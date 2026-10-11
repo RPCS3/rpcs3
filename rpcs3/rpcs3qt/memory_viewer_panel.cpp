@@ -7,7 +7,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include <QVBoxLayout>
@@ -27,6 +27,7 @@
 
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 #include "debugger_frame.h"
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -504,6 +505,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 			m_search_thread = QThread::create([this, wstr, m_modes = m_modes]()
 			{
+				thread_base::set_name("MemViewerSearch");
+
 				gui_log.notice("Searching for %s (mode: %s)", wstr, m_modes);
 
 				u64 found = 0;
@@ -863,7 +866,7 @@ void memory_viewer_panel::ShowMemory()
 
 			if (const auto ptr = this->to_ptr(addr))
 			{
-				const be_t<u32> rmem = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ptr));
+				const be_t<u32> rmem = read_from_ptr_unsafe<be_t<u32>>(static_cast<const u8*>(ptr));
 				t_mem_hex_str += QString::fromStdString(fmt::format("%02x %02x %02x %02x",
 					static_cast<u8>(rmem >> 24),
 					static_cast<u8>(rmem >> 16),
@@ -874,7 +877,7 @@ void memory_viewer_panel::ShowMemory()
 
 				for (auto& ch : str)
 				{
-					if (!std::isprint(static_cast<u8>(ch))) ch = '.';
+					if (!utils::isprint(ch)) ch = '.';
 				}
 
 				t_mem_ascii_str += QString::fromStdString(std::move(str));

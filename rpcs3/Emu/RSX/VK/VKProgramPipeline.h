@@ -22,6 +22,7 @@ namespace vk
 			input_type_storage_buffer,
 			input_type_storage_texture,
 			input_type_push_constant,
+			input_type_attachment,
 
 			// Meta
 			input_type_max_enum,
@@ -87,6 +88,25 @@ namespace vk
 					.set = set,
 					.location = location,
 					.name = name
+				};
+			}
+
+			static program_input make(
+				::glsl::program_domain domain,
+				std::string&& name,
+				program_input_type type,
+				u32 set,
+				u32 location,
+				const bound_data_t& data = bound_buffer{})
+			{
+				return program_input
+				{
+					.domain = domain,
+					.type = type,
+					.bound_data = data,
+					.set = set,
+					.location = location,
+					.name = std::move(name)
 				};
 			}
 		};
@@ -199,16 +219,15 @@ namespace vk
 			program(program&& other) = delete;
 			~program();
 
-			program& link(bool separate_stages);
+			program& link(VkPipelineCache pipeline_cache, bool separate_stages);
 			program& bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point);
 
-			bool has_uniform(program_input_type type, const std::string &uniform_name);
-			std::pair<u32, u32> get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name);
+			bool has_uniform(program_input_type type, std::string_view uniform_name);
+			std::pair<u32, u32> get_uniform_location(::glsl::program_domain domain, program_input_type type, std::string_view uniform_name);
 
 			void bind_uniform(const VkDescriptorImageInfoEx& image_descriptor, u32 set_id, u32 binding_point);
 			void bind_uniform(const VkDescriptorBufferInfoEx& buffer_descriptor, u32 set_id, u32 binding_point);
 			void bind_uniform(const VkDescriptorBufferViewEx& buffer_view, u32 set_id, u32 binding_point);
-			void bind_uniform(const VkDescriptorBufferViewEx& buffer_view, ::glsl::program_domain domain, program_input_type type, const std::string &binding_name);
 
 			void bind_uniform_array(const std::span<const VkDescriptorImageInfoEx>& image_descriptors,u32 set_id, u32 binding_point);
 

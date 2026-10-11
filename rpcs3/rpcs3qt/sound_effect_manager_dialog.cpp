@@ -41,7 +41,7 @@ sound_effect_manager_dialog::sound_effect_manager_dialog(QWidget* parent)
 		}
 
 		QPushButton* button = new QPushButton("", this);
-		connect(button, &QAbstractButton::clicked, this, [this, button, sound, name]()
+		connect(button, &QAbstractButton::clicked, this, [this, sound, name]()
 		{
 			const std::string path = rsx::overlays::get_sound_filepath(sound);
 			if (fs::is_file(path))

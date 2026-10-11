@@ -4,7 +4,7 @@
 
 namespace rpcs3
 {
-#if defined(ARCH_x64)
+#if defined(ARCH_X64)
 	union hypervisor_context_t
 	{
 		u64 regs[1];

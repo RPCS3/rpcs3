@@ -15,6 +15,12 @@ namespace gl
 		fence() = default;
 		~fence() = default;
 
+		fence(const fence&) = delete;
+		fence& operator = (const fence&) = delete;
+
+		fence(fence&&) noexcept = default;
+		fence& operator = (fence&&) noexcept = default;
+
 		void create()
 		{
 			m_value = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);

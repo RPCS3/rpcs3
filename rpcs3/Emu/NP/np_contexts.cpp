@@ -25,7 +25,7 @@ generic_async_transaction_context::~generic_async_transaction_context()
 	}
 }
 
-std::optional<s32> generic_async_transaction_context::get_transaction_status()
+std::optional<s32> generic_async_transaction_context::get_transaction_status() const
 {
 	std::lock_guard lock(mutex);
 	return result;

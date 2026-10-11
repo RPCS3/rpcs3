@@ -21,7 +21,7 @@ game_list_grid::game_list_grid()
 		Q_EMIT IconReady(game, item);
 	};
 
-	connect(this, &game_list_grid::IconReady, this, [this](const game_info& game, const movie_item_base* item)
+	connect(this, &game_list_grid::IconReady, this, [](const game_info& game, const movie_item_base* item)
 	{
 		if (game && item && game->item == item) item->image_change_callback();
 	}, Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...
@@ -35,6 +35,17 @@ game_list_grid::game_list_grid()
 	});
 }
 
+void game_list_grid::stop_movie()
+{
+	for (flow_widget_item* flow_item : items())
+	{
+		if (game_list_grid_item* item = static_cast<game_list_grid_item*>(flow_item))
+		{
+			item->set_active(false);
+		}
+	}
+}
+
 void game_list_grid::clear_list()
 {
 	clear();
@@ -45,7 +56,8 @@ void game_list_grid::populate(
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
 	const std::set<std::string>& selected_item_ids,
-	bool play_hover_movies)
+	bool play_hover_movies,
+	bool play_hover_music)
 {
 	clear_list();
 
@@ -65,8 +77,8 @@ void game_list_grid::populate(
 
 	for (const auto& game : game_data)
 	{
-		const QString serial = QString::fromStdString(game->info.serial);
-		const QString title = get_title(serial, game->info.name);
+		const QString serial = QString::fromStdString(game->serial);
+		const QString title = get_title(serial, game->name);
 
 		game_list_grid_item* item = new game_list_grid_item(this, game, title);
 		item->installEventFilter(this);
@@ -92,7 +104,7 @@ void game_list_grid::populate(
 
 			if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
 			{
-				item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
+				item->set_icon(gui::utils::get_aligned_pixmap(pixmap, m_icon_size, 1.0, Qt::FastTransformation, gui::utils::align_h::center, gui::utils::align_v::center));
 				return;
 			}
 
@@ -102,36 +114,33 @@ void game_list_grid::populate(
 			{
 				item->set_icon(game->pxmap);
 
-				if (!game->has_hover_gif && !game->has_hover_pam)
+				if (game->movie_path.empty())
 				{
 					game->pxmap = {};
 				}
 			}
 		});
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam || game->has_audio_file))
+		bool check_iso = false;
+
+		if (play_hover_movies && !game->movie_path.empty())
 		{
-			bool check_iso = false;
-
-			if (game->has_hover_gif || game->has_hover_pam)
-			{
-				item->set_video_path(game->info.movie_path);
-				check_iso |= !fs::exists(game->info.movie_path);
-			}
-
-			if (game->has_audio_file)
-			{
-				item->set_audio_path(game->info.audio_path);
-				check_iso |= !fs::exists(game->info.audio_path);
-			}
-
-			if (check_iso && is_file_iso(game->info.path))
-			{
-				item->set_iso_path(game->info.path);
-			}
+			item->set_video_path(game->movie_path, game->movie_in_archive);
+			check_iso |= game->movie_in_archive;
 		}
 
-		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
+		if (play_hover_music && !game->audio_path.empty())
+		{
+			item->set_audio_path(game->audio_path, game->audio_in_archive);
+			check_iso |= game->audio_in_archive;
+		}
+
+		if (check_iso && game->is_iso_file && is_iso_file(game->path))
+		{
+			item->set_iso_path(game->path);
+		}
+
+		if (selected_item_ids.contains(game->path + game->icon_path))
 		{
 			selected_items.insert(item);
 		}
@@ -147,6 +156,9 @@ void game_list_grid::populate(
 	QApplication::processEvents();
 
 	select_items(selected_items);
+
+	// Prevent playing unwanted movie
+	stop_movie();
 }
 
 void game_list_grid::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)

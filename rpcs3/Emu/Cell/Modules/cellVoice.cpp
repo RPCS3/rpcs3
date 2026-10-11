@@ -167,7 +167,7 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 		return CELL_VOICE_ERROR_ARGUMENT_INVALID;
 	}
 
-	if (manager.ports.size() > CELLVOICE_MAX_PORT)
+	if (manager.ports.size() >= CELLVOICE_MAX_PORT)
 		return CELL_VOICE_ERROR_RESOURCE_INSUFFICIENT;
 
 	// Id: bits [8,15] seem to contain a "random" value
@@ -426,6 +426,8 @@ error_code cellVoiceInitEx(vm::ptr<CellVoiceInitParam> pArg)
 	cellVoice.todo("cellVoiceInitEx(pArg=*0x%x)", pArg);
 
 	auto& manager = g_fxo->get<voice_manager>();
+
+	std::lock_guard lock(manager.mtx);
 
 	if (manager.is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_INITIALIZED;

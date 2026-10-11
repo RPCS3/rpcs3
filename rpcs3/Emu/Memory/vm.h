@@ -78,10 +78,10 @@ namespace vm
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
-	bool check_addr(u32 addr, u8 flags, u32 size);
+	bool check_addr(u64 addr, u8 flags, u32 size);
 
 	template <u32 Size = 1>
-	inline bool check_addr(u32 addr, u8 flags = page_readable)
+	inline bool check_addr(u64 addr, u8 flags = page_readable)
 	{
 		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
 
@@ -121,16 +121,18 @@ namespace vm
 
 	enum block_flags_3
 	{
-		page_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
-		page_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
-		page_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
-		page_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
+		block_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
+		block_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
+		block_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
+		block_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
 
 		stack_guarded  = 0x10,
 		preallocated   = 0x20, // nonshareable
 
 		bf0_0x1 = 0x1, // TODO: document
 		bf0_0x2 = 0x2, // TODO: document
+		rsx_incomp = 0x4, // Block is not compatible for RSX mappings, despite 1MB pages
+		mapping_comp = 0x8, // Block is compatible for sys_mmapper mappings
 
 		bf0_mask = bf0_0x1 | bf0_0x2,
 	};
@@ -221,7 +223,7 @@ namespace vm
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 
 	// Allocate segment at specified location, does nothing if exists already
-	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = page_size_64k);
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = block_size_64k);
 
 	// Get PS3 virtual memory address from the provided pointer (nullptr or pointer from outside is always converted to 0)
 	// Super memory is allowed as well
@@ -377,7 +379,4 @@ namespace vm
 
 	template <typename T, typename AT>
 	class _ptr_base;
-
-	template <typename T, typename AT>
-	class _ref_base;
 }

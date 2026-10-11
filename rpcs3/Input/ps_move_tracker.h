@@ -13,10 +13,8 @@ struct ps_move_info
 	bool valid = false;     // The tracking result
 	f32 radius = 0.0f;      // Radius of the sphere in pixels
 	f32 distance_mm = 0.0f; // Distance from sphere to camera in mm
-	u32 x_pos = 0;          // X position in pixels
-	u32 y_pos = 0;          // Y position in pixels
-	u32 x_max = 0;          // Maximum X position in pixels
-	u32 y_max = 0;          // Maximum Y position in pixels
+	f32 x_pos = 0.0f;       // X position (0-1)
+	f32 y_pos = 0.0f;       // Y position (0-1)
 };
 
 template <bool DiagnosticsEnabled = false>
@@ -28,7 +26,8 @@ public:
 
 	void set_image_data(const void* buf, u64 size, u32 width, u32 height, s32 format);
 
-	void init_workers();
+	void init_worker(u32 index);
+	void join_worker(u32 index);
 	void process_image();
 	void convert_image(s32 output_format);
 	void process_hues();

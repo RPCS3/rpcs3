@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Cell/lv2/sys_usbd.h"
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -14,8 +16,6 @@
 #else
 #pragma GCC diagnostic pop
 #endif
-
-#include "Emu/Cell/lv2/sys_usbd.h"
 
 struct UsbTransfer;
 
@@ -226,6 +226,12 @@ public:
 
 	virtual bool open_device() = 0;
 
+	// Emulated devices can decline attachment to the bus, e.g. while the real hardware they are backed by is not connected
+	virtual bool is_attachable() const
+	{
+		return true;
+	}
+
 	void get_location(u8* location) const;
 	virtual void read_descriptors();
 
@@ -238,6 +244,9 @@ public:
 	virtual void isochronous_transfer(UsbTransfer* transfer)                                                                                        = 0;
 
 public:
+	// Look up an endpoint descriptor by address in the descriptor tree
+	const UsbDeviceEndpoint* find_endpoint(u8 endpoint_addr) const;
+
 	// device ID if the device has been ldded(0 otherwise)
 	u32 assigned_number = 0;
 	// base device descriptor, every other descriptor is a subnode
@@ -274,6 +283,9 @@ protected:
 protected:
 	libusb_device* lusb_device        = nullptr;
 	libusb_device_handle* lusb_handle = nullptr;
+
+private:
+	void patch_descriptors();
 };
 
 class usb_device_emulated : public usb_device

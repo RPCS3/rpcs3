@@ -27,8 +27,8 @@ namespace rsx
 				m_frame_width = m_frame_height = 24;
 				m_spacing_x = m_spacing_y = 6;
 
-				set_size(24, 30);
-				set_padding(4, 0, 2, 8);
+				set_size(24, 24);
+				set_padding(4, 0, 4, 0);
 			}
 		};
 	}

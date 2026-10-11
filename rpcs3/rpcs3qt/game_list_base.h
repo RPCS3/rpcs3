@@ -16,7 +16,8 @@ public:
 		[[maybe_unused]] const std::map<QString, QString>& notes_map,
 		[[maybe_unused]] const std::map<QString, QString>& title_map,
 		[[maybe_unused]] const std::set<std::string>& selected_item_ids,
-		[[maybe_unused]] bool play_hover_movies){};
+		[[maybe_unused]] bool play_hover_movies,
+		[[maybe_unused]] bool play_hover_music){};
 
 	void set_icon_size(QSize size) { m_icon_size = std::move(size); }
 	void set_icon_color(QColor color) { m_icon_color = std::move(color); }

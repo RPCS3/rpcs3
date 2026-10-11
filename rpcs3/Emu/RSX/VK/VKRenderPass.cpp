@@ -27,6 +27,9 @@ namespace vk
 	// 16-21 sample_counts
 	// 22-36 current layouts
 	// 37-41 input attachments
+	// 42-59 reserved
+	// 60-63 flags. Allocated from bit 63 downwards.
+	// NOTE: Keys are persisted in the pipeline cache. Existing fields must not move.
 	union renderpass_key_blob
 	{
 	private:
@@ -62,6 +65,12 @@ namespace vk
 		}
 
 	public:
+		// Flags relative to the flags field
+		enum : u64
+		{
+			flag_no_attachments = (1ull << 3), // Bit 63. Renderpass has no attachments
+		};
+
 		u64 encoded;
 
 		struct
@@ -71,6 +80,8 @@ namespace vk
 			u64 sample_count  : 6;
 			u64 layout_blob   : 15;
 			u64 input_attachments_mask : 5;
+			u64 reserved      : 18;
+			u64 flags         : 4;
 		};
 
 		renderpass_key_blob(u64 encoded_) : encoded(encoded_)
@@ -167,10 +178,20 @@ namespace vk
 
 			return result;
 		}
+
+		inline bool has_no_attachments() const
+		{
+			return !!(flags & flag_no_attachments);
+		}
 	};
+
+	static_assert(sizeof(renderpass_key_blob) == sizeof(u64));
 
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, const std::vector<u8>& input_attachment_ids)
 	{
+		// Use get_renderpass_key_no_attachments for passes without attachments
+		ensure(!images.empty());
+
 		renderpass_key_blob key(0);
 
 		for (u32 i = 0; i < ::size32(images); ++i)
@@ -189,24 +210,30 @@ namespace vk
 		return key.encoded;
 	}
 
-	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key)
+	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key, const std::vector<u8>& input_attachment_ids)
 	{
 		// Partial update; assumes compatible renderpass keys
 		renderpass_key_blob key(previous_key);
 		key.layout_blob = 0;
+		key.input_attachments_mask = 0;
 
 		for (u32 i = 0; i < ::size32(images); ++i)
 		{
 			key.set_layout(i, images[i]->current_layout);
 		}
 
+		for (const auto& ref_id : input_attachment_ids)
+		{
+			key.set_input_attachment(ref_id);
+		}
+
 		return key.encoded;
 	}
 
-	u64 get_renderpass_key(VkFormat surface_format)
+	u64 get_renderpass_key(VkFormat surface_format, u8 color_attachment_count, u8 sample_count)
 	{
 		renderpass_key_blob key(0);
-		key.sample_count = 1;
+		key.sample_count = sample_count;
 
 		switch (surface_format)
 		{
@@ -219,10 +246,45 @@ namespace vk
 			break;
 		default:
 			key.color_format = static_cast<u64>(surface_format);
-			key.layout_blob = static_cast<u64>(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			for (u8 i = 0; i < color_attachment_count; ++i)
+			{
+				key.set_layout(i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			}
 			break;
 		}
 
+		return key.encoded;
+	}
+
+	u64 get_renderpass_key(VkFormat color_format, VkFormat depth_format, u8 color_attachment_count, u8 sample_count)
+	{
+		renderpass_key_blob key(0);
+		key.sample_count = sample_count;
+
+		u32 image_index = 0;
+		if (color_format != VK_FORMAT_UNDEFINED)
+		{
+			key.set_format(color_format);
+			for (u8 i = 0; i < color_attachment_count; ++i)
+			{
+				key.set_layout(image_index++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			}
+		}
+
+		if (depth_format != VK_FORMAT_UNDEFINED)
+		{
+			key.set_format(depth_format);
+			key.set_layout(image_index++, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		}
+
+		return key.encoded;
+	}
+
+	u64 get_renderpass_key_no_attachments(u8 sample_count)
+	{
+		renderpass_key_blob key(0);
+		key.sample_count = sample_count;
+		key.flags = renderpass_key_blob::flag_no_attachments;
 		return key.encoded;
 	}
 
@@ -257,6 +319,12 @@ namespace vk
 		VkFormat color_format = static_cast<VkFormat>(key.color_format);
 		VkFormat depth_format = static_cast<VkFormat>(key.depth_format);
 
+		if (key.has_no_attachments())
+		{
+			// Raster-only pass. Only the sample count is meaningful, the rest decodes to an empty subpass.
+			ensure(!color_format && !depth_format && !key.layout_blob && !key.input_attachments_mask);
+		}
+
 		std::vector<VkAttachmentDescription> attachments = {};
 		std::vector<VkAttachmentReference> attachment_references;
 
@@ -280,7 +348,7 @@ namespace vk
 			color_attachment_description.initialLayout = layout;
 			color_attachment_description.finalLayout = layout;
 
-			attachments.push_back(color_attachment_description);
+			attachments.push_back(std::move(color_attachment_description));
 			attachment_references.push_back({ attachment_count++, layout });
 		}
 
@@ -295,7 +363,7 @@ namespace vk
 			depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 			depth_attachment_description.initialLayout = dsv_layout;
 			depth_attachment_description.finalLayout = dsv_layout;
-			attachments.push_back(depth_attachment_description);
+			attachments.push_back(std::move(depth_attachment_description));
 
 			attachment_references.push_back({ attachment_count, dsv_layout });
 		}
@@ -306,11 +374,22 @@ namespace vk
 		subpass.pColorAttachments = attachment_count? attachment_references.data() : nullptr;
 		subpass.pDepthStencilAttachment = depth_format? &attachment_references.back() : nullptr;
 
+		rsx::simple_array<VkSubpassDependency> subpass_dependencies;
 		const auto input_attachments = key.get_input_attachments();
 		if (!input_attachments.empty())
 		{
 			subpass.inputAttachmentCount = ::size32(input_attachments);
 			subpass.pInputAttachments = input_attachments.data();
+
+			subpass_dependencies.push_back({
+				.srcSubpass = 0,
+				.dstSubpass = 0,
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+			});
 		}
 
 		VkRenderPassCreateInfo rp_info = {};
@@ -319,12 +398,26 @@ namespace vk
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
+		rp_info.dependencyCount = subpass_dependencies.size();
+		rp_info.pDependencies = subpass_dependencies.data();
 
 		VkRenderPass result;
 		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
 
 		g_renderpass_cache[renderpass_key] = result;
 		return result;
+	}
+
+	bool renderpass_has_input_attachments(u64 renderpass_key)
+	{
+		renderpass_key_blob key(renderpass_key);
+		return key.input_attachments_mask != 0u;
+	}
+
+	bool renderpass_has_no_attachments(u64 renderpass_key)
+	{
+		renderpass_key_blob key(renderpass_key);
+		return key.has_no_attachments();
 	}
 
 	void clear_renderpass_cache(VkDevice dev)

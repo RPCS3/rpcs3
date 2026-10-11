@@ -65,7 +65,7 @@ namespace np
 		ticket() = default;
 		ticket(std::vector<u8>&& raw_data);
 
-		std::size_t size() const;
+		usz size() const;
 		const u8* data() const;
 		bool empty() const;
 
@@ -73,11 +73,11 @@ namespace np
 		std::string get_service_id() const;
 
 	private:
-		std::optional<ticket_data> parse_node(std::size_t index) const;
+		std::optional<ticket_data> parse_node(usz index) const;
 		void parse();
 
 	private:
-		static constexpr std::size_t MIN_TICKET_DATA_SIZE = 4;
+		static constexpr usz MIN_TICKET_DATA_SIZE = 4;
 
 		std::vector<u8> raw_data;
 
@@ -155,6 +155,7 @@ namespace np
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
 		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
+		bool select_invitation(u64 msg_id);
 
 		// Those should probably be under match2 ctx
 		vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events
@@ -248,6 +249,11 @@ namespace np
 		std::pair<error_code, std::optional<SceNpId>> get_friend_by_index(u32 index);
 		void set_presence(std::optional<std::string> status, std::optional<std::vector<u8>> data);
 
+		// RPCN trophy support
+		void rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp);
+		std::vector<std::pair<s32, s64>> rpcn_trophy_sync(const SceNpCommunicationId& communication_id,
+		    const std::vector<std::pair<s32, s64>>& local_unlocked);
+
 		template <typename T>
 		error_code get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres);
 
@@ -261,13 +267,13 @@ namespace np
 		ticket get_clan_ticket() const;
 		void add_player_to_history(const SceNpId* npid, const char* description);
 		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
-		u32 get_players_history_count(u32 options);
-		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid);
+		u32 get_players_history_count(u32 options) const;
+		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid) const;
 		SceNpMatching2MemoryInfo get_memory_info() const;
 		error_code abort_request(u32 req_id);
 
 		// For signaling
-		void req_sign_infos(const std::string& npid, u32 conn_id);
+		void req_sign_infos(std::string_view npid, u32 conn_id);
 
 		// For UPNP
 		void upnp_add_port_mapping(u16 internal_port, std::string_view protocol);
@@ -297,7 +303,7 @@ namespace np
 		// Various generic helpers
 		bool discover_ip_address();
 		bool discover_ether_address();
-		bool error_and_disconnect(const std::string& error_msg);
+		bool error_and_disconnect(std::string_view error_msg);
 
 		// Notification handlers
 		void notif_user_joined_room(vec_stream& noti);
@@ -420,7 +426,7 @@ namespace np
 
 		// IP & DNS info
 		std::string hostname = "localhost";
-		std::array<u8, 6> ether_address{};
+		std::array<u8, 6> ether_address{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 		be_t<u32> local_ip_addr{};
 		be_t<u32> public_ip_addr{};
 		be_t<u32> dns_ip = 0x08080808;
@@ -440,6 +446,7 @@ namespace np
 		gui_cache_manager gui_cache;
 
 		// Messages related
+		shared_mutex m_mutex_selected_messages;
 		std::optional<u64> selected_invite_id{};
 		std::optional<u64> selected_message_id{};
 
@@ -518,7 +525,7 @@ namespace np
 		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);
 		void save_players_history();
 
-		shared_mutex mutex_history;
+		mutable shared_mutex mutex_history;
 		std::map<std::string, player_history> players_history; // npid / history
 
 		struct

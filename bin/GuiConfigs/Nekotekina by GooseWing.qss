@@ -397,12 +397,6 @@ QLabel#gamelist_icon_background_color {
 }
 
 
-/* Set Windows Taskbar Thumbnail colors */
-QLabel#thumbnail_icon_color {
-	color: #ffd785;
-}
-
-
 QLabel#log_level_always {
 	color: #00ffff; /* Cyan */
 }

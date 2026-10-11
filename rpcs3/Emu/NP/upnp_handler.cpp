@@ -119,13 +119,14 @@ void upnp_handler::add_port_redir(const std::string& addr, u16 internal_port, st
 	if (!m_active)
 		return;
 
+	const std::string protocol_str(protocol);
+
 	std::lock_guard lock(m_mutex);
 
-	if (m_bindings[std::string(protocol)].contains(internal_port))
+	if (m_bindings[protocol_str].contains(internal_port))
 		return;
 
 	const std::string internal_port_str = fmt::format("%d", internal_port);
-	const std::string protocol_str(protocol);
 	const u32 max_port = std::min(static_cast<u32>(internal_port) + 100, 0xFFFFu);
 	int res = 0;
 

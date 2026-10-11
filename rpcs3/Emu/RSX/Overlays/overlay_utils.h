@@ -95,6 +95,52 @@ struct vertex
 		values[2] -= other.values[2];
 		values[3] -= other.values[3];
 	}
+
+	void operator /= (const vertex& other)
+	{
+		values[0] /= other.values[0];
+		values[1] /= other.values[1];
+		values[2] /= other.values[2];
+		values[3] /= other.values[3];
+	}
+
+	void operator /= (float rhs)
+	{
+		values[0] /= rhs;
+		values[1] /= rhs;
+		values[2] /= rhs;
+		values[3] /= rhs;
+	}
+
+	void operator *= (const vertex& other)
+	{
+		values[0] *= other.values[0];
+		values[1] *= other.values[1];
+		values[2] *= other.values[2];
+		values[3] *= other.values[3];
+	}
+
+	void operator *= (float rhs)
+	{
+		values[0] *= rhs;
+		values[1] *= rhs;
+		values[2] *= rhs;
+		values[3] *= rhs;
+	}
+
+	vertex operator + (const vertex& other) const
+	{
+		vertex result = *this;
+		result += other;
+		return result;
+	}
+
+	vertex operator - (const vertex& other) const
+	{
+		vertex result = *this;
+		result -= other;
+		return result;
+	}
 };
 
 
@@ -172,9 +218,9 @@ void operator < (const vector3_base<T>& lhs, T rhs)
 using vector3i = vector3_base<int>;
 using vector3f = vector3_base<float>;
 
-std::string utf8_to_ascii8(const std::string& utf8_string);
-std::string utf16_to_ascii8(const std::u16string& utf16_string);
-std::u16string ascii8_to_utf16(const std::string& ascii_string);
-std::u32string utf8_to_u32string(const std::string& utf8_string);
-std::u16string u32string_to_utf16(const std::u32string& utf32_string);
-std::u32string utf16_to_u32string(const std::u16string& utf16_string);
+std::string utf8_to_ascii8(std::string_view utf8_string);
+std::string utf16_to_ascii8(std::u16string_view utf16_string);
+std::u16string ascii8_to_utf16(std::string_view ascii_string);
+std::u32string utf8_to_u32string(std::string_view utf8_string);
+std::u16string u32string_to_utf16(std::u32string_view utf32_string);
+std::u32string utf16_to_u32string(std::u16string_view utf16_string);

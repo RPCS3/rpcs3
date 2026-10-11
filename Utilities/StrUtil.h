@@ -23,19 +23,19 @@ inline void strcpy_trunc(D&& dst, const T& src)
 }
 
 // Convert string to signed integer
-bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
+bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max, std::string_view name = {});
 
 // Convert string to unsigned integer
-bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
+bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max, std::string_view name = {});
 
 // Convert string to unsigned int128_t
-bool try_to_uint128(u128* out, std::string_view value);
+bool try_to_uint128(u128* out, std::string_view value, std::string_view name = {});
 
 // Convert string to float
-bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max, std::string_view name = {});
 
 // Convert float to string locale independent
-bool try_to_string(std::string* out, const f64& value);
+bool try_to_string(std::string* out, f64 value, std::string_view name = {});
 
 // Get the file extension of a file path ("png", "jpg", etc.)
 std::string get_file_extension(const std::string& file_path);
@@ -161,7 +161,7 @@ namespace fmt
 	std::string_view trim_back_sv(std::string_view source, std::string_view values = " \t");
 
 	template <typename T>
-	std::string merge(const T& source, std::string_view separator)
+	std::string merge(const T& source, std::string_view separator, bool is_skip_empty = false)
 	{
 		if (source.empty())
 		{
@@ -180,6 +180,23 @@ namespace fmt
 		auto it  = source.begin();
 		auto end = source.end();
 
+		if (is_skip_empty)
+		{
+			for (; it != end; ++it)
+			{
+				if (it->empty()) continue;
+
+				if (!result.empty() && !separator.empty())
+				{
+					result.append(separator);
+				}
+
+				result.append(*it);
+			}
+
+			return result;
+		}
+
 		for (--end; it != end; ++it)
 		{
 			result.append(*it);
@@ -192,7 +209,7 @@ namespace fmt
 	}
 
 	template <typename T>
-	std::string merge(std::initializer_list<T> sources, std::string_view separator)
+	std::string merge(std::initializer_list<T> sources, std::string_view separator, bool is_skip_empty = false)
 	{
 		if (!sources.size())
 		{
@@ -213,6 +230,11 @@ namespace fmt
 
 		for (const auto& v : sources)
 		{
+			if (v.empty()) continue;
+
+			std::string sub = fmt::merge(v, separator, is_skip_empty);
+			if (sub.empty()) continue;
+
 			if (first)
 			{
 				first = false;
@@ -222,7 +244,7 @@ namespace fmt
 				result.append(separator);
 			}
 
-			result.append(fmt::merge(v, separator));
+			result.append(std::move(sub));
 		}
 
 		return result;

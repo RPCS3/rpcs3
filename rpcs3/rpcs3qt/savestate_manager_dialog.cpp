@@ -135,9 +135,15 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 	slider_layout->addWidget(m_game_icon_slider);
 	icon_settings->setLayout(slider_layout);
 
+	m_corrupt_warning_label = new QLabel(this);
+	m_corrupt_warning_label->setWordWrap(true);
+	m_corrupt_warning_label->setStyleSheet(QStringLiteral("QLabel { color: %0; font-weight: bold; }").arg(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red).name()));
+	m_corrupt_warning_label->setVisible(false);
+
 	QVBoxLayout* options_layout = new QVBoxLayout();
 	options_layout->addWidget(choose_game);
 	options_layout->addWidget(icon_settings);
+	options_layout->addWidget(m_corrupt_warning_label);
 	options_layout->addStretch();
 
 	QHBoxLayout* all_layout = new QHBoxLayout(this);
@@ -281,7 +287,7 @@ bool savestate_manager_dialog::LoadSavestateFolderToDB(std::unique_ptr<game_save
 
 	if (game_savestates->title_id.empty())
 	{
-		gui_log.error("Failed to load savestates. Path empty!");
+		gui_log.error("Failed to load savestates. title_id empty!");
 		return false;
 	}
 
@@ -292,7 +298,7 @@ bool savestate_manager_dialog::LoadSavestateFolderToDB(std::unique_ptr<game_save
 
 	if (file_list.isEmpty())
 	{
-		return false;
+		return true;
 	}
 
 	// Populate game_savestates_data
@@ -575,7 +581,7 @@ void savestate_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	if (!name.isEmpty())
 	{
 		QAction* copy_name = new QAction(tr("&Copy Name"), menu);
-		connect(copy_name, &QAction::triggered, this, [this, name]()
+		connect(copy_name, &QAction::triggered, this, [name]()
 		{
 			QApplication::clipboard()->setText(name);
 		});
@@ -593,6 +599,11 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 	WaitAndAbortGameRepaintThreads();
 
 	m_savestate_db.clear();
+
+	if (m_corrupt_warning_label)
+	{
+		m_corrupt_warning_label->setVisible(false);
+	}
 
 	const QString savestate_path = QString::fromStdString(fs::get_config_dir() + "savestates/");
 	const QDir savestate_dir(savestate_path);
@@ -614,15 +625,15 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 		auto game_data_ptr = std::make_unique<game_savestates_data>();
 		game_data_ptr->title_id = folder_list[i].toStdString();
 
-		for (const game_info& gameinfo : m_game_info)
+		for (const game_info& game : m_game_info)
 		{
-			if (gameinfo && gameinfo->info.serial == game_data_ptr->title_id)
+			if (game && game->serial == game_data_ptr->title_id)
 			{
-				game_data_ptr->game_name = gameinfo->info.name;
-				game_data_ptr->game_icon_path = gameinfo->info.icon_path;
-				if (gameinfo->icon_in_archive)
+				game_data_ptr->game_name = game->name;
+				game_data_ptr->game_icon_path = game->icon_path;
+				if (game->icon_in_archive)
 				{
-					game_data_ptr->archive_path = gameinfo->info.path;
+					game_data_ptr->archive_path = game->path;
 				}
 
 				break;
@@ -662,7 +673,6 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 
 		if (!LoadSavestateFolderToDB(std::move(game_data[i])))
 		{
-			// TODO: add a way of showing the number of corrupted/invalid savestates in UI somewhere.
 			gui_log.error("Error occurred while parsing folder %s for savestates.", game_data[i]->title_id);
 			error_count++;
 		}
@@ -675,6 +685,16 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 	if (error_count != 0)
 	{
 		gui_log.error("Failed to load %d of %d savestates!", error_count.load(), count);
+	}
+
+	if (m_corrupt_warning_label)
+	{
+		const int errors = static_cast<int>(error_count.load());
+		m_corrupt_warning_label->setVisible(errors > 0);
+		if (errors > 0)
+		{
+			m_corrupt_warning_label->setText(tr("Warning: %n corrupted or invalid savestate folder(s) could not be loaded.", "", errors));
+		}
 	}
 }
 

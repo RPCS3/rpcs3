@@ -291,6 +291,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_recording_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_recording_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rsx_debugger.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -444,6 +450,9 @@
     <ClCompile Include="rpcs3qt\pad_settings_dialog.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\recording_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\log_frame.cpp">
       <Filter>Gui\log</Filter>
     </ClCompile>
@@ -513,6 +522,15 @@
     <ClCompile Include="rpcs3qt\progress_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_config_database.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_config_database.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\config_database.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_compatibility.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -563,6 +581,18 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\call_stack_list.cpp">
       <Filter>Gui\debugger</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_anaglyph_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_anaglyph_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_guest_memory_dumper.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_guest_memory_dumper.cpp">
+      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -837,12 +867,6 @@
     <ClCompile Include="rpcs3qt\render_creator.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_render_creator.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\config_adapter.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
@@ -1024,6 +1048,15 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_ipc_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\sky_ipc_settings_dialog.cpp">
+      <Filter>Gui\ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_sky_ipc_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_sky_ipc_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\uuid.cpp">
@@ -1293,6 +1326,30 @@
     <ClCompile Include="rpcs3qt\log_level_dialog.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\steam_utils.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\emu_settings_type.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_content_integrity.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_content_integrity.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\content_integrity.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\anaglyph_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\guest_memory_dumper.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\auto_scroll_label.cpp">
+      <Filter>Gui\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1320,6 +1377,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_pad_led_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_recording_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_settings_dialog.h">
@@ -1550,6 +1610,15 @@
     <ClInclude Include="rpcs3qt\log_level_dialog.h">
       <Filter>Gui\settings</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\steam_utils.h">
+      <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\render_creator.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\auto_scroll_label.h">
+      <Filter>Gui\widgets</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1574,6 +1643,9 @@
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\recording_settings_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\welcome_dialog.ui">
@@ -1618,6 +1690,9 @@
     <CustomBuild Include="rpcs3qt\pad_led_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\recording_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\log_frame.h">
       <Filter>Gui\log</Filter>
     </CustomBuild>
@@ -1653,6 +1728,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\save</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\config_database.h">
+      <Filter>Gui\game list</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\game_compatibility.h">
       <Filter>Gui\game list</Filter>
@@ -1756,9 +1834,6 @@
     <CustomBuild Include="rpcs3qt\microphone_creator.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\render_creator.h">
-      <Filter>Gui\settings</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\patch_manager_dialog.h">
       <Filter>Gui\patch manager</Filter>
     </CustomBuild>
@@ -1826,6 +1901,9 @@
       <Filter>Gui\vfs</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\ipc_settings_dialog.h">
+      <Filter>Gui\ipc</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\sky_ipc_settings_dialog.h">
       <Filter>Gui\ipc</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\pad_motion_settings_dialog.h">
@@ -1905,6 +1983,15 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\game_list_actions.h">
       <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\content_integrity.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\anaglyph_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\guest_memory_dumper.h">
+      <Filter>Gui\utils</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -2051,6 +2138,15 @@
     </None>
     <None Include="..\.github\workflows\qt-ts.yml">
       <Filter>CI</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Old Steam by FlexBy.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Windows 11 (Dark Mode) by GustavoGraziano.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Windows 11 (Light Mode) by GustavoGraziano.qss">
+      <Filter>StyleSheets</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

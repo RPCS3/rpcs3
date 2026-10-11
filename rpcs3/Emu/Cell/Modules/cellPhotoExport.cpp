@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
@@ -74,7 +75,7 @@ struct photo_export
 };
 
 
-bool check_photo_path(const std::string& file_path)
+bool check_photo_path(std::string_view file_path)
 {
 	if (file_path.size() >= CELL_PHOTO_EXPORT_UTIL_HDD_PATH_MAX)
 	{
@@ -117,7 +118,7 @@ std::string get_available_photo_path(std::string_view filename)
 		extension = filename.substr(extension_start);
 	}
 
-	return Emu.GetCallbacks().get_photo_path(fmt::format("%s%s", Emu.GetTitle(), extension));
+	return g_emu_callbacks.get_photo_path(fmt::format("%s%s", Emu.GetTitle(), extension));
 }
 
 

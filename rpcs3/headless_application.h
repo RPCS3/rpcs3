@@ -18,10 +18,10 @@ public:
 	headless_application(int& argc, char** argv);
 
 	/** Call this method before calling app.exec */
-	bool Init() override;
+	void Init() override;
 
 private:
-	void InitializeCallbacks();
+	void create_callbacks() override;
 	void InitializeConnects() const;
 
 	QThread* get_thread() override

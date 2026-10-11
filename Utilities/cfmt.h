@@ -91,6 +91,24 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 	};
 
+	const auto write_binary = [&](auto value, u64 min_num)
+	{
+		if constexpr (sizeof(value) == 16)
+		{
+			out.resize(out.size() + std::max<u64>(min_num, 128 - utils::clz128(value | 1)), '0');
+		}
+		else
+		{
+			out.resize(out.size() + std::max<u64>(min_num, 64 - std::countl_zero<u64>(value | 1)), '0');
+		}
+
+		// Write in reversed order
+		for (auto i = out.rbegin(); value; i++, value >>= 1)
+		{
+			*i = static_cast<usz>(value & 0b1) ? '1' : '0';
+		}
+	};
+
 	const auto write_decimal = [&](auto value, s64 min_size)
 	{
 		const usz start = out.size();
@@ -628,6 +646,71 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		{
 			// Add padding if necessary
 			out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ctx.zeros && !ctx.left && !ctx.dot ? '0' : ' ');
+		}
+
+		src.skip(ctx.args);
+		ctx = {0};
+		break;
+	}
+
+	case 'b':
+	case 'B':
+	{
+		if (!src.test(ctx.args)) [[unlikely]]
+		{
+			drop_sequence();
+			break;
+		}
+
+		const usz src_type = src.type(ctx.args);
+
+		if (!ctx.type || src_type > 8)
+		{
+			ctx.type = static_cast<u8>(src_type);
+
+			if (!ctx.type)
+			{
+				ctx.type = src.size_int;
+			}
+		}
+
+		const u64 mask =
+			ctx.type == 1 ? 0xff :
+			ctx.type == 2 ? 0xffff :
+			ctx.type == 4 ? 0xffff'ffffu :
+			0xffff'ffff'ffff'ffffu;
+
+		// Trunc sign-extended signed types
+		const u64 val = src.template get<u64>(ctx.args) & mask;
+
+		const usz start = out.size();
+
+		if (!ctx.dot || ctx.prec)
+		{
+			if (ctx.type >= 16)
+			{
+				u128 val2 = *reinterpret_cast<const u128*>(val);
+				write_binary(val2, ctx.prec);
+			}
+			else
+			{
+				write_binary(val, ctx.prec);
+			}
+		}
+
+		const usz size2 = out.size() - start;
+
+		if (size2 < ctx.width)
+		{
+			// Add padding if necessary
+			if (ctx.zeros && !ctx.left && !ctx.dot)
+			{
+				out.insert(out.begin() + start + (ctx.alter && val ? 2 : 0), ctx.width - size2, '0');
+			}
+			else
+			{
+				out.insert(ctx.left ? out.end() : out.begin() + start, ctx.width - size2, ' ');
+			}
 		}
 
 		src.skip(ctx.args);

@@ -1,10 +1,13 @@
 #include "gamemode_control.h"
 
 #ifdef GAMEMODE_AVAILABLE
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 extern "C" {
 	#include "3rdparty/feralinteractive/feralinteractive/lib/gamemode_client.h"
 }
+#pragma GCC diagnostic pop
 #endif
 
 // Enables and Disables GameMode based on user settings and system

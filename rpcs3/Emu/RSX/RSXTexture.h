@@ -1,10 +1,11 @@
 #pragma once
 #include "gcm_enums.h"
-#include "color_utils.h"
+#include "Utils/color_utils.hpp"
 
 namespace rsx
 {
 	struct texture_format_ex;
+	struct image_section_attributes_t;
 
 	class fragment_texture
 	{
@@ -85,6 +86,8 @@ namespace rsx
 
 		u16 depth() const;
 		u32 pitch() const;
+
+		image_section_attributes_t attributes() const;
 	};
 
 	class vertex_texture

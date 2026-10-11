@@ -6,7 +6,7 @@
 
 #include "Utilities/mutex.h"
 
-#include <deque>
+#include <list>
 #include <memory>
 
 namespace vk
@@ -14,7 +14,7 @@ namespace vk
 	u64 get_event_id();
 	u64 current_event_id();
 	u64 last_completed_event_id();
-	void on_event_completed(u64 event_id, bool flush = false);
+	void on_event_completed(u64 event_id);
 
 	struct eid_scope_t
 	{
@@ -52,8 +52,8 @@ namespace vk
 	private:
 		sampler_pool_t m_sampler_pool;
 
-		std::deque<eid_scope_t> m_eid_map;
-		shared_mutex m_eid_map_lock;
+		std::list<eid_scope_t> m_eid_map;
+		mutable shared_mutex m_eid_map_lock;
 
 		std::vector<std::function<void()>> m_exit_handlers;
 
@@ -61,7 +61,6 @@ namespace vk
 		{
 			const auto eid = current_event_id();
 			{
-				std::lock_guard lock(m_eid_map_lock);
 				if (m_eid_map.empty() || m_eid_map.back().eid != eid)
 				{
 					m_eid_map.emplace_back(eid);
@@ -88,7 +87,12 @@ namespace vk
 
 		void flush()
 		{
-			m_eid_map.clear();
+			std::list<eid_scope_t> dispose_queue;
+			{
+				std::lock_guard lock(m_eid_map_lock);
+				dispose_queue.splice(dispose_queue.begin(), m_eid_map);
+			}
+
 			m_sampler_pool.clear();
 		}
 
@@ -135,11 +139,13 @@ namespace vk
 
 		void dispose(vk::disposable_t& disposable) override
 		{
+			std::lock_guard lock(m_eid_map_lock);
 			get_current_eid_scope().m_disposables.emplace_back(std::move(disposable));
 		}
 
 		inline void dispose(std::unique_ptr<vk::gpu_debug_marker>& object)
 		{
+			std::lock_guard lock(m_eid_map_lock);
 			// Special case as we may need to read these out.
 			// FIXME: We can manage these markers better and remove this exception.
 			get_current_eid_scope().m_debug_markers.emplace_back(std::move(object));
@@ -154,32 +160,51 @@ namespace vk
 
 		void push_down_current_scope()
 		{
+			std::lock_guard lock(m_eid_map_lock);
 			get_current_eid_scope().eid++;
 		}
 
 		void eid_completed(u64 eid)
 		{
-			while (!m_eid_map.empty())
+			// We move scope objects into this so that they're destroyed outside the lock.
+			// These objects should outlive the lock, the idea is to release the main thread while the caller handles the callback spam.
+			std::list<eid_scope_t> discarded_scopes;
 			{
-				const auto& scope = m_eid_map.front();
-				if (scope.eid > eid)
+				reader_lock lock(m_eid_map_lock);
+
+				// First, scan to find the newest item that is going out of scope
+				auto newest_it = m_eid_map.begin();
+				while (newest_it != m_eid_map.end() && newest_it->eid <= eid)
 				{
-					break;
+					newest_it++;
 				}
 
-				eid_scope_t tmp(0);
+				// Any hits?
+				if (newest_it == m_eid_map.begin())
 				{
-					std::lock_guard lock(m_eid_map_lock);
-					m_eid_map.front().swap(tmp);
-					m_eid_map.pop_front();
+					return;
 				}
+
+				// Take all of the entries in one sweep
+				lock.upgrade();
+
+				// Post-upgrade iterators should be safe
+				discarded_scopes.splice(
+					discarded_scopes.end(),
+					m_eid_map,
+					m_eid_map.begin(),
+					newest_it);
 			}
+
+			// Cleanup runs here on the discard pile
 		}
 
 		void trim();
 
 		std::vector<const gpu_debug_marker*> gather_debug_markers() const
 		{
+			reader_lock lock(m_eid_map_lock);
+
 			std::vector<const gpu_debug_marker*> result;
 			for (const auto& scope : m_eid_map)
 			{

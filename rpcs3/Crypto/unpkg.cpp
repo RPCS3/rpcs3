@@ -2,6 +2,7 @@
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
+#include "util/asm.hpp"
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
@@ -15,6 +16,51 @@
 #include <filesystem>
 
 LOG_CHANNEL(pkg_log, "PKG");
+
+// Every path in here is UTF-8, and these two conversions never fail: on Windows a byte no sequence accounts for
+// becomes U+FFFD, elsewhere a path is the bytes themselves
+static std::filesystem::path fs_path_from_utf8(std::string_view utf8)
+{
+#ifdef _WIN32
+	return utf8_to_wchar(utf8);
+#else
+	return std::filesystem::path(utf8);
+#endif
+}
+
+static std::string fs_path_to_utf8(const std::filesystem::path& path)
+{
+#ifdef _WIN32
+	return wchar_to_utf8(path.native());
+#else
+	return path.native();
+#endif
+}
+
+// Whether a name read from the package could reach outside the directory it is joined to: a leading "/", or a "."
+// or ".." component. "/" is the only separator that counts, vfs::escape writes any other one the host may know, and
+// ":", as plain characters
+static bool leaves_directory(std::string_view name)
+{
+	if (name.starts_with('/'))
+	{
+		return true;
+	}
+
+	for (std::string_view rest = name; !rest.empty();)
+	{
+		const usz sep = rest.find('/');
+		const std::string_view component = rest.substr(0, sep);
+		rest = sep == umax ? std::string_view{} : rest.substr(sep + 1);
+
+		if (component == "." || component == "..")
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
 
 package_reader::package_reader(const std::string& path, fs::file file)
 	: m_path(path)
@@ -120,9 +166,9 @@ bool package_reader::read_header()
 		return false;
 	}
 
-	if (u64{umax} / sizeof(PKGEntry) < u64(m_header.file_count))
+	if (m_header.file_count > PKG_MAX_FILE_COUNT || u64(m_header.file_count) > u64(m_header.data_size) / sizeof(PKGEntry))
 	{
-		pkg_log.error("PKG file count is too large! (0x%x)", m_header.file_count);
+		pkg_log.error("PKG file count is invalid! (count=0x%x, data_size=0x%llx)", m_header.file_count, m_header.data_size);
 		return false;
 	}
 
@@ -190,7 +236,8 @@ bool package_reader::read_header()
 		m_file = fs::make_gather(std::move(filelist));
 	}
 
-	if (m_header.data_size + m_header.data_offset > m_header.pkg_size)
+	if ((m_header.data_size + m_header.data_offset) > m_header.pkg_size ||
+		m_header.data_size > (u64{umax} - m_header.data_offset)) // Check for overflow
 	{
 		pkg_log.error("PKG data size mismatch (data_size=0x%llx, data_offset=0x%llx, file_size=0x%llx)", m_header.data_size, m_header.data_offset, m_header.pkg_size);
 		return false;
@@ -203,7 +250,7 @@ bool package_reader::read_metadata()
 {
 	// Read title ID and use it as an installation directory
 	m_install_dir.resize(9);
-	archive_read_block(55, &m_install_dir.front(), m_install_dir.size());
+	archive_read_block(55, {reinterpret_cast<u8*>(m_install_dir.data()), m_install_dir.size()}, m_install_dir.size());
 
 	// Read package metadata
 
@@ -255,7 +302,27 @@ bool package_reader::read_metadata()
 			if (packet.size == sizeof(m_metadata.package_type))
 			{
 				archive_read(&m_metadata.package_type, sizeof(m_metadata.package_type));
+
+				std::vector<std::string> package_flags;
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x01)             package_flags.push_back("0x01");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EBOOT)            package_flags.push_back("EBOOT");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_REQUIRE_LICENSE)  package_flags.push_back("REQUIRE_LICENSE");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_HDD_MC)           package_flags.push_back("HDD_MC");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PATCH)            package_flags.push_back("PATCH");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x20)             package_flags.push_back("0x20");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_RENAME_DIRECTORY) package_flags.push_back("RENAME_DIRECTORY");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EDAT)             package_flags.push_back("EDAT");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x100)            package_flags.push_back("0x100");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EMULATOR)         package_flags.push_back("EMULATOR");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_VSH_MODULE)       package_flags.push_back("VSH_MODULE");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_DISC_BOUND)       package_flags.push_back("DISC_BOUND");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_UNKNOWN)          package_flags.push_back("UNKNOWN");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PS_VITA_CARD)     package_flags.push_back("PS_VITA_CARD");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PS_VITA_NON_GAME) package_flags.push_back("PS_VITA_NON_GAME");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x8000)           package_flags.push_back("0x8000");
+
 				pkg_log.notice("Metadata: Package Type = 0x%x = %d", m_metadata.package_type, m_metadata.package_type);
+				pkg_log.notice("Metadata: Package Flags = %s", package_flags.empty() ? "{}" : fmt::merge(package_flags, ", "));
 				continue;
 			}
 			else
@@ -528,7 +595,7 @@ bool package_reader::read_entries(std::vector<PKGEntry>& entries)
 	entries.clear();
 	entries.resize(m_header.file_count + BUF_PADDING / sizeof(PKGEntry) + 1);
 
-	const usz read_size = decrypt(0, m_header.file_count * sizeof(PKGEntry), m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : m_dec_key.data(), entries.data());
+	const usz read_size = decrypt(0, m_header.file_count * sizeof(PKGEntry), m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{reinterpret_cast<u8*>(entries.data()), entries.size() * sizeof(PKGEntry)});
 
 	if (read_size < m_header.file_count * sizeof(PKGEntry))
 	{
@@ -600,7 +667,7 @@ bool package_reader::read_param_sfo()
 
 		std::string name_buf(entry.name_size + BUF_PADDING, '\0');
 
-		if (usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), name_buf.data()); read_size < entry.name_size)
+		if (usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{reinterpret_cast<u8*>(name_buf.data()), name_buf.size()}); read_size < entry.name_size)
 		{
 			pkg_log.error("PKG name could not be read (size=0x%x, offset=0x%x)", entry.name_size, entry.name_offset);
 			continue;
@@ -623,7 +690,7 @@ bool package_reader::read_param_sfo()
 
 				data_buf.resize(block_size + BUF_PADDING);
 
-				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), data_buf.data()) != block_size)
+				if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), data_buf) != block_size)
 				{
 					pkg_log.error("Failed to decrypt PARAM.SFO file");
 					return false;
@@ -653,7 +720,6 @@ bool package_reader::read_param_sfo()
 	return false;
 }
 
-// TODO: maybe also check if VERSION matches
 package_install_result package_reader::check_target_app_version() const
 {
 	if (!m_is_valid)
@@ -698,7 +764,13 @@ package_install_result package_reader::check_target_app_version() const
 		{
 			// We are unable to compare anything with the target app version
 			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
-			return {package_install_result::error_type::app_version, {std::string(target_app_ver)}};
+			return {
+				.error = package_install_result::error_type::app_version,
+				.version = {
+					.app_ver = std::string(app_ver),
+					.expected = std::string(target_app_ver)
+				}
+			};
 		}
 
 		// There is nothing we need to compare, so we may install the package
@@ -727,6 +799,12 @@ package_install_result package_reader::check_target_app_version() const
 
 	if (target_app_ver.empty())
 	{
+		if (!(m_metadata.package_type & pkg_flag::PKG_FLAG_PATCH))
+		{
+			// This should be a DLC. Let's allow DLCs even with smaller APP_VER.
+			return {package_install_result::error_type::no_error};
+		}
+
 		// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
 
 		const double new_version = std::strtod(app_ver.data(), &ev1);
@@ -744,7 +822,13 @@ package_install_result package_reader::check_target_app_version() const
 		}
 
 		pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
-		return {package_install_result::error_type::app_version, {std::string(app_ver), std::string(installed_app_ver)}};
+		return {
+			.error = package_install_result::error_type::app_version,
+			.version = {
+				.app_ver = std::string(app_ver),
+				.installed = std::string(installed_app_ver)
+			}
+		};
 	}
 
 	// Check if the installed app version matches the target app version
@@ -764,7 +848,14 @@ package_install_result package_reader::check_target_app_version() const
 	}
 
 	pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
-	return {package_install_result::error_type::app_version, {std::string(target_app_ver), std::string(installed_app_ver)}};
+	return {
+		.error = package_install_result::error_type::app_version,
+		.version = {
+			.app_ver = std::string(app_ver),
+			.expected = std::string(target_app_ver),
+			.installed = std::string(installed_app_ver)
+		}
+	};
 }
 
 bool package_reader::set_install_path()
@@ -807,8 +898,18 @@ bool package_reader::set_install_path()
 	}
 
 	// TODO: Verify whether other content types require appending title ID
-	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
-		dir += m_install_dir + '/';
+	// Append title ID depending on content type
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_THEME && m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+	{
+		// The name is read as it comes from the package
+		if (m_install_dir.empty() || leaves_directory(m_install_dir))
+		{
+			pkg_log.error("Invalid installation directory name '%s'", m_install_dir);
+			return false;
+		}
+
+		dir += vfs::escape(m_install_dir) + '/';
+	}
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	m_was_null = !fs::is_dir(dir);
@@ -829,6 +930,46 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		pkg_log.error("Could not create the installation directory %s (error=%s)", m_install_path, fs::g_tls_error);
 		return false;
 	}
+
+	const auto canonicalize = [](std::string_view utf8_path)
+	{
+		std::error_code ec;
+		auto result = std::filesystem::weakly_canonical(fs_path_from_utf8(utf8_path), ec);
+
+		if (ec)
+		{
+			pkg_log.warning("Failed to canonicalize path '%s' (%s); falling back to lexical normalization.", utf8_path, ec.message());
+			result = fs_path_from_utf8(utf8_path).lexically_normal();
+		}
+
+		return result;
+	};
+
+	// weakly_canonical stats every prefix of a path that does not exist yet, and a package holds thousands of files in a
+	// few hundred directories: a directory is resolved once, and a file not on disk is that result plus its own name
+	std::map<std::string, std::filesystem::path, std::less<>> canonical_dirs;
+
+	// The installation directory is resolved without its closing "/", like every entry below it: on a file system that
+	// cannot resolve it, the lexical form would keep that separator as an empty last element no entry can match
+	std::string_view install_dir = m_install_path;
+
+	while (install_dir.ends_with('/'))
+	{
+		install_dir.remove_suffix(1);
+	}
+
+	const std::filesystem::path install_path = canonicalize(install_dir);
+
+	if (install_path.empty())
+	{
+		pkg_log.error("Failed to normalize installation path for '%s'", m_install_path);
+		return false;
+	}
+
+	const auto is_inside_install_path = [&install_path](const std::filesystem::path& path)
+	{
+		return std::mismatch(install_path.begin(), install_path.end(), path.begin(), path.end()).first == install_path.end();
+	};
 
 	m_install_entries.clear();
 	m_bootable_file_path.clear();
@@ -858,7 +999,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		const bool is_psp = (entry.type & PKG_FILE_ENTRY_PSP) != 0u;
 
-		if (const usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), name_buf.data()); read_size < entry.name_size)
+		if (const usz read_size = decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{reinterpret_cast<u8*>(name_buf.data()), name_buf.size()}); read_size < entry.name_size)
 		{
 			num_failures++;
 			pkg_log.error("PKG name could not be read (size=0x%x, offset=0x%x)", entry.name_size, entry.name_offset);
@@ -867,7 +1008,52 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
+		if (leaves_directory(name))
+		{
+			num_failures++;
+			pkg_log.error("PKG entry path escapes installation directory: '%s'", name);
+			break;
+		}
+
 		std::string path = m_install_path + vfs::escape(name);
+
+		const u8 entry_type = entry.type & 0xff;
+		const bool is_folder = entry_type == PKG_FILE_ENTRY_FOLDER || entry_type == 0x12;
+
+		std::filesystem::path canonical_path;
+
+		// A path already on disk is resolved as a whole: it may be a link, or be spelt otherwise there
+		if (is_folder || fs::exists(path))
+		{
+			canonical_path = canonicalize(path);
+
+			if (is_folder)
+			{
+				canonical_dirs.emplace(path, canonical_path);
+			}
+		}
+		else
+		{
+			const usz slash = path.rfind('/');
+			const std::string_view dir(path.data(), slash);
+			auto found = canonical_dirs.find(dir);
+
+			if (found == canonical_dirs.end())
+			{
+				found = canonical_dirs.emplace(std::string(dir), canonicalize(dir)).first;
+			}
+
+			canonical_path = found->second / fs_path_from_utf8(std::string_view(path).substr(slash + 1));
+		}
+
+		if (canonical_path.empty() || !is_inside_install_path(canonical_path))
+		{
+			num_failures++;
+			pkg_log.error("PKG entry path escapes installation directory: '%s'", name);
+			break;
+		}
+
+		path = fs_path_to_utf8(canonical_path);
 
 		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
 		{
@@ -877,8 +1063,6 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		{
 			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
 		}
-
-		const u8 entry_type = entry.type & 0xff;
 
 		switch (entry_type)
 		{
@@ -904,16 +1088,8 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			// TODO: check for valid utf8 characters
-			const std::string true_path = std::filesystem::weakly_canonical(path).string();
-			if (true_path.empty())
-			{
-				num_failures++;
-				pkg_log.error("Failed to get weakly_canonical path for '%s'", path);
-				break;
-			}
-
-			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
+			// "path" went through "vfs::escape", which also takes care of the bytes that are not valid UTF-8
+			auto map_ptr = &*all_install_entries.try_emplace(std::move(path)).first;
 
 			m_install_entries.push_back({
 				.weak_reference = map_ptr,
@@ -1037,7 +1213,7 @@ void package_reader::extract_worker()
 					const install_entry& m_entry;
 					usz m_pos;
 
-					explicit pkg_file_reader(std::function<u64(u64, void* buffer, u64)> read_func, const install_entry& entry) noexcept
+					explicit pkg_file_reader(std::function<u64(u64, void*, u64)> read_func, const install_entry& entry) noexcept
 						: m_read_func(std::move(read_func))
 						, m_entry(entry)
 						, m_pos(0)
@@ -1106,6 +1282,9 @@ void package_reader::extract_worker()
 
 				read_cache.clear();
 
+				// 16MB buffer
+				std::vector<u8> buffer(std::min<usz>(entry.file_size, 1u << 24) + BUF_PADDING);
+
 				auto reader = std::make_unique<pkg_file_reader>([&, cache_off = u64{umax}](usz pos, void* ptr, usz size) mutable -> u64
 				{
 					if (pos >= entry.file_size || !size)
@@ -1113,6 +1292,7 @@ void package_reader::extract_worker()
 						return 0;
 					}
 
+					const usz original_size = size;
 					size = std::min<u64>(entry.file_size - pos, size);
 
 					u64 size_cache_end = 0;
@@ -1147,7 +1327,7 @@ void package_reader::extract_worker()
 						read_cache.resize(block_size + BUF_PADDING);
 						cache_off = pos;
 
-						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), read_cache.data());
+						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), read_cache);
 
 						if (!advance_size)
 						{
@@ -1165,8 +1345,17 @@ void package_reader::extract_worker()
 					while (read_size < size)
 					{
 						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
+						u64 available_buffer_size = original_size - read_size;
 
-						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), static_cast<u8*>(ptr) + read_size);
+						if (buffer.data() == ptr)
+						{
+							available_buffer_size = buffer.size() - read_size;
+							ensure(buffer.size() == original_size + BUF_PADDING);
+						}
+
+						ensure(available_buffer_size >= block_size);
+
+						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{static_cast<u8*>(ptr) + read_size, available_buffer_size});
 
 						if (!advance_size)
 						{
@@ -1200,9 +1389,6 @@ void package_reader::extract_worker()
 					pkg_log.error("Failed to decrypt EDAT file %s (error=%s)", path, fs::g_tls_error);
 					break;
 				}
-
-				// 16MB buffer
-				std::vector<u8> buffer(std::min<usz>(entry.file_size, 1u << 24) + BUF_PADDING);
 
 				while (usz read_size = final_data.read(buffer.data(), buffer.size() - BUF_PADDING))
 				{
@@ -1253,7 +1439,7 @@ void package_reader::extract_worker()
 	}
 }
 
-package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
+package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths, bool from_optical_drive)
 {
 	package_install_result::error_type error = package_install_result::error_type::no_error;
 	usz num_failures = 0;
@@ -1305,15 +1491,18 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 
 		if (reader.m_num_failures == 0)
 		{
-			const usz thread_count = std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
-
-			named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(thread_count), 1) - 1, [&]()
+			// Disc archives don't like multithreaded file reads, so let's just use a single thread here
+			const usz thread_count = from_optical_drive ? 1 : std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
+			const usz num_threads_succeeded = map_workload("PKG Installer "sv, thread_count, [&reader]()
 			{
 				reader.extract_worker();
 			});
 
-			reader.extract_worker();
-			workers.join();
+			if (thread_count != num_threads_succeeded)
+			{
+				pkg_log.error("%d thread(s) failed with an exception!", thread_count - num_threads_succeeded);
+				reader.m_num_failures++;
+			}
 		}
 
 		num_failures += reader.m_num_failures;
@@ -1381,14 +1570,16 @@ u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 	return m_file ? m_file.read(data_ptr, num_bytes) : 0;
 }
 
-std::span<const char> package_reader::archive_read_block(u64 offset, void* data_ptr, u64 num_bytes)
+std::span<const char> package_reader::archive_read_block(u64 offset, std::span<u8> dst, u64 num_bytes)
 {
-	const usz read_n = m_file.read_at(offset, data_ptr, num_bytes);
+	ensure(dst.size() >= num_bytes);
 
-	return {static_cast<const char*>(data_ptr), read_n};
+	const usz read_n = m_file.read_at(offset, dst.data(), num_bytes);
+
+	return {reinterpret_cast<const char*>(dst.data()), read_n};
 }
 
-usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_buf)
+usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8> local_buf)
 {
 	if (!m_is_valid)
 	{
@@ -1400,15 +1591,26 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 		return 0;
 	}
 
+	ensure(local_buf.size() >= size);
+
 	// Read the data and set available size
 	const auto data_span = archive_read_block(m_header.data_offset + offset, local_buf, size);
-	ensure(data_span.data() == static_cast<void*>(local_buf));
+	ensure(data_span.data() == static_cast<void*>(local_buf.data()));
+	ensure(data_span.size() <= size);
 
-	// Get block count
-	const u64 blocks = (data_span.size() + 15) / 16;
-	const auto out_data = reinterpret_cast<u8*>(local_buf);
+	// Clear padding
+	if (data_span.size() < local_buf.size())
+	{
+		std::memset(&local_buf[data_span.size()], 0, local_buf.size() - data_span.size());
+	}
 
-	if (m_header.pkg_type == PKG_RELEASE_TYPE_DEBUG)
+	// Get block count. Round up.
+	const u64 blocks = utils::aligned_div<u64>(data_span.size(), sizeof(u128));
+	const u64 read_size = blocks * sizeof(u128);
+
+	switch (m_header.pkg_type)
+	{
+	case PKG_RELEASE_TYPE_DEBUG:
 	{
 		// Debug key
 		be_t<u64> input[8] =
@@ -1422,7 +1624,7 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 		for (u64 i = 0; i < blocks; i++)
 		{
 			// Initialize stream cipher for current position
-			input[7] = offset / 16 + i;
+			input[7] = offset / sizeof(u128) + i;
 
 			struct sha1_hash
 			{
@@ -1431,11 +1633,13 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 
 			sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
-			const u128 v = read_from_ptr<u128>(out_data, i * 16);
-			write_to_ptr<u128>(out_data, i * 16, v ^ read_from_ptr<u128>(hash.data));
+			const u128 v = read_from_ptr<u128>(local_buf, i * sizeof(u128));
+			write_to_ptr<u128>(local_buf, i * sizeof(u128), v ^ read_from_ptr<u128>(hash.data));
 		}
+
+		break;
 	}
-	else if (m_header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
+	case PKG_RELEASE_TYPE_RELEASE:
 	{
 		aes_context ctx;
 
@@ -1443,7 +1647,7 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 		aes_setkey_enc(&ctx, key, 128);
 
 		// Initialize stream cipher for start position
-		be_t<u128> input = m_header.klicensee.value() + offset / 16;
+		be_t<u128> input = m_header.klicensee.value() + offset / sizeof(u128);
 
 		// Increment stream position for every block
 		for (u64 i = 0; i < blocks; i++, input++)
@@ -1452,19 +1656,25 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 
 			aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
 
-			const u128 v = read_from_ptr<u128>(out_data, i * 16);
-			write_to_ptr<u128>(out_data, i * 16, v ^ key);
+			const u128 v = read_from_ptr<u128>(local_buf, i * sizeof(u128));
+			write_to_ptr<u128>(local_buf, i * sizeof(u128), v ^ key);
 		}
+
+		break;
 	}
-	else
+	default:
 	{
 		pkg_log.error("Unknown release type (0x%x)", m_header.pkg_type);
+		break;
+	}
 	}
 
-	if (blocks * 16 != size)
+	if (read_size > size)
 	{
 		// Put NTS and other zeroes on unaligned reads
-		std::memset(out_data + size, 0, blocks * 16 - size);
+		const u64 pad_size = read_size - size;
+		ensure(local_buf.size() >= (size + pad_size));
+		std::memset(&local_buf[size], 0, pad_size);
 	}
 
 	// Return the amount of data written in buf

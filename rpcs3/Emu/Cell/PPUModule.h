@@ -277,10 +277,18 @@ public:
 	static const ppu_static_module cellWMAPROdec;
 	static const ppu_static_module libad_async;
 	static const ppu_static_module libad_core;
+	static const ppu_static_module libavcdec;
+	static const ppu_static_module libdivx311dec;
+	static const ppu_static_module libdivxdec;
 	static const ppu_static_module libfs_utility_init;
 	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
+	static const ppu_static_module libmvcdec;
+	static const ppu_static_module libsjvtd;
+	static const ppu_static_module libsmvd2;
+	static const ppu_static_module libsmvd4;
 	static const ppu_static_module libsnd3;
+	static const ppu_static_module libsvc1d;
 	static const ppu_static_module libsynth2;
 	static const ppu_static_module sceNp;
 	static const ppu_static_module sceNpBasicLimited;

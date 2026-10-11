@@ -490,9 +490,20 @@ namespace rsx
 			return decode<NV4097_SET_BLEND_ENABLE_MRT>().blend_surface_d();
 		}
 
+		u32 blend_enabled_mask() const
+		{
+			const u32 base = decode<NV4097_SET_BLEND_ENABLE>().blend_enabled() ? 1u : 0u;
+			return (base | registers[NV4097_SET_BLEND_ENABLE_MRT]) & 0xf;
+		}
+
 		bool line_smooth_enabled() const
 		{
 			return decode<NV4097_SET_LINE_SMOOTH_ENABLE>().line_smooth_enabled();
+		}
+
+		shading_mode shade_mode() const
+		{
+			return decode<NV4097_SET_SHADE_MODE>().shading();
 		}
 
 		bool poly_offset_point_enabled() const
@@ -754,6 +765,24 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_COLOR_TARGET>().target();
 		}
 
+		u32 surface_color_target_mask() const
+		{
+			switch (surface_color_target())
+			{
+			case surface_target::surface_a:
+			case surface_target::surface_b:
+				return 1u;
+			case surface_target::surfaces_a_b:
+				return 3u;
+			case surface_target::surfaces_a_b_c:
+				return 7u;
+			case surface_target::surfaces_a_b_c_d:
+				return 15u;
+			default:
+				return 0u;
+			}
+		}
+
 		u16 surface_clip_origin_x() const
 		{
 			return decode<NV4097_SET_SURFACE_CLIP_HORIZONTAL>().origin_x();
@@ -933,6 +962,11 @@ namespace rsx
 		u8 surface_log2_width() const
 		{
 			return decode<NV4097_SET_SURFACE_FORMAT>().log2width();
+		}
+
+		bool surface_is_swizzle_remapped() const
+		{
+			return decode<NV4097_SET_SURFACE_FORMAT>().is_remapped_format();
 		}
 
 		u32 vertex_data_base_offset() const

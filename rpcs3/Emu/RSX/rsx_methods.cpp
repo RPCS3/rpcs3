@@ -4,8 +4,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 
-
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/RSX/NV47/HW/nv47.h"
 #include "Emu/RSX/NV47/HW/nv47_sync.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h" // TODO: Context objects belong in FW not HW
@@ -67,6 +67,9 @@ namespace rsx
 
 	void user_command(context* ctx, u32, u32 arg)
 	{
+		// USER_COMMAND induces a full drain of the backend and frontend.
+		RSX(ctx)->sync();
+
 		if (!RSX(ctx)->isHLE)
 		{
 			sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
@@ -772,11 +775,10 @@ namespace rsx
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
 			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
@@ -787,7 +789,7 @@ namespace rsx
 		{
 			if (methods[id] && state_signals[id])
 			{
-				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.");
+				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.", id);
 			}
 		}
 	}
@@ -1618,6 +1620,7 @@ namespace rsx
 
 		// NV4097
 		bind(NV4097_SET_CULL_FACE, nv4097::set_face_property);
+		bind(NV4097_SET_ZMIN_MAX_CONTROL, nv4097::set_zmin_max_control);
 		bind(NV4097_SET_FRONT_FACE, nv4097::set_face_property);
 		bind(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release);
 		bind(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release);
@@ -1703,6 +1706,7 @@ namespace rsx
 		bind(NV4097_WAIT_FOR_IDLE, nv4097::sync);
 		bind(NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty);
 		bind(NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty);
+		bind(NV4097_SET_SHADE_MODE, nv4097::set_shading_mode);
 
 		bind(NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start);
 		bind(NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask);

@@ -44,7 +44,13 @@
 #include "Emu/Io/LogitechG27.h"
 #endif
 
-#include <libusb.h>
+#ifdef _WIN32
+#if LIBUSB_WINDOWS_HOTPLUG && LIBUSB_API_VERSION >= 0x0100010C
+#define SYS_USBD_HOTPLUG_SUPPORTED 1
+#endif
+#elif LIBUSB_API_VERSION >= 0x01000102
+#define SYS_USBD_HOTPLUG_SUPPORTED 1
+#endif
 
 LOG_CHANNEL(sys_usbd);
 
@@ -55,6 +61,8 @@ cfg_usios g_cfg_usio;
 cfg_guncon3 g_cfg_guncon3;
 cfg_topshotelite g_cfg_topshotelite;
 cfg_topshotfearmaster g_cfg_topshotfearmaster;
+
+extern atomic_t<bool> libusbd_active;
 
 template <>
 void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
@@ -139,6 +147,7 @@ public:
 	void connect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void disconnect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void reconnect_usb_device(u32 assigned_number);
+	void set_usb_device_attached(usb_device* raw_dev, bool attached);
 
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
@@ -152,6 +161,7 @@ public:
 	ppu_thread* sq{};
 
 	atomic_t<u64> usb_hotplug_timeout = umax;
+	atomic_t<bool> hotplug_supported = false;
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -214,7 +224,6 @@ private:
 		{0x12BA, 0x04A0, 0x04A0, "Top Shot Elite", nullptr, nullptr},
 		{0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster", nullptr, nullptr},
 		{0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod", nullptr, nullptr},
-
 
 		// Wheels
 #ifdef HAVE_SDL3
@@ -292,13 +301,9 @@ private:
 
 	libusb_context* ctx = nullptr;
 
-#ifndef _WIN32
-#if LIBUSB_API_VERSION >= 0x01000102
+#if SYS_USBD_HOTPLUG_SUPPORTED
 	libusb_hotplug_callback_handle callback_handle {};
 #endif
-#endif
-
-	bool hotplug_supported = false;
 };
 
 void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
@@ -311,14 +316,12 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
-#ifndef _WIN32
-#if LIBUSB_API_VERSION >= 0x01000102
-static int LIBUSB_CALL hotplug_callback(libusb_context* /*ctx*/, libusb_device * /*dev*/, libusb_hotplug_event event, void * /*user_data*/)
+#if SYS_USBD_HOTPLUG_SUPPORTED
+static int LIBUSB_CALL hotplug_callback(libusb_context* /*ctx*/, libusb_device* /*dev*/, libusb_hotplug_event event, void* /*user_data*/)
 {
-	handle_hotplug_event(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED);
+	handle_hotplug_event(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, true);
 	return 0;
 }
-#endif
 #endif
 
 #if LIBUSB_API_VERSION >= 0x0100010A
@@ -353,7 +356,7 @@ void usb_handler_thread::perform_scan()
 {
 	// look if any device which we could be interested in is actually connected
 	libusb_device** list = nullptr;
-	const ssize_t ndev   = libusb_get_device_list(ctx, &list);
+	const auto ndev = libusb_get_device_list(ctx, &list);
 	std::set<uint64_t> seen_usb_devices;
 
 	if (ndev < 0)
@@ -362,7 +365,7 @@ void usb_handler_thread::perform_scan()
 		return;
 	}
 
-	for (ssize_t index = 0; index < ndev; index++)
+	for (auto index = 0; index < ndev; index++)
 	{
 		libusb_device* dev = list[index];
 		libusb_device_descriptor desc;
@@ -389,6 +392,17 @@ void usb_handler_thread::perform_scan()
 				&& desc.idProduct >= entry.id_product_min
 				&& desc.idProduct <= entry.id_product_max)
 			{
+#ifdef __APPLE__
+				// On macOS, libusb cannot claim HID interfaces, so passing through a real
+				// controller that also has an emulated implementation yields a non-functional
+				// device and silently overrides the user's emulated-device setting (the emulated
+				// setup below only fills slots not already passed through). Prefer the emulated
+				// implementation whenever the user has enabled it. (e.g. DJ Hero Turntable)
+				if (entry.make_instance && entry.max_device_count && entry.max_device_count() > 0)
+				{
+					continue;
+				}
+#endif
 				sys_usbd.success("Found device: %s", std::basic_string(entry.device_name));
 				libusb_ref_device(dev);
 				std::shared_ptr<usb_device_passthrough> usb_dev = std::make_shared<usb_device_passthrough>(dev, desc, get_new_location());
@@ -461,9 +475,7 @@ usb_handler_thread::usb_handler_thread()
 		return;
 	}
 
-#ifdef _WIN32
-	hotplug_supported = true;
-#elif LIBUSB_API_VERSION >= 0x01000102
+#if SYS_USBD_HOTPLUG_SUPPORTED
 	if (libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG))
 	{
 		if (int res = libusb_hotplug_register_callback(ctx, static_cast<libusb_hotplug_event>(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED |
@@ -478,6 +490,8 @@ usb_handler_thread::usb_handler_thread()
 			hotplug_supported = true;
 		}
 	}
+#elif defined(_WIN32)
+	hotplug_supported = true;
 #endif
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
@@ -561,6 +575,12 @@ usb_handler_thread::usb_handler_thread()
 		case microphone_handler::standard:
 			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Logitech));
 			break;
+		case microphone_handler::eye_toy:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::EyeToy));
+			break;
+		case microphone_handler::ps_eye:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::PsEye));
+			break;
 		case microphone_handler::real_singstar:
 		case microphone_handler::singstar:
 			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::SingStar));
@@ -625,11 +645,9 @@ usb_handler_thread::~usb_handler_thread()
 			libusb_free_transfer(transfers[index].transfer);
 	}
 
-#ifndef _WIN32
-#if LIBUSB_API_VERSION >= 0x01000102
+#if SYS_USBD_HOTPLUG_SUPPORTED
 	if (ctx && hotplug_supported)
 		libusb_hotplug_deregister_callback(ctx, callback_handle);
-#endif
 #endif
 
 	if (ctx)
@@ -652,7 +670,7 @@ void usb_handler_thread::operator()()
 			// every 4 seconds.
 			// On systems where hotplug is native, we wait a little bit for devices to settle before we start the scan
 			perform_scan();
-			usb_hotplug_timeout = hotplug_supported ? umax : get_system_time() + 4'000'000ull;
+			usb_hotplug_timeout = hotplug_supported ? umax : (get_system_time() + 4'000'000ull);
 		}
 
 		// Process asynchronous requests that are pending
@@ -661,7 +679,7 @@ void usb_handler_thread::operator()()
 		u64 delay = 1'000;
 
 		// Process fake transfers
-		if (!fake_transfers.empty())
+		if (libusbd_active && !fake_transfers.empty())
 		{
 			std::lock_guard lock_tf(mutex_transfers);
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
@@ -951,6 +969,12 @@ void usb_handler_thread::connect_usb_device(std::shared_ptr<usb_device> dev, boo
 	if (update_usb_devices)
 		usb_devices.push_back(dev);
 
+	if (!dev->is_attachable())
+	{
+		sys_usbd.trace("USB device(VID=0x%04x, PID=0x%04x) is not attachable, skipping connection", dev->device._device.idVendor, dev->device._device.idProduct);
+		return;
+	}
+
 	for (const auto& [name, ldd] : ldds)
 	{
 		if (dev->device._device.idVendor == ldd.id_vendor && dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max)
@@ -1005,6 +1029,23 @@ void usb_handler_thread::reconnect_usb_device(u32 assigned_number)
 			connect_usb_device(dev, false);
 			break;
 		}
+	}
+}
+
+void usb_handler_thread::set_usb_device_attached(usb_device* raw_dev, bool attached)
+{
+	std::lock_guard lock(mutex);
+	for (const auto& dev : usb_devices)
+	{
+		if (dev.get() != raw_dev)
+			continue;
+
+		if (attached && !dev->assigned_number)
+			connect_usb_device(dev, false);
+		else if (!attached && dev->assigned_number)
+			disconnect_usb_device(dev, false);
+
+		break;
 	}
 }
 
@@ -1104,14 +1145,27 @@ void reconnect_usb(u32 assigned_number)
 	usbh->reconnect_usb_device(assigned_number);
 }
 
-void handle_hotplug_event(bool connected)
+void set_usb_device_attached(usb_device* dev, bool attached)
+{
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
+	usbh->set_usb_device_attached(dev, attached);
+}
+
+void handle_hotplug_event(bool connected, bool source_is_libusb)
 {
 	if (auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>())
 	{
+		if (usbh->hotplug_supported && !source_is_libusb) return;
+
+		sys_usbd.notice("handle_hotplug_event: connected=%d", connected);
+
 		usbh->usb_hotplug_timeout = get_system_time() + (connected ? 1'000'000ull : 0);
 	}
 }
-
 
 error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 {
@@ -1567,7 +1621,7 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 	transfer.iso_request.num_packets = iso_request->num_packets;
 	for (u32 index = 0; index < iso_request->num_packets; index++)
 	{
-		transfer.iso_request.packets[index] = iso_request->packets[index];
+		::at32(transfer.iso_request.packets, index) = ::at32(iso_request->packets, index);
 	}
 
 	pipe.device->isochronous_transfer(&transfer);

@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_fonts.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/vfs_config.h"
 
 #ifndef _WIN32
@@ -108,7 +108,7 @@ namespace rsx
 			glyph_load_setup result;
 			result.font_names.push_back(font_name);
 
-			const std::vector<std::string> font_dirs = Emu.GetCallbacks().get_font_dirs();
+			const std::vector<std::string> font_dirs = g_emu_callbacks.get_font_dirs();
 			result.lookup_font_dirs.insert(result.lookup_font_dirs.end(), font_dirs.begin(), font_dirs.end());
 			// Search dev_flash for the font too
 			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
@@ -126,7 +126,12 @@ namespace rsx
 				result.font_names.emplace_back("Roboto-Regular.ttf");
 				result.font_names.emplace_back("OpenSans-Regular.ttf");
 				result.font_names.emplace_back("FreeSans.ttf");
-#elif !defined(_WIN32)
+#elif defined(_WIN32)
+				// Covers symbol blocks (e.g. Roman numerals) that plain Arial may be missing glyphs for.
+				result.font_names.emplace_back("tahoma.ttf");
+				// Covers symbol blocks (e.g. U+2600-26FF Miscellaneous Symbols) that Arial and Tahoma lack.
+				result.font_names.emplace_back("seguisym.ttf");
+#else
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
 #endif
@@ -402,8 +407,9 @@ namespace rsx
 					result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
 					result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
 
-					// The next word will begin after any whitespaces.
-					if (is_whitespace)
+					// The next word will begin after any whitespaces. CJK/Hangul scripts don't use spaces
+					// between words, so also allow breaking right after each such character.
+					if (is_whitespace || classify(get_page_id(c)) != language_class::default_)
 					{
 						begin_of_word = result.size();
 					}
@@ -457,12 +463,9 @@ namespace rsx
 			return render_text_ex(unused_x, unused_y, text, -1, max_width, wrap);
 		}
 
-		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
+		void font::get_char_offset(f32& loc_x, f32& loc_y, const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
-			f32 loc_x, loc_y;
-
 			render_text_ex(loc_x, loc_y, text, max_length, max_width, wrap);
-			return {loc_x, loc_y};
 		}
 
 		const std::vector<u8>& font::get_glyph_data() const

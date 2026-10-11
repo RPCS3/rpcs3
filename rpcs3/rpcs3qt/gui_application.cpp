@@ -28,6 +28,7 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
@@ -55,7 +56,10 @@
 #include <clocale>
 
 #include "Emu/RSX/Null/NullGSRender.h"
+
+#ifndef __APPLE__
 #include "Emu/RSX/GL/GLGSRender.h"
+#endif
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
@@ -91,49 +95,194 @@ gui_application::~gui_application()
 #endif
 }
 
-bool gui_application::Init()
+int gui_application::exec()
+{
+	// Show a series of dialogs using the main event loop before finally showing the main window.
+	// We used to do this synchronous with e.g. QDialog::exec() before we called gui_application::exec(),
+	// but when you call quit() (as seen in these dialogs) without a running event loop,
+	// then the destructors of QObjects won't be called, leading to all sorts of issues.
+	std::shared_ptr<u32> step_index = std::make_shared<u32>(0);
+	std::shared_ptr<std::vector<std::function<void()>>> steps = std::make_shared<std::vector<std::function<void()>>>();
+
+	m_show_next_dialog = [this, step_index, steps]()
+	{
+		ensure(steps && step_index);
+		const auto& func = ::at32(*steps, (*step_index)++);
+		ensure(func);
+		func();
+	};
+
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
+	{
+		steps->push_back([this]()
+		{
+			const std::string_view branch_name = rpcs3::get_full_branch();
+			gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setWindowTitle(tr("Experimental Build Warning"));
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg->setDefaultButton(QMessageBox::No);
+			msg->setText(gui::utils::make_paragraph(tr(
+				"Please understand that this build is not an official RPCS3 release.\n"
+				"This build contains changes that may break games, or even <b>damage</b> your data.\n"
+				"We recommend to download and use the official build from the %0.\n"
+				"\n"
+				"Build origin: %1\n"
+				"Do you wish to use this build anyway?")
+				.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))
+				.arg(Qt::convertFromPlainText(branch_name.data()))));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::No)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+#ifdef __linux__
+	const bool is_flatpak = qEnvironmentVariableIsSet("FLATPAK_ID");
+	const bool is_snap = qEnvironmentVariableIsSet("SNAP");
+	const QString unofficial_build = is_flatpak ? "Flatpak" : (is_snap ? "Snap" : "");
+	if (!unofficial_build.isEmpty())
+	{
+		steps->push_back([this, unofficial_build]()
+		{
+			gui_log.warning("%s Build Warning!", unofficial_build);
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setWindowTitle(tr("Unofficial Build Warning"));
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg->setDefaultButton(QMessageBox::No);
+			msg->setText(gui::utils::make_paragraph(tr(
+				"Warning! You're running an unofficial %0 build of RPCS3.\n"
+				"You will get no official support for this build.\n"
+				"Issues opened on the RPCS3 GitHub related to %0 builds are not allowed and will be closed.\n"
+				"We recommend to download and use the official build from the %1.\n"
+				"\n"
+				"Do you wish to use this build anyway?")
+				.arg(unofficial_build)
+				.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::No)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+#endif
+	if (m_render_creator->vulkan_timed_out)
+	{
+		steps->push_back([this]()
+		{
+			gui_log.error("Vulkan device enumeration timed out");
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setIcon(QMessageBox::Critical);
+			msg->setStandardButtons(QMessageBox::Ignore | QMessageBox::Abort);
+			msg->setDefaultButton(QMessageBox::Abort);
+			msg->setWindowTitle(tr("Vulkan Check Timeout"));
+			msg->setText(tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
+			                "graphics drivers, reinstalling them could fix the issue.\n\n"
+			                "Selecting ignore starts the emulator without Vulkan support."));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::Abort)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
+	{
+		steps->push_back([this]()
+		{
+			welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
+			connect(welcome, &QDialog::finished, this, [this](int result)
+			{
+				if (result == QDialog::Rejected)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			welcome->open();
+		});
+	}
+
+	steps->push_back([this]()
+	{
+		if (m_main_window)
+		{
+			m_main_window->show();
+		}
+
+#ifdef __APPLE__
+		if (!m_render_creator->Vulkan.supported)
+		{
+			QMessageBox::warning(nullptr,
+									tr("Warning"),
+									tr("Vulkan is not supported on this Mac.\n"
+									"No graphics will be rendered."));
+		}
+#endif
+
+		// Check maxfiles
+		if (utils::get_maxfiles() < 4096)
+		{
+			QMessageBox::warning(nullptr,
+									tr("Warning"),
+									tr("The current limit of maximum file descriptors is too low.\n"
+									"Some games will crash.\n"
+									"\n"
+									"Please increase the limit before running RPCS3."));
+		}
+	});
+
+	m_show_next_dialog();
+
+	return QGuiApplication::exec();
+}
+
+void gui_application::Init()
 {
 #ifndef __APPLE__
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 #endif
 
-	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
-	{
-		const std::string_view branch_name = rpcs3::get_full_branch();
-		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
-
-		QMessageBox msg;
-		msg.setWindowModality(Qt::WindowModal);
-		msg.setWindowTitle(tr("Experimental Build Warning"));
-		msg.setIcon(QMessageBox::Critical);
-		msg.setTextFormat(Qt::RichText);
-		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(gui::utils::make_paragraph(tr(
-			"Please understand that this build is not an official RPCS3 release.\n"
-			"This build contains changes that may break games, or even <b>damage</b> your data.\n"
-			"We recommend to download and use the official build from the %0.\n"
-			"\n"
-			"Build origin: %1\n"
-			"Do you wish to use this build anyway?")
-			.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))
-			.arg(Qt::convertFromPlainText(branch_name.data()))));
-		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-		if (msg.exec() == QMessageBox::No)
-		{
-			return false;
-		}
-	}
-
-	m_emu_settings = std::make_shared<emu_settings>();
+	m_emu_settings = std::make_shared<emu_settings>(m_render_creator);
 	m_gui_settings = std::make_shared<gui_settings>();
 	m_persistent_settings = std::make_shared<persistent_settings>();
-
-	if (!m_emu_settings->Init())
-	{
-		return false;
-	}
 
 	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
 	{
@@ -151,52 +300,42 @@ bool gui_application::Init()
 		m_active_user = m_persistent_settings->GetCurrentUser("00000001").toStdString();
 	}
 
+	// Create callbacks from the emulator, which reference the handlers.
+	create_callbacks();
+
 	// Force init the emulator
-	InitializeEmulator(m_active_user, m_show_gui);
+	InitializeEmulator(m_active_user, m_show_gui, false);
+
+	// Create connects to propagate events throughout Gui.
+	InitializeConnects();
 
 	// Create the main window
 	if (m_show_gui)
 	{
-		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, nullptr);
+		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, m_with_cli_boot, nullptr);
 
 		const auto codes    = GetAvailableLanguageCodes();
 		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
 		const auto index    = codes.indexOf(language);
 
 		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
-	}
 
-	// Create callbacks from the emulator, which reference the handlers.
-	InitializeCallbacks();
+		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
+		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
+		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
 
-	// Create connects to propagate events throughout Gui.
-	InitializeConnects();
+		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
+		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
+		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
+		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
+		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
+		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
 
-	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
-	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
+		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
 
-		if (welcome->exec() == QDialog::Rejected)
-		{
-			// If the agreement on RPCS3's usage conditions was not accepted by the user, ask the main window to gracefully terminate
-			return false;
-		}
-	}
-
-	// Check maxfiles
-	if (utils::get_maxfiles() < 4096)
-	{
-		QMessageBox::warning(nullptr,
-							 tr("Warning"),
-							 tr("The current limit of maximum file descriptors is too low.\n"
-								"Some games will crash.\n"
-								"\n"
-								"Please increase the limit before running RPCS3."));
-	}
-
-	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
-	{
-		return false;
+		m_main_window->Init();
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -216,8 +355,6 @@ bool gui_application::Init()
 		register_device_notification(m_main_window->winId());
 	}
 #endif
-
-	return true;
 }
 
 void gui_application::SwitchTranslator(const QString& language_code)
@@ -438,24 +575,6 @@ void gui_application::InitializeConnects()
 	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
 	connect(this, &QGuiApplication::applicationStateChanged, this, &gui_application::OnAppStateChanged);
 
-	if (m_main_window)
-	{
-		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
-		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
-		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
-		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
-
-		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
-		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
-		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
-		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
-		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
-		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
-		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
-
-		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
-	}
-
 #ifdef WITH_DISCORD_RPC
 	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)
 	{
@@ -482,7 +601,7 @@ void gui_application::InitializeConnects()
 std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	// Load AppIcon
-	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+	const QIcon app_icon = gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	if (m_game_window)
 	{
@@ -504,7 +623,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		}
 
 		// Clean-up old game window. This should only happen if the renderer changed or there was an unexpected error during boot.
-		Emu.GetCallbacks().close_gs_frame();
+		g_emu_callbacks.close_gs_frame();
 	}
 
 	gui_log.notice("gui_application: Creating new game window");
@@ -514,10 +633,11 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
 
 	const bool resize_game_window = m_gui_settings->GetValue(gui::gs_resize).toBool();
+	const bool resize_manually = m_gui_settings->GetValue(gui::gs_resize_manual).toBool();
 
 	if (resize_game_window)
 	{
-		if (m_gui_settings->GetValue(gui::gs_resize_manual).toBool())
+		if (resize_manually)
 		{
 			w = m_gui_settings->GetValue(gui::gs_width).toInt();
 			h = m_gui_settings->GetValue(gui::gs_height).toInt();
@@ -585,6 +705,8 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		frame_geometry.setSize(QSize(w, h));
 	}
 
+	gui_log.notice("gui_application: game window geometry: x=%d, y=%d, w=%d, h=%d, screen=%d, resize=%d, manually=%d", frame_geometry.left(), frame_geometry.top(), frame_geometry.width(), frame_geometry.height(), screen_index, resize_game_window, resize_manually);
+
 	gs_frame* frame = nullptr;
 
 	switch (g_cfg.video.renderer.get())
@@ -628,12 +750,11 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	return std::unique_ptr<gs_frame>(frame);
 }
 
-/** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
-void gui_application::InitializeCallbacks()
+void gui_application::create_callbacks()
 {
-	EmuCallbacks callbacks = CreateCallbacks();
+	main_application::create_callbacks();
 
-	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
+	g_emu_callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		// Close rpcs3 if closed in no-gui mode
 		if (force_quit || !m_main_window)
@@ -643,25 +764,27 @@ void gui_application::InitializeCallbacks()
 				on_exit();
 			}
 
+			const bool no_gui = !m_main_window;
+
 			if (m_main_window)
 			{
 				// Close main window in order to save its window state
 				m_main_window->close();
 			}
 
-			gui_log.notice("Quitting gui application");
+			gui_log.notice("Quitting gui application (force_quit=%d, no-gui=%d)", force_quit, no_gui);
 			quit();
 			return true;
 		}
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
+	g_emu_callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
 	{
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = [](utils::serial* ar)
+	g_emu_callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (g_cfg.video.renderer.get())
 		{
@@ -687,7 +810,7 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	g_emu_callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
 	{
 		switch (g_cfg.io.camera.get())
 		{
@@ -710,7 +833,7 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	g_emu_callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
 	{
 		switch (g_cfg.audio.music.get())
 		{
@@ -726,7 +849,7 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.close_gs_frame  = [this]()
+	g_emu_callbacks.close_gs_frame  = [this]()
 	{
 		if (m_game_window)
 		{
@@ -736,28 +859,28 @@ void gui_application::InitializeCallbacks()
 			m_game_window = nullptr;
 		}
 	};
-	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
-	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
-	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
-	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
-	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
-	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
-	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
+	g_emu_callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
+	g_emu_callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
+	g_emu_callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
+	g_emu_callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
+	g_emu_callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	g_emu_callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
+	g_emu_callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
-	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
-	callbacks.on_pause  = [this]() { OnEmulatorPause(); };
-	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
-	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
-	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+	g_emu_callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
+	g_emu_callbacks.on_pause  = [this]() { OnEmulatorPause(); };
+	g_emu_callbacks.on_resume = [this]() { OnEmulatorResume(true); };
+	g_emu_callbacks.on_stop   = [this]() { OnEmulatorStop(); };
+	g_emu_callbacks.on_ready  = [this]() { OnEmulatorReady(); };
 
-	callbacks.enable_disc_eject  = [this](bool enabled)
+	g_emu_callbacks.enable_disc_eject  = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()
 		{
 			OnEnableDiscEject(enabled);
 		});
 	};
-	callbacks.enable_disc_insert = [this](bool enabled)
+	g_emu_callbacks.enable_disc_insert = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()
 		{
@@ -765,7 +888,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_missing_fw = [this]()
+	g_emu_callbacks.on_missing_fw = [this]()
 	{
 		if (m_main_window)
 		{
@@ -773,7 +896,7 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
+	g_emu_callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{
 		if (m_game_window)
 		{
@@ -788,23 +911,23 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
+	g_emu_callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
 	{
 		return localized_emu::get_string(id, args);
 	};
 
-	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
+	g_emu_callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
 		return localized_emu::get_u32string(id, args);
 	};
 
-	callbacks.get_localized_setting = [this](const cfg::_base* node, u32 enum_index) -> std::string
+	g_emu_callbacks.get_localized_setting = [this](const cfg::_base* node, u32 enum_index) -> std::string
 	{
 		ensure(!!m_emu_settings);
 		return m_emu_settings->GetLocalizedSetting(node, enum_index);
 	};
 
-	callbacks.play_sound = [this](const std::string& path, std::optional<f32> volume)
+	g_emu_callbacks.play_sound = [this](const std::string& path, std::optional<f32> volume)
 	{
 		Emu.CallFromMainThread([this, path, volume]()
 		{
@@ -829,20 +952,19 @@ void gui_application::InitializeCallbacks()
 
 	if (m_show_gui) // If this is false, we already have a fallback in the main_application.
 	{
-		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
+		g_emu_callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs, bool from_optical_drive)
 		{
-			ensure(m_main_window);
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
 			for (const std::string& pkg : pkgs)
 			{
 				pkg_list << QString::fromStdString(pkg);
 			}
-			return m_main_window->InstallPackages(pkg_list, true);
+			return main_window::InstallPackages(m_main_window, pkg_list, true, from_optical_drive);
 		};
 	}
 
-	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	g_emu_callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
 	{
 		const std::string terminate_message = tr("Stopping emulator took too long."
 			"\nSome thread has probably deadlocked. Aborting.").toStdString();
@@ -852,7 +974,7 @@ void gui_application::InitializeCallbacks()
 			report_fatal_error(terminate_message);
 		}
 
-		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
+		Emu.CallFromMainThread([closed_successfully, seconds_waiting_already, terminate_message]
 		{
 			const auto seconds = std::make_shared<int>(seconds_waiting_already);
 
@@ -897,7 +1019,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
+	g_emu_callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
 	{
 		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, code_location, init_mtx]
 		{
@@ -1000,7 +1122,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.add_breakpoint = [this](u32 addr)
+	g_emu_callbacks.add_breakpoint = [this](u32 addr)
 	{
 		Emu.BlockingCallFromMainThread([this, addr]()
 		{
@@ -1008,10 +1130,10 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
-	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
+	g_emu_callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
+	g_emu_callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
 
-	callbacks.check_microphone_permissions = []()
+	g_emu_callbacks.check_microphone_permissions = []()
 	{
 		Emu.BlockingCallFromMainThread([]()
 		{
@@ -1019,9 +1141,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.make_video_source = [](){ return std::make_unique<qt_video_source_wrapper>(); };
-
-	Emu.SetCallbacks(std::move(callbacks));
+	g_emu_callbacks.make_video_source = [](){ return std::make_unique<qt_video_source_wrapper>(); };
 }
 
 void gui_application::StartPlaytime(bool start_playtime = true)
@@ -1362,7 +1482,7 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 			{
 				if (Emu.IsRunning() || Emu.IsStarting())
 				{
-					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL, false);
 				}
 				return false;
 			}

@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_friends_list_dialog.h"
+#include "Emu/NP/np_handler.h"
 #include "Emu/NP/rpcn_config.h"
+#include "Emu/System.h"
 #include "Emu/vfs_config.h"
 
 namespace rsx
@@ -14,12 +16,14 @@ namespace rsx
 			dlg->callback_handler(ntype, username, status);
 		}
 
-		friends_list_dialog::friends_list_entry::friends_list_entry(friends_list_dialog_page page, const std::string& username, const rpcn::friend_online_data& data)
+		void game_invite_callback(void* param, const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 		{
-			std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
-			image->set_size(160, 110);
-			image->set_padding(36, 36, 11, 11); // Square image, 88x88
+			auto* dlg = static_cast<friends_list_dialog*>(param);
+			dlg->message_callback_handler(new_msg, msg_id);
+		}
 
+		friends_list_dialog::friends_list_entry::friends_list_entry(friends_list_dialog_page page, std::string_view username, const rpcn::friend_online_data& data)
+		{
 			std::string avatar_path = g_cfg_vfs.get_dev_flash() + "vsh/resource/explore/user/";
 			std::string text;
 
@@ -44,12 +48,16 @@ namespace rsx
 				}
 				break;
 			}
-			case friends_list_dialog_page::invites:
+			case friends_list_dialog_page::friend_requests:
 			{
 				// We use "online" to show whether an invite was sent or received
 				avatar_path += data.online ? "012.png" : "011.png";
 				text = get_localized_string(data.online ? localized_string_id::HOME_MENU_FRIENDS_REQUEST_RECEIVED : localized_string_id::HOME_MENU_FRIENDS_REQUEST_SENT);
 				break;
+			}
+			case friends_list_dialog_page::game_invites:
+			{
+				fmt::throw_exception("Unexpected game invitation in friend entry constructor");
 			}
 			case friends_list_dialog_page::blocked:
 			{
@@ -58,6 +66,30 @@ namespace rsx
 				break;
 			}
 			}
+
+			init(username, text, std::move(avatar_path));
+		}
+
+		friends_list_dialog::friends_list_entry::friends_list_entry(std::string_view username, const message_data& message)
+		{
+			std::string text = message.subject;
+
+			if (!message.body.empty())
+			{
+				if (!text.empty())
+					text += '\n';
+
+				text += message.body;
+			}
+
+			init(username, text, g_cfg_vfs.get_dev_flash() + "vsh/resource/explore/user/012.png");
+		}
+
+		void friends_list_dialog::friends_list_entry::init(std::string_view username, std::string_view text, std::string avatar_path)
+		{
+			std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
+			image->set_size(160, 110);
+			image->set_padding(36, 36, 11, 11); // Square image, 88x88
 
 			if (fs::exists(avatar_path))
 			{
@@ -78,11 +110,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -125,7 +157,7 @@ namespace rsx
 			m_message_box->visible = false;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select user"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -138,12 +170,12 @@ namespace rsx
 			m_extra_btn.set_image_resource(resource_config::standard_image_resource::triangle);
 			m_extra_btn.set_pos(330, m_list->y + m_list->h + 20);
 			m_extra_btn.set_text("");
-			m_extra_btn.set_font("Arial", 16);
+			m_extra_btn.set_font(16);
 
 			m_page_btn.set_image_resource(resource_config::standard_image_resource::square);
 			m_page_btn.set_pos(m_list->x + m_list->w - (30 + 120), m_list->y + m_list->h + 20);
 			m_page_btn.set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_NEXT_LIST));
-			m_page_btn.set_font("Arial", 16);
+			m_page_btn.set_font(16);
 		}
 
 		void friends_list_dialog::update(u64 timestamp_us)
@@ -180,7 +212,9 @@ namespace rsx
 				if (!m_list || m_list->m_items.empty())
 					break;
 
-				if (button_press == pad_button::triangle && m_current_page != friends_list_dialog_page::invites)
+				if (button_press == pad_button::triangle &&
+					m_current_page != friends_list_dialog_page::friend_requests &&
+					m_current_page != friends_list_dialog_page::game_invites)
 					break;
 
 				const usz index = static_cast<usz>(m_list->get_selected_index());
@@ -222,7 +256,7 @@ namespace rsx
 					}
 					break;
 				}
-				case friends_list_dialog_page::invites:
+				case friends_list_dialog_page::friend_requests:
 				{
 					// Get selected user
 					usz user_index = 0;
@@ -279,6 +313,40 @@ namespace rsx
 					}
 					break;
 				}
+				case friends_list_dialog_page::game_invites:
+				{
+					if (index >= m_game_invites.size() || !m_message_box || m_message_box->visible)
+						break;
+
+					const auto& [message_id, message] = ::at32(m_game_invites, index);
+					ensure(message);
+
+					const localized_string_id prompt = button_press == pad_button::cross ?
+						localized_string_id::HOME_MENU_FRIENDS_ACCEPT_GAME_INVITE_MSG :
+						localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE_MSG;
+
+					if (button_press == pad_button::cross)
+					{
+						m_message_box->show(get_localized_string(prompt, message->first.c_str()), [this, message_id]()
+						{
+							if (g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id))
+							{
+								remove_game_invite(message_id);
+							}
+						});
+					}
+					else
+					{
+						m_message_box->show(get_localized_string(prompt, message->first.c_str()), [this, message_id]()
+						{
+							m_rpcn->mark_message_used(message_id);
+							remove_game_invite(message_id);
+						});
+					}
+
+					refresh();
+					break;
+				}
 				case friends_list_dialog_page::blocked:
 				{
 					// Get selected user
@@ -315,8 +383,9 @@ namespace rsx
 			case pad_button::square:
 				switch (m_current_page)
 				{
-				case friends_list_dialog_page::friends: m_current_page = friends_list_dialog_page::invites; break;
-				case friends_list_dialog_page::invites: m_current_page = friends_list_dialog_page::blocked; break;
+				case friends_list_dialog_page::friends: m_current_page = friends_list_dialog_page::friend_requests; break;
+				case friends_list_dialog_page::friend_requests: m_current_page = friends_list_dialog_page::game_invites; break;
+				case friends_list_dialog_page::game_invites: m_current_page = friends_list_dialog_page::blocked; break;
 				case friends_list_dialog_page::blocked: m_current_page = friends_list_dialog_page::friends; break;
 				}
 				m_list_dirty = true;
@@ -382,7 +451,8 @@ namespace rsx
 						switch (m_current_page)
 						{
 						case friends_list_dialog_page::friends: title_id = localized_string_id::HOME_MENU_FRIENDS; break;
-						case friends_list_dialog_page::invites: title_id = localized_string_id::HOME_MENU_FRIENDS_REQUESTS; break;
+						case friends_list_dialog_page::friend_requests: title_id = localized_string_id::HOME_MENU_FRIENDS_REQUESTS; break;
+						case friends_list_dialog_page::game_invites: title_id = localized_string_id::HOME_MENU_FRIENDS_GAME_INVITES; break;
 						case friends_list_dialog_page::blocked: title_id = localized_string_id::HOME_MENU_FRIENDS_BLOCKED; break;
 						}
 						m_description->set_text(get_localized_string(title_id));
@@ -404,14 +474,18 @@ namespace rsx
 					{
 						result.add(m_list->get_compiled());
 
-						if (!m_list->m_items.empty() && m_current_page == friends_list_dialog_page::invites)
+						if (!m_list->m_items.empty())
 						{
-							// Get selected user
 							const usz index = static_cast<usz>(m_list->get_selected_index());
 
-							if (index < m_friend_data.requests_received.size())
+							if (m_current_page == friends_list_dialog_page::friend_requests && index < m_friend_data.requests_received.size())
 							{
 								m_extra_btn.set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST));
+								result.add(m_extra_btn.get_compiled());
+							}
+							else if (m_current_page == friends_list_dialog_page::game_invites && index < m_game_invites.size())
+							{
+								m_extra_btn.set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE));
 								result.add(m_extra_btn.get_compiled());
 							}
 						}
@@ -447,10 +521,38 @@ namespace rsx
 			}
 		}
 
+		void friends_list_dialog::message_callback_handler(const shared_ptr<std::pair<std::string, message_data>>& message, u64 message_id)
+		{
+			std::lock_guard lock(m_list_mutex);
+
+			if (std::none_of(m_game_invite_messages.cbegin(), m_game_invite_messages.cend(), [message_id](const game_invite& invite)
+			{
+				return invite.first == message_id;
+			}))
+			{
+				m_game_invite_messages.emplace_back(message_id, message);
+				m_list_dirty = true;
+			}
+		}
+
+		void friends_list_dialog::remove_game_invite(u64 message_id)
+		{
+			std::lock_guard lock(m_list_mutex);
+			const auto has_message_id = [message_id](const game_invite& invite)
+			{
+				return invite.first == message_id;
+			};
+
+			std::erase_if(m_game_invite_messages, has_message_id);
+			std::erase_if(m_game_invites, has_message_id);
+			m_list_dirty = true;
+		}
+
 		void friends_list_dialog::reload()
 		{
 			std::vector<std::unique_ptr<overlay_element>> entries;
 			std::string selected_user;
+			u64 selected_message_id = 0;
 			s32 selected_index = 0;
 			bool rpcn_connected = true;
 
@@ -474,7 +576,7 @@ namespace rsx
 					}
 					break;
 				}
-				case friends_list_dialog_page::invites:
+				case friends_list_dialog_page::friend_requests:
 				{
 					for (const std::string& username : m_friend_data.requests_received)
 					{
@@ -494,6 +596,14 @@ namespace rsx
 							selected_user = username;
 							break;
 						}
+					}
+					break;
+				}
+				case friends_list_dialog_page::game_invites:
+				{
+					if (old_index >= 0 && static_cast<usz>(old_index) < m_game_invites.size())
+					{
+						selected_message_id = ::at32(m_game_invites, old_index).first;
 					}
 					break;
 				}
@@ -578,7 +688,7 @@ namespace rsx
 				}
 				break;
 			}
-			case friends_list_dialog_page::invites:
+			case friends_list_dialog_page::friend_requests:
 			{
 				for (const std::string& username : m_friend_data.requests_received)
 				{
@@ -598,6 +708,38 @@ namespace rsx
 					}
 
 					std::unique_ptr<overlay_element> entry = std::make_unique<friends_list_entry>(m_current_page, username, rpcn::friend_online_data(false, 0));
+					entries.emplace_back(std::move(entry));
+				}
+				break;
+			}
+			case friends_list_dialog_page::game_invites:
+			{
+				m_game_invites.clear();
+
+				if (!rpcn_connected)
+					break;
+
+				auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+				if (!nph.basic_handler_registered)
+					break;
+
+				const SceNpCommunicationId context = nph.get_basic_handler_context();
+
+				for (const auto& [message_id, message] : m_game_invite_messages)
+				{
+					ensure(message);
+
+					if (std::strncmp(message->second.commId.data, context.data, sizeof(context.data) - 1) != 0)
+						continue;
+
+					if (message_id == selected_message_id)
+					{
+						selected_index = ::size32(entries);
+					}
+
+					m_game_invites.emplace_back(message_id, message);
+					std::unique_ptr<overlay_element> entry = std::make_unique<friends_list_entry>(message->first, message->second);
 					entries.emplace_back(std::move(entry));
 				}
 				break;
@@ -656,7 +798,20 @@ namespace rsx
 
 			m_rpcn = rpcn::rpcn_client::get_instance(0);
 
+			{
+				std::lock_guard lock(m_list_mutex);
+				m_game_invite_messages.clear();
+				m_game_invites.clear();
+				m_list_dirty = true;
+			}
+
 			m_rpcn->register_friend_cb(friend_callback, this);
+			const auto game_invites = m_rpcn->get_messages_and_register_cb(SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE, true, game_invite_callback, this);
+
+			for (const auto& [message_id, message] : game_invites)
+			{
+				message_callback_handler(message, message_id);
+			}
 
 			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS));
 			m_description->auto_resize();
@@ -680,6 +835,9 @@ namespace rsx
 			{
 				notify->wait(0, atomic_wait_timeout{1'000'000});
 			}
+
+			m_rpcn->remove_message_cb(game_invite_callback, this);
+			m_rpcn->remove_friend_cb(friend_callback, this);
 
 			return CELL_OK;
 		}

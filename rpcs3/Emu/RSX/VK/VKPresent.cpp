@@ -1,6 +1,8 @@
 #include "stdafx.h"
+#include "VKCommandStream.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "vkutils/memory.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
@@ -82,6 +84,12 @@ bool VKGSRender::reinitialize_swapchain()
 	// Drain all the queues
 	vkDeviceWaitIdle(*m_device);
 
+	// Clean the FBO caches
+	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
+	{
+		vk::remove_framebuffers_with_image(m_swapchain->get_image(i));
+	}
+
 	// Reset frame context storage
 	for (auto& ctx : m_frame_context_storage)
 	{
@@ -135,6 +143,7 @@ bool VKGSRender::reinitialize_swapchain()
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
+	m_vsync_mode = g_cfg.video.vsync;
 	return true;
 }
 
@@ -340,6 +349,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 				image_to_flip = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					resolution_scaling_config,
 					std::min(surface_width, info->width),
 					std::min(surface_height, info->height));
 			}
@@ -398,11 +408,11 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 
 			if (vk::formats_are_bitcast_compatible(dst_img.get(), image_to_flip))
 			{
-				vk::copy_image(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect, 1);
+				vk::copy_image(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect);
 			}
 			else
 			{
-				vk::copy_image_typeless(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect, 1);
+				vk::copy_image_typeless(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect);
 			}
 
 			image_to_flip = dst_img.get();
@@ -423,6 +433,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			swapchain_unavailable = true;
 		}
+	}
+
+	if (m_vsync_mode != g_cfg.video.vsync)
+	{
+		swapchain_unavailable = true;
 	}
 
 	if (swapchain_unavailable || should_reinitialize_swapchain)
@@ -544,7 +559,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig.stereo_enabled) [[unlikely]]
 		{
-			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
@@ -559,7 +574,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
 				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
@@ -656,9 +671,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
 		std::lock_guard lock(*m_overlay_manager);
 
+		const areau display_area = {0, 0, static_cast<u32>(m_swapchain_dims.width), static_cast<u32>(m_swapchain_dims.height)};
 		for (const auto& view : m_overlay_manager->get_views())
 		{
-			ui_renderer->run(*m_current_command_buffer, area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+			const areau render_area = view->use_window_space ? display_area : area;
+			ui_renderer->run(*m_current_command_buffer, render_area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 		}
 	};
 
@@ -694,24 +711,32 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			single_target_pass = vk::get_renderpass(*m_device, key);
 			ensure(single_target_pass != VK_NULL_HANDLE);
 
-			if (!m_overlay_recording_img ||
-				m_overlay_recording_img->type() != image_to_flip->type() ||
-				m_overlay_recording_img->format() != image_to_flip->format() ||
-				m_overlay_recording_img->width() != image_to_flip->width() ||
-				m_overlay_recording_img->height() != image_to_flip->height() ||
-				m_overlay_recording_img->layers() != image_to_flip->layers())
+			if (m_overlay_recording_img)
+			{
+				// Validate
+				if (m_overlay_recording_img->format() != image_to_flip->format() ||
+					m_overlay_recording_img->width() != image_to_flip->width() ||
+					m_overlay_recording_img->height() != image_to_flip->height())
+				{
+					// Dispose correctly
+					vk::remove_framebuffers_with_image(m_overlay_recording_img.get());
+					vk::get_resource_manager()->dispose(m_overlay_recording_img);
+				}
+			}
+
+			if (!m_overlay_recording_img)
 			{
 				m_overlay_recording_img = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT,
+					VK_IMAGE_TYPE_2D, image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT,
 					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					0, VMM_ALLOCATION_POOL_UNDEFINED);
+					0, VMM_ALLOCATION_POOL_SYSTEM);
 			}
 
 			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 			const areai rect = areai(0, 0, buffer_width, buffer_height);
-			vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect, 1);
+			vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect);
 
 			image_to_flip->pop_layout(*m_current_command_buffer);
 			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -728,14 +753,21 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		vk::copy_image_to_buffer(*m_current_command_buffer, image_to_copy, &sshot_vkbuf, copy_info);
 		image_to_copy->pop_layout(*m_current_command_buffer);
 
+		// We need to disable the driver manager temporarily as this next section is out of sequence.
+		// We're not supposed to be halting the GPU here and we certainly do not want to run driver management as we will end up deleting temp resources too early.
+		auto& driver_manager = g_fxo->get<vk::driver_manager_thread>();
+		driver_manager.set_enabled(false);
+
 		flush_command_queue(true);
 		const auto src = sshot_vkbuf.map(0, sshot_size);
 		std::vector<u8> sshot_frame(sshot_size);
 		memcpy(sshot_frame.data(), src, sshot_size);
 		sshot_vkbuf.unmap();
 
-		const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
+		// Restore the driver manager state to keep things from crashing...
+		driver_manager.set_enabled(true);
 
+		const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
 		if (user_asked_for_screenshot)
 		{
 			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
@@ -749,9 +781,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
+		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+
+		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, target_layout, subresource_range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, target_layout, &clear_black, 1, &subresource_range);
 
 		// Prevent WAW on transfer writes
 		vk::insert_image_memory_barrier(
@@ -765,8 +799,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			VK_ACCESS_TRANSFER_WRITE_BIT,
 			subresource_range
 		);
-
-		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
 	const output_scaling_mode output_scaling = g_cfg.video.output_scaling.get();
@@ -829,7 +861,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
 				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
-				avconfig.gamma, !use_full_rgb_range_output, avconfig.stereo_enabled, g_cfg.video.stereo_render_mode, single_target_pass);
+				avconfig.gamma, !use_full_rgb_range_output, avconfig.stereo_enabled, single_target_pass);
 
 			direct_fbo->release();
 		}
@@ -929,7 +961,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				"Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)\n"
 				"Vertex cache hits: %10u/%u (%u%%)\n"
 				"Program cache lookup ellision: %u/%u (%u%%)",
-				info.stats.framebuffer_stats.to_string(!backend_config.supports_hw_msaa),
+				info.stats.framebuffer_stats.to_string(resolution_scaling_config, !backend_config.supports_hw_msaa),
 				get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
 				info.stats.textures_upload_time, info.stats.draw_exec_time, info.stats.flip_time,
 				num_dirty_textures, texture_memory_size, tmp_texture_memory_size,
@@ -954,4 +986,32 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	m_frame->flip(m_context);
 	rsx::thread::flip(info);
+
+	// Data sync
+	const rsx::surface_scaling_config_t active_res_scaling_config =
+	{
+		.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+		.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+	};
+
+	if (active_res_scaling_config != this->resolution_scaling_config)
+	{
+		// First, try to reclaim any memory since the res scale upgrade is so memory intensive
+		if (const auto severity = vk::vmm_determine_memory_load_severity();
+			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			flush_command_queue(true);
+		}
+
+		// Then apply the change
+		m_rtts.sync_scaling_config(*m_current_command_buffer, active_res_scaling_config);
+		this->resolution_scaling_config = active_res_scaling_config;
+
+		// Finally reclaim any unused resources
+		if (const auto severity = vk::vmm_determine_memory_load_severity();
+			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			flush_command_queue(true);
+		}
+	}
 }

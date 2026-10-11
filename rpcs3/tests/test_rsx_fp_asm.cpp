@@ -51,7 +51,7 @@ namespace rsx::assembler
 		return nullptr;
 	};
 
-	static FlowGraph CFG_from_source(const std::string& asm_)
+	static FlowGraph CFG_from_source(std::string_view asm_)
 	{
 		auto ir = FPIR::from_source(asm_);
 

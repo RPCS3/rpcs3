@@ -61,6 +61,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::notify: return "ntf";
 		case cpu_flag::yield: return "y";
 		case cpu_flag::preempt: return "PREEMPT";
+		case cpu_flag::req_exit: return "REQ-EXIT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -690,7 +691,6 @@ void cpu_thread::operator()()
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this = nullptr;
-		std::string name;
 		std::string(*log_prefix)() = nullptr;
 
 		void cleanup()
@@ -727,16 +727,11 @@ void cpu_thread::operator()()
 
 		~thread_cleanup_t()
 		{
-			if (_this)
-			{
-				sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
-				cleanup();
-			}
+			cleanup();
 		}
 	} cleanup;
 
 	cleanup._this = this;
-	cleanup.name = thread_ctrl::get_name();
 	cleanup.log_prefix = old_prefix;
 
 	// Check thread status
@@ -885,6 +880,14 @@ bool cpu_thread::check_state() noexcept
 			if (flags & cpu_flag::notify)
 			{
 				flags -= cpu_flag::notify;
+				store = true;
+			}
+
+			if (flags & cpu_flag::req_exit)
+			{
+				// A request for the thread to quit has been made
+				flags -= cpu_flag::req_exit;
+				flags += cpu_flag::exit;
 				store = true;
 			}
 
@@ -1157,13 +1160,13 @@ void cpu_thread::notify()
 
 cpu_thread& cpu_thread::operator=(thread_state)
 {
-	if (state & cpu_flag::exit)
+	if (state & (cpu_flag::exit + cpu_flag::req_exit))
 	{
 		// Must be notified elsewhere or self-raised
 		return *this;
 	}
 
-	const auto old = state.fetch_add(cpu_flag::exit);
+	const auto old = state.fetch_add(cpu_flag::req_exit);
 
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
@@ -1267,8 +1270,8 @@ u32 cpu_thread::get_pc() const
 	}
 	case thread_class::rsx:
 	{
-		const auto ctrl = static_cast<const rsx::thread*>(this)->ctrl;
-		return ctrl ? ctrl->get.load() : umax;
+		const auto& ctrl = static_cast<const rsx::thread*>(this)->fifo_ctrl;
+		return ctrl ? ctrl->get_pos() : umax;
 	}
 	default: break;
 	}
@@ -1322,8 +1325,9 @@ extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<
 void cpu_thread::dump_all(std::string& ret) const
 {
 	std::any func_data;
+	std::any misc_data;
 
-	ret += dump_misc();
+	dump_misc(ret, misc_data);
 	ret += '\n';
 	dump_regs(ret, func_data);
 	ret += '\n';
@@ -1371,9 +1375,9 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 	return {};
 }
 
-std::string cpu_thread::dump_misc() const
+void cpu_thread::dump_misc(std::string& ret, std::any& /*custom_data*/) const
 {
-	return fmt::format("%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
+	fmt::append(ret, "%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
@@ -1493,7 +1497,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		{
 			for (u32 i = 0; i < work->prf_size; i++)
 			{
-				utils::prefetch_write(work->prf_list[0]);
+				utils::prefetch_write(work->prf_list[i]);
 			}
 		}
 

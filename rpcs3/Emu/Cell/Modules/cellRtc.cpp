@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_ss.h"
+#include "util/cctype.hpp"
 
 LOG_CHANNEL(cellRtc);
 
@@ -197,7 +198,7 @@ error_code cellRtcFormatRfc2822(ppu_thread& ppu, vm::ptr<char> pszDateTime, vm::
 
 	s32 weekdayIdx = cellRtcGetDayOfWeek(date_time->year, date_time->month, date_time->day);
 	// Day name
-	pszDateTime[0] = std::toupper(WEEKDAY_NAMES[weekdayIdx][0]);
+	pszDateTime[0] = utils::toupper(WEEKDAY_NAMES[weekdayIdx][0]);
 	pszDateTime[1] = WEEKDAY_NAMES[weekdayIdx][1];
 	pszDateTime[2] = WEEKDAY_NAMES[weekdayIdx][2];
 	pszDateTime[3] = ',';
@@ -208,7 +209,7 @@ error_code cellRtcFormatRfc2822(ppu_thread& ppu, vm::ptr<char> pszDateTime, vm::
 	pszDateTime[7] = ' ';
 
 	// month name
-	pszDateTime[8]   = std::toupper(MONTH_NAMES[date_time->month - 1][0]);
+	pszDateTime[8]   = utils::toupper(MONTH_NAMES[date_time->month - 1][0]);
 	pszDateTime[9]   = MONTH_NAMES[date_time->month - 1][1];
 	pszDateTime[10]  = MONTH_NAMES[date_time->month - 1][2];
 	pszDateTime[0xb] = ' ';
@@ -433,7 +434,7 @@ u16 rtcParseComponent(vm::cptr<char> pszDateTime, u32& pos, char delimiter, cons
 		pos++;
 	}
 
-	if (!std::isdigit(pszDateTime[pos]))
+	if (!utils::isdigit(pszDateTime[pos]))
 	{
 		cellRtc.error("rtcParseComponent(): failed to parse %s: ASCII value 0x%x at position %d is not a digit", component_name, pszDateTime[pos + 1], pos);
 		return umax;
@@ -443,7 +444,7 @@ u16 rtcParseComponent(vm::cptr<char> pszDateTime, u32& pos, char delimiter, cons
 
 	pos++;
 
-	if (std::isdigit(pszDateTime[pos]))
+	if (utils::isdigit(pszDateTime[pos]))
 	{
 		ret = ret * 10 + digit(pszDateTime[pos]);
 
@@ -462,7 +463,7 @@ u8 rtcParseName(vm::cptr<char> pszDateTime, u32& pos, const std::array<std::stri
 
 		u32 ch_idx = 0;
 
-		while (ch_idx < name_length && std::tolower(pszDateTime[pos + ch_idx]) == names[name_idx][ch_idx]) // Not case sensitive
+		while (ch_idx < name_length && utils::tolower(pszDateTime[pos + ch_idx]) == names[name_idx][ch_idx]) // Not case sensitive
 		{
 			ch_idx++;
 		}
@@ -520,15 +521,15 @@ error_code rtcParseRfc2822(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<
 	// Year: "XX" or "XXXX"
 	u16 year = 0;
 
-	if (!std::isdigit(pszDateTime[pos]) ||
-		!std::isdigit(pszDateTime[pos + 1]))
+	if (!utils::isdigit(pszDateTime[pos]) ||
+		!utils::isdigit(pszDateTime[pos + 1]))
 	{
 		return { CELL_RTC_ERROR_BAD_PARSE, "rtcParseRfc2822(): failed to parse year: one of the first two ASCII values 0x%x, 0x%x at position %d is not a digit",
 			pszDateTime[pos], pszDateTime[pos + 1], pos };
 	}
 
-	if (!std::isdigit(pszDateTime[pos + 2]) ||
-		!std::isdigit(pszDateTime[pos + 3]))
+	if (!utils::isdigit(pszDateTime[pos + 2]) ||
+		!utils::isdigit(pszDateTime[pos + 3]))
 	{
 		year = digit(pszDateTime[pos]) * 10 + digit(pszDateTime[pos + 1]);
 		year += (year < 50) ? 2000 : 1900;
@@ -591,10 +592,10 @@ error_code rtcParseRfc2822(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<
 		{
 			// "±hhmm"
 
-			if (std::isdigit(pszDateTime[pos + 1]) &&
-				std::isdigit(pszDateTime[pos + 2]) &&
-				std::isdigit(pszDateTime[pos + 3]) &&
-				std::isdigit(pszDateTime[pos + 4]))
+			if (utils::isdigit(pszDateTime[pos + 1]) &&
+				utils::isdigit(pszDateTime[pos + 2]) &&
+				utils::isdigit(pszDateTime[pos + 3]) &&
+				utils::isdigit(pszDateTime[pos + 4]))
 			{
 				const s32 time_zone_hhmm = digit(pszDateTime[pos + 1]) * 1000 + digit(pszDateTime[pos + 2]) * 100 + digit(pszDateTime[pos + 3]) * 10 + digit(pszDateTime[pos + 4]);
 
@@ -627,7 +628,7 @@ error_code rtcParseRfc2822(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::cptr<
 				// "A", "B", "C", ..., not case sensitive
 				// These are all off by one ("A" should be UTC+01:00, "B" should be UTC+02:00, etc.)
 
-				const char letter = std::toupper(pszDateTime[pos]);
+				const char letter = utils::toupper(pszDateTime[pos]);
 
 				if (letter >= 'A' && letter <= 'M' && letter != 'J')
 				{
@@ -671,15 +672,15 @@ error_code cellRtcParseDateTime(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::
 
 	u32 pos = 0;
 
-	while (std::isblank(pszDateTime[pos]))
+	while (utils::isblank(pszDateTime[pos]))
 	{
 		pos++;
 	}
 
-	if (std::isdigit(pszDateTime[pos]) &&
-		std::isdigit(pszDateTime[pos + 1]) &&
-		std::isdigit(pszDateTime[pos + 2]) &&
-		std::isdigit(pszDateTime[pos + 3]))
+	if (utils::isdigit(pszDateTime[pos]) &&
+		utils::isdigit(pszDateTime[pos + 1]) &&
+		utils::isdigit(pszDateTime[pos + 2]) &&
+		utils::isdigit(pszDateTime[pos + 3]))
 	{
 		return cellRtcParseRfc3339(ppu, pUtc, pszDateTime + pos);
 	}
@@ -697,7 +698,7 @@ error_code cellRtcParseDateTime(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::
 	}
 
 	// Skip spaces and tabs
-	while (std::isblank(pszDateTime[pos]))
+	while (utils::isblank(pszDateTime[pos]))
 	{
 		pos++;
 	}
@@ -742,13 +743,13 @@ error_code cellRtcParseDateTime(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::
 
 		pos++;
 	}
-	else if (std::isdigit(pszDateTime[pos]))
+	else if (utils::isdigit(pszDateTime[pos]))
 	{
 		day = digit(pszDateTime[pos]);
 
 		pos++;
 
-		if (std::isdigit(pszDateTime[pos]))
+		if (utils::isdigit(pszDateTime[pos]))
 		{
 			day = day * 10 + digit(pszDateTime[pos]);
 
@@ -793,10 +794,10 @@ error_code cellRtcParseDateTime(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::
 	pos++;
 
 	// Year: XXXX
-	if (!std::isdigit(pszDateTime[pos]) ||
-		!std::isdigit(pszDateTime[pos + 1]) ||
-		!std::isdigit(pszDateTime[pos + 2]) ||
-		!std::isdigit(pszDateTime[pos + 3]))
+	if (!utils::isdigit(pszDateTime[pos]) ||
+		!utils::isdigit(pszDateTime[pos + 1]) ||
+		!utils::isdigit(pszDateTime[pos + 2]) ||
+		!utils::isdigit(pszDateTime[pos + 3]))
 	{
 		return { CELL_RTC_ERROR_BAD_PARSE, "cellRtcParseDateTime(): failed to parse year: one of the ASCII values 0x%x, 0x%x, 0x%x, or 0x%x is not a digit",
 			pszDateTime[pos], pszDateTime[pos + 1], pszDateTime[pos + 2], pszDateTime[pos + 3] };
@@ -831,7 +832,10 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	vm::var<CellRtcDateTime> date_time;
 
 	// Year: XXXX-12-03T13:23:00.00Z
-	if (std::isdigit(pszDateTime[0]) && std::isdigit(pszDateTime[1]) && std::isdigit(pszDateTime[2]) && std::isdigit(pszDateTime[3]))
+	if (utils::isdigit(pszDateTime[0]) &&
+		utils::isdigit(pszDateTime[1]) &&
+		utils::isdigit(pszDateTime[2]) &&
+		utils::isdigit(pszDateTime[3]))
 	{
 		date_time->year = digit(pszDateTime[0]) * 1000 + digit(pszDateTime[1]) * 100 + digit(pszDateTime[2]) * 10 + digit(pszDateTime[3]);
 	}
@@ -846,7 +850,7 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	}
 
 	// Month: 1995-XX-03T13:23:00.00Z
-	if (std::isdigit(pszDateTime[5]) && std::isdigit(pszDateTime[6]))
+	if (utils::isdigit(pszDateTime[5]) && utils::isdigit(pszDateTime[6]))
 	{
 		date_time->month = digit(pszDateTime[5]) * 10 + digit(pszDateTime[6]);
 	}
@@ -861,7 +865,7 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	}
 
 	// Day: 1995-12-XXT13:23:00.00Z
-	if (std::isdigit(pszDateTime[8]) && std::isdigit(pszDateTime[9]))
+	if (utils::isdigit(pszDateTime[8]) && utils::isdigit(pszDateTime[9]))
 	{
 		date_time->day = digit(pszDateTime[8]) * 10 + digit(pszDateTime[9]);
 	}
@@ -876,7 +880,7 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	}
 
 	// Hour: 1995-12-03TXX:23:00.00Z
-	if (std::isdigit(pszDateTime[11]) && std::isdigit(pszDateTime[12]))
+	if (utils::isdigit(pszDateTime[11]) && utils::isdigit(pszDateTime[12]))
 	{
 		date_time->hour = digit(pszDateTime[11]) * 10 + digit(pszDateTime[12]);
 	}
@@ -891,7 +895,7 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	}
 
 	// Minute: 1995-12-03T13:XX:00.00Z
-	if (std::isdigit(pszDateTime[14]) && std::isdigit(pszDateTime[15]))
+	if (utils::isdigit(pszDateTime[14]) && utils::isdigit(pszDateTime[15]))
 	{
 		date_time->minute = digit(pszDateTime[14]) * 10 + digit(pszDateTime[15]);
 	}
@@ -906,7 +910,7 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	}
 
 	// Second: 1995-12-03T13:23:XX.00Z
-	if (std::isdigit(pszDateTime[17]) && std::isdigit(pszDateTime[18]))
+	if (utils::isdigit(pszDateTime[17]) && utils::isdigit(pszDateTime[18]))
 	{
 		date_time->second = digit(pszDateTime[17]) * 10 + digit(pszDateTime[18]);
 	}
@@ -923,7 +927,7 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	{
 		u32 mul = 100000;
 
-		for (char c = pszDateTime[++pos]; std::isdigit(c); c = pszDateTime[++pos])
+		for (char c = pszDateTime[++pos]; utils::isdigit(c); c = pszDateTime[++pos])
 		{
 			date_time->microsecond += digit(c) * mul;
 			mul /= 10;
@@ -942,11 +946,11 @@ error_code cellRtcParseRfc3339(ppu_thread& ppu, vm::ptr<CellRtcTick> pUtc, vm::c
 	// Time offset: 1995-12-03T13:23:00.00+02:30
 	if (sign == '+' || sign == '-')
 	{
-		if (!std::isdigit(pszDateTime[pos + 1]) ||
-			!std::isdigit(pszDateTime[pos + 2]) ||
+		if (!utils::isdigit(pszDateTime[pos + 1]) ||
+			!utils::isdigit(pszDateTime[pos + 2]) ||
 			pszDateTime[pos + 3] != ':' ||
-			!std::isdigit(pszDateTime[pos + 4]) ||
-			!std::isdigit(pszDateTime[pos + 5]))
+			!utils::isdigit(pszDateTime[pos + 4]) ||
+			!utils::isdigit(pszDateTime[pos + 5]))
 		{
 			return CELL_RTC_ERROR_BAD_PARSE;
 		}

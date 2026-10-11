@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <type_traits>
 
@@ -723,15 +724,24 @@ struct coord3_base
 		struct { T width, height, depth; };
 	};
 
-	constexpr coord3_base() : position{}, size{}
+	constexpr coord3_base()
+		: position{}, size{}
 	{
 	}
 
-	constexpr coord3_base(const position3_base<T>& position, const size3_base<T>& size) : position{ position }, size{ size }
+	constexpr coord3_base(const position3_base<T>& position, const size3_base<T>& size)
+		: position{ position }, size{ size }
 	{
 	}
 
-	constexpr coord3_base(T x, T y, T z, T width, T height, T depth) : x{ x }, y{ y }, z{ z }, width{ width }, height{ height }, depth{ depth }
+	constexpr coord3_base(T x, T y, T z, T width, T height, T depth)
+		: x{ x }, y{ y }, z{ z }, width{ width }, height{ height }, depth{ depth }
+	{
+	}
+
+	constexpr coord3_base(const area_base<T>& area, T z = 0, T depth = 1)
+		: x{ area.x1 }, y{ area.y1 }, z{ z }
+		, width{ area.x2 - area.x1 }, height{ area.y2 - area.y1 }, depth{ depth }
 	{
 	}
 
@@ -753,6 +763,51 @@ struct coord3_base
 	explicit constexpr operator coord3_base<NT>() const
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z), static_cast<NT>(width), static_cast<NT>(height), static_cast<NT>(depth) };
+	}
+
+	void flip_horizontal()
+		requires std::is_signed_v<T>
+	{
+		auto x2 = x + width;
+		x = x2;
+		width = -width;
+	}
+
+	void flip_vertical()
+		requires std::is_signed_v<T>
+	{
+		auto y2 = y + height;
+		y = y2;
+		height = -height;
+	}
+
+	bool is_flipped() const
+		requires std::is_signed_v<T>
+	{
+		return width < 0 || height < 0 || depth < 0;
+	}
+
+	area_base<T> to_area() const
+	{
+		return { x, y, x + width, y + height };
+	}
+
+	T abs_width() const
+		requires std::is_signed_v<T>
+	{
+		return width < 0 ? -width : width;
+	}
+
+	T abs_height() const
+		requires std::is_signed_v<T>
+	{
+		return height < 0 ? -height : height;
+	}
+
+	T abs_depth() const
+		requires std::is_signed_v<T>
+	{
+		return depth < 0 ? -depth : depth;
 	}
 };
 
@@ -1027,3 +1082,6 @@ using color1u = color1_base<unsigned int>;
 using color1i = color1_base<int>;
 using color1f = color1_base<float>;
 using color1d = color1_base<double>;
+
+using mat3f = color3_base<float>[3];
+static_assert(sizeof(mat3f) == sizeof(float) * 3 * 3);

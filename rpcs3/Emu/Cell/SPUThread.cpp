@@ -245,6 +245,26 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 }
 #endif
 
+// Insane idea to accelerate comparisons on Neon with a fixed length
+// Common ARM chips like the a78 and a715 can Perform 3 128b loads/clock
+// But only execute 2 128b instructions on the ALU per clock
+// To consume data any faster, we need to use ALU instructions that take 3 inputs
+// Idea: compare data, filling each lane with either -1 or 0
+// Then multiply each pair of comparisons together, resulting in 1 if both pairs were -1
+// Accummulate those results, and compare the accumulated value to the expected count
+// Benchmarks showed this to be faster even on arm machines that aren't capable of more loads than ALU operations
+// Tested on Tensor G1, Snapdragon 8 gen 2, and the Snapdragon 8 Elite gen 5
+#if defined(ARCH_ARM64)
+static FORCE_INLINE int16x8_t cmp16_pair_accum_arm64(
+	int16x8_t acc, const v128& lhs0, const v128& rhs0, const v128& lhs1, const v128& rhs1)
+{
+	const int16x8_t eq0 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs0), static_cast<uint16x8_t>(rhs0)));
+	const int16x8_t eq1 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs1), static_cast<uint16x8_t>(rhs1)));
+	return vmlaq_s16(acc, eq0, eq1);
+}
+
+#endif
+
 #ifdef _MSC_VER
 __forceinline
 #endif
@@ -261,12 +281,22 @@ extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 
 	const auto lhs = reinterpret_cast<const v128*>(_lhs);
 	const auto rhs = reinterpret_cast<const v128*>(_rhs);
+#if defined(ARCH_ARM64)
+	int16x8_t hits = vdupq_n_s16(0);
+	hits = cmp16_pair_accum_arm64(hits, lhs[0], rhs[0], lhs[1], rhs[1]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[2], rhs[2], lhs[3], rhs[3]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[4], rhs[4], lhs[5], rhs[5]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[6], rhs[6], lhs[7], rhs[7]);
+
+	return vaddvq_s16(hits) == 32;
+#else
 	const v128 a = (lhs[0] ^ rhs[0]) | (lhs[1] ^ rhs[1]);
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
 	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
 	return gv_testz(r);
+#endif
 }
 
 #if defined(ARCH_X64)
@@ -495,7 +525,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
 
-const spu_decoder<spu_itype> s_spu_itype;
+const extern spu_decoder<spu_itype> g_spu_itype;
+const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 namespace vm
 {
@@ -598,7 +629,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 {
 	std::array<u32, 2> res{spu_branch_target(pc + 4), umax};
 
-	switch (const auto type = s_spu_itype.decode(op.opcode))
+	switch (const auto type = g_spu_itype.decode(op.opcode))
 	{
 	case spu_itype::BR:
 	case spu_itype::BRA:
@@ -637,6 +668,54 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	}
 
 	return res;
+}
+
+std::tuple<u32, std::array<u32, 3>, u32> op_register_targets(u32 /*pc*/, spu_opcode_t op)
+{
+	std::tuple<u32, std::array<u32, 3>, u32> result{u32{umax}, std::array<u32, 3>{128, 128, 128}, op.opcode};
+
+	const auto type = g_spu_itype.decode(op.opcode);
+
+	if (type & spu_itype::zregmod)
+	{
+		std::get<2>(result) = 0;
+		return result;
+	}
+
+	std::get<0>(result) = type & spu_itype::_quadrop ? op.rt4 : op.rt;
+
+	spu_opcode_t op_masked = op;
+
+	if (type & spu_itype::_quadrop)
+	{
+		op_masked.rt4 = 0;
+	}
+	else
+	{
+		op_masked.rt = 0;
+	}
+
+	std::get<2>(result) = op_masked.opcode;
+
+	if (auto iflags = g_spu_iflag.decode(op.opcode))
+	{
+		if (+iflags & +spu_iflag::use_ra)
+		{
+			std::get<1>(result)[0] = op.ra;
+		}
+
+		if (+iflags & +spu_iflag::use_rb)
+		{
+			std::get<1>(result)[1] = op.rb;
+		}
+
+		if (+iflags & +spu_iflag::use_rc)
+		{
+			std::get<1>(result)[2] = op.rc;
+		}
+	}
+
+	return result;
 }
 
 void spu_int_ctrl_t::set(u64 ints)
@@ -988,7 +1067,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 					passed[i / 4] = true;
 
 					const spu_opcode_t op{_ref<u32>(i)};
-					const auto type = s_spu_itype.decode(op.opcode);
+					const auto type = g_spu_itype.decode(op.opcode);
 
 					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
 					{
@@ -1090,11 +1169,62 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	return call_stack_list;
 }
 
-std::string spu_thread::dump_misc() const
+void spu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 {
-	std::string ret = cpu_thread::dump_misc();
+	cpu_thread::dump_misc(ret, custom_data);
 
-	fmt::append(ret, "Block Weight: %u (Retreats: %u)", block_counter, block_failure);
+	struct dump_misc_data_t
+	{
+		u32 cpu_id = umax;
+		u64 last_read_time = umax;
+		u64 last_block_counter = umax;
+		u64 update_count = 0;
+
+		std::pair<u64, u64> update(u64 current_block_counter, u64 current_timestamp = get_system_time())
+		{
+			const u64 diff_time = current_timestamp <= last_read_time ? 0 : current_timestamp - last_read_time;
+			const u64 diff_block = current_block_counter <= last_block_counter ? 0 : current_block_counter - last_block_counter;
+
+			if (last_read_time == umax || update_count >= 1000)
+			{
+				last_read_time = current_timestamp;
+				last_block_counter = current_block_counter;
+				update_count = 0;
+			}
+			else if (diff_time >= 100000 && diff_block >= 100)
+			{
+				// Update values to measure rate (but not fully so rate can be measured later)
+				last_read_time += diff_time / 10 * 9;
+				last_block_counter += diff_block / 10 * 9;
+				update_count++;
+			}
+
+			return {diff_time, diff_block};
+		}
+	};
+
+	dump_misc_data_t* func_data = std::any_cast<dump_misc_data_t>(&custom_data);
+
+	if (!func_data)
+	{
+		custom_data.reset();
+		custom_data = std::make_any<dump_misc_data_t>();
+		func_data = ensure(std::any_cast<dump_misc_data_t>(&custom_data));
+	}
+
+	if (func_data->cpu_id != this->id)
+	{
+		*func_data = {};
+		func_data->cpu_id = this->id;
+	}
+
+	const u64 current_block_counter = atomic_storage<u64>::load(block_counter);
+
+	const auto [diff_time, diff_block] = func_data->update(current_block_counter);
+
+	const u64 rate_of_diff = diff_block ? std::max<u64>(1, utils::rational_mul<u64>(diff_block, 1'000'000, std::max<u64>(diff_time, 1))) : 0;
+
+	fmt::append(ret, "Block Weight: log10(%u/second): %.1f (Retreats: %u)", rate_of_diff, std::log10(std::max<u64>(rate_of_diff, 10)), block_failure);
 
 	if (u64 hash = atomic_storage<u64>::load(block_hash))
 	{
@@ -1145,8 +1275,6 @@ std::string spu_thread::dump_misc() const
 			break;
 		}
 	}
-
-	return ret;
 }
 
 void spu_thread::cpu_on_stop()
@@ -1605,21 +1733,48 @@ void spu_thread::cleanup()
 	static_cast<named_thread<spu_thread>&>(*this) = thread_state::finished;
 }
 
+enum : s64
+{
+	SIGNED_LS_SIZE = SPU_LS_SIZE
+};
+
 spu_thread::~spu_thread()
 {
 	// Unmap LS and its mirrors
-	shm->unmap(ls + SPU_LS_SIZE);
-	shm->unmap(ls);
-	shm->unmap(ls - SPU_LS_SIZE);
-	utils::memory_release(ls - SPU_LS_SIZE * 2, SPU_LS_SIZE * 5);
+	for (s64 ls_offs = 0 - SIGNED_LS_SIZE * 2; ls_offs <= SIGNED_LS_SIZE * 2; ls_offs += SIGNED_LS_SIZE)
+	{
+		shm->unmap(ls + ls_offs);
+	}
+
+	utils::memory_release(ls - SIGNED_LS_SIZE * 3, SIGNED_LS_SIZE * 7);
 }
 
 u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
 {
+	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SIGNED_LS_SIZE * 7, nullptr, true))) + SIGNED_LS_SIZE * 3;
+
 	vm::writer_lock mlock;
 
-	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true))) + SPU_LS_SIZE * 2;
-	ensure(shm.map_critical(ls - SPU_LS_SIZE).first && shm.map_critical(ls).first && shm.map_critical(ls + SPU_LS_SIZE).first);
+	for (s64 ls_offs = 0 - SIGNED_LS_SIZE * 2; ls_offs <= SIGNED_LS_SIZE * 2; ls_offs += SIGNED_LS_SIZE)
+	{
+		const auto [ptr_ret, str] = shm.map_critical(ls + ls_offs);
+
+		if (!ptr_ret)
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned error (error=%s) [ls_offs=0x%x]", str, ls_offs);
+		}
+
+		if (ptr_ret != ls + ls_offs)
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned a different address: 0x%llx vs 0x%llx (error=%s) [ls_offs=0x%x]", ptr_ret, ls + ls_offs, str, ls_offs);
+		}
+
+		if (!str.empty())
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned unexpected error (error=%s) [ls_offs=0x%x]", str, ls_offs);
+		}
+	}
+
 	return ls;
 }
 
@@ -1659,12 +1814,12 @@ void spu_thread::init_spu_decoder()
 }
 
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
-	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true)) + SPU_LS_SIZE * 2)
+	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 7, nullptr, true)) + SPU_LS_SIZE * 3)
 	, option(option)
 	, lv2_id(lv2_id)
 	, spu_tname(make_single<std::string>(name))
@@ -1714,14 +1869,14 @@ void spu_thread::serialize_common(utils::serial& ar)
 	}
 	else
 	{
-		const u8 count = ar;
+		const u8 count{ar};
 		ar(std::span(vals, count));
 		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
 	}
 }
 
 spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(ar)
 	, thread_type(group ? spu_type::threaded : ar.pop<u8>() ? spu_type::isolated : spu_type::raw)
@@ -3320,6 +3475,14 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		const bool success = [&]()
 		{
+			if (!g_cfg.core.spu_accurate_reservations && diff16_pos != umax)
+			{
+				vm::range_lock<128>(range_lock, addr, 128);
+				const bool ok = cmp_rdata(rdata, super_data) && atomic_storage<u128>::compare_exchange(*cast_as(super_data, diff16_pos), *cast_as(rdata, diff16_pos), *cast_as_const(to_write, diff16_pos));
+				range_lock->release(0);
+				return ok;
+			}
+
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr, range_lock);
@@ -3515,6 +3678,13 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 			// Hard lock
 			auto spu = cpu ? cpu->try_get<spu_thread>() : nullptr;
+
+			if (!spu && cpu)
+			{
+				// For vm::writer_lock
+				cpu->state += cpu_flag::wait;
+			}
+
 			vm::writer_lock lock(addr, spu ? spu->range_lock : nullptr);
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;
@@ -3761,7 +3931,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 
 		const u32 addr0 = spu_branch_target(addr);
 		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr)};
-		const auto type = s_spu_itype.decode(op.opcode);
+		const auto type = g_spu_itype.decode(op.opcode);
 
 		if (type == spu_itype::UNK || !op.opcode)
 		{
@@ -3907,7 +4077,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 				// Test the validity of a single instruction of the optional target
 				// This function can't be too slow and is unlikely to improve results by a great deal
 				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
-				const spu_itype::type type0 = s_spu_itype.decode(op0);
+				const spu_itype::type type0 = g_spu_itype.decode(op0);
 
 				if (type0 == spu_itype::UNK || !op0)
 				{
@@ -6332,8 +6502,6 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<sha
 
 bool spu_thread::stop_and_signal(u32 code)
 {
-	spu_log.trace("stop_and_signal(code=0x%x)", code);
-
 	auto set_status_npc = [&]()
 	{
 		status_npc.atomic_op([&](status_npc_sync_var& state)
@@ -6347,6 +6515,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (get_type() >= spu_type::raw)
 	{
+		spu_log.warning("stop_and_signal(code=0x%x)", code);
+
 		// Save next PC and current SPU Interrupt Status
 		state += cpu_flag::stop + cpu_flag::wait + cpu_flag::ret;
 		set_status_npc();
@@ -6878,7 +7048,7 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 			const u32 op = read_from_ptr<be_t<u32>>(all_data, pc0 - 4);
 
 			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
-			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+			if (!op || op == 0x35000000u || g_spu_itype.decode(op) == spu_itype::UNK)
 			{
 				if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 					break;
@@ -7102,11 +7272,13 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 
 	lv2_obj::notify_all();
 
-	const u32 wait_on_val = static_cast<u32>(((pop ? bit_occupy : 0) | bit_wait) >> 32);
+	old = (pop ? bit_occupy : 0) | bit_wait;
 
 	while (true)
 	{
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], wait_on_val);
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr_unsafe<u32>(reinterpret_cast<char*>(&old), is_le * 4));
+
 		old = data;
 
 		if (!(old & bit_wait))
@@ -7121,6 +7293,12 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 			{
 				if (u64 v = jostling_value.exchange(0); !(v & bit_occupy))
 				{
+					while (data & bit_wait)
+					{
+						// Wait until notifying thread finishes operation
+						busy_wait(500);
+					}
+
 					return static_cast<u32>(v);
 				}
 
@@ -7144,7 +7322,7 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	{
 		if (data & bit_count) [[unlikely]]
 		{
-			jostling_value.release(push ? (bit_occupy | value) : static_cast<u32>(data));
+			jostling_value.release(push ? value : static_cast<u32>(data));
 			data |= (push ? bit_occupy : 0) | bit_wait;
 		}
 		else if (push)
@@ -7184,7 +7362,8 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 			return !data.bit_test_reset(off_wait);
 		}
 
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32(state >> 32));
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], u32(state >> 32));
 		state = data;
 	}
 }

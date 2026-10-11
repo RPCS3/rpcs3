@@ -1267,6 +1267,11 @@ struct SceNpOnlineId
 {
 	char data[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1]; // char term;
 	char dummy[3];
+
+	bool operator<(const SceNpOnlineId& other) const
+	{
+		return memcmp(data, other.data, sizeof(data)) < 0;
+	}
 };
 
 // NP ID structure
@@ -1283,6 +1288,11 @@ struct SceNpId
 	};
 
 	u8 reserved[8];
+
+	bool operator<(const SceNpId& other) const
+	{
+		return handle < other.handle;
+	}
 };
 
 CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
@@ -1689,12 +1699,22 @@ struct SceNpLobbyId
 {
 	u8 opt[28];
 	u8 reserved[8];
+
+	bool operator<(const SceNpLobbyId& other) const
+	{
+		return memcmp(opt, other.opt, sizeof(opt)) < 0;
+	}
 };
 
 struct SceNpRoomId
 {
 	u8 opt[28];
 	u8 reserved[8];
+
+	bool operator<(const SceNpRoomId& other) const
+	{
+		return memcmp(opt, other.opt, sizeof(opt)) < 0;
+	}
 };
 
 struct SceNpMatchingAttr

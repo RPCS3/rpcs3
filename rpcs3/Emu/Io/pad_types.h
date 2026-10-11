@@ -44,6 +44,13 @@ enum class pad_button : u8
 
 	pad_button_max_enum,
 
+	motion_x,
+	motion_y,
+	motion_z,
+	motion_g,
+
+	pad_motion_max_enum,
+
 	// Special buttons for mouse input
 	mouse_button_1,
 	mouse_button_2,
@@ -53,6 +60,11 @@ enum class pad_button : u8
 	mouse_button_6,
 	mouse_button_7,
 	mouse_button_8,
+
+	// Special "buttons" that map behaviour
+	mouse,
+	left_stick,
+	right_stick
 };
 
 u32 pad_button_offset(pad_button button);
@@ -386,18 +398,18 @@ struct Button
 	u16 m_value    = 0;
 	bool m_pressed = false;
 
-	std::set<u32> m_key_codes{};
+	std::vector<std::set<u32>> m_key_combos;
 
-	u16 m_actual_value = 0;              // only used in keyboard_pad_handler
-	bool m_analog      = false;          // only used in keyboard_pad_handler
-	bool m_trigger     = false;          // only used in keyboard_pad_handler
-	std::map<u32, u16> m_pressed_keys{}; // only used in keyboard_pad_handler
+	u16 m_actual_value = 0;            // only used in keyboard_pad_handler
+	bool m_analog      = false;        // only used in keyboard_pad_handler
+	bool m_trigger     = false;        // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys; // only used in keyboard_pad_handler
 
 	Button(){}
-	Button(u32 offset, std::set<u32> key_codes, u32 outKeyCode)
+	Button(u32 offset, std::vector<std::set<u32>> key_combos, u32 outKeyCode)
 		: m_offset(offset)
 		, m_outKeyCode(outKeyCode)
-		, m_key_codes(std::move(key_codes))
+		, m_key_combos(std::move(key_combos))
 	{
 		if (offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
@@ -421,23 +433,42 @@ struct Button
 	}
 };
 
+struct ButtonExternal
+{
+	u32 m_offset = 0;
+	u32 m_outKeyCode = 0;
+	u16 m_value    = 0;
+	bool m_pressed = false;
+};
+
 struct AnalogStick
 {
 	u32 m_offset = 0;
 	u16 m_value = 128;
 
-	std::set<u32> m_key_codes_min{};
-	std::set<u32> m_key_codes_max{};
+	std::vector<std::set<u32>> m_key_combos_min;
+	std::vector<std::set<u32>> m_key_combos_max;
 
-	std::map<u32, u16> m_pressed_keys_min{}; // only used in keyboard_pad_handler
-	std::map<u32, u16> m_pressed_keys_max{}; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys_min; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_keys_max; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_combos_min; // only used in keyboard_pad_handler
+	std::map<u32, u16> m_pressed_combos_max; // only used in keyboard_pad_handler
+	u8 m_stick_min = 0; // only used in keyboard_pad_handler
+	u8 m_stick_max = 128; // only used in keyboard_pad_handler
+	u8 m_stick_val = 128; // only used in keyboard_pad_handler
 
 	AnalogStick() {}
-	AnalogStick(u32 offset, std::set<u32> key_codes_min, std::set<u32> key_codes_max)
+	AnalogStick(u32 offset, std::vector<std::set<u32>> key_combos_min, std::vector<std::set<u32>> key_combos_max)
 		: m_offset(offset)
-		, m_key_codes_min(std::move(key_codes_min))
-		, m_key_codes_max(std::move(key_codes_max))
+		, m_key_combos_min(std::move(key_combos_min))
+		, m_key_combos_max(std::move(key_combos_max))
 	{}
+};
+
+struct AnalogStickExternal
+{
+	u32 m_offset = 0;
+	u16 m_value = 128;
 };
 
 struct AnalogSensor
@@ -516,9 +547,10 @@ struct Pad
 	std::array<AnalogStick, 4> m_sticks{};
 	std::array<AnalogSensor, 4> m_sensors{};
 	std::array<VibrateMotor, 2> m_vibrate_motors{};
+	std::array<u8, 2> m_angles{};
 
-	std::vector<Button> m_buttons_external;
-	std::array<AnalogStick, 4> m_sticks_external{};
+	std::vector<ButtonExternal> m_buttons_external;
+	std::array<AnalogStickExternal, 4> m_sticks_external{};
 
 	std::vector<std::shared_ptr<Pad>> copilots;
 

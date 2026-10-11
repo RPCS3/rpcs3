@@ -98,6 +98,9 @@ namespace logs
 		// Flush log to disk
 		static void sync_all();
 
+		// Detach all listeners before controlled shutdown tears them down.
+		static void shutdown_all();
+
 		// Close file handle after flushing to disk (hazardous)
 		static void close_all_prematurely();
 	};
@@ -172,10 +175,10 @@ namespace logs
 	void silence();
 
 	// Log level control: register channel if necessary, set channel level
-	void set_level(const std::string&, level);
+	void set_level(const std::string& ch_name, level value);
 
 	// Log level control: get channel level
-	level get_level(const std::string&);
+	level get_level(const std::string& ch_name);
 
 	// Log level control: set specific channels to level::fatal
 	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map);

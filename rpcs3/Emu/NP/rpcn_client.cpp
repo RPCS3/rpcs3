@@ -161,6 +161,9 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::GetRoomInfoGUI: return "GetRoomInfoGUI";
 			case rpcn::CommandType::QuickMatchGUI: return "QuickMatchGUI";
 			case rpcn::CommandType::SearchJoinRoomGUI: return "SearchJoinRoomGUI";
+			case rpcn::CommandType::UnlockTrophy: return "UnlockTrophy";
+			case rpcn::CommandType::SyncTrophies: return "SyncTrophies";
+			case rpcn::CommandType::DeleteTrophies: return "DeleteTrophies";
 			}
 
 			return unknown;
@@ -257,7 +260,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 30;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 32;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -503,8 +506,8 @@ namespace rpcn
 					{
 						if (msg.size() == 6)
 						{
-							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
-							const u16 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(msg, 0);
+							const u16 new_port_sig = read_from_ptr<be_t<u16>>(msg, 4);
 							const u32 old_addr_sig = addr_sig;
 							const u32 old_port_sig = port_sig;
 
@@ -533,7 +536,7 @@ namespace rpcn
 							// We don't really need ipv6 info stored so we just update the pong data
 							// std::array<u8, 16> new_ipv6_addr;
 							// std::memcpy(new_ipv6_addr.data(), &msg[3], 16);
-							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(&msg[16]);
+							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(msg, 16);
 
 							last_pong_time_ipv6 = now;
 						}
@@ -626,9 +629,9 @@ namespace rpcn
 		}
 
 		const u8 packet_type = header[0];
-		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(&header[1])));
-		const u32 packet_size = read_from_ptr<le_t<u32>>(&header[3]);
-		const u64 packet_id = read_from_ptr<le_t<u64>>(&header[7]);
+		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(header, 1)));
+		const u32 packet_size = read_from_ptr<le_t<u32>>(header, 3);
+		const u64 packet_id = read_from_ptr<le_t<u64>>(header, 7);
 
 		if (packet_size < RPCN_HEADER_SIZE)
 			return error_and_disconnect("Invalid packet size");
@@ -657,13 +660,24 @@ namespace rpcn
 				break;
 			}
 
+			if (command == CommandType::UnlockTrophy)
+			{
+				const ErrorType err = static_cast<ErrorType>(data[0]);
+
+				if (err != ErrorType::NoError)
+					rpcn_log.error("UnlockTrophy failed with %s", err);
+
+				break;
+			}
+
 			// Those commands are handled synchronously and won't be forwarded to NP Handler
 			if (command == CommandType::Login || command == CommandType::GetServerList || command == CommandType::Create || command == CommandType::Delete ||
 				command == CommandType::AddFriend || command == CommandType::RemoveFriend ||
 				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
 				command == CommandType::SendResetToken || command == CommandType::ResetPassword ||
-				command == CommandType::GetNetworkTime || command == CommandType::SetPresence || command == CommandType::Terminate)
+				command == CommandType::GetNetworkTime || command == CommandType::SetPresence || command == CommandType::Terminate ||
+				command == CommandType::SyncTrophies || command == CommandType::DeleteTrophies)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -677,7 +691,7 @@ namespace rpcn
 				}
 				else
 				{
-					rpcn_log.error("Tried to forward a reply whose packet_id marks it as internal to RPCN");
+					rpcn_log.error("Tried to forward a reply whose packet_id marks it as internal to RPCN: %s:0x%x", command, packet_id);
 				}
 			}
 
@@ -717,7 +731,7 @@ namespace rpcn
 			if (data.size() != 4)
 				return error_and_disconnect("Invalid size of ServerInfo packet");
 
-			received_version = reinterpret_cast<le_t<u32>&>(data[0]);
+			received_version = read_from_ptr<le_t<u32>>(data, 0);
 			server_info_received = true;
 			break;
 		}
@@ -967,7 +981,7 @@ namespace rpcn
 		server_info_received = false;
 	}
 
-	bool rpcn_client::connect(const std::string& host)
+	bool rpcn_client::connect(std::string_view host)
 	{
 		rpcn_log.warning("connect: Attempting to connect");
 
@@ -1172,7 +1186,7 @@ namespace rpcn
 		return true;
 	}
 
-	bool rpcn_client::login(const std::string& npid, const std::string& password, const std::string& token)
+	bool rpcn_client::login(std::string_view npid, std::string_view password, std::string_view token)
 	{
 		if (npid.empty())
 		{
@@ -1239,7 +1253,7 @@ namespace rpcn
 		auto get_usernames = [](vec_stream& stream, std::set<std::string>& usernames)
 		{
 			u32 num_usernames = stream.get<u32>();
-			for (u32 i = 0; i < num_usernames; i++)
+			for (u32 i = 0; i < num_usernames && !stream.is_error(); i++)
 			{
 				std::string username = stream.get_string(false);
 				usernames.insert(std::move(username));
@@ -1338,7 +1352,7 @@ namespace rpcn
 		return error;
 	}
 
-	ErrorType rpcn_client::resend_token(const std::string& npid, const std::string& password)
+	ErrorType rpcn_client::resend_token(std::string_view npid, std::string_view password)
 	{
 		if (authentified)
 		{
@@ -1469,7 +1483,38 @@ namespace rpcn
 		return error;
 	}
 
-	std::optional<ErrorType> rpcn_client::add_friend(const std::string& friend_username)
+	ErrorType rpcn_client::delete_trophies(std::string_view communication_id)
+	{
+		std::vector<u8> data;
+		std::copy(communication_id.begin(), communication_id.end(), std::back_inserter(data));
+		data.push_back(0);
+
+		std::vector<u8> packet_data;
+
+		if (!forge_send_reply(CommandType::DeleteTrophies, rpcn_request_counter.fetch_add(1), data, packet_data))
+		{
+			return ErrorType::Malformed;
+		}
+
+		vec_stream reply(packet_data);
+		const auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (error == rpcn::ErrorType::NoError)
+		{
+			if (communication_id.empty())
+			{
+				rpcn_log.success("RPCN trophies were successfully deleted!");
+			}
+			else
+			{
+				rpcn_log.success("RPCN trophies for %s were successfully deleted!", communication_id);
+			}
+		}
+
+		return error;
+	}
+
+	std::optional<ErrorType> rpcn_client::add_friend(std::string_view friend_username)
 	{
 		std::vector<u8> data;
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
@@ -1494,7 +1539,7 @@ namespace rpcn
 		return error;
 	}
 
-	bool rpcn_client::remove_friend(const std::string& friend_username)
+	bool rpcn_client::remove_friend(std::string_view friend_username)
 	{
 		std::vector<u8> data;
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
@@ -1653,7 +1698,7 @@ namespace rpcn
 	{
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u16));
 		rpcn_client::write_communication_id(communication_id, data);
-		reinterpret_cast<le_t<u16>&>(data[COMMUNICATION_ID_SIZE]) = server_id;
+		write_to_ptr<le_t<u16>>(data, COMMUNICATION_ID_SIZE, server_id);
 
 		return forge_send(CommandType::GetWorldList, req_id, data);
 	}
@@ -2159,7 +2204,7 @@ namespace rpcn
 		return forge_request_with_com_id(serialized, communication_id, CommandType::SendRoomMessage, req_id);
 	}
 
-	bool rpcn_client::req_sign_infos(u32 req_id, const std::string& npid)
+	bool rpcn_client::req_sign_infos(u32 req_id, std::string_view npid)
 	{
 		std::vector<u8> data;
 		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
@@ -2168,7 +2213,7 @@ namespace rpcn
 		return forge_send(CommandType::RequestSignalingInfos, req_id, data);
 	}
 
-	bool rpcn_client::req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie)
+	bool rpcn_client::req_ticket(u32 req_id, std::string_view service_id, const std::vector<u8>& cookie)
 	{
 		std::vector<u8> data;
 		std::copy(service_id.begin(), service_id.end(), std::back_inserter(data));
@@ -2206,7 +2251,7 @@ namespace rpcn
 		pb_req.SerializeToString(&serialized);
 
 		std::vector<u8> data(serialized.size() + sizeof(u32));
-		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(serialized.size());
+		write_to_ptr<le_t<u32>>(data, 0, static_cast<u32>(serialized.size()));
 		memcpy(data.data() + sizeof(u32), serialized.data(), serialized.size());
 
 		return forge_send(CommandType::SendMessage, rpcn_request_counter.fetch_add(1), data);
@@ -2306,9 +2351,9 @@ namespace rpcn
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize + sizeof(u32) + score_data.size());
 
 		rpcn_client::write_communication_id(communication_id, data);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		write_to_ptr<le_t<u32>>(data, COMMUNICATION_ID_SIZE, static_cast<u32>(bufsize));
 		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), serialized.data(), bufsize);
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize]) = static_cast<u32>(score_data.size());
+		write_to_ptr<le_t<u32>>(data, COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize, static_cast<u32>(score_data.size()));
 		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize + sizeof(u32), score_data.data(), score_data.size());
 
 		return forge_send(CommandType::RecordScoreData, req_id, data);
@@ -2605,6 +2650,64 @@ namespace rpcn
 		return forge_request_with_com_id(serialized, pr_com_id, CommandType::SetPresence, rpcn_request_counter.fetch_add(1));
 	}
 
+	bool rpcn_client::unlock_trophy(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp)
+	{
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(s32) + sizeof(s64));
+		rpcn_client::write_communication_id(communication_id, data);
+		write_to_ptr<le_t<s32>>(data, COMMUNICATION_ID_SIZE, trophy_id);
+		write_to_ptr<le_t<s64>>(data, COMMUNICATION_ID_SIZE + sizeof(s32), timestamp);
+		return forge_send(CommandType::UnlockTrophy, rpcn_request_counter.fetch_add(1), data);
+	}
+
+	std::vector<std::pair<s32, s64>> rpcn_client::sync_trophies(
+		const SceNpCommunicationId& communication_id,
+		const std::vector<std::pair<s32, s64>>& local_unlocked)
+	{
+		const u32 count = static_cast<u32>(local_unlocked.size());
+
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + count * (sizeof(s32) + sizeof(s64))), reply_data;
+
+		rpcn_client::write_communication_id(communication_id, data);
+		write_to_ptr<le_t<u32>>(data, COMMUNICATION_ID_SIZE, count);
+
+		usz offset = COMMUNICATION_ID_SIZE + sizeof(u32);
+		for (const auto& [tid, ts] : local_unlocked)
+		{
+			write_to_ptr<le_t<s32>>(data, offset, tid);
+			offset += sizeof(s32);
+			write_to_ptr<le_t<s64>>(data, offset, ts);
+			offset += sizeof(s64);
+		}
+
+		if (!forge_send_reply(CommandType::SyncTrophies, rpcn_request_counter.fetch_add(1), data, reply_data))
+			return {};
+
+		vec_stream reply(reply_data);
+		const auto error = static_cast<ErrorType>(reply.get<u8>());
+		if (error != rpcn::ErrorType::NoError)
+		{
+			rpcn_log.error("sync_trophies: server returned error %s", fmt::format("%s", error));
+			return {};
+		}
+
+		const u32 server_count = reply.get<u32>();
+		std::vector<std::pair<s32, s64>> result;
+		result.reserve(server_count);
+		for (u32 i = 0; i < server_count; i++)
+		{
+			const s32 tid = reply.get<s32>();
+			const s64 ts  = reply.get<s64>();
+			result.emplace_back(tid, ts);
+		}
+
+		if (reply.is_error())
+		{
+			error_and_disconnect("Malformed reply to SyncTrophies command");
+			return {};
+		}
+		return result;
+	}
+
 	bool rpcn_client::createjoin_room_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingAttr* attr_list)
 	{
 		np2_structs::CreateRoomGUIRequest pb_req;
@@ -2859,25 +2962,25 @@ namespace rpcn
 		memcpy(data.data(), com_id_str.data(), COMMUNICATION_ID_SIZE);
 	}
 
-	bool rpcn_client::forge_request_with_com_id(const std::string& serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
+	bool rpcn_client::forge_request_with_com_id(std::string_view serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
 	{
 		const usz bufsize = serialized_data.size();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 		rpcn_client::write_communication_id(com_id, data);
 
-		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+		write_to_ptr<le_t<u32>>(data, COMMUNICATION_ID_SIZE, static_cast<u32>(bufsize));
 		memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), serialized_data.data(), bufsize);
 
 		return forge_send(command, packet_id, data);
 	}
 
-	bool rpcn_client::forge_request_with_data(const std::string& serialized_data, CommandType command, u64 packet_id)
+	bool rpcn_client::forge_request_with_data(std::string_view serialized_data, CommandType command, u64 packet_id)
 	{
 		const usz bufsize = serialized_data.size();
 		std::vector<u8> data(sizeof(u32) + bufsize);
 
-		reinterpret_cast<le_t<u32>&>(data[0]) = static_cast<u32>(bufsize);
+		write_to_ptr<le_t<u32>>(data, 0, static_cast<u32>(bufsize));
 		memcpy(data.data() + sizeof(u32), serialized_data.data(), bufsize);
 
 		return forge_send(command, packet_id, data);
@@ -2889,22 +2992,22 @@ namespace rpcn
 
 		std::vector<u8> packet(packet_size);
 		packet[0] = static_cast<u8>(PacketType::Request);
-		reinterpret_cast<le_t<u16>&>(packet[1]) = static_cast<u16>(command);
-		reinterpret_cast<le_t<u32>&>(packet[3]) = ::narrow<u32>(packet_size);
-		reinterpret_cast<le_t<u64>&>(packet[7]) = packet_id;
+		write_to_ptr<le_t<u16>>(packet, 1, static_cast<u16>(command));
+		write_to_ptr<le_t<u32>>(packet, 3, ::narrow<u32>(packet_size));
+		write_to_ptr<le_t<u64>>(packet, 7, packet_id);
 
 		memcpy(packet.data() + RPCN_HEADER_SIZE, data.data(), data.size());
 		return packet;
 	}
 
-	bool rpcn_client::error_and_disconnect(const std::string& error_msg)
+	bool rpcn_client::error_and_disconnect(std::string_view error_msg)
 	{
 		connected = false;
 		rpcn_log.error("%s", error_msg);
 		return false;
 	}
 
-	bool rpcn_client::error_and_disconnect_notice(const std::string& error_msg)
+	bool rpcn_client::error_and_disconnect_notice(std::string_view error_msg)
 	{
 		connected = false;
 		rpcn_log.notice("%s", error_msg);
@@ -3146,10 +3249,19 @@ namespace rpcn
 			return;
 		}
 
+		const u32 main_type = pb_mdata->maintype().value();
+		const u32 sub_type = pb_mdata->subtype().value();
+
+		if (main_type > std::numeric_limits<u16>::max() || sub_type > std::numeric_limits<u16>::max())
+		{
+			rpcn_log.warning("Discarded message with invalid type! (main_type=%u, sub_type=%u)", main_type, sub_type);
+			return;
+		}
+
 		message_data mdata = {
 			.msgId = message_counter,
-			.mainType = ::narrow<u16>(pb_mdata->maintype().value()),
-			.subType = ::narrow<u16>(pb_mdata->subtype().value()),
+			.mainType = static_cast<u16>(main_type),
+			.subType = static_cast<u16>(sub_type),
 			.msgFeatures = pb_mdata->msgfeatures(),
 			.subject = pb_mdata->subject(),
 			.body = pb_mdata->body()};
@@ -3180,7 +3292,7 @@ namespace rpcn
 		}
 	}
 
-	std::optional<shared_ptr<std::pair<std::string, message_data>>> rpcn_client::get_message(u64 id)
+	std::optional<shared_ptr<std::pair<std::string, message_data>>> rpcn_client::get_message(u64 id) const
 	{
 		{
 			std::lock_guard lock(mutex_messages);
@@ -3238,21 +3350,21 @@ namespace rpcn
 		active_messages.erase(id);
 	}
 
-	u32 rpcn_client::get_num_friends()
+	u32 rpcn_client::get_num_friends() const
 	{
 		std::lock_guard lock(mutex_friends);
 
 		return ::size32(friend_infos.friends);
 	}
 
-	u32 rpcn_client::get_num_blocks()
+	u32 rpcn_client::get_num_blocks() const
 	{
 		std::lock_guard lock(mutex_friends);
 
 		return ::size32(friend_infos.blocked);
 	}
 
-	std::optional<std::string> rpcn_client::get_friend_by_index(u32 index)
+	std::optional<std::string> rpcn_client::get_friend_by_index(u32 index) const
 	{
 		std::lock_guard lock(mutex_friends);
 
@@ -3270,7 +3382,7 @@ namespace rpcn
 		return it->first;
 	}
 
-	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_index(u32 index)
+	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_index(u32 index) const
 	{
 		std::lock_guard lock(mutex_friends);
 
@@ -3284,7 +3396,7 @@ namespace rpcn
 		return std::optional(*it);
 	}
 
-	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_npid(const std::string& npid)
+	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_npid(const std::string& npid) const
 	{
 		std::lock_guard lock(mutex_friends);
 		const auto it = friend_infos.friends.find(npid);

@@ -59,7 +59,28 @@ namespace gl
 		GLuint num_layers;
 	};
 
-	class texture : public named_object<GL_TEXTURE>
+	template <GLenum Type>
+	struct bindless_texture_t : public named_object<Type>
+	{
+		handle64_t handle() const
+		{
+			if (m_handle64)
+			{
+				return m_handle64;
+			}
+
+			ensure(gl::get_driver_caps().ARB_bindless_texture_supported, "Bindless handles are not supported on this device.");
+			m_handle64 = ensure(glGetTextureHandleARB(m_id), "Failed to get image handle from OpenGL driver.");
+			glMakeTextureHandleResidentARB(m_handle64);
+			return m_handle64;
+		}
+
+	protected:
+		using named_object<Type>::m_id;
+		mutable GLuint64 m_handle64 = GL_NONE;
+	};
+
+	class texture : public bindless_texture_t<GL_TEXTURE>
 	{
 		friend class texture_view;
 
@@ -85,7 +106,7 @@ namespace gl
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
 			uint_24_8 = GL_UNSIGNED_INT_24_8,
-			float32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
+			f32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,
@@ -181,6 +202,8 @@ namespace gl
 		};
 
 	protected:
+		mutable GLuint64 m_handle64 = GL_NONE;
+
 		GLuint m_width = 0;
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
@@ -345,9 +368,11 @@ namespace gl
 		}
 	};
 
-	class texture_view : public named_object<GL_TEXTURE>
+	class texture_view : public bindless_texture_t<GL_TEXTURE>
 	{
 	protected:
+		mutable GLuint64 m_handle64 = GL_NONE;
+
 		GLenum m_target = 0;
 		GLenum m_format = 0;
 		GLenum m_view_format = 0;

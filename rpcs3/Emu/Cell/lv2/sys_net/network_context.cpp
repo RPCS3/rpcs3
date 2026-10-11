@@ -302,7 +302,7 @@ void p2p_thread::operator()()
 #endif
 		if (ret_p2p > 0)
 		{
-			std::lock_guard lock(list_p2p_ports_mutex);
+			std::scoped_lock lock(mutex_thread_loop, list_p2p_ports_mutex);
 			auto fd_index = 0;
 
 			auto process_fd = [&](nt_p2p_port& p2p_port)

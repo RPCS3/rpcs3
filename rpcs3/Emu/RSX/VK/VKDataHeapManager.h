@@ -1,6 +1,7 @@
 #pragma once
 
 #include <util/types.hpp>
+#include "Emu/RSX/Common/simple_array.hpp"
 
 #include <unordered_map>
 
@@ -29,5 +30,8 @@ namespace vk
 
 		// Cleanup
 		void reset();
+
+		// Retrieve as list
+		rsx::simple_array<vk::data_heap*> to_list();
 	}
 }

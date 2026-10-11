@@ -2,9 +2,14 @@
 
 #include "gui_game_info.h"
 #include "shortcut_utils.h"
+#include "Loader/content_validation.h"
 
 #include <QFuture>
 #include <QObject>
+#include <QSet>
+
+class QActionGroup;
+class QMenu;
 
 class progress_dialog;
 class game_list_frame;
@@ -48,13 +53,41 @@ public:
 		std::set<std::string> removed_disc_list; // Filled in by RemoveContentList()
 	};
 
-	static bool IsGameRunning(const std::string& serial);
+	static bool IsGameRunning(std::string_view serial);
 
 	void CreateShortcuts(const std::vector<game_info>& games, const std::set<gui::utils::shortcut_location>& locations);
 
 	void ShowRemoveGameDialog(const std::vector<game_info>& games);
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
+	void ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path);
+
+	// Validates a game, held either by a JB folder or by an ISO image, against the IRD file of the disc it
+	// comes from, asking the user for the IRD file to check it against
+	void ShowIrdIntegrityDialog(const std::string& game_path);
+
 	void ShowDiskUsageDialog();
+
+	// Fills a game collection menu with the default entry and one per collection. The rename and removal
+	// submenus belong to the Manage menu, and are null for the View one, which carries neither.
+	void UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_group, QMenu* rename_menu, QMenu* remove_menu);
+
+	// Asks for a name until it is accepted or the dialog is dismissed, then adds the given games to what
+	// was created
+	void CreateGameCollection(const QSet<QString>& serials = {});
+
+	// Asks for a new name for a game collection until it is accepted or the dialog is dismissed
+	void RenameGameCollection(const QString& name);
+
+	// Drops a game collection after confirmation. Its games keep existing, assigned to none.
+	void RemoveGameCollection(const QString& name);
+
+	// Makes a game collection the one the game list is filtered by. An empty name shows every game.
+	void SelectGameCollection(const QString& name);
+
+	// Appends the "Add to Collection" submenu, which puts the given games in a user defined game collection
+	// or takes them out of it, and the entry that removes them from the collection the game list is
+	// filtered by
+	void AddCollectionMenu(QMenu* parent, const std::vector<game_info>& games);
 
 	// NOTES:
 	//   - SetContentList() MUST always be called to set the content's info to be removed by:
@@ -94,9 +127,15 @@ public:
 	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
 
 private:
+	// Opens the progress dialog reporting how far the hash calculation driven by the validator has got, and
+	// closes it as soon as the validator reports it is done
+	void StartHashProgressDialog();
+
 	game_list_frame* m_game_list_frame = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QFuture<void> m_disk_usage_future;
+	QFuture<void> m_game_integrity_future;
+	std::shared_ptr<content_validation> m_game_validator = std::make_shared<content_validation>();
 
 	// NOTE:
 	//   m_content_info is used by:
@@ -107,6 +146,14 @@ private:
 	//   - BatchRemoveContentLists()
 	//
 	content_info m_content_info;
+
+	// Asks for a collection name until accept takes it or the dialog is dismissed, warning about whichever
+	// rule was broken. Returns what was accepted, or nothing.
+	QString AskForCollectionName(const QString& title, const QString& initial,
+		const std::function<bool(const QString&)>& accept);
+
+	// Puts the given games in a game collection or takes them out of it, then refreshes the game list
+	void ChangeCollectionMembership(const QSet<QString>& serials, const QString& name, bool add);
 
 	void BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials,
 		QString progressLabel, std::function<bool(const std::string&)> action,

@@ -60,6 +60,8 @@ namespace vk
 				return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			case input_type_storage_texture:
 				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case input_type_attachment:
+				return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 			default:
 				fmt::throw_exception("Unexpected program input type %d", static_cast<int>(type));
 			}
@@ -201,7 +203,7 @@ namespace vk
 			return *this;
 		}
 
-		program& program::link(bool separate_objects)
+		program& program::link(VkPipelineCache pipeline_cache, bool separate_objects)
 		{
 			auto p_graphics_info = std::get_if<VkGraphicsPipelineCreateInfo>(&m_info);
 			auto p_compute_info = !p_graphics_info ? std::get_if<VkComputePipelineCreateInfo>(&m_info) : nullptr;
@@ -269,20 +271,20 @@ namespace vk
 			{
 				VkGraphicsPipelineCreateInfo create_info = *p_graphics_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, pipeline_cache, 1, &create_info, nullptr, &m_pipeline));
 			}
 			else
 			{
 				VkComputePipelineCreateInfo create_info = *p_compute_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateComputePipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(vkCreateComputePipelines(m_device, pipeline_cache, 1, &create_info, nullptr, &m_pipeline));
 			}
 
 			m_linked = true;
 			return *this;
 		}
 
-		bool program::has_uniform(program_input_type type, const std::string& uniform_name)
+		bool program::has_uniform(program_input_type type, std::string_view uniform_name)
 		{
 			for (auto& set : m_sets)
 			{
@@ -296,7 +298,7 @@ namespace vk
 			return false;
 		}
 
-		std::pair<u32, u32> program::get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name)
+		std::pair<u32, u32> program::get_uniform_location(::glsl::program_domain domain, program_input_type type, std::string_view uniform_name)
 		{
 			for (unsigned i = 0; i < ::size32(m_sets); ++i)
 			{
@@ -632,7 +634,7 @@ namespace vk
 
 			std::unordered_map<u32, VkDescriptorType> descriptor_type_map;
 
-			auto descriptor_count = [](const std::string& name) -> u32
+			auto descriptor_count = [](std::string_view name) -> u32
 			{
 				const auto start = name.find_last_of("[");
 				if (start == std::string::npos)
@@ -643,8 +645,8 @@ namespace vk
 				const auto end = name.find_last_of("]");
 				ensure(end != std::string::npos && start < end, "Invalid variable name");
 
-				const std::string array_size = name.substr(start + 1, end - start - 1);
-				if (const auto count = std::atoi(array_size.c_str());
+				const std::string_view array_size = name.substr(start + 1, end - start - 1);
+				if (const auto count = std::atoi(array_size.data());
 					count > 0)
 				{
 					return count;
@@ -696,7 +698,7 @@ namespace vk
 		void descriptor_table_t::create_descriptor_pool()
 		{
 			m_descriptor_pool = std::make_unique<descriptor_pool>();
-			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes);
+			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes, 16u, 4096u);
 		}
 
 		void descriptor_table_t::validate() const

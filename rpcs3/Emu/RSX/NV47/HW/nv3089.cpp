@@ -5,6 +5,7 @@
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/Common/tiled_dma_copy.hpp"
 #include "Emu/RSX/Host/MM.h"
+#include "Emu/RSX/Utils/image_utils.hpp"
 
 #include "context_accessors.define.h"
 
@@ -195,7 +196,7 @@ namespace rsx
 
 			if (!dst_address)
 			{
-				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%dx)", dst_offset, dst_dma);
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%x)", dst_offset, dst_dma);
 				RSX(ctx)->recover_fifo();
 				return { false, src_info, dst_info };
 			}
@@ -217,7 +218,7 @@ namespace rsx
 				if (const auto result = RSX(ctx)->read_barrier(src_address, data_length, false);
 					result == rsx::result_zcull_intr)
 				{
-					if (RSX(ctx)->copy_zcull_stats(src_address, data_length, dst_address) == data_length)
+					if (RSX(ctx)->copy_zcull_stats(src_address, data_length, dst_address) >= data_length)
 					{
 						// All writes deferred
 						return { false, src_info, dst_info };
@@ -226,7 +227,7 @@ namespace rsx
 			}
 			else
 			{
-				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
+				const u16 read_h = std::max<u16>(std::min(static_cast<u16>(clip_h / scale_y), in_h), 1);
 				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
 
 				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)

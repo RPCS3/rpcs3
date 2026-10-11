@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "ProgramStateCache.h"
-#include "FragmentProgramDecompiler.h"
 #include "Emu/system_config.h"
 #include "Emu/RSX/Core/RSXDriverState.h"
 #include "util/sysinfo.hpp"
@@ -140,17 +139,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	//u32 last_instruction_address = 0;
 	//u32 first_instruction_address = entry;
 
-	std::bitset<rsx::max_vertex_program_instructions> instructions_to_patch;
+	bit_set<rsx::max_vertex_program_instructions> instructions_to_patch;
 	std::pair<u32, u32> instruction_range{ umax, 0 };
 	bool has_branch_instruction = false;
-	std::stack<u32> call_stack;
+	std::stack<u32, std::vector<u32>> call_stack;
 
 	D3 d3{};
 	D2 d2{};
 	D1 d1{};
 	D0 d0{};
 
-	std::function<void(u32, bool)> walk_function = [&](u32 start, bool fast_exit)
+	auto walk_function = [&](auto&& self, u32 start, bool fast_exit) -> void
 	{
 		u32 current_instruction = start;
 		std::set<u32> conditional_targets;
@@ -178,7 +177,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			d3.HEX = instruction._u32[3];
 
 			// Touch current instruction
-			result.instruction_mask[current_instruction] = true;
+			result.instruction_mask.set(current_instruction, true);
 			instruction_range.first = std::min(current_instruction, instruction_range.first);
 			instruction_range.second = std::max(current_instruction, instruction_range.second);
 
@@ -224,7 +223,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_VEC_OPCODE_TXL:
 			{
 				result.referenced_textures_mask |= (1 << d2.tex_num);
-				break;
+				[[ fallthrough ]];
 			}
 			default:
 			{
@@ -258,7 +257,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_SCA_OPCODE_CLB:
 			{
 				// Need to patch the jump address to be consistent wherever the program is located
-				instructions_to_patch[current_instruction] = true;
+				instructions_to_patch.set(current_instruction, true);
 				has_branch_instruction = true;
 
 				d0.HEX = instruction._u32[0];
@@ -334,7 +333,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		{
 			if (!result.instruction_mask[target])
 			{
-				walk_function(target, true);
+				self(self, target, true);
 			}
 		}
 	};
@@ -347,7 +346,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		dump.close();
 	}
 
-	walk_function(entry, false);
+	walk_function(walk_function, entry, false);
 
 	const u32 instruction_count = (instruction_range.second - instruction_range.first + 1);
 	result.ucode_length = instruction_count * 16;
@@ -679,8 +678,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			break;
 		}
 
-		if (rsx::assembler::FP::get_operand_count(opcode) > 0 &&
-			is_any_src_constant(inst))
+		if (is_any_src_constant(inst))
 		{
 			// Instruction references constant, skip one slot occupied by data
 			index++;
@@ -790,9 +788,9 @@ namespace rsx
 
 			if (sanitize)
 			{
-				//Convert NaNs and Infs to 0
+				// Zero NaNs as a host driver workaround, realhw keeps NaN and Inf as is
 				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
-				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
+				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800001));
 				const auto result = _mm_and_si128(shuffled_vector, valid);
 				_mm_stream_si128(utils::bless<__m128i>(dst), result);
 			}
@@ -818,7 +816,7 @@ namespace rsx
 				const u32 value = reinterpret_cast<const u32*>(data)[i];
 				const u32 shuffled = ((value >> 8) & 0xff00ff) | ((value << 8) & 0xff00ff00);
 
-				if (sanitize && (shuffled & 0x7fffffff) >= 0x7f800000)
+				if (sanitize && (shuffled & 0x7fffffff) > 0x7f800000)
 				{
 					dst[i] = 0.f;
 				}

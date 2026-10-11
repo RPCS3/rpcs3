@@ -2,7 +2,9 @@
 #include "RSXDisplay.h"
 
 #include "../Common/simple_array.hpp"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
+
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -49,7 +51,7 @@ namespace rsx
 		}
 	}
 
-	std::string framebuffer_statistics_t::to_string(bool squash) const
+	std::string framebuffer_statistics_t::to_string(const surface_scaling_config_t& scaling_config, bool squash) const
 	{
 		// Format is sorted by sample count
 		struct sorted_message_t
@@ -70,7 +72,7 @@ namespace rsx
 		for (const auto& [aa_mode, stat] : data)
 		{
 			auto real_stat = stat;
-			std::tie(real_stat.width, real_stat.height) = apply_resolution_scale(stat.width, stat.height);
+			std::tie(real_stat.width, real_stat.height) = apply_resolution_scale(scaling_config, stat.width, stat.height);
 			real_stats.push_back(real_stat);
 
 			sorted_message_t msg;

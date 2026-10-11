@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/PPUModule.h"
@@ -699,7 +700,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			}
 			else
 			{
-				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.content_id);
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.get_content_id());
 
 				if (fs::file rap_fd{rap_file})
 				{
@@ -1434,7 +1435,7 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 
 		Emu.BlockingCallFromMainThread([=, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
 		{
-			auto send_dlg = Emu.GetCallbacks().get_sendmessage_dialog();
+			auto send_dlg = g_emu_callbacks.get_sendmessage_dialog();
 			result = send_dlg->Exec(msg_data, npids);
 		});
 
@@ -1618,7 +1619,7 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 
 		Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
 		{
-			auto recv_dlg = Emu.GetCallbacks().get_recvmessage_dialog();
+			auto recv_dlg = g_emu_callbacks.get_recvmessage_dialog();
 			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
 		});
 
@@ -6798,6 +6799,11 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!get_signaling_context(ctx_id))
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
 	}
 
 	if (!npId || !conn_id)

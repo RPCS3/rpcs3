@@ -58,6 +58,7 @@ private:
 
 	QCheckBox* m_enabled = nullptr;
 	QCheckBox* m_reverse_effects = nullptr;
+	QComboBox* m_ffb_direction_type = nullptr;
 	QComboBox* m_compatibility_limit = nullptr;
 
 	std::map<mapping_device, Mapping*> m_mappings;

@@ -24,29 +24,27 @@ namespace utils
 		return (m_hi << 24) | (m_mid << 16) | (m_lo << 8) | ((uint(m_type) & 0xf) << 4) | (m_type_index & 0xf);
 	}
 
-	std::string version::to_string() const
+	std::string version::to_string(bool simple) const
 	{
-		std::string version = std::to_string(hi()) + "." + std::to_string(mid());
+		std::string version = fmt::format("%d.%d", hi(), mid());
 
 		if (lo())
 		{
-			version += '.';
-			version += std::to_string(lo());
+			fmt::append(version, ".%d", lo());
 		}
 
-		if (type() != version_type::release)
+		if (!simple && type() != version_type::release)
 		{
 			if (!postfix().empty())
 			{
-				version += "-" + postfix();
+				fmt::append(version, "-%s", postfix());
 			}
 
-			version += ' ';
-			version += utils::to_string(type());
+			fmt::append(version, " %s", utils::to_string(type()));
 
 			if (type_index() > 1)
 			{
-				version += " " + std::to_string(type_index());
+				fmt::append(version, " %d", type_index());
 			}
 		}
 
@@ -57,7 +55,8 @@ namespace utils
 	int compare_versions(const std::string& v1, const std::string& v2, bool& ok)
 	{
 		// Check if both version strings are valid
-		ok = std::regex_match(v1, std::regex("[0-9.]*")) && std::regex_match(v2, std::regex("[0-9.]*"));
+		static const std::regex comp = std::regex("[0-9.]*");
+		ok = std::regex_match(v1, comp) && std::regex_match(v2, comp);
 
 		if (!ok)
 		{

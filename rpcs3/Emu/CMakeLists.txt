@@ -19,6 +19,7 @@ add_library(rpcs3_emu STATIC
     perf_monitor.cpp
     IPC_config.cpp
     IPC_socket.cpp
+    Io/SkylanderPortalIPC_config.cpp
 )
 
 if(USE_LTO)
@@ -27,6 +28,17 @@ endif()
 
 if(USE_ASAN)
     set_source_files_properties(../../Utilities/Thread.cpp PROPERTIES COMPILE_DEFINITIONS USE_ASAN)
+endif()
+
+# GCC overemits weak type information when using LTO
+# This causes an issue with LLVM 22 which is build without RTTI
+# Issue is specifically related to vfs::ProxyFileSystem
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set_source_files_properties(
+        Cell/PPUThread.cpp
+        Cell/SPULLVMRecompiler.cpp
+        PROPERTIES COMPILE_OPTIONS -fno-lto
+    )
 endif()
 
 if(NOT USE_SYSTEM_OPENAL)
@@ -77,6 +89,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/sema.cpp
     ../../Utilities/simple_ringbuf.cpp
     ../../Utilities/stack_trace.cpp
+    ../../Utilities/stereo_config.cpp
     ../../Utilities/StrFmt.cpp
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
@@ -125,7 +138,11 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/PSF.cpp
     ../Loader/PUP.cpp
     ../Loader/TAR.cpp
+    ../Loader/IRD.cpp
+    ../Loader/IRD_validation.cpp
     ../Loader/ISO.cpp
+    ../Loader/iso_cache.cpp
+    ../Loader/content_validation.cpp
     ../Loader/TROPUSR.cpp
     ../Loader/TRP.cpp
 )
@@ -160,7 +177,7 @@ if(WIN32)
         Audio/XAudio2/xaudio2_enumerator.cpp
     )
     target_compile_definitions(rpcs3_emu PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
-    target_link_libraries(rpcs3_emu PRIVATE pdh bcrypt)
+    target_link_libraries(rpcs3_emu PRIVATE pdh bcrypt dbghelp)
 endif()
 
 # Cell
@@ -184,6 +201,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUThread.cpp
     Cell/lv2/lv2.cpp
     Cell/lv2/sys_bdemu.cpp
+    Cell/lv2/sys_bluetooth.cpp
     Cell/lv2/sys_btsetting.cpp
     Cell/lv2/sys_cond.cpp
     Cell/lv2/sys_console.cpp
@@ -333,9 +351,17 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/HLE_PATCHES.cpp
     Cell/Modules/libad_async.cpp
     Cell/Modules/libad_core.cpp
+    Cell/Modules/libavcdec.cpp
+    Cell/Modules/libdivx311dec.cpp
+    Cell/Modules/libdivxdec.cpp
     Cell/Modules/libmedi.cpp
     Cell/Modules/libmixer.cpp
+    Cell/Modules/libmvcdec.cpp
+    Cell/Modules/libsjvtd.cpp
+    Cell/Modules/libsmvd2.cpp
+    Cell/Modules/libsmvd4.cpp
     Cell/Modules/libsnd3.cpp
+    Cell/Modules/libsvc1d.cpp
     Cell/Modules/libsynth2.cpp
     Cell/Modules/sceNp2.cpp
     Cell/Modules/sceNpClans.cpp
@@ -399,6 +425,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/Dimensions.cpp
     Io/evdev_gun_handler.cpp
     Io/GameTablet.cpp
+    Io/gem_config.cpp
     Io/GHLtar.cpp
     Io/GunCon3.cpp
     Io/Infinity.cpp
@@ -420,6 +447,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/RB3MidiKeyboard.cpp
     Io/recording_config.cpp
     Io/Skylander.cpp
+    Io/SkylanderPortalIPC.cpp
     Io/TopShotElite.cpp
     Io/TopShotFearmaster.cpp
     Io/Turntable.cpp
@@ -488,6 +516,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/NV47/HW/nv406e.cpp
     RSX/NV47/HW/nv4097.cpp
     RSX/Overlays/FriendsList/overlay_friends_list_dialog.cpp
+    RSX/Overlays/HomeMenu/overlay_home_icons.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_main_menu.cpp
@@ -495,6 +524,12 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/HomeMenu/overlay_home_menu_page.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_settings.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_savestate.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_sidebar_page.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture_game_details.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture_game_grid.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture_game_info.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture_main_menu.cpp
     RSX/Overlays/Network/overlay_recvmessage_dialog.cpp
     RSX/Overlays/Network/overlay_sendmessage_dialog.cpp
     RSX/Overlays/Trophies/overlay_trophy_list_dialog.cpp
@@ -502,6 +537,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_audio.cpp
+    RSX/Overlays/overlay_checkbox.cpp
     RSX/Overlays/overlay_compile_notification.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp
@@ -518,6 +554,9 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_perf_metrics.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
+    RSX/Overlays/overlay_select.cpp
+    RSX/Overlays/overlay_slider.cpp
+    RSX/Overlays/overlay_tabs.cpp
     RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/overlay_user_list_dialog.cpp
     RSX/Overlays/overlay_utils.cpp
@@ -536,6 +575,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp
+    RSX/Program/ShaderInterpreter.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
     RSX/GSFrameBase.cpp
@@ -546,8 +586,8 @@ target_sources(rpcs3_emu PRIVATE
     RSX/RSXThread.cpp
     RSX/RSXZCULL.cpp
     RSX/rsx_methods.cpp
-    RSX/rsx_utils.cpp
     RSX/rsx_vertex_data.cpp
+    RSX/Utils/rsx_utils.cpp
 )
 
 if(NOT ANDROID AND NOT APPLE)
@@ -571,6 +611,7 @@ if(NOT ANDROID AND NOT APPLE)
         RSX/GL/glutils/buffer_object.cpp
         RSX/GL/glutils/capabilities.cpp
         RSX/GL/glutils/common.cpp
+        RSX/GL/glutils/ex.cpp
         RSX/GL/glutils/fbo.cpp
         RSX/GL/glutils/image.cpp
         RSX/GL/glutils/program.cpp
@@ -592,6 +633,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/commands.cpp
         RSX/VK/vkutils/ex.cpp
         RSX/VK/vkutils/data_heap.cpp
+        RSX/VK/vkutils/debug_print.cpp
         RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
         RSX/VK/vkutils/image_helpers.cpp
@@ -641,6 +683,9 @@ if(TARGET 3rdparty_vulkan)
     endif()
 endif()
 
+if(NOT WIN32)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
 find_package(Threads REQUIRED)
 
 target_link_libraries(rpcs3_emu

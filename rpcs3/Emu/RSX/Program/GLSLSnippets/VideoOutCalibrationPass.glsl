@@ -19,6 +19,7 @@ layout(location=0) out vec4 ocol;
 #define STEREO_MODE_ANAGLYPH_MAGENTA_CYAN 7
 #define STEREO_MODE_ANAGLYPH_TRIOSCOPIC 8
 #define STEREO_MODE_ANAGLYPH_AMBER_BLUE 9
+#define STEREO_MODE_ANAGLYPH_CUSTOM 10
 
 #define TRUE 1
 #define FALSE 0
@@ -37,26 +38,28 @@ layout(push_constant) uniform static_data
 	int limit_range;
 	int stereo_display_mode;
 	int stereo_image_count;
+	mat3 left_anaglyph_matrix;
+	mat3 right_anaglyph_matrix;
 };
 #else
 uniform float gamma;
 uniform int limit_range;
 uniform int stereo_display_mode;
 uniform int stereo_image_count;
+uniform mat3 left_anaglyph_matrix;
+uniform mat3 right_anaglyph_matrix;
 #endif
+
+vec3 applyMatrix(vec3 left, vec3 right)
+{
+	vec3 outColor = left_anaglyph_matrix * left + right_anaglyph_matrix * right;
+	return clamp(outColor, 0.0, 1.0);
+}
 
 vec4 anaglyph(const in vec4 left, const in vec4 right)
 {
-	switch (stereo_display_mode)
-	{
-	case STEREO_MODE_ANAGLYPH_RED_GREEN:    return vec4(left.r, right.g, 0.f, 1.f);
-	case STEREO_MODE_ANAGLYPH_RED_BLUE:     return vec4(left.r, 0.f, right.b, 1.f);
-	case STEREO_MODE_ANAGLYPH_RED_CYAN:     return vec4(left.r, right.g, right.b, 1.f);
-	case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN: return vec4(left.r, right.g, (left.b + right.b) / 2.f, 1.f);
-	case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:   return vec4(right.r, left.g, right.b, 1.f);
-	case STEREO_MODE_ANAGLYPH_AMBER_BLUE:   return vec4(left.r, left.g, (right.r + right.g + right.b) / 3.f, 1.f);
-	default:                                return texture(fs0, tc0);
-	}
+	vec3 color = applyMatrix(left.rgb, right.rgb);
+	return vec4(color, 1.0);
 }
 
 vec4 anaglyph_single_image()
@@ -92,6 +95,7 @@ vec4 read_source()
 			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
 			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
 			case STEREO_MODE_ANAGLYPH_AMBER_BLUE:
+			case STEREO_MODE_ANAGLYPH_CUSTOM:
 				return anaglyph_single_image();
 			case STEREO_MODE_SIDE_BY_SIDE:
 				return (tc0.x < 0.5)
@@ -120,6 +124,7 @@ vec4 read_source()
 			case STEREO_MODE_ANAGLYPH_MAGENTA_CYAN:
 			case STEREO_MODE_ANAGLYPH_TRIOSCOPIC:
 			case STEREO_MODE_ANAGLYPH_AMBER_BLUE:
+			case STEREO_MODE_ANAGLYPH_CUSTOM:
 				return anaglyph_stereo_image();
 			case STEREO_MODE_SIDE_BY_SIDE:
 				return (tc0.x < 0.5)

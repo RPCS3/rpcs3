@@ -182,7 +182,7 @@ namespace rsx::assembler::FP
 			instruction.bytecode[2] = src1.HEX;
 
 			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = true };
-			instruction.srcs.push_back({ .reg = src_reg, .mask = 0xF });
+			instruction.srcs.push_back({ .reg = std::move(src_reg), .mask = 0xF });
 			instruction.dsts.push_back({ .reg{ .id = reg_id, .f16 = false }, .mask = (1u << ch) });
 			result.push_back(std::move(instruction));
 		}
@@ -250,7 +250,7 @@ namespace rsx::assembler::FP
 			instruction.bytecode[1] = src0.HEX;
 
 			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = true };
-			instruction.srcs.push_back({ .reg = src_reg, .mask = 0xF });
+			instruction.srcs.push_back({ .reg = std::move(src_reg), .mask = 0xF });
 			instruction.dsts.push_back({ .reg{.id = reg.reg.id, .f16 = false }, .mask = dst.write_mask });
 			result.push_back(std::move(instruction));
 		}

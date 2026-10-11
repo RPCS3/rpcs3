@@ -9,7 +9,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		user_list_dialog::user_list_entry::user_list_entry(const std::string& username, const std::string& user_id, const std::string& avatar_path)
+		user_list_dialog::user_list_entry::user_list_entry(std::string_view username, std::string_view user_id, const std::string& avatar_path)
 		{
 			std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 			image->set_size(160, 110);
@@ -34,11 +34,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -74,7 +74,7 @@ namespace rsx
 			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select user"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -174,7 +174,7 @@ namespace rsx
 			return result;
 		}
 
-		error_code user_list_dialog::show(const std::string& title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close)
+		error_code user_list_dialog::show(std::string_view title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close)
 		{
 			visible = false;
 

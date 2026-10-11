@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "RSXTexture.h"
 
-#include "rsx_utils.h"
 #include "Common/TextureUtils.h"
-#include "Program/GLSLCommon.h"
+#include "Utils/algorithm.hpp"
+#include "Utils/rsx_utils.h"
 
 #include "Emu/system_config.h"
 #include "util/simd.hpp"
@@ -453,6 +453,21 @@ namespace rsx
 	u32 fragment_texture::pitch() const
 	{
 		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
+	}
+
+	image_section_attributes_t fragment_texture::attributes() const
+	{
+		const auto _format = format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+		return {
+			.address = offset(),
+			.gcm_format = _format,
+			.pitch = pitch(),
+			.width = width(),
+			.height = height(),
+			.depth = depth(),
+			.mipmaps = mipmap(),
+			.bpp = rsx::get_format_block_size_in_bytes(_format)
+		};
 	}
 
 	u32 vertex_texture::offset() const

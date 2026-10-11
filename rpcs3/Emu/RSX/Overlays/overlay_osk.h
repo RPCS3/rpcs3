@@ -111,7 +111,7 @@ namespace rsx
 			void SetText(const std::u16string& text) override;
 			void Insert(const std::u16string& text) override;
 
-			void initialize_layout(const std::u32string& title, const std::u32string& initial_text);
+			void initialize_layout(std::u32string_view title, std::u32string_view initial_text);
 			void add_panel(const osk_panel& panel);
 			void step_panel(bool next_panel);
 			void update_panel();
@@ -128,13 +128,13 @@ namespace rsx
 			void on_text_changed();
 
 			void on_default_callback(const std::u32string& str);
-			void on_shift(const std::u32string&);
-			void on_layer(const std::u32string&);
-			void on_space(const std::u32string&);
-			void on_backspace(const std::u32string&);
-			void on_delete(const std::u32string&);
-			void on_enter(const std::u32string&);
-			void on_move_cursor(const std::u32string&, edit_text::direction dir);
+			void on_shift(std::u32string_view str);
+			void on_layer(std::u32string_view str);
+			void on_space(std::u32string_view str);
+			void on_backspace(std::u32string_view str);
+			void on_delete(std::u32string_view str);
+			void on_enter(std::u32string_view str);
+			void on_move_cursor(std::u32string_view str, edit_text::direction dir);
 
 			std::u32string get_placeholder() const;
 

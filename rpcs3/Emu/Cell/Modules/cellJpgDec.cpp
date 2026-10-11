@@ -125,26 +125,26 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
 	// Write the header to buffer
-	std::unique_ptr<u8[]> buffer(new u8[fileSize]);
+	std::vector<u8> buffer(fileSize);
 
 	switch (subHandle_data->src.srcSelect)
 	{
 	case CELL_JPGDEC_BUFFER:
-		std::memcpy(buffer.get(), vm::base(subHandle_data->src.streamPtr), fileSize);
+		std::memcpy(buffer.data(), vm::base(subHandle_data->src.streamPtr), fileSize);
 		break;
 
 	case CELL_JPGDEC_FILE:
 	{
 		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 		file->file.seek(0);
-		file->file.read(buffer.get(), fileSize);
+		file->file.read(buffer.data(), fileSize);
 		break;
 	}
 	default: break; // TODO
 	}
 
-	if (read_from_ptr<le_t<u32>>(buffer.get() + 0) != 0xE0FFD8FF || // Error: Not a valid SOI header
-		read_from_ptr<u32>(buffer.get() + 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
+	if (read_from_ptr<le_t<u32>>(buffer, 0) != 0xE0FFD8FF || // Error: Not a valid SOI header
+		read_from_ptr<u32>(buffer, 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
 	{
 		return CELL_JPGDEC_ERROR_HEADER;
 	}
@@ -154,7 +154,7 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 	if (i >= fileSize)
 		return CELL_JPGDEC_ERROR_HEADER;
 
-	u16 block_length = buffer[i] * 0xFF + buffer[i + 1];
+	u16 block_length = ::at32(buffer, i) * 0xFF + ::at32(buffer, i + 1);
 
 	while (true)
 	{
@@ -165,15 +165,16 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 			return CELL_JPGDEC_ERROR_HEADER;
 		}
 
-		if (buffer[i + 1] == 0xC0)
+		const u8 next = ::at32(buffer, i + 1);
+		if (next == 0xC0)
 			break;                                          // 0xFFC0 is the "Start of frame" marker which contains the file size
 
 		i += 2;                                             // Skip the block marker
-		block_length = buffer[i] * 0xFF + buffer[i + 1];    // Go to the next block
+		block_length = ::at32(buffer, i) * 0xFF + next;     // Go to the next block
 	}
 
-	current_info.imageWidth    = buffer[i + 7] * 0x100 + buffer[i + 8];
-	current_info.imageHeight   = buffer[i + 5] * 0x100 + buffer[i + 6];
+	current_info.imageWidth    = ::at32(buffer, i + 7) * 0x100 + ::at32(buffer, i + 8);
+	current_info.imageHeight   = ::at32(buffer, i + 5) * 0x100 + ::at32(buffer, i + 6);
 	current_info.numComponents = 3; // Unimplemented
 	current_info.colorSpace    = CELL_JPG_RGB;
 

@@ -46,26 +46,26 @@ namespace aarch64
     {
         compiled_instruction_t i{};
         i.asm_ = inst;
-        m_instructions.push_back(i);
+        m_instructions.push_back(std::move(i));
     }
 
     void UASM::emit1(const char* inst, const Arg& arg0, const std::vector<gpr>& clobbered)
     {
         int arg_id = 0;
-        fmt_replacement_list_t repl = {
+        const fmt_replacement_list_t repl = {
             { "{0}", arg0.to_string(&arg_id) }
         };
 
         compiled_instruction_t i{};
         i.asm_ = fmt::replace_all(inst, repl);
         embed_args(i, { arg0 }, clobbered);
-        m_instructions.push_back(i);
+        m_instructions.push_back(std::move(i));
     }
 
     void UASM::emit2(const char* inst, const Arg& arg0, const Arg& arg1, const std::vector<gpr>& clobbered)
     {
         int arg_id = 0;
-        fmt_replacement_list_t repl = {
+        const fmt_replacement_list_t repl = {
             { "{0}", arg0.to_string(&arg_id) },
             { "{1}", arg1.to_string(&arg_id) },
         };
@@ -73,13 +73,13 @@ namespace aarch64
         compiled_instruction_t i{};
         i.asm_ = fmt::replace_all(inst, repl);
         embed_args(i, { arg0, arg1 }, clobbered);
-        m_instructions.push_back(i);
+        m_instructions.push_back(std::move(i));
     }
 
     void UASM::emit3(const char* inst, const Arg& arg0, const Arg& arg1, const Arg& arg2, const std::vector<gpr>& clobbered)
     {
         int arg_id = 0;
-        fmt_replacement_list_t repl = {
+        const fmt_replacement_list_t repl = {
             { "{0}", arg0.to_string(&arg_id) },
             { "{1}", arg1.to_string(&arg_id) },
             { "{2}", arg2.to_string(&arg_id) },
@@ -88,13 +88,13 @@ namespace aarch64
         compiled_instruction_t i{};
         i.asm_ = fmt::replace_all(inst, repl);
         embed_args(i, { arg0, arg1, arg2 }, clobbered);
-        m_instructions.push_back(i);
+        m_instructions.push_back(std::move(i));
     }
 
     void UASM::emit4(const char* inst, const Arg& arg0, const Arg& arg1, const Arg& arg2, const Arg& arg3, const std::vector<gpr>& clobbered)
     {
         int arg_id = 0;
-        fmt_replacement_list_t repl = {
+        const fmt_replacement_list_t repl = {
             { "{0}", arg0.to_string(&arg_id) },
             { "{1}", arg1.to_string(&arg_id) },
             { "{2}", arg2.to_string(&arg_id) },
@@ -104,14 +104,14 @@ namespace aarch64
         compiled_instruction_t i{};
         i.asm_ = fmt::replace_all(inst, repl);
         embed_args(i, { arg0, arg1, arg2, arg3 }, clobbered);
-        m_instructions.push_back(i);
+        m_instructions.push_back(std::move(i));
     }
 
     void UASM::insert(llvm::IRBuilder<>* irb, llvm::LLVMContext& ctx) const
     {
         for (const auto& inst : m_instructions)
         {
-            auto constraints = fmt::merge(inst.constraints, ",");
+            const auto constraints = fmt::merge(inst.constraints, ",");
             llvm_asm(irb, inst.asm_, inst.args, constraints, ctx);
         }
     }

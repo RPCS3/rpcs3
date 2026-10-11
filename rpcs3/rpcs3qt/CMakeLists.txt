@@ -1,6 +1,8 @@
 add_library(rpcs3_ui STATIC
     about_dialog.cpp
+    anaglyph_settings_dialog.cpp
     auto_pause_settings_dialog.cpp
+    auto_scroll_label.cpp
     basic_mouse_settings_dialog.cpp
     breakpoint_handler.cpp
     breakpoint_list.cpp
@@ -12,6 +14,8 @@ add_library(rpcs3_ui STATIC
     clans_settings_dialog.cpp
     config_adapter.cpp
     config_checker.cpp
+    config_database.cpp
+    content_integrity.cpp
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp
@@ -22,6 +26,7 @@ add_library(rpcs3_ui STATIC
     dimensions_dialog.cpp
     _discord_utils.cpp
     emu_settings.cpp
+    emu_settings_type.cpp
     elf_memory_dumping_dialog.cpp
     emulated_pad_settings_dialog.cpp
     emulated_logitech_g27_settings_dialog.cpp
@@ -40,6 +45,7 @@ add_library(rpcs3_ui STATIC
     game_list_grid.cpp
     game_list_grid_item.cpp
     game_list_table.cpp
+    guest_memory_dumper.cpp
     gui_application.cpp
     gl_gs_frame.cpp
     gs_frame.cpp
@@ -49,6 +55,7 @@ add_library(rpcs3_ui STATIC
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
+    sky_ipc_settings_dialog.cpp
     kamen_rider_dialog.cpp
     kernel_explorer.cpp
     localized.cpp
@@ -84,6 +91,7 @@ add_library(rpcs3_ui STATIC
     qt_video_source.cpp
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
+    recording_settings_dialog.cpp
     recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
@@ -105,6 +113,7 @@ add_library(rpcs3_ui STATIC
     shortcut_settings.cpp
     skylander_dialog.cpp
     sound_effect_manager_dialog.cpp
+    steam_utils.cpp
     syntax_highlighter.cpp
     system_cmd_dialog.cpp
     table_item_delegate.cpp
@@ -136,6 +145,7 @@ add_library(rpcs3_ui STATIC
     patch_creator_dialog.ui
     patch_manager_dialog.ui
     ps_move_tracker_dialog.ui
+    recording_settings_dialog.ui
     settings_dialog.ui
     shortcut_dialog.ui
     welcome_dialog.ui
@@ -204,6 +214,9 @@ set_target_properties(rpcs3_ui
 # https://docs.microsoft.com/en-us/windows/win32/winsock/creating-a-basic-winsock-application
 # https://docs.microsoft.com/en-us/windows/win32/winprog/using-the-windows-headers#faster-builds-with-smaller-header-files
 target_compile_definitions(rpcs3_ui PRIVATE WIN32_LEAN_AND_MEAN)
+
+# We need to know where our custom widgets are located when compiling form files
+target_include_directories(rpcs3_ui AFTER PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(rpcs3_ui
     PUBLIC

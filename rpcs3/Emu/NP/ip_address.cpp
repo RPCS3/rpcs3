@@ -3,7 +3,6 @@
 #include "ip_address.h"
 #include "Utilities/StrFmt.h"
 #include "Emu/IdManager.h"
-#include "util/endian.hpp"
 #include "util/types.hpp"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
@@ -12,6 +11,12 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <fcntl.h>
+#else
+#include <MSWSock.h>
+
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
 #endif
 
 LOG_CHANNEL(IPv6_log, "IPv6_layer");
@@ -66,7 +71,7 @@ namespace np
 		return sockaddr_ipv6;
 	}
 
-	u32 register_ip(const std::string& ip_bytes)
+	u32 register_ip(std::string_view ip_bytes)
 	{
 		if (ip_bytes.size() == 4)
 		{
@@ -295,6 +300,19 @@ namespace np
 			::ioctlsocket(socket, FIONBIO, &_true);
 #else
 			::fcntl(socket, F_SETFL, ::fcntl(socket, F_GETFL, 0) | O_NONBLOCK);
+#endif
+		}
+	}
+
+	void set_dgram_socket_disable_connreset(socket_type socket)
+	{
+		if (socket)
+		{
+#ifdef _WIN32
+			DWORD enable = FALSE;
+			DWORD bytes_returned = 0;
+
+			WSAIoctl(socket, SIO_UDP_CONNRESET, &enable, sizeof(enable), nullptr, 0, &bytes_returned, nullptr, nullptr);
 #endif
 		}
 	}

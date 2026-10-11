@@ -13,7 +13,8 @@ namespace rsx
 		enum class friends_list_dialog_page
 		{
 			friends,
-			invites,
+			friend_requests,
+			game_invites,
 			blocked
 		};
 
@@ -24,10 +25,14 @@ namespace rsx
 			{
 			private:
 				std::unique_ptr<image_info> icon_data;
+				void init(std::string_view username, std::string_view text, std::string avatar_path);
 
 			public:
-				friends_list_entry(friends_list_dialog_page page, const std::string& username, const rpcn::friend_online_data& data);
+				friends_list_entry(friends_list_dialog_page page, std::string_view username, const rpcn::friend_online_data& data);
+				friends_list_entry(std::string_view username, const message_data& message);
 			};
+
+			using game_invite = std::pair<u64, shared_ptr<std::pair<std::string, message_data>>>;
 
 			std::mutex m_list_mutex;
 			std::vector<u32> m_entry_ids;
@@ -42,11 +47,14 @@ namespace rsx
 
 			std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 			rpcn::friend_data m_friend_data;
+			std::vector<game_invite> m_game_invite_messages;
+			std::vector<game_invite> m_game_invites;
 			atomic_t<bool> m_list_dirty { true };
 			atomic_t<friends_list_dialog_page> m_current_page { friends_list_dialog_page::friends };
 			atomic_t<friends_list_dialog_page> m_last_page { friends_list_dialog_page::friends };
 
 			void reload();
+			void remove_game_invite(u64 message_id);
 
 		public:
 			friends_list_dialog();
@@ -59,6 +67,7 @@ namespace rsx
 			error_code show(bool enable_overlay, std::function<void(s32 status)> on_close);
 
 			void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status);
+			void message_callback_handler(const shared_ptr<std::pair<std::string, message_data>>& message, u64 message_id);
 
 			static bool rpcn_configured();
 		};

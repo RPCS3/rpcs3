@@ -5,11 +5,13 @@
 #include "version.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 
 #include "util/types.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 #include <charconv>
 #include <regex>
@@ -329,7 +331,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							is_valid = false;
 							continue;
 						}
-						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)); }))
+						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return utils::isalnum(c); }))
 						{
 							append_log_message(log_messages, fmt::format("Error: Serial '%s' invalid (patch: %s, key: %s, location: %s, file: %s)", serial, description, main_key, get_yaml_node_location(serial_node), path), &patch_log.error);
 							is_valid = false;
@@ -962,7 +964,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
 
 			// Allocate map if needed, if allocated flags will indicate that bit 62 is set (unique identifier)
-			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | (1ull << 62));
+			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::block_size_64k | (1ull << 62));
 
 			u64 flags = vm::alloc_unwritable;
 
@@ -1188,7 +1190,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (!addr)
 			{
-				patch_log.error("Failed to allocate 0x%x bytes for code (entry=0x%x)", alloc_size, addr, out_branch);
+				patch_log.error("Failed to allocate 0x%x bytes for code (entry=0x%x)", alloc_size, out_branch);
 				continue;
 			}
 
@@ -1386,7 +1388,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (exec_addr)
 			{
-				Emu.GetCallbacks().add_breakpoint(exec_addr);
+				g_emu_callbacks.add_breakpoint(exec_addr);
 			}
 
 			break;
@@ -1434,7 +1436,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (dest_path.empty())
 			{
-				patch_log.error("Failed to patch file path at '%s': destination is not mounted", original_vfs_path, dest_vfs_path);
+				patch_log.error("Failed to patch file path at '%s': destination is not mounted", original_vfs_path);
 				continue;
 			}
 
@@ -1803,8 +1805,9 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 
 bool patch_engine::save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages)
 {
-	fs::file file(path, fs::rewrite);
-	if (!file)
+	fs::pending_file file(path);
+
+	if (!file.file)
 	{
 		append_log_message(log_messages, fmt::format("Failed to open patch file %s (%s)", path, fs::g_tls_error), &patch_log.fatal);
 		return false;
@@ -1904,7 +1907,17 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 				out << YAML::Flow;
 				out << YAML::BeginSeq;
 				out << fmt::format("%s", data.type);
-				out << fmt::format("0x%.8x", data.offset);
+
+				if (patch_type_uses_hex_offset(data.type))
+				{
+					out << fmt::format("0x%.8x", data.offset);
+				}
+				else
+				{
+					// This element is a path for move_file and hide_file, not an address
+					out << data.original_offset;
+				}
+
 				out << data.original_value;
 				out << YAML::EndSeq;
 			}
@@ -1918,7 +1931,11 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 	out << YAML::EndMap;
 
-	file.write(out.c_str(), out.size());
+	if (file.file.write(out.c_str(), out.size()) < out.size() || !file.commit())
+	{
+		append_log_message(log_messages, fmt::format("Failed to write patch file %s (%s)", path, fs::g_tls_error), &patch_log.fatal);
+		return false;
+	}
 
 	return true;
 }

@@ -197,7 +197,7 @@ namespace vk
 		const bool supports_dxt = vk::get_current_renderer()->get_texture_compression_bc_support();
 		switch (format)
 		{
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R5G6B5: return VK_FORMAT_R5G6B5_UNORM_PACK16;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
 		case CELL_GCM_TEXTURE_R5G5B5A1: return VK_FORMAT_R5G5B5A1_UNORM_PACK16;
@@ -205,7 +205,7 @@ namespace vk
 		case CELL_GCM_TEXTURE_A1R5G5B5: return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		case CELL_GCM_TEXTURE_A4R4G4B4: return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
 #else
-		// assign B8G8R8A8_UNORM to formats that are not supported by Metal
+		// assign B8G8R8A8_UNORM to formats that are not supported by Metal on non-Apple GPUs
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_R5G6B5: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_R5G5B5A1: return VK_FORMAT_B8G8R8A8_UNORM;

@@ -74,9 +74,11 @@ bool game_list_grid_item::event(QEvent* event)
 	switch (event->type())
 	{
 	case QEvent::HoverEnter:
-		set_active(true);
+		if (isActiveWindow())
+			set_active(true);
 		break;
 	case QEvent::HoverLeave:
+	case QEvent::FocusOut:
 		set_active(false);
 		break;
 	default:

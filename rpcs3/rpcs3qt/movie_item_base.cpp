@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "movie_item_base.h"
+#include "Utilities/Thread.h"
 
 movie_item_base::movie_item_base() : qt_video_source()
 {
@@ -33,6 +34,8 @@ void movie_item_base::call_icon_load_func(int index)
 	m_icon_loading = true;
 	m_icon_load_thread.reset(QThread::create([this, index]()
 	{
+		thread_base::set_name(fmt::format("IconLoad %d", index));
+
 		if (m_icon_load_callback)
 		{
 			m_icon_load_callback(index);
@@ -63,6 +66,8 @@ void movie_item_base::call_size_calc_func()
 	m_size_on_disk_loading = true;
 	m_size_calc_thread.reset(QThread::create([this]()
 	{
+		thread_base::set_name("SizeCalc");
+
 		if (m_size_calc_callback)
 		{
 			m_size_calc_callback();

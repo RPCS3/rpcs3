@@ -2,8 +2,11 @@
 
 #include "util/types.hpp"
 #include <string>
+#include <string_view>
 #include <set>
 #include <vector>
+
+struct GameInfo;
 
 enum class game_content_type
 {
@@ -21,9 +24,9 @@ namespace rpcs3::utils
 
 	void configure_logs(bool force_enable = false);
 
-	u32 check_user(const std::string& user);
+	u32 check_user(std::string_view user);
 
-	bool install_pkg(const std::string& path);
+	bool install_pkg(const std::string& path, bool from_optical_drive);
 
 	// VFS directories and disk usage
 	std::vector<std::pair<std::string, u64>> get_vfs_disk_usage();
@@ -45,6 +48,16 @@ namespace rpcs3::utils
 	u64 get_cache_disk_usage();
 	std::string get_cache_dir();
 	std::string get_cache_dir(std::string_view module_path);
+
+	std::string	get_redump_db_path();
+	std::string get_redump_db_download_url();
+	std::string get_redump_key_dir();
+	std::string get_psn_content_db_path();
+	std::string get_psn_content_db_download_url();
+	std::string get_psn_dlc_db_path();
+	std::string get_psn_dlc_db_download_url();
+	std::string get_psn_update_db_path();
+	std::string get_psn_update_db_download_url();
 
 	std::string get_data_dir();
 	std::string get_icons_dir();
@@ -68,6 +81,13 @@ namespace rpcs3::utils
 	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast = false);
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id = "");
 
+	// Check whether "name" is the name of an additional disc game directory (e.g. "PS3_GM01"), the counterpart of "PS3_GAME".
+	// NOTE: equivalent to the "^PS3_GM[[:digit:]]{2}$" regular expression, without building one for each checked name
+	inline bool is_ps3_gm_dir_name(std::string_view name)
+	{
+		return name.size() == 8 && name.starts_with("PS3_GM") && name[6] >= '0' && name[6] <= '9' && name[7] >= '0' && name[7] <= '9';
+	}
+
 	std::string get_custom_config_dir();
 	std::string get_custom_config_path(const std::string& identifier);
 
@@ -75,6 +95,7 @@ namespace rpcs3::utils
 	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);
 
+	std::pair<std::string, bool> get_game_content_path(game_content_type type, const GameInfo& info);
 	std::string get_game_content_path(game_content_type type);
 
 	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw);

@@ -53,10 +53,15 @@ nt_p2p_port::nt_p2p_port(u16 port)
 		fmt::throw_exception("Failed to create DGRAM socket for P2P socket: %s!", get_last_error(true));
 
 	np::set_socket_non_blocking(p2p_socket);
+	np::set_dgram_socket_disable_connreset(p2p_socket);
 
 	u32 optval = 131072; // value obtained from DECR for a SOCK_DGRAM_P2P socket(should maybe be bigger for actual socket?)
 	if (setsockopt(p2p_socket, SOL_SOCKET, SO_RCVBUF, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
 		fmt::throw_exception("Error setsockopt SO_RCVBUF on P2P socket: %s", get_last_error(true));
+
+	optval = 1;
+	if (setsockopt(p2p_socket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&optval), sizeof(optval)) != 0)
+		fmt::throw_exception("Error setsockopt SO_BROADCAST on P2P socket: %s", get_last_error(true));
 
 	int ret_bind = 0;
 	const u16 be_port = std::bit_cast<u16, be_t<u16>>(port);
@@ -337,13 +342,20 @@ bool nt_p2p_port::recv_data()
 			if (bound_p2ps_vports.contains(tcp_header->dst_port))
 			{
 				const auto& bound_sockets = ::at32(bound_p2ps_vports, tcp_header->dst_port);
+				bool handled = false;
 
 				for (const auto sock_id : bound_sockets)
 				{
 					sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
-					handle_listening(sock_id, tcp_header, p2p_data.data() + sizeof(p2ps_encapsulated_tcp), &native_addr);
+					handled |= handle_listening(sock_id, tcp_header, p2p_data.data() + sizeof(p2ps_encapsulated_tcp), &native_addr);
 				}
-				return true;
+
+				if (handled)
+				{
+					return true;
+				}
+
+				// The vport is only reserved(e.g. by a connect()ed socket), no socket is listening on it, reply with RST as if it was unbound
 			}
 
 			if (tcp_header->flags == p2ps_tcp_flags::RST)

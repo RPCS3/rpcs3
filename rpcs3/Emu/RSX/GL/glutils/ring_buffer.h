@@ -92,7 +92,7 @@ namespace gl
 		};
 
 		buffer m_storage;
-		std::vector<barrier> m_barriers;
+		std::vector<std::unique_ptr<barrier>> m_barriers;
 		u64 m_alloc_pointer = 0;
 
 		void pop_barrier(u32 start, u32 length);

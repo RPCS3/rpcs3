@@ -13,6 +13,33 @@
 
 namespace utils
 {
+	void clean_backtrace(std::vector<std::string>& result)
+	{
+		for (usz it = 1, first_in_seq = 0, del_count = 0;;)
+		{
+			if (it >= result.size() || result[it] != result[first_in_seq])
+			{
+				if (del_count)
+				{
+					fmt::append(result[first_in_seq], " x%u", del_count + 1);
+				}
+
+				if (it < result.size())
+				{
+					first_in_seq = it;
+					it++;
+					del_count = 0;
+					continue;
+				}
+
+				break;
+			}
+
+			result.erase(result.begin() + it);
+			del_count++;
+		}
+	}
+
 #ifdef _WIN32
 	std::string wstr_to_utf8(LPWSTR data, int str_len)
 	{
@@ -30,42 +57,61 @@ namespace utils
 		return out.data();
 	}
 
-	std::vector<void*> get_backtrace(int max_depth)
+	std::vector<void*> get_backtrace(int max_depth, PCONTEXT ctx)
 	{
+		static struct sym_initer_t
+		{
+			sym_initer_t() noexcept
+			{
+				SymInitialize(GetCurrentProcess(), NULL, TRUE);
+			}
+			~sym_initer_t() noexcept
+			{
+				SymCleanup(GetCurrentProcess());
+			}
+		} s_initer{};
+
 		std::vector<void*> result = {};
 
 		const auto hProcess = ::GetCurrentProcess();
 		const auto hThread = ::GetCurrentThread();
 
 		CONTEXT context{};
-		RtlCaptureContext(&context);
+		if (ctx)
+			context = *ctx;
+		else
+			RtlCaptureContext(&context);
 
 		STACKFRAME64 stack = {};
 		stack.AddrPC.Mode = AddrModeFlat;
 		stack.AddrStack.Mode = AddrModeFlat;
 		stack.AddrFrame.Mode = AddrModeFlat;
 #if defined(ARCH_X64)
+		const DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
 		stack.AddrPC.Offset = context.Rip;
 		stack.AddrStack.Offset = context.Rsp;
 		stack.AddrFrame.Offset = context.Rbp;
 #elif defined(ARCH_ARM64)
+		const DWORD machineType = IMAGE_FILE_MACHINE_ARM64;
 		stack.AddrPC.Offset = context.Pc;
 		stack.AddrStack.Offset = context.Sp;
 		stack.AddrFrame.Offset = context.Fp;
+#else
+#error "Unsupported architecture"
 #endif
 
 		while (max_depth--)
 		{
 			if (!StackWalk64(
-				IMAGE_FILE_MACHINE_AMD64,
-				hProcess,
-				hThread,
-				&stack,
-				&context,
-				NULL,
-				SymFunctionTableAccess64,
-				SymGetModuleBase64,
-				NULL))
+					machineType,
+					hProcess,
+					hThread,
+					&stack,
+					&context,
+					NULL,
+					SymFunctionTableAccess64,
+					SymGetModuleBase64,
+					NULL))
 			{
 				break;
 			}
@@ -100,26 +146,27 @@ namespace utils
 
 			if (sym->NameLen)
 			{
-				const auto function_name = wstr_to_utf8(sym->Name, static_cast<int>(sym->NameLen));
+				std::string function_name = wstr_to_utf8(sym->Name, static_cast<int>(sym->NameLen));
 
 				// Attempt to get file and line information if available
 				DWORD unused2;
 				if (SymGetLineFromAddrW64(hProcess, reinterpret_cast<DWORD64>(pointer), &unused2, &line_info))
 				{
-					const auto full_path = fmt::format("%s:%u %s", wstr_to_utf8(line_info.FileName, -1), line_info.LineNumber, function_name);
-					result.push_back(full_path);
+					std::string full_path = fmt::format("%s:%u %s", wstr_to_utf8(line_info.FileName, -1), line_info.LineNumber, function_name);
+					result.push_back(std::move(full_path));
 				}
 				else
 				{
-					result.push_back(function_name);
+					result.push_back(std::move(function_name));
 				}
 			}
 			else
 			{
-				result.push_back(fmt::format("rpcs3@0xp", pointer));
+				result.push_back(fmt::format("rpcs3@0x%p", pointer));
 			}
 		}
 
+		clean_backtrace(result);
 		return result;
 	}
 #else
@@ -147,6 +194,7 @@ namespace utils
 
 		free(symbols);
 #endif
+		clean_backtrace(result);
 		return result;
 	}
 #endif

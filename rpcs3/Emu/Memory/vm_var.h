@@ -20,6 +20,13 @@ namespace vm
 		}
 	};
 
+	struct hle_malloc_allocator
+	{
+		// Defined externally
+		static std::pair<vm::addr_t, u32> alloc(u32 size, u32 align);
+		static void dealloc(u32 addr, u32 size) noexcept;
+	};
+
 	template <typename T>
 	struct stack_allocator
 	{

@@ -76,7 +76,7 @@ struct video_export
 };
 
 
-bool check_movie_path(const std::string& file_path)
+bool check_movie_path(std::string_view file_path)
 {
 	if (file_path.size() >= CELL_VIDEO_EXPORT_UTIL_HDD_PATH_MAX)
 	{

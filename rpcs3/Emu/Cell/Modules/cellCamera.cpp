@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "cellCamera.h"
 
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
@@ -504,8 +505,10 @@ error_code cellCameraInit()
 	return CELL_OK;
 }
 
-error_code cellCameraEnd()
+error_code cellCameraEnd(ppu_thread& ppu)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellCamera.todo("cellCameraEnd()");
 
 	auto& g_camera = g_fxo->get<camera_thread>();
@@ -570,7 +573,7 @@ error_code cellCameraOpenAsync()
 	return CELL_OK;
 }
 
-error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
+error_code cellCameraOpenEx(ppu_thread& ppu, s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraOpenEx(dev_num=%d, info=*0x%x)", dev_num, info);
 
@@ -621,6 +624,8 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	const auto vbuf_size = get_video_buffer_size(*info);
 
+	ppu.state += cpu_flag::wait;
+
 	std::lock_guard lock(g_camera.mutex);
 
 	// TODO: find out if the buffers are also checked for nullptr
@@ -666,8 +671,10 @@ error_code cellCameraOpenPost()
 	return CELL_OK;
 }
 
-error_code cellCameraClose(s32 dev_num)
+error_code cellCameraClose(ppu_thread& ppu, s32 dev_num)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellCamera.notice("cellCameraClose(dev_num=%d)", dev_num);
 
 	if (error_code error = check_init_and_open(dev_num))
@@ -694,14 +701,19 @@ error_code cellCameraClose(s32 dev_num)
 	if (g_camera.info.buffer)
 	{
 		vm::dealloc(g_camera.info.buffer.addr(), vm::main);
+		g_camera.info.buffer = vm::null;
 	}
+
 	if (g_camera.info.pbuf[0])
 	{
 		vm::dealloc(g_camera.info.pbuf[0].addr(), vm::main);
+		g_camera.info.pbuf[0] = vm::null;
 	}
+
 	if (g_camera.info.pbuf[1])
 	{
 		vm::dealloc(g_camera.info.pbuf[1].addr(), vm::main);
+		g_camera.info.pbuf[1] = vm::null;
 	}
 
 	g_camera.close_camera();
@@ -1407,7 +1419,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 			u64 frame_number{};
 			u64 bytes_read{};
 
-			if (!g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+			if (!g_camera.get_camera_frame(g_camera.info.buffer ? g_camera.info.buffer.get_ptr() : nullptr, width, height, frame_number, bytes_read))
 			{
 				return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 			}
@@ -1705,20 +1717,20 @@ void camera_context::operator()()
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
+					constexpr u64 camera_id = 0;
 					u64 data2 = 0;
 					u64 data3 = 0;
 
 					if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
 					{
 						const u64 image_data_size = static_cast<u64>(info.bytesize);
-						const u64 camera_id = 0;
 
 						data2 = image_data_size << 32 | buffer_number << 16 | camera_id;
 						data3 = get_guest_system_time() - start_timestamp_us; // timestamp
 					}
 					else // CELL_CAMERA_READ_FUNCCALL, also default
 					{
-						data2 = 0; // device id (always 0)
+						data2 = camera_id;
 						data3 = 0; // unused
 					}
 
@@ -1759,7 +1771,7 @@ bool camera_context::open_camera()
 	Emu.BlockingCallFromMainThread([this]()
 	{
 		handler.reset();
-		handler = Emu.GetCallbacks().get_camera_handler();
+		handler = g_emu_callbacks.get_camera_handler();
 		if (handler)
 		{
 			handler->open_camera();
@@ -1841,14 +1853,19 @@ void camera_context::reset_state()
 	if (info.buffer)
 	{
 		vm::dealloc(info.buffer.addr(), vm::main);
+		info.buffer = vm::null;
 	}
+
 	if (info.pbuf[0])
 	{
 		vm::dealloc(info.pbuf[0].addr(), vm::main);
+		info.pbuf[0] = vm::null;
 	}
+
 	if (info.pbuf[1])
 	{
 		vm::dealloc(info.pbuf[1].addr(), vm::main);
+		info.pbuf[1] = vm::null;
 	}
 
 	std::scoped_lock lock(mutex_notify_data_map);
@@ -1981,7 +1998,7 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 	{
 		if (!is_attached)
 		{
-			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
+			cellCamera.warning("Camera handler not attached (state=%d). Sending attach event...", static_cast<int>(state));
 			is_attached = true;
 			is_attached_dirty = true;
 		}

@@ -349,24 +349,24 @@ QPushButton:disabled {
 }
 
 
-QDialog QDialogButtonBox QPushButton {
+QDialog QDialogButtonBox QPushButton:default {
     color: #000000;
     background-color: #4CC2FF;
     border-color: #5AC7FF;
 }
 
-QDialog QDialogButtonBox QPushButton:hover {
+QDialog QDialogButtonBox QPushButton:default:hover {
     background-color: #48B2E9;
     border-color: #56B8EB;
 }
 
-QDialog QDialogButtonBox QPushButton:pressed {
+QDialog QDialogButtonBox QPushButton:default:pressed {
     color: #22526A;
     background-color: #45A4D5;
     border-color: #45A4D5;
 }
 
-QDialog QDialogButtonBox QPushButton:disabled {
+QDialog QDialogButtonBox QPushButton:default:disabled {
     color: #ABABAB;
     background-color: #4C4C4C;
     border-color: #4C4C4C;
@@ -614,8 +614,13 @@ QComboBox QAbstractItemView {
 QComboBox QAbstractItemView::item {
     color: #FFFFFF;
     padding: 4px 6px;
+    margin: 2px 0px;
     background-color: transparent;
     border-radius: 4px;
+}
+
+QComboBox QAbstractItemView::item:hover {
+    background-color: #383838;
 }
 
 QComboBox QAbstractItemView::item:selected {
@@ -642,7 +647,7 @@ QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
     border-radius: 4px;
     width: 8px;
     height: 8px;
-    padding: 3px 4px;  
+    padding: 3px 4px;
 }
 
 QSpinBox::up-button:hover, QSpinBox::down-button:hover,
@@ -707,6 +712,16 @@ QSlider::handle:horizontal:pressed {
 
 QSlider::handle:horizontal:disabled {
     image: url("GuiConfigs/dark/slider-handle-disabled.svg");
+}
+
+QSlider::sub-page:horizontal {
+    background-color: #4CC2FF;
+    border-radius: 2px;
+    height: 4px;
+}
+
+QSlider::sub-page:horizontal:disabled {
+    background-color: #767A7D;
 }
 
 
@@ -791,7 +806,7 @@ QMenuBar::item:pressed {
 
 QMenu {
 	background-color: #2C2C2C;
-    border: 1px solid #131313;
+    border: 1px solid #3E3E3E;
     padding: 4px 0px;
 }
 
@@ -799,12 +814,12 @@ QMenu::item {
     color: #FFFFFF;
     background-color: transparent;
     border-radius: 4px;
-    padding: 8px 20px;
+    padding: 4px 20px;
     margin: 0px 4px;
 }
 
 QMenu::item:selected {
-    background-color: #383838;
+    background-color: #353535;
 }
 
 QMenu::item:disabled {
@@ -814,8 +829,8 @@ QMenu::item:disabled {
 
 QMenu::separator {
     height: 1px;
-    background: #131313;
-    margin: 4px 0px;
+    background: #3E3E3E;
+    margin: 4px 8px;
 }
 
 QMenu::indicator, QMenu::right-arrow {

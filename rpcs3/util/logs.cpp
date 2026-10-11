@@ -257,10 +257,8 @@ namespace logs
 		{
 			return found.first->second->enabled.observe();
 		}
-		else
-		{
-			return level::always;
-		}
+
+		return level::always;
 	}
 
 	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map)
@@ -369,6 +367,16 @@ void logs::listener::sync_all()
 	for (listener* lis = get_logger(); lis; lis = lis->m_next)
 	{
 		lis->sync();
+	}
+}
+
+void logs::listener::shutdown_all()
+{
+	std::lock_guard lock(g_mutex);
+
+	for (listener* lis = get_logger()->m_next.exchange(nullptr); lis;)
+	{
+		lis = lis->m_next.exchange(nullptr);
 	}
 }
 

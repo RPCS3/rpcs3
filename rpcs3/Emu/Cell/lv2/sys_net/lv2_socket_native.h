@@ -52,6 +52,7 @@ public:
 
 	void poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
+	void get_sockinfo(sys_net_sockinfo_t& info) override;
 
 	bool is_socket_connected();
 
@@ -63,6 +64,7 @@ private:
 	void set_socket(socket_type native_socket, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	void set_default_buffers();
 	void set_non_blocking();
+	void set_dgram_disable_connreset();
 
 private:
 	// Value keepers

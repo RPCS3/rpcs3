@@ -3,6 +3,11 @@
 #include "rpcs3_version.h"
 
 #include "util/sysinfo.hpp"
+#include "Emu/system_config.h"
+
+#if !(defined(__ANDROID__) || defined(__APPLE__))
+#include "Emu/RSX/GL/glutils/capabilities.h"
+#endif
 
 namespace rpcs3
 {
@@ -40,6 +45,11 @@ namespace rpcs3
 					title_string += '%';
 					break;
 				}
+				case 'A':
+				{
+					title_string += utils::get_architecture();
+					break;
+				}
 				case 'T':
 				{
 					title_string += title_data.title;
@@ -68,7 +78,22 @@ namespace rpcs3
 				}
 				case 'G':
 				{
-					title_string += title_data.vulkan_adapter;
+					switch (g_cfg.video.renderer.get())
+					{
+					case video_renderer::null:
+						title_string += "null";
+						break;
+					case video_renderer::opengl:
+#if !(defined(__ANDROID__) || defined(__APPLE__))
+						title_string += gl::get_device_name();
+#else
+						title_string += "OpenGL GPU";
+#endif
+						break;
+					case video_renderer::vulkan:
+						title_string += title_data.vulkan_adapter;
+						break;
+					}
 					break;
 				}
 				case 'C':

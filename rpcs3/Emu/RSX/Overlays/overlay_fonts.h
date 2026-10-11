@@ -78,7 +78,7 @@ namespace rsx
 
 			std::vector<vertex> render_text(const char32_t* text, u16 max_width = -1, bool wrap = false);
 
-			std::pair<f32, f32> get_char_offset(const char32_t* text, usz max_length, u16 max_width = -1, bool wrap = false);
+			void get_char_offset(f32& loc_x, f32& loc_y, const char32_t* text, usz max_length, u16 max_width = -1, bool wrap = false);
 
 			bool matches(std::string_view name, int size) const { return static_cast<int>(size_pt) == size && font_name == name; }
 			std::string_view get_name() const { return font_name; }

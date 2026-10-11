@@ -58,7 +58,7 @@ namespace rsx
 			set_pos(x + dx, y + dy);
 		}
 
-		void progress_bar::set_text(const std::string& str)
+		void progress_bar::set_text(std::string_view str)
 		{
 			text_view.set_text(str);
 			text_view.align_text(text_align::center);

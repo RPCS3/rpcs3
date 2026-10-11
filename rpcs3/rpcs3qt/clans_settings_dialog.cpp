@@ -66,7 +66,7 @@ clans_settings_dialog::clans_settings_dialog(QWidget* parent)
 			g_cfg_clans.save();
 		});
 
-	connect(m_cbx_protocol, &QComboBox::currentIndexChanged, this, [this](int index)
+	connect(m_cbx_protocol, &QComboBox::currentIndexChanged, this, [](int index)
 		{
 			if (index < 0)
 				return;

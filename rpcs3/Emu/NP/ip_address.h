@@ -66,7 +66,7 @@ namespace np
 		std::vector<std::array<u8, 16>> ipv4_to_ipv6;
 	};
 
-	u32 register_ip(const std::string& ip_bytes);
+	u32 register_ip(std::string_view ip_bytes);
 
 	enum class IPV6_SUPPORT : u8
 	{
@@ -82,4 +82,5 @@ namespace np
 
 	void close_socket(socket_type socket);
 	void set_socket_non_blocking(socket_type socket);
+	void set_dgram_socket_disable_connreset(socket_type socket);
 } // namespace np

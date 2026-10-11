@@ -29,6 +29,8 @@ public:
 
 	progress_dialog* get_progress_dialog() const;
 
+	bool aborted() const { return m_curl_abort; }
+
 private Q_SLOTS:
 	void handle_buffer_update(int size, int max) const;
 

@@ -3,6 +3,7 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
+#include "Emu/RSX/Utils/color_utils.hpp"
 #include "Emu/RSX/gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
@@ -43,8 +44,6 @@ namespace glsl
 	{
 		switch (elementCount)
 		{
-		default:
-			abort();
 		case 1:
 			return "float";
 		case 2:
@@ -53,6 +52,8 @@ namespace glsl
 			return "vec3";
 		case 4:
 			return "vec4";
+		default:
+			fmt::throw_exception("Unexpected element count %d", elementCount);
 		}
 	}
 
@@ -60,8 +61,6 @@ namespace glsl
 	{
 		switch (elementCount)
 		{
-		default:
-			abort();
 		case 1:
 			return "float16_t";
 		case 2:
@@ -70,10 +69,12 @@ namespace glsl
 			return "f16vec3";
 		case 4:
 			return "f16vec4";
+		default:
+			fmt::throw_exception("Unexpected element count %d", elementCount);
 		}
 	}
 
-	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 	{
 		if (scalar)
 		{
@@ -150,8 +151,13 @@ namespace glsl
 			;
 	}
 
-	void insert_rop_init(std::ostream& OS)
+	void insert_rop_init(std::ostream& OS, u32 mrt_buffer_count)
 	{
+		program_common::define_glsl_constants<u32>(OS,
+		{
+			{ "_MRT_BUFFERS_COUNT", mrt_buffer_count },
+		});
+
 		OS <<
 			#include "GLSLSnippets/RSXProg/RSXROPPrologue.glsl"
 			;
@@ -161,6 +167,13 @@ namespace glsl
 	{
 		OS <<
 			#include "GLSLSnippets/RSXProg/RSXROPEpilogue.glsl"
+			;
+	}
+
+	void insert_fragment_epilogue(std::ostream& OS, const shader_properties& /*props*/)
+	{
+		OS <<
+			#include "GLSLSnippets/RSXProg/RSXFragmentEpilogue.glsl"
 			;
 	}
 
@@ -200,8 +213,27 @@ namespace glsl
 				{ "ALPHA_TEST_FUNC_LENGTH      ", rsx::ROP_control_bits::ALPHA_FUNC_NUM_BITS },
 				{ "MSAA_SAMPLE_CTRL_OFFSET     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET },
 				{ "MSAA_SAMPLE_CTRL_LENGTH     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
+				{ "FRAG_DEPTH_24_BIT           ", rsx::ROP_control_bits::FRAG_DEPTH_24_BIT },
+				{ "FRAG_DEPTH_FLOAT_BIT        ", rsx::ROP_control_bits::FRAG_DEPTH_FLOAT_BIT },
+				{ "DEPTH_CLAMP_ENABLE_BIT      ", rsx::ROP_control_bits::DEPTH_CLAMP_ENABLE_BIT },
+				{ "MRT_CHANNEL_REMAP_OFFSET    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET },
+				{ "MRT_CHANNEL_REMAP_LENGTH    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_NUM_BITS },
+				{ "MRT_BLEND_TARGETS_OFFSET    ", rsx::ROP_control_bits::MRT_BLEND_TARGETS_OFFSET },
+				{ "MRT_BLEND_TARGETS_LENGTH    ", rsx::ROP_control_bits::MRT_BLEND_TARGETS_NUM_BITS },
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
+
+			if (props.ROP_channel_remap)
+			{
+				program_common::define_glsl_constants<rsx::ROP_channel_remap>(OS,
+				{
+					{ "ROP_REMAP_SWIZZLE_RGBA", rsx::ROP_channel_remap::RGBA },
+					{ "ROP_REMAP_SWIZZLE_BBBB", rsx::ROP_channel_remap::BBBB },
+					{ "ROP_REMAP_SWIZZLE_GBGB", rsx::ROP_channel_remap::GBGB },
+					{ "ROP_REMAP_SWIZZLE_RGB1", rsx::ROP_channel_remap::RGB1 },
+					{ "ROP_REMAP_SWIZZLE_RGB0", rsx::ROP_channel_remap::RGB0 }
+				});
+			}
 
 			program_common::define_glsl_constants<const char*>(OS,
 			{
@@ -240,6 +272,26 @@ namespace glsl
 			{
 				enabled_options.push_back("_ENABLE_POLYGON_STIPPLE");
 			}
+
+			if (props.emulate_depth_compare)
+			{
+				enabled_options.push_back("_ENABLE_DEPTH_COMPARE");
+			}
+
+			if (props.ROP_output_multisampled)
+			{
+				enabled_options.push_back("_ENABLE_ROP_OUTPUT_MULTISAMPLED");
+			}
+
+			if (props.ROP_emulate_depth_range)
+			{
+				enabled_options.push_back("_EMULATE_DEPTH_RANGE");
+			}
+
+			if (props.ROP_depth_export)
+			{
+				enabled_options.push_back("_ENABLE_DEPTH_EXPORT");
+			}
 		}
 
 		// Import common header
@@ -272,6 +324,11 @@ namespace glsl
 			if (props.require_instanced_render)
 			{
 				enabled_options.push_back("_ENABLE_INSTANCED_CONSTANTS");
+			}
+
+			if (props.emulate_depth_range)
+			{
+				enabled_options.push_back("_EMULATE_DEPTH_RANGE");
 			}
 
 			// Import vertex header
@@ -309,6 +366,21 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_COMPARISON_FUNC");
 		}
 
+		if (props.require_texture_ops && props.require_depth_conversion)
+		{
+			enabled_options.push_back("_ENABLE_COLOR_CHANNEL_REMAPPING");
+		}
+
+		if (props.ROP_channel_remap)
+		{
+			enabled_options.push_back("_ENABLE_ROP_CHANNEL_REMAPPING");
+		}
+
+		if (props.ROP_programmable_blend)
+		{
+			enabled_options.push_back("_ENABLE_PROGRAMMABLE_BLENDING");
+		}
+
 		if (props.require_fog_read)
 		{
 			program_common::define_glsl_constants<rsx::fog_mode>(OS,
@@ -322,6 +394,12 @@ namespace glsl
 			});
 
 			enabled_options.push_back("_ENABLE_FOG_READ");
+		}
+
+		// Programs with the emulation bit always need the encoding, even if they were cached while the option was off
+		if (props.emulated_depth_storage || props.ROP_emulate_depth_range)
+		{
+			enabled_options.push_back("_EMULATED_DEPTH_STORAGE");
 		}
 
 		// Import fragment header
@@ -418,6 +496,11 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_DEPTH_FORMAT_RECONSTRUCTION");
 			}
 
+			if (props.require_msaa_ops)
+			{
+				enabled_options.push_back("_ENABLE_TEXTURE_MULTISAMPLE");
+			}
+
 			program_common::define_glsl_switches(OS, enabled_options);
 			enabled_options.clear();
 
@@ -451,20 +534,25 @@ namespace glsl
 				}
 			}
 		}
+
+		if (props.ROP_programmable_blend)
+		{
+			insert_blend_prologue(OS);
+		}
 	}
 
 	std::string getFunctionImpl(FUNCTION f)
 	{
 		switch (f)
 		{
-		default:
-			abort();
 		case FUNCTION::DP2:
 			return "$Ty(dot($0.xy, $1.xy))";
 		case FUNCTION::DP2A:
 			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::DP3:
 			return "$Ty(dot($0.xyz, $1.xyz))";
+		case FUNCTION::DP3_PRECISE:
+			return "$Ty(fma($0.x, $1.x, fma($0.y, $1.y, $0.z * $1.z)))";
 		case FUNCTION::DP4:
 			return "$Ty(dot($0, $1))";
 		case FUNCTION::DPH:
@@ -561,6 +649,8 @@ namespace glsl
 			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::VERTEX_TEXTURE_FETCH2DMS:
 			return "texelFetch($t, ivec2($0.xy * textureSize($t)), 0)";
+		default:
+			fmt::throw_exception("Unexpected function request: %d", static_cast<int>(f));
 		}
 
 		rsx_log.error("Unexpected function request: %d", static_cast<int>(f));
@@ -619,7 +709,7 @@ namespace glsl
 					}
 				}
 
-				varying_list.push_back({ reg_location, var_name, PT.type });
+				varying_list.push_back({ reg_location, std::move(var_name), PT.type });
 			}
 		}
 
@@ -643,12 +733,18 @@ namespace glsl
 
 		// Make the output a little nicer
 		std::sort(varying_list.begin(), varying_list.end(), FN(x.location < y.location));
+		const auto is_flat_color = [&prog](const _varying_register_config& reg)
+		{
+			return (prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING) &&
+				(reg.name.starts_with("diff_color"sv) || reg.name.starts_with("spec_color"sv));
+		};
 
 		if (!(prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION))
 		{
 			for (const auto& reg : varying_list)
 			{
-				OS << "layout(location=" << reg.location << ") in " << reg.type << " " << reg.name << ";\n";
+				OS << "layout(location=" << reg.location << ") in " << (is_flat_color(reg) ? "flat " : "")
+					<< reg.type << " " << reg.name << ";\n";
 			}
 
 			OS << "\n";
@@ -676,7 +772,14 @@ namespace glsl
 
 		for (const auto& reg : varying_list)
 		{
-			OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+			if (is_flat_color(reg))
+			{
+				OS << "vec4 " << reg.name << " = " << reg.name << "_raw[2];\n";
+			}
+			else
+			{
+				OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+			}
 		}
 
 		OS << "\n";

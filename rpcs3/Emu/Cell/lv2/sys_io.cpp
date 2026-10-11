@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 
 #include "sys_io.h"
 
@@ -34,8 +35,10 @@ error_code sys_io_buffer_destroy(u32 handle)
 	return CELL_OK;
 }
 
-error_code sys_io_buffer_allocate(u32 handle, vm::ptr<u32> block)
+error_code sys_io_buffer_allocate(ppu_thread& ppu, u32 handle, vm::ptr<u32> block)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_io.todo("sys_io_buffer_allocate(handle=0x%x, block=*0x%x)", handle, block);
 
 	if (!block)
@@ -48,6 +51,7 @@ error_code sys_io_buffer_allocate(u32 handle, vm::ptr<u32> block)
 		// no idea what we actually need to allocate
 		if (u32 addr = vm::alloc(io->block_count * io->block_size, vm::main))
 		{
+			ppu.check_state();
 			*block = addr;
 			return CELL_OK;
 		}
@@ -58,8 +62,10 @@ error_code sys_io_buffer_allocate(u32 handle, vm::ptr<u32> block)
 	return CELL_ESRCH;
 }
 
-error_code sys_io_buffer_free(u32 handle, u32 block)
+error_code sys_io_buffer_free(ppu_thread& ppu, u32 handle, u32 block)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_io.todo("sys_io_buffer_free(handle=0x%x, block=0x%x)", handle, block);
 
 	const auto io = idm::get_unlocked<lv2_io_buf>(handle);

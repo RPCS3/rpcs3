@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FPASM.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
+#include "util/cctype.hpp"
 
 #include <stack>
 
@@ -171,7 +172,7 @@ namespace rsx::assembler
 
 		for (const auto& inst : m_instructions)
 		{
-			const auto src = reinterpret_cast<const be_t<u16>*>(inst.bytecode);
+			const auto src = utils::bless<const be_t<u16>>(&inst.bytecode[0]);
 			for (u32 j = 0; j < inst.length; ++j)
 			{
 				const u16 low = src[j * 2];
@@ -198,7 +199,7 @@ namespace rsx::assembler
 			result.reserve(s.size());
 
 			bool literal = false;
-			for (const auto& c : s)
+			for (const char c : s)
 			{
 				if (c == ' ')
 				{
@@ -209,7 +210,7 @@ namespace rsx::assembler
 					continue;
 				}
 
-				if (std::isspace(c))
+				if (utils::isspace(c))
 				{
 					continue;
 				}

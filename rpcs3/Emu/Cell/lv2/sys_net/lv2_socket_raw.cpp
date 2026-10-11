@@ -139,6 +139,11 @@ void lv2_socket_raw::poll([[maybe_unused]] sys_net_pollfd& sn_pfd, [[maybe_unuse
 	LOG_ONCE(raw_poll, "lv2_socket_raw::poll");
 }
 
+void lv2_socket_raw::get_sockinfo(sys_net_sockinfo_t& info)
+{
+	info.state = SYS_NET_STATE_UNKNOWN;
+}
+
 std::tuple<bool, bool, bool> lv2_socket_raw::select([[maybe_unused]] bs_t<lv2_socket::poll_t> selected, [[maybe_unused]] pollfd& native_pfd)
 {
 	LOG_ONCE(raw_select, "lv2_socket_raw::select");

@@ -13,6 +13,7 @@
 #include "Emu/Io/Keyboard.h"
 
 #include "util/yaml.hpp"
+#include "util/cctype.hpp"
 #include "Utilities/File.h"
 #include "Utilities/Config.h"
 
@@ -91,33 +92,13 @@ namespace
 	}
 }
 
-emu_settings::emu_settings()
+emu_settings::emu_settings(std::shared_ptr<render_creator> r_creator)
 	: QObject()
+	, m_render_creator(ensure(r_creator))
 {
 }
 
-bool emu_settings::Init()
-{
-	m_render_creator = new render_creator(this);
-
-	if (m_render_creator->abort_requested)
-	{
-		return false;
-	}
-
-	// Make Vulkan default setting if it is supported
-	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
-	{
-		const std::string adapter = ::at32(m_render_creator->Vulkan.adapters, 0).toStdString();
-		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
-		Emu.SetDefaultRenderer(video_renderer::vulkan);
-		Emu.SetDefaultGraphicsAdapter(adapter);
-	}
-
-	return true;
-}
-
-void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global)
+void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global, const std::string& db_config)
 {
 	m_title_id = title_id;
 
@@ -157,6 +138,22 @@ void emu_settings::LoadSettings(const std::string& title_id, bool create_config_
 			cfg_log.fatal("Failed to load global config %s:\n%s (%s)", global_config_path, global_error, fs::g_tls_error);
 			QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load global config:\nFile: %0\nError: %1")
 				.arg(QString::fromStdString(global_config_path)).arg(QString::fromStdString(global_error)), QMessageBox::Ok);
+		}
+	}
+	else if (!db_config.empty())
+	{
+		// Add database config
+		auto [config, error] = yaml_load(db_config);
+
+		if (config && error.empty())
+		{
+			m_current_settings += config;
+		}
+		else
+		{
+			cfg_log.fatal("Failed to load database config for '%s':\n%s", title_id, error);
+			QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load database config:\nError: %1")
+				.arg(QString::fromStdString(error)), QMessageBox::Ok);
 		}
 	}
 
@@ -207,7 +204,7 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	bool is_clean = true;
 
 	std::function<void(int, YAML::Node&, std::vector<std::string>&, cfg::_base*)> search_level;
-	search_level = [&search_level, &is_clean, &cleanup, this](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
+	search_level = [&search_level, &is_clean, &cleanup](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
 	{
 		if (!yml_node || !yml_node.IsMap())
 		{
@@ -238,8 +235,10 @@ bool emu_settings::ValidateSettings(bool cleanup)
 
 			if (cfg_node)
 			{
-				// Ignore every node in Log subsection
-				if (level == 0 && cfg_node->get_name() == "Log")
+				// Ignore every node in map subsections
+				if (cfg_node->get_type() == cfg::type::log ||
+					cfg_node->get_type() == cfg::type::map ||
+					cfg_node->get_type() == cfg::type::node_map)
 				{
 					continue;
 				}
@@ -446,7 +445,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	}
 
 	std::string def = GetSettingDefault(type);
-	std::transform(def.begin(), def.end(), def.begin(), ::tolower);
+	std::transform(def.begin(), def.end(), def.begin(), utils::tolower<char>);
 
 	if (def != "true" && def != "false")
 	{
@@ -455,7 +454,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	}
 
 	std::string selected = GetSetting(type);
-	std::transform(selected.begin(), selected.end(), selected.begin(), ::tolower);
+	std::transform(selected.begin(), selected.end(), selected.begin(), utils::tolower<char>);
 
 	if (selected == "true")
 	{
@@ -1097,6 +1096,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case msaa_level::_auto: return tr("Auto", "MSAA");
 		}
 		break;
+	case emu_settings_type::FramebufferAliasingBias:
+		switch (static_cast<framebuffer_aliasing_bias>(index))
+		{
+		case framebuffer_aliasing_bias::_auto: return tr("Auto", "Framebuffer Aliasing Heuristic Bias");
+		case framebuffer_aliasing_bias::prefer_color: return tr("Prefer Color", "Framebuffer Aliasing Heuristic Bias");
+		case framebuffer_aliasing_bias::prefer_depth: return tr("Prefer Depth", "Framebuffer Aliasing Heuristic Bias");
+		}
+		break;
 	case emu_settings_type::ShaderPrecisionQuality:
 		switch (static_cast<gpu_preset_level>(index))
 		{
@@ -1135,6 +1142,8 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case microphone_handler::singstar: return tr("SingStar", "Microphone handler");
 		case microphone_handler::real_singstar: return tr("Real SingStar", "Microphone handler");
 		case microphone_handler::rocksmith: return tr("Rocksmith", "Microphone handler");
+		case microphone_handler::eye_toy: return tr("Eye Toy", "Microphone handler");
+		case microphone_handler::ps_eye: return tr("PS Eye", "Microphone handler");
 		}
 		break;
 	case emu_settings_type::KeyboardHandler:
@@ -1230,6 +1239,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case ghltar_handler::null: return tr("Null", "GHLtar handler");
 		case ghltar_handler::one_controller: return tr("1 controller", "GHLtar handler");
 		case ghltar_handler::two_controllers: return tr("2 controllers", "GHLtar handler");
+		}
+		break;
+	case emu_settings_type::USIO:
+		switch (static_cast<usio_handler_mode>(index))
+		{
+		case usio_handler_mode::fighting_games: return tr("Fighting Games", "USIO mode");
+		case usio_handler_mode::shooter_games: return tr("Shooter Games", "USIO mode");
 		}
 		break;
 	case emu_settings_type::InternetStatus:
@@ -1479,6 +1495,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case stereo_render_mode_options::anaglyph_magenta_cyan: return tr("Anaglyph Magenta-Cyan", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_trioscopic: return tr("Anaglyph Green-Magenta (Trioscopic)", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_amber_blue: return tr("Anaglyph Amber-Blue (ColorCode 3D)", "3D Display Mode");
+		case stereo_render_mode_options::anaglyph_custom: return tr("Anaglyph Custom", "3D Display Mode");
 		}
 		break;
 	case emu_settings_type::MidiDevices:
@@ -1499,6 +1516,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case xfloat_accuracy::inaccurate: return tr("Inaccurate XFloat");
 		}
 		break;
+	case emu_settings_type::VSync:
+		switch (static_cast<vsync_mode>(index))
+		{
+		case vsync_mode::off: return tr("Disabled", "VSync Mode");
+		case vsync_mode::adaptive: return tr("Adaptive", "VSync Mode");
+		case vsync_mode::full: return tr("Full", "VSync Mode");
+		}
 	default:
 		break;
 	}
@@ -1508,7 +1532,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		std::string type_string;
 		if (const auto it = settings_location.find(type); it != settings_location.cend())
 		{
-			for (const char* loc : it->second)
+			for (const std::string& loc : it->second)
 			{
 				if (!type_string.empty()) type_string += ": ";
 				type_string += loc;

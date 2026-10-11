@@ -22,14 +22,14 @@ Most of this information can be found on the PlayStation 3 Developer Wiki.</p>
     <screenshots>
         <screenshot type="default">
             <caption>RPCS3 running a game using the Vulkan backend</caption>
-            <image type="source">https://rpcs3.net/blog/wp-content/uploads/2017/05/progress/vklinux.jpg</image>
+            <image type="source">https://rpcs3.net/cdn/preview/preview.png</image>
         </screenshot>
     </screenshots>
     <url type="homepage">https://rpcs3.net</url>
     <url type="bugtracker">https://github.com/RPCS3/rpcs3/issues</url>
     <url type="faq">https://rpcs3.net/faq</url>
     <url type="help">https://rpcs3.net/quickstart</url>
-    <url type="donation">https://www.patreon.com/Nekotekina</url>
+    <url type="donation">https://rpcs3.net/patreon</url>
     <url type="vcs-browser">https://github.com/RPCS3/rpcs3</url>
     <url type="contribute">https://github.com/RPCS3/rpcs3#contributing</url>
     <categories>

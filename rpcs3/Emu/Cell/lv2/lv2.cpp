@@ -51,6 +51,7 @@
 #include "sys_storage.h"
 #include "sys_uart.h"
 #include "sys_crypto_engine.h"
+#include "sys_bluetooth.h"
 
 #include <algorithm>
 #include <optional>
@@ -59,6 +60,7 @@
 #include "util/tsc.hpp"
 #include "util/sysinfo.hpp"
 #include "util/init_mutex.hpp"
+#include "util/cctype.hpp"
 
 #if defined(ARCH_X64)
 #ifdef _MSC_VER
@@ -622,7 +624,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	uns_func,                                               //576 (0x240)  UNS
 	null_func,//BIND_SYSC(sys_pad_manager_...),             //577 (0x241)  ROOT  PM
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //578 (0x242)
-	null_func,//BIND_SYSC(sys_bluetooth_aud_serial_...),    //579 (0x243)
+	BIND_SYSC(sys_bluetooth_aud_serial_get_event_579),      //579 (0x243)
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //580 (0x244)  ROOT
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //581 (0x245)  ROOT
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //582 (0x246)  ROOT
@@ -833,8 +835,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_ss_get_cache_of_analog_sunset_flag),      //860 (0x35C)  AUTHID
 	NULL_FUNC(sys_ss_protected_file_db),                    //861  ROOT
 	BIND_SYSC(sys_ss_virtual_trm_manager),                  //862  ROOT
-	BIND_SYSC(sys_ss_update_manager),                       //863  ROOT
-	NULL_FUNC(sys_ss_sec_hw_framework),                     //864  DBG
+	BIND_SYSC(sys_ss_update_manager),                       //863 (0x35F) ROOT
+	NULL_FUNC(sys_ss_sec_hw_framework),                     //864 (0x360) DBG
 	BIND_SYSC(sys_ss_random_number_generator),              //865 (0x361)
 	BIND_SYSC(sys_ss_secure_rtc),                           //866  ROOT
 	BIND_SYSC(sys_ss_appliance_info_manager),               //867  ROOT
@@ -976,6 +978,7 @@ enum CellAudioError : u32;
 enum CellAudioOutError : u32;
 enum CellAudioInError : u32;
 
+enum CellVdecError : u32;
 enum CellVideoOutError : u32;
 
 enum CellSpursCoreError : u32;
@@ -983,11 +986,24 @@ enum CellSpursPolicyModuleError : u32;
 enum CellSpursTaskError : u32;
 enum CellSpursJobError : u32;
 enum CellSyncError : u32;
+enum CellSync2Error : u32;
 
 enum CellGameError : u32;
+enum CellSysutilError : u32;
+enum CellSaveDataError : u32;
 enum CellGameDataError : u32;
-enum CellDiscGameError : u32;
 enum CellHddGameError : u32;
+enum CellDiscGameError : u32;
+
+enum CellCameraError : u32;
+enum CellGemError : u32;
+
+enum CellKbError : u32;
+enum CellPadError : u32;
+enum CellMouseError : u32;
+
+enum CellGcmError : u32;
+enum CellRescError : u32;
 
 enum SceNpTrophyError : u32;
 enum SceNpError : u32;
@@ -997,31 +1013,73 @@ constexpr auto formatter_of = std::make_pair(EnumMin, &fmt_class_string<E>::form
 
 const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
 {
-	formatter_of<0x80610000, CellAdecError>,
-	formatter_of<0x80612100, CellAdecError>,
 	formatter_of<0x80610300, CellAtracError>,
 	formatter_of<0x80610b00, CellAtracMultiError>,
 	formatter_of<0x80310700, CellAudioError>,
 	formatter_of<0x8002b240, CellAudioOutError>,
 	formatter_of<0x8002b260, CellAudioInError>,
 	formatter_of<0x8002b220, CellVideoOutError>,
+	formatter_of<0x80610100, CellVdecError>,
+
+	formatter_of<0x80610000, CellAdecError>,
+	formatter_of<0x80612000, CellAdecError>,
+	formatter_of<0x80612100, CellAdecError>,
+	formatter_of<0x80612400, CellAdecError>,
+	formatter_of<0x80612500, CellAdecError>,
+	formatter_of<0x80612700, CellAdecError>,
+	formatter_of<0x80612b00, CellAdecError>,
+	formatter_of<0x80612e00, CellAdecError>,
 
 	formatter_of<0x80410100, CellSyncError>,
+	formatter_of<0x80410C00, CellSync2Error>,
+
 	formatter_of<0x80410700, CellSpursCoreError>,
 	formatter_of<0x80410800, CellSpursPolicyModuleError>,
 	formatter_of<0x80410900, CellSpursTaskError>,
 	formatter_of<0x80410A00, CellSpursJobError>,
 
 	formatter_of<0x8002cb00, CellGameError>,
+	formatter_of<0x8002b100, CellSysutilError>,
+	formatter_of<0x8002b400, CellSaveDataError>,
 	formatter_of<0x8002b600, CellGameDataError>,
-	formatter_of<0x8002bd00, CellDiscGameError>,
 	formatter_of<0x8002ba00, CellHddGameError>,
+	formatter_of<0x8002bd00, CellDiscGameError>,
+
+	formatter_of<0x80140800, CellCameraError>,
+	formatter_of<0x80121800, CellGemError>,
+
+	formatter_of<0x80121000, CellKbError>,
+	formatter_of<0x80121100, CellPadError>,
+	formatter_of<0x80121200, CellMouseError>,
+
+	formatter_of<0x80210000, CellGcmError>,
+	formatter_of<0x80210300, CellRescError>,
 
 	formatter_of<0x80022900, SceNpTrophyError>,
 	formatter_of<0x80029500, SceNpError>,
+	formatter_of<0x80023b00, SceNpError>,
+	formatter_of<0x80028f00, SceNpError>,
+	formatter_of<0x80029400, SceNpError>,
+	formatter_of<0x80029600, SceNpError>,
+	formatter_of<0x80029700, SceNpError>,
+	formatter_of<0x80029d00, SceNpError>,
+	formatter_of<0x80029e00, SceNpError>,
+	formatter_of<0x8002a000, SceNpError>,
+	formatter_of<0x8002a100, SceNpError>,
+	formatter_of<0x8002a200, SceNpError>,
+	formatter_of<0x8002a300, SceNpError>,
+	formatter_of<0x8002a400, SceNpError>,
+	formatter_of<0x8002a500, SceNpError>,
+	formatter_of<0x8002a600, SceNpError>,
+	formatter_of<0x8002a700, SceNpError>,
+	formatter_of<0x8002a800, SceNpError>,
+	formatter_of<0x8002aa00, SceNpError>,
+	formatter_of<0x8002ab00, SceNpError>,
+	formatter_of<0x8002af00, SceNpError>,
+	formatter_of<0x8002e500, SceNpError>,
 };
 
-template<>
+template <>
 void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 {
 	// Test if can be formatted by this formatter
@@ -1034,8 +1092,12 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		if (upper == s_error_codes_formatting_by_type.begin())
 		{
-			// Format as unknown by another enum formatter
-			upper->second(out, arg);
+			// Format as unknown
+			format_enum(out, arg, [](auto /*error*/)
+			{
+				return unknown;
+			});
+
 			return;
 		}
 
@@ -1115,6 +1177,12 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<error_code>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<CellError>::format(out, arg);
 }
 
 stx::init_lock acquire_lock(stx::init_mutex& mtx, ppu_thread* ppu)
@@ -1252,16 +1320,8 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 
 		if (const auto func = g_ppu_syscall_table[code].first)
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
-#endif
 			func(ppu, {}, vm::_ptr<u32>(ppu.cia), nullptr);
 			ppu_log.trace("Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
-
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(true);
-			// No need to flush cache lines after a syscall, since we didn't generate any code.
-#endif
 			return;
 		}
 	}
@@ -1321,7 +1381,7 @@ std::string lv2_obj::name64(u64 name_u64)
 	// NTS string, ignore invalid/newline characters
 	// Example: "lv2\n\0tx" will be printed as "lv2"
 	std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
-	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
+	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !utils::isprint(c); }), str.end());
 
 	return str;
 }
@@ -1800,18 +1860,22 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// While signaling to the other hardware thread to execute the caller's code.
 	// Resulting in a delay to the caller after such thread is signaled
 
-	if (current_ppu && changed_queue && has_free_hw_thread_space)
+	if (current_ppu && cpu != current_ppu && changed_queue && has_free_hw_thread_space)
 	{
 		if (current_ppu->prio.load().prio > lowest_new_priority)
 		{
-			const bool is_create_thread = current_ppu->gpr[11] == 0x35;
+			const bool is_create_thread = current_ppu->current_function && current_ppu->gpr[11] == 0x35;
 
 			// When not being set to All timers - activate only for sys_ppu_thread_start
 			if (is_create_thread || g_cfg.core.sleep_timers_accuracy == sleep_timers_accuracy_level::_all_timers)
 			{
 				if (!current_ppu->state.test_and_set(cpu_flag::yield) || current_ppu->hw_sleep_time != 0)
 				{
-					current_ppu->hw_sleep_time += (is_create_thread ? 51 : 35);
+#ifdef _WIN32
+					current_ppu->hw_sleep_time += (is_create_thread ? 600 : 200);
+#else
+					current_ppu->hw_sleep_time += 100;
+#endif
 				}
 				else
 				{

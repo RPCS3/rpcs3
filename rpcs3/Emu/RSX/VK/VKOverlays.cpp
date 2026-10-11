@@ -14,6 +14,7 @@
 #include "../Program/RSXOverlay.h"
 
 #include "util/fnv_hash.hpp"
+#include "Utilities/stereo_config.h"
 
 #include "Emu/Cell/timers.hpp"
 
@@ -66,23 +67,20 @@ namespace vk
 
 		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding)
 		{
-			const std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_uniform_buffer, 0, 0);
-			fs_inputs.push_back(input);
+			std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
+			fs_inputs.push_back(program_input::make(::glsl::program_domain::glsl_fragment_program, std::move(name), program_input_type::input_type_uniform_buffer, 0, 0));
 		}
 
 		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
-			const std::string name = "fs" + std::to_string(n);
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
-			fs_inputs.push_back(input);
+			std::string name = "fs" + std::to_string(n);
+			fs_inputs.push_back(program_input::make(::glsl::program_domain::glsl_fragment_program, std::move(name), program_input_type::input_type_texture, 0, binding));
 		}
 
 		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding)
 		{
-			const std::string name = "sp" + std::to_string(n);
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
-			fs_inputs.push_back(input);
+			std::string name = "sp" + std::to_string(n);
+			fs_inputs.push_back(program_input::make(::glsl::program_domain::glsl_fragment_program, std::move(name), program_input_type::input_type_texture, 0, binding));
 		}
 
 		return fs_inputs;
@@ -434,7 +432,7 @@ namespace vk
 		}
 	}
 
-	vk::image_view* ui_overlay_renderer::find_font(rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap)
+	vk::image_view* ui_overlay_renderer::find_font(const rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap)
 	{
 		const auto image_size = font->get_glyph_data_dimensions();
 
@@ -462,7 +460,7 @@ namespace vk
 				true, false, bytes.data(), -1);
 	}
 
-	vk::image_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
+	vk::image_view* ui_overlay_renderer::find_temp_image(const rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
 	{
 		const bool dirty = std::exchange(desc->dirty, false);
 		const u64 key = reinterpret_cast<u64>(desc);
@@ -494,7 +492,7 @@ namespace vk
 				glsl::input_type_push_constant,
 				0,
 				0,
-				glsl::push_constant_ref { .size = 68 }
+				glsl::push_constant_ref { .size = vertex_push_constants_size }
 			)
 		);
 		return result;
@@ -510,7 +508,7 @@ namespace vk
 				glsl::input_type_push_constant,
 				0,
 				0,
-				glsl::push_constant_ref {.offset = 68, .size = 12 }
+				glsl::push_constant_ref {.offset = vertex_push_constants_size, .size = fragment_push_constants_size }
 			)
 		);
 		return result;
@@ -527,29 +525,39 @@ namespace vk
 		// 68: uint fragment_config;
 		// 72: float timestamp;
 		// 76: float blur_intensity;
+		// 80: vec4 sdf_params;
+		// 96: vec2 sdf_origin;
+		// 104: vec2 reserved;
+		// 112: vec4 sdf_border_color;
 
-		f32 push_buf[32];
+		usz pos = 0;
+		std::array<f32, std::max(vertex_push_constants_size, fragment_push_constants_size) / sizeof(f32)> push_buf{};
+
 		// 1. Vertex config (00 - 63)
-		std::memcpy(push_buf, m_scale_offset.rgba, 16);
-		std::memcpy(push_buf + 4, m_color.rgba, 16);
+		write_to_ptr(push_buf, pos, m_scale_offset.rgba);
+		pos += sizeof(m_scale_offset.rgba) / sizeof(f32);
+		write_to_ptr(push_buf, pos, m_color.rgba);
+		pos += sizeof(m_color.rgba) / sizeof(f32);
 
-		push_buf[8] = m_viewport.width;
-		push_buf[9] = m_viewport.height;
-		push_buf[10] = m_viewport.x;
-		push_buf[11] = m_viewport.y;
+		push_buf[pos++] = m_viewport.width;
+		push_buf[pos++] = m_viewport.height;
+		push_buf[pos++] = m_viewport.x;
+		push_buf[pos++] = m_viewport.y;
 
-		push_buf[12] = m_clip_region.x1;
-		push_buf[13] = m_clip_region.y1;
-		push_buf[14] = m_clip_region.x2;
-		push_buf[15] = m_clip_region.y2;
+		push_buf[pos++] = m_clip_region.x1;
+		push_buf[pos++] = m_clip_region.y1;
+		push_buf[pos++] = m_clip_region.x2;
+		push_buf[pos++] = m_clip_region.y2;
 
 		rsx::overlays::vertex_options vert_opts {};
 		const auto vert_config = vert_opts
 			.disable_vertex_snap(m_disable_vertex_snap)
 			.get();
-		push_buf[16] = std::bit_cast<f32>(vert_config);
+		push_buf[pos++] = std::bit_cast<f32>(vert_config);
 
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, 68, push_buf);
+		ensure(pos <= push_buf.size());
+		ensure(pos == (vertex_push_constants_size / sizeof(f32)));
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, vertex_push_constants_size, push_buf.data());
 
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts {};
@@ -557,13 +565,28 @@ namespace vk
 			.texture_mode(m_texture_type)
 			.clip_fragments(m_clip_enabled)
 			.pulse_glow(m_pulse_glow)
+			.set_sdf(m_sdf_config.func)
 			.get();
 
-		push_buf[0] = std::bit_cast<f32>(frag_config);
-		push_buf[1] = m_time;
-		push_buf[2] = m_blur_strength;
+		pos = 0;
+		push_buf[pos++] = std::bit_cast<f32>(frag_config);
+		push_buf[pos++] = m_time;
+		push_buf[pos++] = m_blur_strength;
+		push_buf[pos++] = m_sdf_config.hx;
+		push_buf[pos++] = m_sdf_config.hy;
+		push_buf[pos++] = m_sdf_config.br;
+		push_buf[pos++] = m_sdf_config.bw;
+		push_buf[pos++] = m_sdf_config.cx;
+		push_buf[pos++] = m_sdf_config.cy;
+		push_buf[pos++] = 0.f;
+		push_buf[pos++] = 0.f;
 
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
+		write_to_ptr(push_buf, pos, m_sdf_config.border_color.rgba);
+		pos += sizeof(m_sdf_config.border_color.rgba) / sizeof(f32);
+
+		ensure(pos <= push_buf.size());
+		ensure(pos == (fragment_push_constants_size / sizeof(f32)));
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, vertex_push_constants_size, fragment_push_constants_size, push_buf.data());
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -613,7 +636,11 @@ namespace vk
 	void ui_overlay_renderer::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
 			vk::data_heap& upload_heap, rsx::overlays::overlay& ui)
 	{
-		m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
+		ui.set_render_viewport(
+		    static_cast<u16>(std::min<u32>(viewport.width(), std::numeric_limits<u16>::max())),
+		    static_cast<u16>(std::min<u32>(viewport.height(), std::numeric_limits<u16>::max()))
+		);
+		m_scale_offset = color4f(ui.get_virtual_width(), ui.get_virtual_height(), 1.f, 1.f);
 		m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
 
 		std::vector<vk::image_view*> image_views
@@ -644,6 +671,9 @@ namespace vk
 			m_clip_region = command.config.clip_rect;
 			m_disable_vertex_snap = command.config.disable_vertex_snap;
 
+			m_sdf_config = command.config.sdf_config;
+			m_sdf_config.transform(static_cast<areaf>(viewport), { m_scale_offset.x, m_scale_offset.y });
+
 			vk::image_view* src = nullptr;
 			switch (command.config.texture_ref)
 			{
@@ -660,7 +690,7 @@ namespace vk
 					: rsx::overlays::texture_sampling_mode::font3D;
 				break;
 			case rsx::overlays::image_resource_id::raw_image:
-				src = find_temp_image(static_cast<rsx::overlays::image_info_base*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
+				src = find_temp_image(static_cast<const rsx::overlays::image_info_base*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
 				break;
 			default:
 				src = view_cache[command.config.texture_ref].get();
@@ -727,7 +757,7 @@ namespace vk
 				vk::glsl::input_type_push_constant,
 				0,
 				0,
-				glsl::push_constant_ref{ .size = 32 })
+				glsl::push_constant_ref{ .size = vertex_push_constants_size })
 		};
 	}
 
@@ -743,7 +773,8 @@ namespace vk
 		data[6] = colormask.b;
 		data[7] = colormask.a;
 
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
+		static_assert(sizeof(data) == vertex_push_constants_size);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, vertex_push_constants_size, data);
 	}
 
 	void attachment_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -881,7 +912,7 @@ namespace vk
 				vk::glsl::input_type_push_constant,
 				0,
 				0,
-				glsl::push_constant_ref{ .size = 16 }
+				glsl::push_constant_ref{ .size = fragment_push_constants_size }
 			)
 		);
 		return result;
@@ -889,17 +920,28 @@ namespace vk
 
 	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
 	{
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
+		static_assert(sizeof(config.data) == fragment_push_constants_size);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, fragment_push_constants_size, config.data);
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
 		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb,
-		bool stereo_enabled, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
+		bool stereo_enabled, VkRenderPass render_pass)
 	{
+		static stereo_config stereo_cfg = stereo_config(true);
+		stereo_cfg.update_from_config(stereo_enabled);
+		const auto& matrices = stereo_cfg.matrices();
+
 		config.gamma = gamma;
-		config.limit_range = limited_rgb? 1 : 0;
-		config.stereo_display_mode = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
+		config.limit_range = limited_rgb ? 1 : 0;
+		config.stereo_display_mode = static_cast<u8>(stereo_cfg.stereo_mode());
 		config.stereo_image_count = std::min(::size32(src), 2u);
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			std::memcpy(config.left_anaglyph_matrix[i].rgba, matrices.left[i].rgb, sizeof(matrices.left[i].rgb));
+			std::memcpy(config.right_anaglyph_matrix[i].rgba, matrices.right[i].rgb, sizeof(matrices.right[i].rgb));
+		}
 
 		std::vector<vk::image_view*> views;
 		views.reserve(2);

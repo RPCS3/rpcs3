@@ -7,14 +7,7 @@ body:
     attributes:
       value: |
         # Summary
-        Please do not ask for help or report compatibility regressions here, use [RPCS3 Discord server](https://discord.gg/rpcs3) or [forums](https://forums.rpcs3.net/) instead.
-  - type: textarea
-    id: quick-summary
-    attributes:
-      label: Quick summary
-      description: Please briefly describe what has stopped working correctly.
-    validations:
-      required: true
+        Please do not ask for help here, use the [RPCS3 Discord server](https://discord.gg/rpcs3) or the [RPCS3 Forum](https://forums.rpcs3.net/) instead.
   - type: textarea
     id: details
     attributes:
@@ -26,19 +19,27 @@ body:
     attributes:
       value: |
         # Identify the regressed build
-        Please provide the _exact_ build (or commit) information that introduced the regression you're reporting.
+        Please provide the _exact_ build information that **introduced** the regression you're reporting (i.e. the first version where it happens).
         * Please see [How to find the build that caused a regression](https://wiki.rpcs3.net/index.php?title=Help:Using_different_versions_of_RPCS3#How_to_find_the_build_that_caused_a_regression.3F) in our wiki.
-        * You can find [History of RPCS3 builds](https://rpcs3.net/compatibility?b) here.
+        * You can find the [History of RPCS3 builds](https://rpcs3.net/builds) here.
 
         Make sure you're running with settings as close to default as possible
         * **Do NOT enable any emulator game patches when reporting issues**
-        * Only change settings that are required for the game to work
+        * **Only change settings that are required for the game to work**
   - type: input
-    id: regressed-build
+    id: last-good-build
     attributes:
-      label: Build with regression
-      description: Provide _exact_ build (or commit) information that introduced the regression you're reporting.
+      label: Last working build
+      description: Provide the _exact_ last working build. This needs to be the build right before the first broken build.
       placeholder: v0.0.23-13948-31df99f7
+    validations:
+      required: true
+  - type: input
+    id: first-bad-build
+    attributes:
+      label: First broken build
+      description: Provide the _exact_ first broken build. This needs to be the build right after the last working build.
+      placeholder: v0.0.23-13949-d1a46b49
     validations:
       required: true
   - type: markdown
@@ -56,10 +57,23 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Attach two log files
+      label: Attach 3 log files
       description: |
-        Attach one file for the build with regression and another for a build that works.
+        * A RPCS3 log file for the last working build
+        * A RPCS3 log file for the first broken build
+        * A RPCS3 log file for the latest master build (not required if latest master build is the first broken build)
+
         Drag & drop the files into this input field, or upload them to another service (f.ex. Dropbox, Mega) and provide a link.
+    validations:
+      required: true
+  - type: dropdown
+    id: require-log-files
+    attributes:
+      label: I have attached all 3 required log files
+      options:
+        - "Yes"
+        - "No"
+      default: 1
     validations:
       required: true
   - type: markdown
@@ -73,8 +87,8 @@ body:
   - type: textarea
     id: captures
     attributes:
-      label: Attach capture files for visual issues
-      description: Compress your capture with 7z, Rar etc. and attach it here, or upload it to the cloud (Dropbox, Mega etc) and add a link to it.
+      label: Attach the RSX (.rrc) or RenderDoc (.rdc) capture files for visual issues
+      description: Compress your capture with .7z, .gz, etc. and attach it here, or upload it to another service (f.ex. Dropbox, Mega) and provide a link.
     validations:
       required: false
   - type: textarea
@@ -82,12 +96,5 @@ body:
     attributes:
       label: System configuration
       description: Provide information about your system, such as operating system, CPU and GPU model, GPU driver version and other information that describes your system configuration.
-    validations:
-      required: false
-  - type: textarea
-    id: other-details
-    attributes:
-      label: Other details
-      description: Include anything else you deem to be important.
     validations:
       required: false

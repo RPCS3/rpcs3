@@ -1,4 +1,5 @@
 #include "vkutils/data_heap.h"
+#include "VKFramebuffer.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -305,6 +306,14 @@ namespace vk
 		return (bytes_spilled > 0);
 	}
 
+	drawable_surface_t::~drawable_surface_t()
+	{
+		if (value)
+		{
+			vk::remove_framebuffers_with_image(this);
+		}
+	}
+
 	// Get the linear resolve target bound to this surface. Initialize if none exists
 	vk::viewable_image* render_target::get_resolve_target_safe(vk::command_buffer& cmd)
 	{
@@ -317,7 +326,7 @@ namespace vk
 			VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			usage |= (this->info.usage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
 
-			resolve_surface.reset(new vk::viewable_image(
+			resolve_surface.reset(new vk::drawable_surface_t(
 				*g_render_device,
 				g_render_device->get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -724,6 +733,7 @@ namespace vk
 				subres.height_in_block
 			);
 			subres.data = std::span(ext_data);
+			upload_flags |= source_is_userptr;
 #else
 			const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, range, subres.width_in_block, subres.height_in_block, get_bpp());
 
@@ -735,7 +745,7 @@ namespace vk
 #endif
 		}
 
-		if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
+		if (resolution_scaling_config.scale_percent == 100 && spp == 1) [[likely]]
 		{
 			push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			vk::upload_image(cmd, this, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, heap_align, upload_flags);
@@ -777,9 +787,9 @@ namespace vk
 				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				vk::copy_scaled_image(cmd, content, final_dst,
-					{ 0, 0, subres.width_in_block, subres.height_in_block },
-					{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
-					1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
+					areai{ 0, 0, subres.width_in_block, subres.height_in_block },
+					areai{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
+					{}, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
 
 				content->pop_layout(cmd);
 			}
@@ -793,13 +803,16 @@ namespace vk
 			}
 		}
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+		state_flags &= ~(rsx::surface_state_flags::erase_bkgnd | rsx::surface_state_flags::force_data_load);
 	}
 
 	void render_target::initialize_memory(vk::command_buffer& cmd, rsx::surface_access access)
 	{
-		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth_surface() ?
+			!!g_cfg.video.read_depth_buffer :
+			!!g_cfg.video.read_color_buffers;
+
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (!should_read_buffers)
 		{
@@ -842,7 +855,7 @@ namespace vk
 	bool render_target::matches_dimensions(u16 _width, u16 _height) const
 	{
 		// Use forward scaling to account for rounding and clamping errors
-		const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(_width, _height);
+		const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(resolution_scaling_config, _width, _height);
 		return (scaled_w == width()) && (scaled_h == height());
 	}
 
@@ -858,6 +871,12 @@ namespace vk
 			// If we have back-to-back depth-read barriers, skip subsequent ones
 			// If an actual write is happening, this flag will be automatically reset
 			return;
+		}
+
+		if (msaa_flags & rsx::surface_state_flags::require_unresolve)
+		{
+			// Emit an early write barrier here to commit any resolve operations
+			write_barrier(cmd);
 		}
 
 		vk::insert_texture_barrier(cmd, this, optimal_layout);
@@ -937,7 +956,8 @@ namespace vk
 		}
 
 		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (should_read_buffers)
 		{

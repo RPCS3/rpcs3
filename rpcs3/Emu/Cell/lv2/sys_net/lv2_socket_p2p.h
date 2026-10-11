@@ -32,10 +32,13 @@ public:
 
 	void poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
+	void get_sockinfo(sys_net_sockinfo_t& info) override;
 
 	void handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vector<u8> p2p_data);
 
 protected:
+	virtual bs_t<poll_t> get_pending_events() const;
+
 	// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
 	u16 port = 3658, vport = 0;
 	u32 bound_addr = 0;

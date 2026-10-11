@@ -5,6 +5,7 @@
 #include "VKHelpers.h"
 #include "vkutils/device.h"
 #include "../Program/GLSLCommon.h"
+#include "Emu/system_config.h"
 
 std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
@@ -21,7 +22,7 @@ std::string VKVertexDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+std::string VKVertexDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1, scalar);
 }
@@ -69,12 +70,14 @@ void VKVertexDecompilerThread::prepareBindingTable()
 	}
 }
 
-void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
+void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 {
 	prepareBindingTable();
 
 	OS <<
 		"#version 450\n\n"
+		"#extension GL_EXT_scalar_block_layout : require\n"
+		"#extension GL_EXT_uniform_buffer_unsized_array : require\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 	glsl::insert_subheader_block(OS);
@@ -88,20 +91,20 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
 
 	OS <<
-		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly restrict buffer VertexContextBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform VertexContextBuffer\n"
 		"{\n"
 		"	vertex_context_t vertex_contexts[];\n"
 		"};\n\n";
 
-	const vk::glsl::program_input context_input
+	vk::glsl::program_input context_input
 	{
 		.domain = glsl::glsl_vertex_program,
-		.type = vk::glsl::input_type_storage_buffer,
+		.type = vk::glsl::input_type_uniform_buffer,
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = vk_prog->binding_table.context_buffer_location,
 		.name = "VertexContextBuffer"
 	};
-	inputs.push_back(context_input);
+	inputs.push_back(std::move(context_input));
 
 	if (m_device_props.emulate_conditional_rendering)
 	{
@@ -111,7 +114,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 			"	uint cr_predicate_value;\n"
 			"};\n\n";
 
-		const vk::glsl::program_input predicate_input
+		vk::glsl::program_input predicate_input
 		{
 			.domain = glsl::glsl_vertex_program,
 			.type = vk::glsl::input_type_storage_buffer,
@@ -119,7 +122,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 			.location = vk_prog->binding_table.cr_pred_buffer_location,
 			.name = "EXT_Conditional_Rendering"
 		};
-		inputs.push_back(predicate_input);
+		inputs.push_back(std::move(predicate_input));
 	}
 
 	OS <<
@@ -128,7 +131,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	draw_parameters_t draw_parameters[];\n"
 		"};\n\n";
 
-	const vk::glsl::program_input layouts_input
+	vk::glsl::program_input layouts_input
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_storage_buffer,
@@ -136,7 +139,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.location = vk_prog->binding_table.vertex_buffers_location + 2,
 		.name = "DrawParametersBuffer"
 	};
-	inputs.push_back(layouts_input);
+	inputs.push_back(std::move(layouts_input));
 
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
@@ -144,7 +147,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uint draw_parameters_offset;\n"
 		"};\n\n";
 
-	const vk::glsl::program_input push_constants
+	vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_push_constant,
@@ -153,7 +156,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.location = umax,
 		.name = "push_constants_block"
 	};
-	inputs.push_back(push_constants);
+	inputs.push_back(std::move(push_constants));
 }
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
@@ -169,19 +172,18 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 	{
 		OS << "layout(set=0, binding=" << location << ") uniform usamplerBuffer " << stream << ";\n";
 
-		const vk::glsl::program_input input
+		this->inputs.push_back(vk::glsl::program_input
 		{
 			.domain = glsl::glsl_vertex_program,
 			.type = vk::glsl::input_type_texel_buffer,
 			.set = vk::glsl::binding_set_index_vertex,
 			.location = location++,
 			.name = stream
-		};
-		this->inputs.push_back(input);
+		});
 	}
 }
 
-void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
+void VKVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
 	vk::glsl::program_input in
 	{
@@ -197,14 +199,14 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			{
 				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
 				{
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly restrict buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") uniform VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 vc[];\n";
 					OS << "};\n\n";
 
 					in.location = vk_prog->binding_table.cbuf_location;
 					in.name = "VertexConstantsBuffer";
-					in.type = vk::glsl::input_type_storage_buffer;
+					in.type = vk::glsl::input_type_uniform_buffer;
 
 					inputs.push_back(in);
 					continue;
@@ -306,14 +308,23 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 	{
 		if (i.need_declare)
 		{
-			// All outputs must be declared always to allow setting default values
-			OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
+			// All outputs must be declared always to allow setting default values.
+			// NV4097_SET_SHADE_MODE applies to the front/back diffuse and specular colors.
+			const bool flat_color = (m_prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING) &&
+				(i.name.starts_with("diff_color"sv) || i.name.starts_with("spec_color"sv));
+			OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out "
+				<< (flat_color ? "flat " : "") << "vec4 " << i.name << ";\n";
 		}
 	}
 
 	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INTERPRETER_MODEL))
 	{
 		OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
+	}
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+	{
+		OS << "layout(location=" << vk::get_varying_register_location("depth_range") << ") out flat vec2 depth_range;\n";
 	}
 }
 
@@ -329,7 +340,7 @@ void VKVertexDecompilerThread::insertFSExport(std::stringstream& OS)
 		"}\n\n";
 }
 
-void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
+void VKVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 {
 	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
@@ -340,6 +351,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.low_precision_tests = vk::is_NVIDIA(vk::get_driver_vendor());
 	properties2.require_explicit_invariance = (vk::is_NVIDIA(vk::get_driver_vendor()) && g_cfg.video.shader_precision != gpu_preset_level::low);
 	properties2.require_instanced_render = !!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS);
+	properties2.emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_vulkan);
@@ -387,9 +399,9 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
-	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			if (PI.name.starts_with("dst_reg"))
 				continue;
@@ -402,9 +414,9 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
@@ -413,7 +425,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "\nuint xform_constants_offset = get_draw_params().xform_constants_offset;\n\n";
 }
 
-void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
+void VKVertexDecompilerThread::insertMainEnd(std::stringstream& OS)
 {
 	OS << "}\n\n";
 
@@ -471,7 +483,18 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	}
 
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
-	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
+
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)) [[ likely ]]
+	{
+		OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
+	}
+	else
+	{
+		OS <<
+			"	depth_range = vec2(min(z_near, z_far), max(z_near, z_far));\n"
+			"	gl_Position = apply_depth_range_xform(gl_Position, depth_range);\n";
+	}
+
 	OS << "}\n";
 }
 
@@ -492,6 +515,8 @@ VKVertexProgram::~VKVertexProgram()
 
 void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
+	m_ctrl = prog.ctrl;
+
 	std::string source;
 	VKVertexDecompilerThread decompiler(prog, source, parr, *this);
 	decompiler.Task();

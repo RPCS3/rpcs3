@@ -6,7 +6,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 // Helper methods to interact with YAML and the config settings.
 namespace cfg_adapter
 {
-	static cfg::_base& get_cfg(const cfg::_base& root, const std::string& name)
+	static cfg::_base& get_cfg(const cfg::_base& root, std::string_view name)
 	{
 		if (root.get_type() == cfg::type::node)
 		{

@@ -1158,11 +1158,10 @@ static error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::pt
 	for (const ime_jp_manager::candidate& can : list)
 	{
 		// Copy the candidate
-		for (u32 i = pos; i < can.text.length(); i++)
+		for (u32 i = 0; i < can.text.length(); i++)
 		{
-			pCandidateString[i] = can.text[i];
+			pCandidateString[pos++] = can.text[i];
 		}
-		pos += ::narrow<u32>(can.text.length());
 
 		// Add null terminator
 		pCandidateString[pos++] = 0;

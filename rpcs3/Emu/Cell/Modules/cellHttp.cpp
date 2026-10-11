@@ -3702,7 +3702,7 @@ error_code cellHttpEndExternalCache()
 
 error_code cellHttpInitExternalCache(vm::ptr<void> buf, u32 size)
 {
-	cellHttp.todo("cellHttpInitExternalCache(buf=*0x%x, size=0x%x)", size);
+	cellHttp.todo("cellHttpInitExternalCache(buf=*0x%x, size=0x%x)", buf, size);
 
 	auto& man = g_fxo->get<http_manager>();
 	std::lock_guard lock(man.mtx);

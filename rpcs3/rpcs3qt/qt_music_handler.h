@@ -16,7 +16,7 @@ public:
 
 	void stop() override;
 	void pause() override;
-	void play(const std::string& path) override;
+	void play(const std::string& path, bool automatic = false) override;
 	void fast_forward(const std::string& path) override;
 	void fast_reverse(const std::string& path) override;
 	void set_volume(f32 volume) override;

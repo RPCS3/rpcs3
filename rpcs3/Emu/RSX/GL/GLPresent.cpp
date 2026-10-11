@@ -95,6 +95,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 				image = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					resolution_scaling_config,
 					std::min(surface_width, info->width),
 					std::min(surface_height, info->height));
 			}
@@ -144,7 +145,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		if (gl::formats_are_bitcast_compatible(flip_image.get(), image))
 		{
 			const position3u offset{};
-			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), 0, 0, offset, offset, { info->width, info->height, 1 });
+			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), offset, offset, { info->width, info->height, 1 });
 		}
 		else
 		{
@@ -225,7 +226,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig.stereo_enabled) [[unlikely]]
 		{
-			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
@@ -240,7 +241,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
 				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
@@ -252,6 +253,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	if (info.emu_flip)
 	{
 		evaluate_cpu_usage_reduction_limits();
+		update_swap_interval();
 	}
 
 	// Get window state
@@ -315,9 +317,11 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			// Lock to avoid modification during run-update chain
 			std::lock_guard lock(*m_overlay_manager);
 
+			const areau display_area = {0, 0, static_cast<u32>(m_frame->client_width()), static_cast<u32>(m_frame->client_height())};
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer.run(cmd, aspect_ratio, target, *view.get(), flip_vertically);
+				const areau render_area = view->use_window_space ? display_area : aspect_ratio;
+				m_ui_renderer.run(cmd, render_area, target, *view.get(), flip_vertically);
 			}
 		}
 	};
@@ -360,7 +364,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				tex = m_sshot_tex.get();
 
 				static const position3u offset{};
-				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, 0, 0, offset, offset, { tex->width(), tex->height(), 1 });
+				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, offset, offset, { tex->width(), tex->height(), 1 });
 
 				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()), true);
 				m_sshot_fbo.remove();
@@ -369,7 +373,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 			glGetError();
 
-			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+			const coord3u region = { {}, { buffer_width, buffer_height, 1 } };
+			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, 0, region, pack_settings);
 
 			m_sshot_tex.reset();
 
@@ -432,7 +437,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 
 			gl::screen.bind();
-			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_enabled, g_cfg.video.stereo_render_mode, filter);
+			m_video_output_pass.run(cmd, areau(aspect_ratio), images.map(FN(x ? x->id() : GL_NONE)), gamma, limited_range, avconfig.stereo_enabled, filter);
 		}
 	}
 
@@ -476,7 +481,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			"Texture uploads: %11u (%u from CPU - %02u%%, %u copies avoided)\n"
 			"Vertex cache hits: %9u/%u (%u%%)\n"
 			"Program cache lookup ellision: %u/%u (%u%%)",
-			info.stats.framebuffer_stats.to_string(!backend_config.supports_hw_msaa),
+			info.stats.framebuffer_stats.to_string(resolution_scaling_config, !backend_config.supports_hw_msaa),
 			get_load(), info.stats.draw_calls, info.stats.setup_time, info.stats.vertex_upload_time,
 			info.stats.textures_upload_time, info.stats.draw_exec_time, num_dirty_textures, texture_memory_size,
 			num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
@@ -512,6 +517,19 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	m_frame->flip(m_context);
 	rsx::thread::flip(info);
+
+	// Data sync
+	const rsx::surface_scaling_config_t active_res_scaling_config =
+	{
+		.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+		.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+	};
+
+	if (active_res_scaling_config != this->resolution_scaling_config)
+	{
+		m_rtts.sync_scaling_config(cmd, active_res_scaling_config);
+		this->resolution_scaling_config = active_res_scaling_config;
+	}
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();

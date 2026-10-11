@@ -129,7 +129,7 @@ public:
 	const native_entry entry_point;
 
 	// Set name for debugger
-	static void set_name(std::string);
+	static void set_name(std::string name);
 
 private:
 	// Thread handle (platform-specific)
@@ -232,11 +232,7 @@ public:
 	}
 
 	// Set current thread name (not recommended)
-	static void set_name(std::string name)
-	{
-		g_tls_this_thread->m_tname.store(make_single<std::string>(name));
-		g_tls_this_thread->set_name(std::move(name));
-	}
+	static void set_name(std::string name);
 
 	// Set thread name (not recommended)
 	template <typename T>
@@ -318,6 +314,9 @@ public:
 
 	// Exit.
 	[[noreturn]] static void emergency_exit(std::string_view reason);
+
+	// Exit the current named thread as errored without reporting a fatal error.
+	[[noreturn]] static void silent_exit() noexcept;
 
 	// Get current thread (may be nullptr)
 	static thread_base* get_current()
@@ -801,31 +800,30 @@ public:
 		m_count = 0;
 
 		// Create all threads
-		for (u32 i = 0; i < count - 1; i++)
+		for (; m_count < count - 1; m_count++)
 		{
 			// Copy the context
 			std::remove_cvref_t<Context> context(static_cast<const Context&>(f));
 
 			// Perform the check and additional preparations for each context
-			if (!std::invoke(std::forward<CheckAndPrepare>(check), i, context))
+			if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count, context))
 			{
 				return;
 			}
 
-			m_count++;
-			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), std::move(context));
+			new (static_cast<void*>(m_threads + m_count)) Thread(std::string(name) + std::to_string(m_count + 1), std::move(context));
 		}
 
 		// Move the context (if movable)
 		std::remove_cvref_t<Context> context(std::forward<Context>(f));
 
-		if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count - 1, context))
+		if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count, context))
 		{
 			return;
 		}
 
+		new (static_cast<void*>(m_threads + m_count)) Thread(std::string(name) + std::to_string(m_count + 1), std::move(context));
 		m_count++;
-		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count - 1), std::move(context));
 	}
 
 	// Default constructor
@@ -907,3 +905,6 @@ public:
 		::operator delete(static_cast<void*>(m_threads), std::align_val_t{alignof(Thread)});
 	}
 };
+
+usz map_workload(std::string_view thread_name, usz thread_count, usz count, std::function<void(usz)>&& func);
+usz map_workload(std::string_view thread_name, usz thread_count, std::function<void()>&& func);

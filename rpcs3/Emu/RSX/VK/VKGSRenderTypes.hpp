@@ -6,7 +6,7 @@
 #include "VKResourceManager.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/rsx_cache.h"
 #include "Utilities/mutex.h"
 #include "util/asm.hpp"
@@ -254,18 +254,18 @@ namespace vk
 
 		void consumer_wait() const
 		{
-			while (num_waiters.load() != 0)
+			utils::spin_wait(num_waiters, [](auto v)
 			{
-				utils::pause();
-			}
+				return v == 0;
+			});
 		}
 
 		void producer_wait() const
 		{
-			while (pending_state.load())
+			utils::spin_wait(pending_state, [](auto v)
 			{
-				std::this_thread::yield();
-			}
+				return !v;
+			});
 		}
 	};
 

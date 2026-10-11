@@ -319,7 +319,7 @@ error_code sys_config_open(u32 equeue_hdl, vm::ptr<u32> out_config_hdl)
 	const auto config = lv2_config_handle::create(std::move(queue));
 	if (config)
 	{
-		*out_config_hdl = idm::last_id();
+		*out_config_hdl = idm::last_id<lv2_config_handle>();
 		return CELL_OK;
 	}
 

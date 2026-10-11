@@ -2,6 +2,7 @@
 
 #include "GSFrameBase.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config_types.h"
 
 enum wm_event
 {
@@ -22,6 +23,8 @@ protected:
 	GSFrameBase* m_frame;
 	draw_context_t m_context = nullptr;
 	bool m_continuous_mode = false;
+
+	vsync_mode m_vsync_mode{};
 
 public:
 	~GSRender() override;

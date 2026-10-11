@@ -6,7 +6,7 @@
 #include <tuple>
 #include <algorithm>
 #include "gcm_enums.h"
-#include "rsx_utils.h"
+#include "Utils/rsx_utils.h"
 
 namespace rsx
 {
@@ -3369,6 +3369,20 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 		{
 			return color_fmt() < surface_color_format::w16z16y16x16;
 		}
+
+		bool is_remapped_format() const
+		{
+			static constexpr u32 s_remapped_formats =
+				(1u << CELL_GCM_SURFACE_X1R5G5B5_Z1R5G5B5) |
+				(1u << CELL_GCM_SURFACE_X1R5G5B5_O1R5G5B5) |
+				(1u << CELL_GCM_SURFACE_X8R8G8B8_Z8R8G8B8) |
+				(1u << CELL_GCM_SURFACE_X8R8G8B8_O8R8G8B8) |
+				(1u << CELL_GCM_SURFACE_B8) |
+				(1u << CELL_GCM_SURFACE_G8B8) |
+				(1u << CELL_GCM_SURFACE_X8B8G8R8_Z8B8G8R8) |
+				(1u << CELL_GCM_SURFACE_X8B8G8R8_O8B8G8R8);
+			return !!((1u << color_fmt_raw()) & s_remapped_formats);
+		}
 	};
 
 	static void dump(std::string& out, const decoded_type& decoded)
@@ -3775,12 +3789,12 @@ struct registers_decoder<NV309E_SET_FORMAT>
 
 		u8 sw_height_log2() const
 		{
-			return bf_decoder<16, 8>(value);
+			return bf_decoder<24, 8>(value);
 		}
 
 		u8 sw_width_log2() const
 		{
-			return bf_decoder<24, 8>(value);
+			return bf_decoder<16, 8>(value);
 		}
 	};
 

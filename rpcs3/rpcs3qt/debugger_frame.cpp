@@ -13,9 +13,9 @@
 #include "hex_validator.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
@@ -58,6 +58,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
 	, m_gui_settings(std::move(gui_settings))
 {
+	setObjectName("debugger");
 	setContentsMargins(0, 0, 0, 0);
 
 	m_update = new QTimer(this);
@@ -825,7 +826,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 	}
 
-	if (!!m_disasm != !!m_cpu)
+	if (!!m_disasm != !!m_cpu && !m_rsx)
 	{
 		// Fixup for HW PPU viewer
 		if (m_cpu)
@@ -872,7 +873,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 {
 	constexpr cpu_thread* null_cpu = nullptr;
 
-	if (Emu.IsStopped())
+	if (Emu.IsStopped(true))
 	{
 		return []() { return null_cpu; };
 	}
@@ -921,7 +922,7 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 
 	return [cpu, type, shared = std::move(shared), emulation_id = Emu.GetEmulationIdentifier()]() mutable -> cpu_thread*
 	{
-		if (emulation_id != Emu.GetEmulationIdentifier() || Emu.IsStopped())
+		if (emulation_id != Emu.GetEmulationIdentifier() || Emu.IsStopped(true))
 		{
 			// Invalidate all data after Emu.Kill()
 			shared.reset();
@@ -1040,7 +1041,7 @@ void debugger_frame::UpdateUnitList()
 	const u64 emulation_id = static_cast<std::underlying_type_t<Emulator::stop_counter_t>>(Emu.GetEmulationIdentifier());
 	const u64 threads_created = cpu_thread::g_threads_created;
 	const u64 threads_deleted = cpu_thread::g_threads_deleted;
-	const system_state emu_state = Emu.GetStatus();
+	const system_state emu_state = Emu.GetStatus(false);
 
 	std::unique_lock<shared_mutex> lock{id_manager::g_mutex, std::defer_lock};
 
@@ -1077,6 +1078,11 @@ void debugger_frame::UpdateUnitList()
 	{
 		std::function<cpu_thread*()> func_cpu = make_check_cpu(std::addressof(cpu), true);
 
+		if (cpu.state & cpu_flag::exit)
+		{
+			return;
+		}
+
 		// Space at the end is to pad a gap on the right
 		cpu_list.emplace_back(QString::fromStdString((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
 
@@ -1093,7 +1099,7 @@ void debugger_frame::UpdateUnitList()
 			idm::select<named_thread<ppu_thread>>(on_select, idm::unlocked);
 		}
 
-		m_hw_ppu_idx = cpu_list.size() + 1; // Account for NoThreadString thread
+		m_hw_ppu_idx = ::size32(cpu_list) + 1; // Account for NoThreadString thread
 
 		for (u32 i = 0; i < g_cfg.core.ppu_threads + 0u; i++)
 		{
@@ -1397,7 +1403,7 @@ void debugger_frame::OnSelectSPUDisassembler()
 
 		for (u32 passed = spu_base; passed < SPU_LS_SIZE; passed += 4096)
 		{
-			if (!vm::check_addr(spu_addr + passed))
+			if (!vm::check_addr(spu_addr + passed - spu_base))
 			{
 				if (passed == spu_base)
 				{
@@ -1469,17 +1475,32 @@ void debugger_frame::WritePanels(cpu_thread* cpu)
 
 	int loc = m_misc_state->verticalScrollBar()->value();
 	int hloc = m_misc_state->horizontalScrollBar()->value();
-	m_misc_state->clear();
-	m_misc_state->setPlainText(QString::fromStdString(cpu->dump_misc()));
+
+	m_last_misc_state.clear();
+	cpu->dump_misc(m_last_misc_state, m_dump_misc_func_data);
+
+	if (m_last_misc_state != m_old_misc_state)
+	{
+		m_misc_state->clear();
+		m_misc_state->setPlainText(QString::fromStdString(m_last_misc_state));
+		m_old_misc_state = m_last_misc_state;
+	}
+
 	m_misc_state->verticalScrollBar()->setValue(loc);
 	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
 	loc = m_regs->verticalScrollBar()->value();
 	hloc = m_regs->horizontalScrollBar()->value();
-	m_regs->clear();
 	m_last_reg_state.clear();
 	cpu->dump_regs(m_last_reg_state, m_dump_reg_func_data);
-	m_regs->setPlainText(QString::fromStdString(m_last_reg_state));
+
+	if (m_last_reg_state != m_old_reg_state)
+	{
+		m_regs->clear();
+		m_regs->setPlainText(QString::fromStdString(m_last_reg_state));
+		m_old_reg_state = m_last_reg_state;
+	}
+
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 

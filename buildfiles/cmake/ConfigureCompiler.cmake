@@ -1,5 +1,9 @@
 # Check and configure compiler options for RPCS3
 
+if(USE_ARM_LSE2)
+	add_compile_definitions(ARM_FEATURE_LSE2=1)
+endif()
+
 if(MSVC)
 	add_compile_options(/Zc:throwingNew- /constexpr:steps16777216)
 	add_compile_definitions(
@@ -96,11 +100,6 @@ else()
 		# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 		add_link_options(-Wl,--exclude-libs,ALL)
 	elseif(WIN32)
-		add_compile_definitions(__STDC_FORMAT_MACROS=1)
-
-		# Workaround for mingw64 (MSYS2)
-		add_link_options(-Wl,--allow-multiple-definition)
-
 		# Increase stack limit to 8 MB
 		add_link_options(-Wl,--stack -Wl,8388608)
 	endif()

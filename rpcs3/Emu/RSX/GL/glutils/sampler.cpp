@@ -45,7 +45,7 @@ namespace gl
 		return 1.0f;
 	}
 
-	int tex_min_filter(rsx::texture_minify_filter min_filter)
+	GLenum tex_min_filter(rsx::texture_minify_filter min_filter)
 	{
 		switch (min_filter)
 		{
@@ -60,7 +60,7 @@ namespace gl
 		fmt::throw_exception("Unknown min filter");
 	}
 
-	int tex_mag_filter(rsx::texture_magnify_filter mag_filter)
+	GLenum tex_mag_filter(rsx::texture_magnify_filter mag_filter)
 	{
 		switch (mag_filter)
 		{
@@ -72,7 +72,7 @@ namespace gl
 	}
 
 	// Apply sampler state settings
-	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
+	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image, bool allow_mipmaps)
 	{
 		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
 		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
@@ -114,8 +114,7 @@ namespace gl
 			}
 		}
 
-		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
-			tex.get_exact_mipmap_count() == 1)
+		if (!allow_mipmaps || tex.get_exact_mipmap_count() == 1)
 		{
 			GLint min_filter = tex_min_filter(tex.min_filter());
 
