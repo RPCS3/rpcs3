@@ -168,12 +168,15 @@ void VKGSRender::update_draw_state()
 {
 	m_profiler.start();
 
+	const auto& raster = m_ctx->draw_state.raster;
+	const auto& depth_stencil = m_ctx->draw_state.depth_stencil;
+
 	// Update conditional dynamic state
 	if (REGS(m_ctx)->current_draw_clause.primitive >= rsx::primitive_type::points &&   // AMD/AMDVLK driver does not like it if you render points without setting line width for some reason
 		REGS(m_ctx)->current_draw_clause.primitive <= rsx::primitive_type::line_strip)
 	{
 		const float actual_line_width =
-			m_device->get_wide_lines_support() ? REGS(m_ctx)->line_width() * resolution_scaling_config.scale_factor() : 1.f;
+			m_device->get_wide_lines_support() ? raster.line_width * resolution_scaling_config.scale_factor() : 1.f;
 		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
@@ -184,20 +187,20 @@ void VKGSRender::update_draw_state()
 		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
 	}
 
-	if (REGS(m_ctx)->stencil_test_enabled())
+	if (depth_stencil.stencil_test_enabled)
 	{
-		const bool two_sided_stencil = REGS(m_ctx)->two_sided_stencil_test_enabled();
+		const bool two_sided_stencil = depth_stencil.two_sided_stencil_test_enabled;
 		VkStencilFaceFlags face_flag = (two_sided_stencil) ? VK_STENCIL_FACE_FRONT_BIT : VK_STENCIL_FRONT_AND_BACK;
 
-		vkCmdSetStencilWriteMask(*m_current_command_buffer, face_flag, REGS(m_ctx)->stencil_mask());
-		vkCmdSetStencilCompareMask(*m_current_command_buffer, face_flag, REGS(m_ctx)->stencil_func_mask());
-		vkCmdSetStencilReference(*m_current_command_buffer, face_flag, REGS(m_ctx)->stencil_func_ref());
+		vkCmdSetStencilWriteMask(*m_current_command_buffer, face_flag, depth_stencil.front.write_mask);
+		vkCmdSetStencilCompareMask(*m_current_command_buffer, face_flag, depth_stencil.front.func_mask);
+		vkCmdSetStencilReference(*m_current_command_buffer, face_flag, depth_stencil.front.func_ref);
 
 		if (two_sided_stencil)
 		{
-			vkCmdSetStencilWriteMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, REGS(m_ctx)->back_stencil_mask());
-			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, REGS(m_ctx)->back_stencil_func_mask());
-			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, REGS(m_ctx)->back_stencil_func_ref());
+			vkCmdSetStencilWriteMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, depth_stencil.back.write_mask);
+			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, depth_stencil.back.func_mask);
+			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, depth_stencil.back.func_ref);
 		}
 	}
 
@@ -209,15 +212,15 @@ void VKGSRender::update_draw_state()
 		return;
 	}
 
-	if (REGS(m_ctx)->poly_offset_fill_enabled())
+	if (raster.poly_offset_fill_enabled)
 	{
 		// offset_bias is the constant factor, multiplied by the implementation factor R
 		// offst_scale is the slope factor, multiplied by the triangle slope factor M
 		// R is implementation dependent and has to be derived empirically for supported implementations.
 		// Lucky for us, only NVIDIA currently supports fixed-point 24-bit depth buffers.
 
-		const auto polygon_offset_scale = REGS(m_ctx)->poly_offset_scale();
-		auto polygon_offset_bias = REGS(m_ctx)->poly_offset_bias();
+		const auto polygon_offset_scale = raster.poly_offset_scale;
+		auto polygon_offset_bias = raster.poly_offset_bias;
 
 		if (!m_draw_fbo->attachments.empty() &&
 			m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT &&
@@ -241,12 +244,11 @@ void VKGSRender::update_draw_state()
 	if (m_device->get_depth_bounds_support())
 	{
 		f32 bounds_min, bounds_max;
-		if (REGS(m_ctx)->depth_bounds_test_enabled())
+		if (depth_stencil.depth_bounds_test_enabled)
 		{
-			// Update depth bounds min/max, saturated into the RSX depth format's range as hardware does
-			const auto depth_format = REGS(m_ctx)->surface_depth_fmt();
-			bounds_min = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_min());
-			bounds_max = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_max());
+			// Update depth bounds min/max, already saturated into the RSX depth format's range by the core
+			bounds_min = depth_stencil.depth_bounds_min;
+			bounds_max = depth_stencil.depth_bounds_max;
 		}
 		else
 		{
@@ -257,7 +259,7 @@ void VKGSRender::update_draw_state()
 
 		if (!m_config.supports_extended_depth_range)
 		{
-			if (REGS(m_ctx)->depth_bounds_test_enabled() && requires_depth_range_emulation()) [[ unlikely ]]
+			if (depth_stencil.depth_bounds_test_enabled && requires_depth_range_emulation()) [[ unlikely ]]
 			{
 				bounds_min = rsx::encode_emulated_depth(bounds_min);
 				bounds_max = rsx::encode_emulated_depth(bounds_max);
@@ -273,7 +275,6 @@ void VKGSRender::update_draw_state()
 	bind_viewport();
 
 	m_current_command_buffer->flags &= ~vk::command_buffer::cb_reload_dynamic_state;
-	m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
 	m_ctx->stats.setup_time += m_profiler.duration();
 }
 
@@ -1379,7 +1380,9 @@ bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
 
-	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state)
+	if ((m_ctx->graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state) ||
+		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::raster) ||
+		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::depth_stencil))
 	{
 		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	}

@@ -28,6 +28,7 @@ namespace rsx
 		rsx::flags32_t m_pre_begin_pipeline_state = 0;
 
 		bool should_skip_draw() const;
+		void decode_draw_state();
 		void execute_nop_draw();
 		void post_draw_hook();
 	};
