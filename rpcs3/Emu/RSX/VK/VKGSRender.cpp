@@ -247,7 +247,7 @@ namespace vk
 		const rsx::context* ctx,
 		const vertex_input_assembly_state& vertex_input,
 		vk::render_target* ds,
-		const rsx::backend_configuration& backend_config,
+		const rsx::backend_configuration& m_config,
 		u8 num_draw_buffers,
 		u8 num_rasterization_samples,
 		bool depth_bounds_support,
@@ -387,9 +387,9 @@ namespace vk
 			}
 		}
 
-		if (backend_config.supports_hw_a2c || num_rasterization_samples > 1)
+		if (m_config.supports_hw_a2c || num_rasterization_samples > 1)
 		{
-			const bool alpha_to_one_enable = REGS(ctx)->msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
+			const bool alpha_to_one_enable = REGS(ctx)->msaa_alpha_to_one_enabled() && m_config.supports_hw_a2one;
 
 			properties.state.set_multisample_state(
 				num_rasterization_samples,
@@ -653,19 +653,19 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		m_shader_interpreter.init(m_ctx, *m_device);
 	}
 
-	backend_config.supports_multidraw = true;
-	backend_config.supports_hw_instanced_rendering = true;
-	backend_config.supports_programmable_blending = true;
+	m_config.supports_multidraw = true;
+	m_config.supports_hw_instanced_rendering = true;
+	m_config.supports_programmable_blending = true;
 
-	backend_config.supports_extended_depth_range = m_device->get_unrestricted_depth_range_support();
-	backend_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
-	if (!backend_config.supports_last_provoking_vertex)
+	m_config.supports_extended_depth_range = m_device->get_unrestricted_depth_range_support();
+	m_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
+	if (!m_config.supports_last_provoking_vertex)
 	{
 		rsx_log.warning("VK_EXT_provoking_vertex with provokingVertexLast is unavailable; RSX flat shading will fall back to smooth interpolation.");
 	}
 
 	// NVIDIA has broken attribute interpolation
-	backend_config.supports_normalized_barycentrics = (
+	m_config.supports_normalized_barycentrics = (
 		!vk::is_NVIDIA(vk::get_driver_vendor()) ||
 		!m_device->get_barycoords_support() ||
 		g_cfg.video.shader_precision == gpu_preset_level::low);
@@ -674,10 +674,10 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
-		backend_config.supports_hw_msaa = true;
-		backend_config.supports_hw_a2c = true;
-		backend_config.supports_hw_a2c_1spp = true;
-		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
+		m_config.supports_hw_msaa = true;
+		m_config.supports_hw_a2c = true;
+		m_config.supports_hw_a2c_1spp = true;
+		m_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
 	}
 
 	// Framebufferless rendering. Zero-attachment subpasses can only rasterize at the sample counts reported for them.
@@ -688,7 +688,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	if (const auto supported_sample_counts = m_device->gpu().get_limits().framebufferNoAttachmentsSampleCounts & required_sample_counts;
 		supported_sample_counts == required_sample_counts)
 	{
-		backend_config.supports_framebufferless_rendering = true;
+		m_config.supports_framebufferless_rendering = true;
 	}
 	else
 	{
@@ -697,29 +697,29 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
-	backend_config.supports_hw_renormalization = vk::is_NVIDIA(vk::get_driver_vendor());
+	m_config.supports_hw_renormalization = vk::is_NVIDIA(vk::get_driver_vendor());
 
 	// Conditional rendering support
 	// Do not use on MVK due to a speedhack we rely on (streaming results without stopping the current renderpass)
 	// If we break the renderpasses, MVK loses around 75% of its performance in troublesome spots compared to just doing a CPU sync
-	backend_config.supports_hw_conditional_render = (vk::get_driver_vendor() != vk::driver_vendor::MVK);
+	m_config.supports_hw_conditional_render = (vk::get_driver_vendor() != vk::driver_vendor::MVK);
 
 	// Passthrough DMA
-	backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
+	m_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
 
 	// Host sync
-	backend_config.supports_host_gpu_labels = !!g_cfg.video.host_label_synchronization;
+	m_config.supports_host_gpu_labels = !!g_cfg.video.host_label_synchronization;
 
 	// Async compute and related operations
 	if (g_cfg.video.vk.asynchronous_texture_streaming)
 	{
 		// Optimistic, enable async compute
-		backend_config.supports_asynchronous_compute = true;
+		m_config.supports_asynchronous_compute = true;
 
 		if (m_device->get_graphics_queue() == m_device->get_transfer_queue())
 		{
 			rsx_log.error("Cannot run graphics and async transfer in the same queue. Async uploads are disabled. This is a limitation of your GPU");
-			backend_config.supports_asynchronous_compute = false;
+			m_config.supports_asynchronous_compute = false;
 		}
 	}
 
@@ -727,7 +727,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	switch (vk::get_driver_vendor())
 	{
 	case vk::driver_vendor::NVIDIA:
-		if (backend_config.supports_asynchronous_compute)
+		if (m_config.supports_asynchronous_compute)
 		{
 			if (auto chip_family = vk::get_chip_family();
 				chip_family == vk::chip_class::NV_kepler || chip_family == vk::chip_class::NV_maxwell)
@@ -751,25 +751,25 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
 	case vk::driver_vendor::ANV:
 #endif
-		if (backend_config.supports_passthrough_dma)
+		if (m_config.supports_passthrough_dma)
 		{
 			rsx_log.error("AMDGPU kernel driver on Linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
-			backend_config.supports_passthrough_dma = false;
+			m_config.supports_passthrough_dma = false;
 		}
 		break;
 #endif
 	case vk::driver_vendor::INTEL:
 		// As expected host allocations won't work on INTEL despite the extension being present
-		if (backend_config.supports_passthrough_dma)
+		if (m_config.supports_passthrough_dma)
 		{
 			rsx_log.error("INTEL driver does not support passthrough DMA buffers");
-			backend_config.supports_passthrough_dma = false;
+			m_config.supports_passthrough_dma = false;
 		}
 		break;
 	default: break;
 	}
 
-	if (backend_config.supports_asynchronous_compute)
+	if (m_config.supports_asynchronous_compute)
 	{
 		m_async_compute_memory_barrier =
 		{
@@ -792,9 +792,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler, m_async_compute_dependency_info);
 	}
 
-	if (backend_config.supports_host_gpu_labels)
+	if (m_config.supports_host_gpu_labels)
 	{
-		if (backend_config.supports_passthrough_dma)
+		if (m_config.supports_passthrough_dma)
 		{
 			m_host_object_data = std::make_unique<vk::buffer>(*m_device,
 				0x10000,
@@ -807,16 +807,16 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		else
 		{
 			rsx_log.error("Your GPU/driver does not support extensions required to enable passthrough DMA emulation. Host GPU labels will be disabled.");
-			backend_config.supports_host_gpu_labels = false;
+			m_config.supports_host_gpu_labels = false;
 		}
 	}
 
-	if (!backend_config.supports_host_gpu_labels &&
-		!backend_config.supports_asynchronous_compute)
+	if (!m_config.supports_host_gpu_labels &&
+		!m_config.supports_asynchronous_compute)
 	{
 		// Disable passthrough DMA unless we enable a feature that requires it.
 		// I'm avoiding an explicit checkbox for this until I figure out why host labels don't fix all problems with passthrough.
-		backend_config.supports_passthrough_dma = false;
+		m_config.supports_passthrough_dma = false;
 	}
 }
 
@@ -1619,7 +1619,7 @@ std::pair<volatile vk::host_data_t*, VkBuffer> VKGSRender::map_host_object_data(
 
 bool VKGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
-	if (!backend_config.supports_host_gpu_labels)
+	if (!m_config.supports_host_gpu_labels)
 	{
 		return false;
 	}
@@ -1674,7 +1674,7 @@ bool VKGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 
 void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
 {
-	if (!backend_config.supports_host_gpu_labels)
+	if (!m_config.supports_host_gpu_labels)
 	{
 		return;
 	}
@@ -1886,7 +1886,7 @@ bool VKGSRender::load_program()
 			m_ctx,
 			vertex_state,
 			m_rtts.m_bound_depth_stencil.second,
-			backend_config,
+			m_config,
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
 			m_device->get_depth_bounds_support(),
