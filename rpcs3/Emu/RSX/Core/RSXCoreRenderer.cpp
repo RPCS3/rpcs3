@@ -4,6 +4,7 @@
 #include "Emu/RSX/Capture/rsx_capture.h"
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Utils/color_utils.hpp"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/system_config.h"
 
@@ -81,6 +82,93 @@ namespace rsx
 		state.back.op_zpass = regs.back_stencil_op_zpass();
 	}
 
+	static std::array<f32, 4> decode_constant_blend_color(const rsx_state& regs, surface_color_format color_format)
+	{
+		//TODO: check another color formats (probably all integer formats with > 8-bits wide channels)
+		if (color_format == rsx::surface_color_format::w16z16y16x16)
+		{
+			const u16 blend_color_r = regs.blend_color_16b_r();
+			const u16 blend_color_g = regs.blend_color_16b_g();
+			const u16 blend_color_b = regs.blend_color_16b_b();
+			const u16 blend_color_a = regs.blend_color_16b_a();
+
+			return { decode_fp16(blend_color_r), decode_fp16(blend_color_g), decode_fp16(blend_color_b), decode_fp16(blend_color_a) };
+		}
+
+		const u8 blend_color_r = regs.blend_color_8b_r();
+		const u8 blend_color_g = regs.blend_color_8b_g();
+		const u8 blend_color_b = regs.blend_color_8b_b();
+		const u8 blend_color_a = regs.blend_color_8b_a();
+
+		return { blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f };
+	}
+
+	static void decode_blend_state(const rsx_state& regs, blend_state& state)
+	{
+		const auto color_format = regs.surface_color();
+		const auto output_mask = rsx::get_write_output_mask(color_format);
+
+		for (u32 index = 0; index < state.color_mask.size(); ++index)
+		{
+			bool color_mask_b = regs.color_mask_b(index);
+			bool color_mask_g = regs.color_mask_g(index);
+			bool color_mask_r = regs.color_mask_r(index);
+			bool color_mask_a = regs.color_mask_a(index);
+
+			switch (color_format)
+			{
+			case rsx::surface_color_format::b8:
+				rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+				break;
+			case rsx::surface_color_format::g8b8:
+				rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+				break;
+			default:
+				break;
+			}
+
+			state.color_mask[index] =
+			{
+				.r = color_mask_r && output_mask[0],
+				.g = color_mask_g && output_mask[1],
+				.b = color_mask_b && output_mask[2],
+				.a = color_mask_a && output_mask[3]
+			};
+		}
+
+		state.dither_enabled = regs.dither_enabled();
+
+		state.logic_op_enabled = regs.logic_op_enabled();
+		if (state.logic_op_enabled)
+		{
+			state.logic_operation = regs.logic_operation();
+		}
+
+		// Blend factors are still decoded under the logic op. Programmable blending and the VK blend constants only check the enable mask.
+		state.enable_mask = static_cast<u8>(regs.blend_enabled_mask());
+		if (!state.enable_mask)
+		{
+			return;
+		}
+
+		state.sfactor_rgb = regs.blend_func_sfactor_rgb();
+		state.sfactor_a = regs.blend_func_sfactor_a();
+		state.dfactor_rgb = regs.blend_func_dfactor_rgb();
+		state.dfactor_a = regs.blend_func_dfactor_a();
+		state.equation_rgb = regs.blend_equation_rgb();
+		state.equation_a = regs.blend_equation_a();
+		state.constant_color = decode_constant_blend_color(regs, color_format);
+	}
+
+	static void decode_multisample_state(const rsx_state& regs, multisample_state& state)
+	{
+		state.antialias = regs.surface_antialias();
+		state.msaa_enabled = regs.msaa_enabled();
+		state.sample_mask = regs.msaa_sample_mask();
+		state.alpha_to_coverage_enabled = regs.msaa_alpha_to_coverage_enabled();
+		state.alpha_to_one_enabled = regs.msaa_alpha_to_one_enabled();
+	}
+
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
 	// Full decode on top of the current state. Fields the decoders skip keep their current value, so only relevant fields are compared.
 	// A mismatch means a register feeding the group is missing from draw_state_signals.
@@ -93,6 +181,14 @@ namespace rsx
 		depth_stencil_state depth_stencil = state.depth_stencil;
 		decode_depth_stencil_state(regs, depth_stencil);
 		ensure(depth_stencil == state.depth_stencil, "Stale depth/stencil state");
+
+		blend_state blend = state.blend;
+		decode_blend_state(regs, blend);
+		ensure(blend == state.blend, "Stale blend state");
+
+		multisample_state multisample = state.multisample;
+		decode_multisample_state(regs, multisample);
+		ensure(multisample == state.multisample, "Stale multisample state");
 	}
 #endif
 
@@ -195,6 +291,20 @@ namespace rsx
 			decode_depth_stencil_state(regs, state.depth_stencil);
 			state.pending.clear(draw_state_t::group::depth_stencil);
 			state.dirty.set(draw_state_t::group::depth_stencil);
+		}
+
+		if (state.pending.test(draw_state_t::group::blend))
+		{
+			decode_blend_state(regs, state.blend);
+			state.pending.clear(draw_state_t::group::blend);
+			state.dirty.set(draw_state_t::group::blend);
+		}
+
+		if (state.pending.test(draw_state_t::group::multisample))
+		{
+			decode_multisample_state(regs, state.multisample);
+			state.pending.clear(draw_state_t::group::multisample);
+			state.dirty.set(draw_state_t::group::multisample);
 		}
 
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG

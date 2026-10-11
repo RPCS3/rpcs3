@@ -702,6 +702,8 @@ namespace rsx
 		// The core renderer only re-decodes groups that have been signalled.
 		const auto raster = static_cast<u8>(draw_state_t::group::raster);
 		const auto depth_stencil = static_cast<u8>(draw_state_t::group::depth_stencil);
+		const auto blend = static_cast<u8>(draw_state_t::group::blend);
+		const auto multisample = static_cast<u8>(draw_state_t::group::multisample);
 
 		for (const u32 reg :
 		{
@@ -728,6 +730,24 @@ namespace rsx
 		})
 		{
 			draw_state_signals[reg] |= depth_stencil;
+		}
+
+		// SURFACE_FORMAT selects the color mask remap and the blend constant color format
+		for (const u32 reg :
+		{
+			NV4097_SET_COLOR_MASK, NV4097_SET_COLOR_MASK_MRT, NV4097_SET_SURFACE_FORMAT, NV4097_SET_DITHER_ENABLE,
+			NV4097_SET_LOGIC_OP_ENABLE, NV4097_SET_LOGIC_OP, NV4097_SET_BLEND_ENABLE, NV4097_SET_BLEND_ENABLE_MRT,
+			NV4097_SET_BLEND_FUNC_SFACTOR, NV4097_SET_BLEND_FUNC_DFACTOR, NV4097_SET_BLEND_EQUATION,
+			NV4097_SET_BLEND_COLOR, NV4097_SET_BLEND_COLOR2
+		})
+		{
+			draw_state_signals[reg] |= blend;
+		}
+
+		// SURFACE_FORMAT holds the antialiasing mode
+		for (const u32 reg : { NV4097_SET_ANTI_ALIASING_CONTROL, NV4097_SET_SURFACE_FORMAT })
+		{
+			draw_state_signals[reg] |= multisample;
 		}
 	}
 
