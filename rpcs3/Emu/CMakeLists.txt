@@ -429,6 +429,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/GHLtar.cpp
     Io/GunCon3.cpp
     Io/Infinity.cpp
+    Io/wiimote_config.cpp
     Io/interception.cpp
     Io/KamenRider.cpp
     Io/KeyboardHandler.cpp
@@ -698,6 +699,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::vulkan
         3rdparty::glew
         3rdparty::libusb
+        3rdparty::hidapi
         3rdparty::wolfssl
         3rdparty::openal
         3rdparty::cubeb
