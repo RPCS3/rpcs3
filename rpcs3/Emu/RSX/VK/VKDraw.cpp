@@ -1255,19 +1255,8 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	m_ctx->stats.draw_exec_time += m_profiler.duration();
 }
 
-void VKGSRender::begin()
+void VKGSRender::begin_draw()
 {
-	// Save shader state now before prefetch and loading happens
-	m_interpreter_state = (m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
-
-	rsx::thread::begin();
-
-	if (m_ctx->frame_skip.skip_current_frame ||
-		m_ctx->cond_render.disable_rendering())
-	{
-		return;
-	}
-
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
 
 	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
@@ -1278,14 +1267,10 @@ void VKGSRender::begin()
 	}
 }
 
-void VKGSRender::end()
+bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 {
-	if (should_skip_draw())
-	{
-		execute_nop_draw();
-		rsx::thread::end();
-		return;
-	}
+	// Shader state as it was before prefetch and loading happened
+	m_interpreter_state = pre_begin_pipeline_state;
 
 	m_profiler.start();
 
@@ -1317,10 +1302,8 @@ void VKGSRender::end()
 	{
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
-		execute_nop_draw();
 		// m_rtts.on_write(); - breaks games for obvious reasons
-		rsx::thread::end();
-		return;
+		return false;
 	}
 
 	// Load program execution environment
@@ -1423,5 +1406,5 @@ void VKGSRender::end()
 
 	m_rtts.on_write(m_ctx->fb.layout.color_write_enabled, m_ctx->fb.layout.zeta_write_enabled);
 
-	rsx::thread::end();
+	return true;
 }

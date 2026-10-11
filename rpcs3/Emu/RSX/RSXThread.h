@@ -27,6 +27,7 @@
 #include "Core/RSXDriverState.h"
 #include "Core/RSXFrameBuffer.h"
 #include "Core/RSXContext.h"
+#include "Core/RSXCoreRenderer.h"
 #include "Core/RSXRenderBackend.h"
 #include "Core/RSXVertexTypes.h"
 
@@ -67,6 +68,8 @@ namespace rsx
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
 	class thread : public cpu_thread, public fw_context
 	{
+		friend class core_renderer;
+
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
 		u64 m_cycles_counter = 0;
@@ -123,6 +126,9 @@ namespace rsx
 
 		// Draw call management
 		draw_command_processor m_draw_processor;
+
+		// Backend-agnostic renderer core
+		core_renderer m_core;
 
 	public:
 		atomic_t<u64> new_get_put = u64{umax};
@@ -290,10 +296,10 @@ namespace rsx
 		thread& operator=(const thread&) = delete;
 		void save(utils::serial& ar);
 
-		virtual void begin();
-		virtual void end();
-		virtual void execute_nop_draw();
-		bool should_skip_draw() const;
+		// NV4097_SET_BEGIN_END, forwarded to the renderer core
+		void begin();
+		void end();
+		void discard_draw();
 
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);

@@ -41,6 +41,8 @@ namespace rsx
 		const backend_configuration& config() const { return m_config; }
 
 		// Draw
+		virtual void begin_draw() {}
+		virtual bool end_draw(rsx::flags32_t /*pre_begin_pipeline_state*/) { return false; }
 		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void emit_geometry(u32 /*sub_index*/) {}
 
