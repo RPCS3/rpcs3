@@ -256,16 +256,19 @@ namespace vk
 	{
 		vk::pipeline_props properties{};
 
+		const auto& raster = ctx->draw_state.raster;
+		const auto& depth_stencil = ctx->draw_state.depth_stencil;
+
 		// Input assembly
 		properties.state.set_primitive_type(vertex_input.primitive);
 		properties.state.enable_primitive_restart(vertex_input.restart_index_enabled);
 
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
-		properties.state.set_front_face(vk::get_front_face(REGS(ctx)->front_face_mode()));
+		properties.state.set_front_face(vk::get_front_face(raster.front_face_mode));
 		if (!force_depth_clamp) [[ likely ]]
 		{
-			properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
+			properties.state.enable_depth_clamp(depth_stencil.depth_clamp_enabled || !depth_stencil.depth_clip_enabled);
 		}
 		else
 		{
@@ -275,16 +278,16 @@ namespace vk
 		properties.state.enable_depth_bias(true);
 		properties.state.enable_depth_bounds_test(depth_bounds_support);
 
-		if (REGS(ctx)->depth_test_enabled())
+		if (depth_stencil.depth_test_enabled)
 		{
 			//NOTE: Like stencil, depth write is meaningless without depth test
-			properties.state.set_depth_mask(REGS(ctx)->depth_write_enabled());
-			properties.state.enable_depth_test(vk::get_compare_func(REGS(ctx)->depth_func()));
+			properties.state.set_depth_mask(depth_stencil.depth_write_enabled);
+			properties.state.enable_depth_test(vk::get_compare_func(depth_stencil.depth_func));
 		}
 
-		if (REGS(ctx)->cull_face_enabled())
+		if (raster.cull_face_enabled)
 		{
-			properties.state.enable_cull_face(vk::get_cull_face(REGS(ctx)->cull_face_mode()));
+			properties.state.enable_cull_face(vk::get_cull_face(raster.cull_face_mode));
 		}
 
 		const auto host_write_mask = rsx::get_write_output_mask(REGS(ctx)->surface_color());
@@ -344,31 +347,31 @@ namespace vk
 			}
 		}
 
-		if (REGS(ctx)->stencil_test_enabled())
+		if (depth_stencil.stencil_test_enabled)
 		{
-			if (!REGS(ctx)->two_sided_stencil_test_enabled())
+			if (!depth_stencil.two_sided_stencil_test_enabled)
 			{
 				properties.state.enable_stencil_test(
-					vk::get_stencil_op(REGS(ctx)->stencil_op_fail()),
-					vk::get_stencil_op(REGS(ctx)->stencil_op_zfail()),
-					vk::get_stencil_op(REGS(ctx)->stencil_op_zpass()),
-					vk::get_compare_func(REGS(ctx)->stencil_func()),
+					vk::get_stencil_op(depth_stencil.front.op_fail),
+					vk::get_stencil_op(depth_stencil.front.op_zfail),
+					vk::get_stencil_op(depth_stencil.front.op_zpass),
+					vk::get_compare_func(depth_stencil.front.func),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 			}
 			else
 			{
 				properties.state.enable_stencil_test_separate(0,
-					vk::get_stencil_op(REGS(ctx)->stencil_op_fail()),
-					vk::get_stencil_op(REGS(ctx)->stencil_op_zfail()),
-					vk::get_stencil_op(REGS(ctx)->stencil_op_zpass()),
-					vk::get_compare_func(REGS(ctx)->stencil_func()),
+					vk::get_stencil_op(depth_stencil.front.op_fail),
+					vk::get_stencil_op(depth_stencil.front.op_zfail),
+					vk::get_stencil_op(depth_stencil.front.op_zpass),
+					vk::get_compare_func(depth_stencil.front.func),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 
 				properties.state.enable_stencil_test_separate(1,
-					vk::get_stencil_op(REGS(ctx)->back_stencil_op_fail()),
-					vk::get_stencil_op(REGS(ctx)->back_stencil_op_zfail()),
-					vk::get_stencil_op(REGS(ctx)->back_stencil_op_zpass()),
-					vk::get_compare_func(REGS(ctx)->back_stencil_func()),
+					vk::get_stencil_op(depth_stencil.back.op_fail),
+					vk::get_stencil_op(depth_stencil.back.op_zfail),
+					vk::get_stencil_op(depth_stencil.back.op_zpass),
+					vk::get_compare_func(depth_stencil.back.func),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 			}
 
