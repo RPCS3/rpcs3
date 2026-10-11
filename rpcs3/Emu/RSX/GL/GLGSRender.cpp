@@ -50,19 +50,19 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
-	backend_config.supports_multidraw = true;
-	backend_config.supports_normalized_barycentrics = true;
-	backend_config.supports_hw_instanced_rendering = true;
+	m_config.supports_multidraw = true;
+	m_config.supports_normalized_barycentrics = true;
+	m_config.supports_hw_instanced_rendering = true;
 	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
-	backend_config.supports_last_provoking_vertex = true;
-	backend_config.supports_extended_depth_range = gl::get_driver_caps().NV_depth_buffer_float_supported;
+	m_config.supports_last_provoking_vertex = true;
+	m_config.supports_extended_depth_range = gl::get_driver_caps().NV_depth_buffer_float_supported;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
-		backend_config.supports_hw_msaa = true;
-		backend_config.supports_hw_a2c = true;
-		backend_config.supports_hw_a2c_1spp = false; // In OGL A2C is implicitly disabled at 1spp
-		backend_config.supports_hw_a2one = true;
+		m_config.supports_hw_msaa = true;
+		m_config.supports_hw_a2c = true;
+		m_config.supports_hw_a2c_1spp = false; // In OGL A2C is implicitly disabled at 1spp
+		m_config.supports_hw_a2one = true;
 	}
 }
 
@@ -192,12 +192,12 @@ void GLGSRender::on_init_thread()
 	if (!gl_caps.ARB_shader_storage_buffer_object_supported)
 	{
 		rsx_log.warning("[PERFORMANCE WARNING] SSBOs are not supported by your GPU. Some functionality such as hardware instancing will be unavailable.");
-		backend_config.supports_hw_instanced_rendering = false;
+		m_config.supports_hw_instanced_rendering = false;
 	}
 
 	if (gl_caps.ARB_framebuffer_no_attachments_supported)
 	{
-		backend_config.supports_framebufferless_rendering = true;
+		m_config.supports_framebufferless_rendering = true;
 	}
 
 	if (!gl_caps.ARB_bindless_texture_supported)
@@ -219,12 +219,12 @@ void GLGSRender::on_init_thread()
 		g_cfg.video.shader_precision != gpu_preset_level::low)
 	{
 		// NVIDIA's attribute interpolation requires some workarounds
-		backend_config.supports_normalized_barycentrics = false;
+		m_config.supports_normalized_barycentrics = false;
 	}
 
 	if (gl_caps.AMD_pinned_memory_supported && g_cfg.video.host_label_synchronization)
 	{
-		backend_config.supports_host_gpu_labels = true;
+		m_config.supports_host_gpu_labels = true;
 
 		m_host_gpu_context_data = std::make_unique<gl::buffer>();
 		m_host_gpu_context_data->create(gl::buffer::target::array, 4096, nullptr, gl::buffer::memory_type::host_visible,
@@ -351,7 +351,7 @@ void GLGSRender::on_init_thread()
 	m_raster_env_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_scratch_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	if (backend_config.supports_hw_instanced_rendering)
+	if (m_config.supports_hw_instanced_rendering)
 	{
 		ensure(gl_caps.ARB_shader_storage_buffer_object_supported);
 		m_instancing_ring_buffer->create(gl::buffer::target::ssbo, 128 * 0x100000);
@@ -380,7 +380,7 @@ void GLGSRender::on_init_thread()
 	{
 		// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 		// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
-		backend_config.supports_hw_renormalization = true;
+		m_config.supports_hw_renormalization = true;
 	}
 
 	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>(static_cast<u32>(m_attrib_ring_buffer->size()), m_max_texbuffer_size));
@@ -955,7 +955,7 @@ void GLGSRender::load_program_env()
 	const bool update_fragment_texture_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
 	const bool update_instruction_buffers = !!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program);
 	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_ctx->graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
-	const bool update_instancing_data = backend_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
+	const bool update_instancing_data = m_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
 	if (manually_flush_ring_buffers)
 	{
@@ -1425,7 +1425,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 
 bool GLGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
-	if (!backend_config.supports_host_gpu_labels)
+	if (!m_config.supports_host_gpu_labels)
 	{
 		return false;
 	}
@@ -1472,7 +1472,7 @@ void GLGSRender::enqueue_host_context_write(u32 offset, u32 size, const void* da
 
 void GLGSRender::on_guest_texture_read()
 {
-	if (!backend_config.supports_host_gpu_labels)
+	if (!m_config.supports_host_gpu_labels)
 	{
 		return;
 	}

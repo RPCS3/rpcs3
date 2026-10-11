@@ -255,7 +255,7 @@ void VKGSRender::update_draw_state()
 			bounds_max = std::max(1.f, REGS(m_ctx)->clip_max());
 		}
 
-		if (!backend_config.supports_extended_depth_range)
+		if (!m_config.supports_extended_depth_range)
 		{
 			if (REGS(m_ctx)->depth_bounds_test_enabled() && requires_depth_range_emulation()) [[ unlikely ]]
 			{
@@ -637,7 +637,7 @@ void VKGSRender::load_texture_env()
 		invalidate_render_pass();
 	}
 
-	if (backend_config.supports_asynchronous_compute)
+	if (m_config.supports_asynchronous_compute)
 	{
 		// We have to do this here, because we have to assume the CB will be dumped
 		auto async_task_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>();
