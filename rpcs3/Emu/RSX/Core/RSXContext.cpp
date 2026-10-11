@@ -15,7 +15,8 @@ namespace rsx
 		textures.fragment_textures_dirty.fill(true);
 		textures.vertex_textures_dirty.fill(true);
 
-		graphics_state |= pipeline_state::all_dirty;
+		graphics_state.set(pipeline_state::all_dirty);
+		draw_state.dirty.set(draw_state_t::all);
 	}
 
 	context::~context() = default;

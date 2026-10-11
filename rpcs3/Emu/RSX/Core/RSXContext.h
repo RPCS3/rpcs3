@@ -7,6 +7,7 @@
 #include "Emu/RSX/NV47/HW/context.h"
 #include "Emu/RSX/RSXZCULL.h"
 #include "RSXDisplay.h"
+#include "RSXDrawState.h"
 #include "RSXDriverState.h"
 #include "RSXFrameBuffer.h"
 #include "RSXProgramState.h"
@@ -27,6 +28,9 @@ namespace rsx
 		bitmask_t<pipeline_state> graphics_state;
 		atomic_bitmask_t<eng_interrupt_reason> eng_interrupt_mask;
 		bool in_begin_end = false;
+
+		// Decoded pipeline state for the backend
+		draw_state_t draw_state;
 
 		framebuffer_state fb;
 		program_state program;

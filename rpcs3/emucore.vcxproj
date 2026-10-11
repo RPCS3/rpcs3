@@ -716,6 +716,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXDrawState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXProgramState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXRenderBackend.h" />
     <ClInclude Include="Emu\RSX\Core\RSXTextureState.h" />
