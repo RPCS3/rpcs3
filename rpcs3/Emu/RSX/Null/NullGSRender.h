@@ -8,7 +8,4 @@ public:
 
 	NullGSRender(utils::serial* ar) noexcept;
 	NullGSRender() noexcept : NullGSRender(nullptr) {}
-
-private:
-	void end() override;
 };
