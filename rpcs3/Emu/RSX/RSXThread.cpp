@@ -933,6 +933,11 @@ namespace rsx
 		m_core.discard_draw();
 	}
 
+	void thread::clear_surface(u32 arg)
+	{
+		m_core.clear(arg);
+	}
+
 	void thread::cpu_task()
 	{
 		while (Emu.IsReady())

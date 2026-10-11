@@ -222,7 +222,7 @@ public:
 	bool is_current_program_interpreted() const override;
 
 protected:
-	void clear_surface(u32 arg) override;
+	void clear() override;
 	void begin_draw() override;
 	bool end_draw(rsx::flags32_t pre_begin_pipeline_state) override;
 	void emit_geometry(u32 sub_index) override;
