@@ -1368,4 +1368,7 @@ namespace rsx
 
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
 	extern std::array<u32, 0x10000 / 4> state_signals;
+
+	// Register -> draw_state_t::group bits whose decoded state depends on that register
+	extern std::array<u8, 0x10000 / 4> draw_state_signals;
 }

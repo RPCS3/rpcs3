@@ -14,6 +14,7 @@ namespace rsx
 {
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 	std::array<u32, 0x10000 / 4> state_signals{};
+	std::array<u8, 0x10000 / 4> draw_state_signals{};
 
 	void invalid_method(context* ctx, u32 reg, u32 arg)
 	{
@@ -695,6 +696,41 @@ namespace rsx
 		}
 	}
 
+	static void init_draw_state_signals()
+	{
+		// Every register read by a draw state decoder must be listed under its group, or the decoded state goes stale.
+		// The core renderer only re-decodes groups that have been signalled.
+		const auto raster = static_cast<u8>(draw_state_t::group::raster);
+		const auto depth_stencil = static_cast<u8>(draw_state_t::group::depth_stencil);
+
+		for (const u32 reg :
+		{
+			NV4097_SET_CULL_FACE_ENABLE, NV4097_SET_CULL_FACE, NV4097_SET_FRONT_FACE, NV4097_SET_FRONT_POLYGON_MODE,
+			NV4097_SET_BACK_POLYGON_MODE, NV4097_SET_LINE_WIDTH, NV4097_SET_LINE_SMOOTH_ENABLE,
+			NV4097_SET_POLY_OFFSET_POINT_ENABLE, NV4097_SET_POLY_OFFSET_LINE_ENABLE, NV4097_SET_POLY_OFFSET_FILL_ENABLE,
+			NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, NV4097_SET_POLYGON_OFFSET_BIAS
+		})
+		{
+			draw_state_signals[reg] |= raster;
+		}
+
+		// SURFACE_FORMAT and CONTROL0 select the depth format that the depth bounds are saturated to
+		for (const u32 reg :
+		{
+			NV4097_SET_DEPTH_TEST_ENABLE, NV4097_SET_DEPTH_MASK, NV4097_SET_DEPTH_FUNC, NV4097_SET_ZMIN_MAX_CONTROL,
+			NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, NV4097_SET_DEPTH_BOUNDS_MIN, NV4097_SET_DEPTH_BOUNDS_MAX,
+			NV4097_SET_SURFACE_FORMAT, NV4097_SET_CONTROL0, NV4097_SET_STENCIL_TEST_ENABLE,
+			NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, NV4097_SET_STENCIL_FUNC, NV4097_SET_STENCIL_FUNC_REF,
+			NV4097_SET_STENCIL_FUNC_MASK, NV4097_SET_STENCIL_MASK, NV4097_SET_STENCIL_OP_FAIL, NV4097_SET_STENCIL_OP_ZFAIL,
+			NV4097_SET_STENCIL_OP_ZPASS, NV4097_SET_BACK_STENCIL_FUNC, NV4097_SET_BACK_STENCIL_FUNC_REF,
+			NV4097_SET_BACK_STENCIL_FUNC_MASK, NV4097_SET_BACK_STENCIL_MASK, NV4097_SET_BACK_STENCIL_OP_FAIL,
+			NV4097_SET_BACK_STENCIL_OP_ZFAIL, NV4097_SET_BACK_STENCIL_OP_ZPASS
+		})
+		{
+			draw_state_signals[reg] |= depth_stencil;
+		}
+	}
+
 	static void init_state_signals()
 	{
 		// Signal definitions
@@ -767,12 +803,6 @@ namespace rsx
 		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 29] = rsx::polygon_stipple_pattern_dirty;
 		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 30] = rsx::polygon_stipple_pattern_dirty;
 		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 31] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = rsx::polygon_offset_state_dirty;
-		state_signals[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = rsx::polygon_offset_state_dirty;
-		state_signals[NV4097_SET_POLYGON_OFFSET_BIAS] = rsx::polygon_offset_state_dirty;
-		state_signals[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = rsx::depth_bounds_state_dirty;
-		state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
-		state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
 		state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
 		state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 		state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
@@ -1738,6 +1768,7 @@ namespace rsx
 		bind(FIFO::FIFO_DRAW_BARRIER >> 2, fifo::draw_barrier);
 
 		init_state_signals();
+		init_draw_state_signals();
 
 		return true;
 	}();
