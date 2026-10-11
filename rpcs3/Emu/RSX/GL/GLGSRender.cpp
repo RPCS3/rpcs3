@@ -1337,7 +1337,7 @@ void GLGSRender::on_semaphore_acquire_wait()
 	}
 }
 
-void GLGSRender::do_local_task(rsx::FIFO::state state)
+bool GLGSRender::on_local_task(rsx::FIFO::state state)
 {
 	if (!work_queue.empty())
 	{
@@ -1365,24 +1365,7 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 		}
 	}
 
-	rsx::thread::do_local_task(state);
-
-	if (state == rsx::FIFO::state::lock_wait)
-	{
-		// Critical check finished
-		return;
-	}
-
-	if (m_overlay_manager)
-	{
-		const auto should_ignore = m_ctx->in_begin_end && state != rsx::FIFO::state::empty;
-		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
-		{
-			rsx::display_flip_info_t info{};
-			info.buffer = current_display_buffer;
-			flip(info);
-		}
-	}
+	return true;
 }
 
 gl::work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)

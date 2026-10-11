@@ -423,8 +423,14 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 	return image_to_flip;
 }
 
-void VKGSRender::flip(const rsx::display_flip_info_t& info)
+bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 {
+	if (!info.emu_flip)
+	{
+		// Native UI flips are requested from the local task. Submit outstanding work first.
+		flush_command_queue(true);
+	}
+
 	// Check swapchain condition/status
 	if (!m_swapchain->supports_automatic_wm_reports())
 	{
@@ -456,8 +462,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			if (Emu.IsStopped())
 			{
 				m_frame->flip(m_context);
-				rsx::thread::flip(info);
-				return;
+				return false;
 			}
 
 			std::this_thread::sleep_for(100ms);
@@ -506,8 +511,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 
 		m_frame->flip(m_context);
-		rsx::thread::flip(info);
-		return;
+		return false;
 	}
 
 	u32 buffer_width = display_buffers[info.buffer].width;
@@ -985,8 +989,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	m_ctx->stats.flip_time = m_profiler.duration();
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(info);
+	return true;
+}
 
+void VKGSRender::post_present()
+{
 	// Data sync
 	const rsx::surface_scaling_config_t active_res_scaling_config =
 	{

@@ -229,9 +229,10 @@ protected:
 
 	void on_init_thread() override;
 	void on_exit() override;
-	void flip(const rsx::display_flip_info_t& info) override;
+	bool present_frame(const rsx::display_flip_info_t& info) override;
+	void post_present() override;
 
-	void do_local_task(rsx::FIFO::state state) override;
+	bool on_local_task(rsx::FIFO::state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause) override;

@@ -55,12 +55,14 @@ void GSRender::on_exit()
 	}
 }
 
-void GSRender::flip(const rsx::display_flip_info_t&)
+bool GSRender::present_frame(const rsx::display_flip_info_t&)
 {
 	if (m_frame)
 	{
 		m_frame->flip(m_context);
 	}
+
+	return false;
 }
 
 f64 GSRender::get_display_refresh_rate() const

@@ -36,7 +36,7 @@ public:
 	void on_init_thread() override;
 	void on_exit() override;
 
-	void flip(const rsx::display_flip_info_t& info) override;
+	bool present_frame(const rsx::display_flip_info_t& info) override;
 	f64 get_display_refresh_rate() const override;
 
 	GSFrameBase* get_frame() const { return m_frame; }
