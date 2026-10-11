@@ -58,26 +58,6 @@ namespace rsx
 
 	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
 
-	struct backend_configuration
-	{
-		bool supports_multidraw;                 // Draw call batching
-		bool supports_hw_a2c;                    // Alpha to coverage
-		bool supports_hw_a2c_1spp;               // Alpha to coverage at 1 sample per pixel
-		bool supports_hw_renormalization;        // Should be true on NV hardware which matches PS3 texture renormalization behaviour
-		bool supports_hw_msaa;                   // MSAA support
-		bool supports_hw_a2one;                  // Alpha to one
-		bool supports_hw_conditional_render;     // Conditional render
-		bool supports_hw_instanced_rendering;    // Instanced draws
-		bool supports_passthrough_dma;           // DMA passthrough
-		bool supports_asynchronous_compute;      // Async compute
-		bool supports_host_gpu_labels;           // Advanced host synchronization
-		bool supports_normalized_barycentrics;   // Basically all GPUs except NVIDIA have properly normalized barycentrics
-		bool supports_last_provoking_vertex;     // Flat shading using RSX's last-vertex convention
-		bool supports_programmable_blending;     // Can handle programmable blending requests
-		bool supports_extended_depth_range;      // Depth values above 1 can be stored and tested. Float depth targets are emulated otherwise.
-		bool supports_framebufferless_rendering; // Can rasterize without any attachments bound (e.g for occlusion queries)
-	};
-
 	struct desync_fifo_cmd_info
 	{
 		u32 cmd;
@@ -95,8 +75,6 @@ namespace rsx
 
 		void cpu_task() override;
 	protected:
-
-		backend_configuration backend_config{};
 
 		// FIFO
 	public:
@@ -200,7 +178,7 @@ namespace rsx
 		surface_scaling_config_t resolution_scaling_config{};
 
 		void capture_frame(const std::string& name) const;
-		const backend_configuration& get_backend_config() const { return backend_config; }
+		const backend_configuration& get_backend_config() const { return m_renderer->config(); }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
 
@@ -410,10 +388,5 @@ namespace rsx
 	inline thread* get_current_renderer()
 	{
 		return g_fxo->try_get<rsx::thread>();
-	}
-
-	inline const backend_configuration& get_renderer_backend_config()
-	{
-		return g_fxo->get<rsx::thread>().get_backend_config();
 	}
 }

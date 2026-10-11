@@ -490,7 +490,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			"Texture uploads: %11u (%u from CPU - %02u%%, %u copies avoided)\n"
 			"Vertex cache hits: %9u/%u (%u%%)\n"
 			"Program cache lookup ellision: %u/%u (%u%%)",
-			info.stats.framebuffer_stats.to_string(resolution_scaling_config, !backend_config.supports_hw_msaa),
+			info.stats.framebuffer_stats.to_string(resolution_scaling_config, !m_config.supports_hw_msaa),
 			get_load(), info.stats.draw_calls, info.stats.setup_time, info.stats.vertex_upload_time,
 			info.stats.textures_upload_time, info.stats.draw_exec_time, num_dirty_textures, texture_memory_size,
 			num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,

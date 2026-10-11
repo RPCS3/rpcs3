@@ -932,7 +932,7 @@ namespace rsx
 		else if (m_ctx->cond_render.eval_pending())
 		{
 			// Evaluate conditional rendering test or enable hw cond render until results are available
-			if (backend_config.supports_hw_conditional_render)
+			if (m_renderer->config().supports_hw_conditional_render)
 			{
 				// In this mode, it is possible to skip the cond render while the backend is still processing data.
 				// The backend guarantees that any draw calls emitted during this time will NOT generate any ROP writes
@@ -949,7 +949,7 @@ namespace rsx
 			}
 		}
 
-		if (!backend_config.supports_normalized_barycentrics)
+		if (!m_renderer->config().supports_normalized_barycentrics)
 		{
 			// Check for mode change between rasterized polys vs lines and points
 			// Luckily this almost never happens in real games
@@ -1791,7 +1791,7 @@ namespace rsx
 		{
 			// No attachments. The hardware still rasterizes in this case and side effects such as ZPASS counters are still updated.
 			if (context != rsx::framebuffer_creation_context::context_draw ||
-				!backend_config.supports_framebufferless_rendering)
+				!m_renderer->config().supports_framebufferless_rendering)
 			{
 				rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
 				return;
@@ -2158,7 +2158,7 @@ namespace rsx
 		u32 expected_ctrl = 0;
 
 		// Programmable blending. Requires color attachments to read from.
-		if (backend_config.supports_programmable_blending &&
+		if (m_renderer->config().supports_programmable_blending &&
 			!m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
 		{
 			expected_ctrl = m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
@@ -2172,7 +2172,7 @@ namespace rsx
 		// Resolve MSAA here if needed
 		if (!!(expected_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
 			REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
-			backend_config.supports_hw_msaa)
+			m_renderer->config().supports_hw_msaa)
 		{
 			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
 		}
@@ -2203,7 +2203,7 @@ namespace rsx
 		// Resolve MSAA here if needed
 		if ((expected_ctrl & (RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE | RSX_SHADER_CONTROL_ROP_MULTISAMPLED)) == RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE &&
 			REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
-			backend_config.supports_hw_msaa)
+			m_renderer->config().supports_hw_msaa)
 		{
 			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
 		}
@@ -2213,7 +2213,7 @@ namespace rsx
 
 	bool thread::requires_depth_range_emulation() const
 	{
-		if (backend_config.supports_extended_depth_range || !g_cfg.video.emulate_extended_depth_range) [[ likely ]]
+		if (m_renderer->config().supports_extended_depth_range || !g_cfg.video.emulate_extended_depth_range) [[ likely ]]
 		{
 			return false;
 		}
@@ -2363,7 +2363,7 @@ namespace rsx
 
 		m_ctx->program.vertex_program.ctrl &= ~RSX_SHADER_CONTROL_FLAT_SHADING;
 		if (REGS(m_ctx)->shade_mode() == rsx::shading_mode::flat &&
-			backend_config.supports_last_provoking_vertex)
+			m_renderer->config().supports_last_provoking_vertex)
 		{
 			m_ctx->program.vertex_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
 		}
@@ -2378,7 +2378,7 @@ namespace rsx
 				m_ctx->program.vp_texture_state.clear(i);
 				m_ctx->program.vp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 
-				if (backend_config.supports_hw_msaa &&
+				if (m_renderer->config().supports_hw_msaa &&
 					sampler_descriptors[i]->samples > 1)
 				{
 					m_ctx->program.vp_texture_state.multisampled_textures |= (1 << i);
@@ -2409,14 +2409,14 @@ namespace rsx
 		m_ctx->program.fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(REGS(m_ctx)->surface_color_target());
 
 		if (REGS(m_ctx)->shade_mode() == rsx::shading_mode::flat &&
-			backend_config.supports_last_provoking_vertex)
+			m_renderer->config().supports_last_provoking_vertex)
 		{
 			m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
 		}
 
 		if (REGS(m_ctx)->current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
-			if (!backend_config.supports_normalized_barycentrics)
+			if (!m_renderer->config().supports_normalized_barycentrics)
 			{
 				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
@@ -2441,7 +2441,7 @@ namespace rsx
 		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled())
 		{
 			const bool is_multiple_samples = REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
-			if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
+			if (!m_renderer->config().supports_hw_a2c || (!is_multiple_samples && !m_renderer->config().supports_hw_a2c_1spp))
 			{
 				// Emulation required
 				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
@@ -2534,7 +2534,7 @@ namespace rsx
 				}
 			}
 
-			if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
+			if (m_renderer->config().supports_hw_msaa && sampler_descriptors[i]->samples > 1)
 			{
 				m_ctx->program.fp_texture_state.multisampled_textures |= (1 << i);
 				texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
@@ -2619,7 +2619,7 @@ namespace rsx
 					}
 				}
 			}
-			else if (!backend_config.supports_hw_renormalization /* &&
+			else if (!m_renderer->config().supports_hw_renormalization /* &&
 				tex.min_filter() == rsx::texture_minify_filter::nearest &&
 				tex.mag_filter() == rsx::texture_magnify_filter::nearest*/)
 			{
