@@ -177,6 +177,13 @@ namespace rsx
 		state.z_clip_max = regs.clip_max();
 	}
 
+	static void decode_input_assembly_state(const rsx_state& regs, input_assembly_state& state)
+	{
+		state.restart_index_enabled = regs.restart_index_enabled();
+		state.restart_index = regs.restart_index();
+		state.index_type = regs.index_type();
+	}
+
 	static void decode_clear_state(const rsx_state& regs, rsx::flags32_t mask, clear_state& state)
 	{
 		state.mask = mask;
@@ -299,6 +306,10 @@ namespace rsx
 		viewport_state viewport = state.viewport;
 		decode_viewport_state(regs, viewport);
 		ensure(viewport == state.viewport, "Stale viewport state");
+
+		input_assembly_state input_assembly = state.input_assembly;
+		decode_input_assembly_state(regs, input_assembly);
+		ensure(input_assembly == state.input_assembly, "Stale input assembly state");
 	}
 #endif
 
@@ -425,6 +436,13 @@ namespace rsx
 			decode_viewport_state(regs, state.viewport);
 			state.pending.clear(draw_state_t::group::viewport);
 			state.dirty.set(draw_state_t::group::viewport);
+		}
+
+		if (state.pending.test(draw_state_t::group::input_assembly))
+		{
+			decode_input_assembly_state(regs, state.input_assembly);
+			state.pending.clear(draw_state_t::group::input_assembly);
+			state.dirty.set(draw_state_t::group::input_assembly);
 		}
 
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
