@@ -2148,7 +2148,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 	rsx::reservation_lock<false, 1> rsx_lock(eal, args.size, !is_get && (g_cfg.video.strict_rendering_mode || (g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma && eal < rsx::constants::local_mem_base)));
 
-	if (!is_get || g_cfg.core.spu_accurate_dma)  [[unlikely]]
+	// Make 128-byte GET & PUT atomic by default (fast check)
+	if (!is_get || g_cfg.core.spu_accurate_dma || u64{eal & 127} + args.size - 128 == 0)  [[unlikely]]
 	{
 		perf_meter<"ADMA_GET"_u64> perf_get = perf_;
 		perf_meter<"ADMA_PUT"_u64> perf_put = perf_;
@@ -2299,13 +2300,13 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			}
 		}
 
-		if (g_cfg.core.spu_accurate_dma) [[unlikely]]
+		if (g_cfg.core.spu_accurate_dma || ((eal & 127) == 0 && args.size == 128 && ~args.cmd & MFC_LIST_MASK)) [[unlikely]]
 		{
 			for (u32 size0, size = args.size;; size -= size0, dst += size0, src += size0, eal += size0)
 			{
 				size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
-				if (size0 == 128u && g_cfg.core.accurate_cache_line_stores)
+				if (size0 == 128u)
 				{
 					// As atomic as PUTLLUC
 					do_cell_atomic_128_store(eal, src);
