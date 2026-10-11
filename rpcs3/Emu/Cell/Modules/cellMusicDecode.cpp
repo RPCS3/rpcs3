@@ -50,7 +50,6 @@ struct music_decode
 	s32 decode_command = CELL_MUSIC_DECODE_CMD_STOP;
 	u64 read_pos = 0;
 	std::string decoding_hash; // Hash of the selection context that is being decoded
-	bool has_context = false; // A selection context was set or selected since the last initialization
 	utils::audio_decoder decoder{};
 
 	shared_mutex mutex;
@@ -135,6 +134,7 @@ struct music_decode2 : music_decode
 {
 	s32 speed = CELL_MUSIC_DECODE2_SPEED_MAX;
 	atomic_t<bool> busy = false; // The result of Initialize2 or SetSelectionContext2 was not delivered yet
+	bool initialized = false;
 };
 
 template <typename Music_Decode>
@@ -174,7 +174,6 @@ error_code cell_music_decode_select_contents()
 					dec.current_selection_context = std::move(context);
 					dec.current_selection_context.create_playlist(music_selection_context::get_next_hash());
 					cellMusicDecode.success("Media list dialog: selected entry '%s'", dec.current_selection_context.playlist.front());
-					dec.has_context = true;
 				}
 				else
 				{
@@ -280,25 +279,24 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 		cellMusicDecode.trace("cell_music_decode_read(read_size=%d, samples=%d, start_time_ms=%d)", read_size, read_size / sizeof(u64), start_time_ms);
 	}
 
-	if (list_end)
-	{
-		// Reset the decoder and the decode status
-		ensure(dec.set_decode_command(CELL_MUSIC_DECODE_CMD_STOP) == CELL_OK);
-		dec.read_pos = 0;
-	}
-	else if (track_end)
+	if (track_end)
 	{
 		dec.read_pos = 0;
-		dec.decoder.clear();
-		dec.decoder.wake_up();
-	}
 
-	if constexpr (is_music_decode2)
-	{
-		// At the end of a track the decoder announces the next contents, then reports that it is decoding them,
-		// or that the decoding finished if there are none
-		if (track_end)
+		if (list_end)
 		{
+			// Reset the decoder and the decode status
+			ensure(dec.set_decode_command(CELL_MUSIC_DECODE_CMD_STOP) == CELL_OK);
+		}
+		else
+		{
+			dec.decoder.clear();
+			dec.decoder.wake_up();
+		}
+
+		if constexpr (is_music_decode2)
+		{
+			// The decoder announces the next contents, then reports that it is decoding them, or that the decoding finished if there are none
 			sysutil_register_cb([&dec, list_end](ppu_thread& ppu) -> s32
 			{
 				dec.func(ppu, CELL_MUSIC_DECODE_EVENT_STATUS_NOTIFICATION, vm::addr_t(CELL_MUSIC_DECODE_NEXT_CONTENTS_READY), dec.userData);
@@ -516,7 +514,8 @@ error_code cellMusicDecodeInitialize2(s32 mode, u32 container, s32 spuPriority, 
 	dec.func = func;
 	dec.userData = userData;
 	dec.speed = speed;
-	dec.has_context = false;
+	dec.current_selection_context = {};
+	dec.initialized = true;
 	dec.busy = true;
 
 	sysutil_register_cb([userData, &dec](ppu_thread& ppu) -> s32
@@ -543,7 +542,8 @@ error_code cellMusicDecodeInitialize2SystemWorkload(s32 mode, u32 container, vm:
 	std::lock_guard lock(dec.mutex);
 	dec.func = func;
 	dec.userData = userData;
-	dec.has_context = false;
+	dec.current_selection_context = {};
+	dec.initialized = true;
 	dec.busy = true;
 
 	sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
@@ -563,7 +563,8 @@ error_code cellMusicDecodeFinalize2()
 	auto& dec = g_fxo->get<music_decode2>();
 	std::lock_guard lock(dec.mutex);
 	dec.finalize();
-	dec.has_context = false;
+	dec.current_selection_context = {};
+	dec.initialized = false;
 
 	if (dec.func)
 	{
@@ -599,8 +600,20 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 	auto& dec = g_fxo->get<music_decode2>();
 	std::lock_guard lock(dec.mutex);
 
-	if (!dec.func)
+	if (!dec.initialized)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
+
+	// Without a selection context the command fails, and its result is the only event
+	if (!dec.current_selection_context)
+	{
+		sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(CELL_MUSIC_DECODE_ERROR_GENERIC), dec.userData);
+			return CELL_OK;
+		});
+
+		return CELL_MUSIC_DECODE_ERROR_GENERIC;
+	}
 
 	const error_code result = dec.set_decode_command(command);
 
@@ -629,7 +642,7 @@ error_code cellMusicDecodeGetDecodeStatus2(vm::ptr<s32> status)
 		return CELL_MUSIC_DECODE_ERROR_BUSY;
 
 	// There is no status until there is something to decode
-	if (!dec.has_context)
+	if (!dec.current_selection_context)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
 	*status = dec.decode_status;
@@ -655,6 +668,12 @@ error_code cellMusicDecodeGetSelectionContext2(vm::ptr<CellMusicSelectionContext
 	auto& dec = g_fxo->get<music_decode2>();
 	std::lock_guard lock(dec.mutex);
 
+	if (!dec.initialized)
+		return CELL_MUSIC_DECODE_ERROR_GENERIC;
+
+	if (!dec.current_selection_context)
+		return CELL_MUSIC_DECODE_ERROR_NO_ACTIVE_CONTENT;
+
 	*context = dec.current_selection_context.get();
 	cellMusicDecode.warning("cellMusicDecodeGetSelectionContext2: selection context = %s)", dec.current_selection_context.to_string());
 
@@ -671,22 +690,35 @@ error_code cellMusicDecodeSetSelectionContext2(vm::ptr<CellMusicSelectionContext
 	auto& dec = g_fxo->get<music_decode2>();
 	std::lock_guard lock(dec.mutex);
 
-	if (!dec.func)
+	if (!dec.initialized)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	const bool result = dec.current_selection_context.set(*context);
-	if (result) cellMusicDecode.warning("cellMusicDecodeSetSelectionContext2: new selection_context = %s", dec.current_selection_context.to_string());
-	else cellMusicDecode.error("cellMusicDecodeSetSelectionContext2: failed. context = '%s'", music_selection_context::context_to_hex(*context));
+	// An invalid context keeps the current one. Its result is the only event
+	music_selection_context new_context{};
 
-	dec.has_context |= result;
+	if (!new_context.set(*context))
+	{
+		cellMusicDecode.error("cellMusicDecodeSetSelectionContext2: failed. context = '%s'", music_selection_context::context_to_hex(*context));
+
+		sysutil_register_cb([&dec](ppu_thread& ppu) -> s32
+		{
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT), dec.userData);
+			return CELL_OK;
+		});
+
+		return CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT;
+	}
+
+	dec.current_selection_context = std::move(new_context);
+	cellMusicDecode.warning("cellMusicDecodeSetSelectionContext2: new selection_context = %s", dec.current_selection_context.to_string());
+
 	dec.busy = true;
 
 	// The result is followed by a status notification, like the result of a decode command
-	sysutil_register_cb([&dec, result, decode_status = dec.decode_status](ppu_thread& ppu) -> s32
+	sysutil_register_cb([&dec, decode_status = dec.decode_status](ppu_thread& ppu) -> s32
 	{
 		dec.busy = false;
-		const u32 status = result ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_ERROR_INVALID_CONTEXT};
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(status), dec.userData);
+		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_STATUS_NOTIFICATION, vm::addr_t(decode_status), dec.userData);
 		return CELL_OK;
 	});
