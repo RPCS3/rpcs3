@@ -9,9 +9,3 @@ u64 NullGSRender::get_cycles()
 NullGSRender::NullGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
 }
-
-void NullGSRender::end()
-{
-	execute_nop_draw();
-	rsx::thread::end();
-}

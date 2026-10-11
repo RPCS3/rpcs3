@@ -500,6 +500,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/texture_cache.cpp
     RSX/Common/texture_cache_types.cpp
     RSX/Core/RSXContext.cpp
+    RSX/Core/RSXCoreRenderer.cpp
     RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
     RSX/gcm_enums.cpp

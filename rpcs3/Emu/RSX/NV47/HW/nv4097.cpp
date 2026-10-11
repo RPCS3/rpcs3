@@ -530,8 +530,7 @@ namespace rsx
 
 				if (g_cfg.video.disable_video_output)
 				{
-					RSX(ctx)->execute_nop_draw();
-					RSX(ctx)->rsx::thread::end();
+					RSX(ctx)->discard_draw();
 					return;
 				}
 
