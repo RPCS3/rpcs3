@@ -120,13 +120,14 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
+			const auto& input_assembly = m_ctx->draw_state.input_assembly;
 			const auto primitive = REGS(m_ctx)->current_draw_clause.primitive;
 			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(primitive);
-			const bool emulate_restart = REGS(m_ctx)->restart_index_enabled() && vk::emulate_primitive_restart(primitive);
+			const bool emulate_restart = input_assembly.restart_index_enabled && vk::emulate_primitive_restart(primitive);
 
 			rsx::index_array_type index_type = REGS(m_ctx)->current_draw_clause.is_immediate_draw ?
 				rsx::index_array_type::u32 :
-				REGS(m_ctx)->index_type();
+				input_assembly.index_type;
 
 			u32 type_size = get_index_type_size(index_type);
 
@@ -160,8 +161,8 @@ namespace
 				dst,
 				command.raw_index_buffer, index_type,
 				REGS(m_ctx)->current_draw_clause.primitive,
-				REGS(m_ctx)->restart_index_enabled(),
-				REGS(m_ctx)->restart_index(),
+				input_assembly.restart_index_enabled,
+				input_assembly.restart_index,
 				[](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index > max_index ||
