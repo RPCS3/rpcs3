@@ -841,7 +841,7 @@ namespace rsx
 	{
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
-			return on_access_violation(address, is_writing);
+			return m_renderer->on_access_violation(address, is_writing);
 		};
 
 		g_user_asked_for_frame_capture = false;
@@ -912,7 +912,7 @@ namespace rsx
 	{
 		frame_trace_data::draw_state draw_state{};
 
-		draw_state.programs = get_programs();
+		draw_state.programs = m_renderer->get_programs();
 		draw_state.name = name;
 		frame_debug.draw_calls.emplace_back(std::move(draw_state));
 	}
@@ -1050,7 +1050,7 @@ namespace rsx
 		}
 		else
 		{
-			on_semaphore_acquire_wait();
+			m_renderer->on_semaphore_acquire_wait();
 			std::this_thread::yield();
 		}
 	}
@@ -3367,13 +3367,13 @@ namespace rsx
 		if (is_stopped())
 		{
 			// We only need to commit host-resident memory to the guest in case of savestates or captures.
-			on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
+			m_renderer->on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
 		}
 
 		// Host sync
 		rsx::mm_flush();
 
-		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
+		m_renderer->on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
 		m_invalidated_memory_range.invalidate();
 	}
 

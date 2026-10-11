@@ -27,9 +27,9 @@
 #include "Core/RSXDriverState.h"
 #include "Core/RSXFrameBuffer.h"
 #include "Core/RSXContext.h"
+#include "Core/RSXRenderBackend.h"
 #include "Core/RSXVertexTypes.h"
 
-#include "NV47/FW/GRAPH_backend.h"
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_disable_frame_limit;
@@ -85,7 +85,7 @@ namespace rsx
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public fw_context, public GRAPH_backend
+	class thread : public cpu_thread, public fw_context
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
@@ -136,6 +136,9 @@ namespace rsx
 		// Context
 		std::unique_ptr<context> m_primary_ctx;
 		context* m_ctx = nullptr;
+
+		// Host renderer bridge
+		render_backend* m_renderer = nullptr;
 
 		// Host DMA
 		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
@@ -202,6 +205,8 @@ namespace rsx
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
 
 		context* get_context() const { return m_ctx; }
+
+		render_backend* renderer() const { return m_renderer; }
 
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;
@@ -300,8 +305,6 @@ namespace rsx
 		 */
 		virtual void do_local_task(FIFO::state state);
 
-		virtual void emit_geometry(u32) {}
-
 		void run_FIFO();
 
 	public:
@@ -309,7 +312,6 @@ namespace rsx
 		thread& operator=(const thread&) = delete;
 		void save(utils::serial& ar);
 
-		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
@@ -319,9 +321,6 @@ namespace rsx
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		virtual void flip(const display_flip_info_t& info) = 0;
 		virtual u64 timestamp();
-		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_invalidate_memory_range(const address_range32 & /*range*/, rsx::invalidation_cause) {}
-		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// control
 		virtual void renderctl(u32 request_code, void* args);
@@ -341,9 +340,7 @@ namespace rsx
 		// sync
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
-		virtual void write_barrier(u32 /*memory_address*/, u32 /*memory_range*/) {}
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
-		virtual bool release_GCM_label(u32 /*type*/, u32 /*address*/, u32 /*value*/) { return false; }
 
 	protected:
 
@@ -385,23 +382,6 @@ namespace rsx
 		 * Any data held in the defined range is discarded
 		 */
 		void on_notify_post_memory_unmapped(u64 event_data1, u64 event_data2);
-
-		/**
-		 * Notify to check internal state during semaphore wait
-		 */
-		virtual void on_semaphore_acquire_wait() {}
-
-		/**
-		 * Load an image from memory with optional scaling and rotation.
-		 * Returns false to tell the HW decoder to perform the operation on the CPU as a fallback when the operation cannot be safely accelerated.
-		 */
-		virtual bool scaled_image_from_memory(const blit_src_info& /*src_info*/, const blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
-
-
-		// Program public "get" handlers
-		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
-
-		virtual bool is_current_program_interpreted() const { return false; }
 
 	public:
 		void reset();

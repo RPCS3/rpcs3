@@ -2638,6 +2638,9 @@
     <ClInclude Include="Emu\RSX\Core\RSXProgramState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXRenderBackend.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXTextureState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
@@ -2820,9 +2823,6 @@
     </ClInclude>
     <ClInclude Include="Emu\savestate_utils.hpp">
       <Filter>Emu</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
-      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\NV47\FW\context.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>

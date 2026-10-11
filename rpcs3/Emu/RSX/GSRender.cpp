@@ -16,6 +16,9 @@ GSRender::GSRender(utils::serial* ar) noexcept : rsx::thread(ar)
 	}
 
 	m_vsync_mode = g_cfg.video.vsync;
+
+	// The renderer is its own host backend until the thread/renderer split (spec 03)
+	m_renderer = this;
 }
 
 GSRender::~GSRender()

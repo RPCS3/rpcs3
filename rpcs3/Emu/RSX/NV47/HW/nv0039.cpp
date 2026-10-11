@@ -117,7 +117,7 @@ namespace rsx
 			// Deferred write_barrier on RSX side
 			utils::deferred_op deferred([&]()
 			{
-				RSX(ctx)->write_barrier(write_address, write_length);
+				RSX(ctx)->renderer()->write_barrier(write_address, write_length);
 				// res->release(0);
 			});
 
