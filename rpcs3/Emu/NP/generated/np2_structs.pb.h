@@ -79,6 +79,22 @@ class GUIUserInfo;
 struct GUIUserInfoDefaultTypeInternal;
 extern GUIUserInfoDefaultTypeInternal _GUIUserInfo_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<24> GUIUserInfo_class_data_;
+class GetLobbyInfoListRequest;
+struct GetLobbyInfoListRequestDefaultTypeInternal;
+extern GetLobbyInfoListRequestDefaultTypeInternal _GetLobbyInfoListRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<36> GetLobbyInfoListRequest_class_data_;
+class GetLobbyInfoListResponse;
+struct GetLobbyInfoListResponseDefaultTypeInternal;
+extern GetLobbyInfoListResponseDefaultTypeInternal _GetLobbyInfoListResponse_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<37> GetLobbyInfoListResponse_class_data_;
+class GetLobbyMemberDataInternalListRequest;
+struct GetLobbyMemberDataInternalListRequestDefaultTypeInternal;
+extern GetLobbyMemberDataInternalListRequestDefaultTypeInternal _GetLobbyMemberDataInternalListRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<50> GetLobbyMemberDataInternalListRequest_class_data_;
+class GetLobbyMemberDataInternalListResponse;
+struct GetLobbyMemberDataInternalListResponseDefaultTypeInternal;
+extern GetLobbyMemberDataInternalListResponseDefaultTypeInternal _GetLobbyMemberDataInternalListResponse_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<51> GetLobbyMemberDataInternalListResponse_class_data_;
 class GetPingInfoResponse;
 struct GetPingInfoResponseDefaultTypeInternal;
 extern GetPingInfoResponseDefaultTypeInternal _GetPingInfoResponse_default_instance_;
@@ -139,6 +155,14 @@ class IntSearchFilter;
 struct IntSearchFilterDefaultTypeInternal;
 extern IntSearchFilterDefaultTypeInternal _IntSearchFilter_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<28> IntSearchFilter_class_data_;
+class JoinLobbyRequest;
+struct JoinLobbyRequestDefaultTypeInternal;
+extern JoinLobbyRequestDefaultTypeInternal _JoinLobbyRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<29> JoinLobbyRequest_class_data_;
+class JoinLobbyResponse;
+struct JoinLobbyResponseDefaultTypeInternal;
+extern JoinLobbyResponseDefaultTypeInternal _JoinLobbyResponse_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<30> JoinLobbyResponse_class_data_;
 class JoinRoomRequest;
 struct JoinRoomRequestDefaultTypeInternal;
 extern JoinRoomRequestDefaultTypeInternal _JoinRoomRequest_default_instance_;
@@ -147,10 +171,34 @@ class JoinRoomResponse;
 struct JoinRoomResponseDefaultTypeInternal;
 extern JoinRoomResponseDefaultTypeInternal _JoinRoomResponse_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<29> JoinRoomResponse_class_data_;
+class JoinedSessionInfo;
+struct JoinedSessionInfoDefaultTypeInternal;
+extern JoinedSessionInfoDefaultTypeInternal _JoinedSessionInfo_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<30> JoinedSessionInfo_class_data_;
+class LeaveLobbyRequest;
+struct LeaveLobbyRequestDefaultTypeInternal;
+extern LeaveLobbyRequestDefaultTypeInternal _LeaveLobbyRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<30> LeaveLobbyRequest_class_data_;
 class LeaveRoomRequest;
 struct LeaveRoomRequestDefaultTypeInternal;
 extern LeaveRoomRequestDefaultTypeInternal _LeaveRoomRequest_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<29> LeaveRoomRequest_class_data_;
+class LobbyDataExternal;
+struct LobbyDataExternalDefaultTypeInternal;
+extern LobbyDataExternalDefaultTypeInternal _LobbyDataExternal_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<30> LobbyDataExternal_class_data_;
+class LobbyDataInternal;
+struct LobbyDataInternalDefaultTypeInternal;
+extern LobbyDataInternalDefaultTypeInternal _LobbyDataInternal_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<30> LobbyDataInternal_class_data_;
+class LobbyMemberDataInternal;
+struct LobbyMemberDataInternalDefaultTypeInternal;
+extern LobbyMemberDataInternalDefaultTypeInternal _LobbyMemberDataInternal_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<36> LobbyMemberDataInternal_class_data_;
+class LobbyMemberUpdateInfo;
+struct LobbyMemberUpdateInfoDefaultTypeInternal;
+extern LobbyMemberUpdateInfoDefaultTypeInternal _LobbyMemberUpdateInfo_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<34> LobbyMemberUpdateInfo_class_data_;
 class Matching2SignalingInfo;
 struct Matching2SignalingInfoDefaultTypeInternal;
 extern Matching2SignalingInfoDefaultTypeInternal _Matching2SignalingInfo_default_instance_;
@@ -191,6 +239,22 @@ class MessageDetails;
 struct MessageDetailsDefaultTypeInternal;
 extern MessageDetailsDefaultTypeInternal _MessageDetails_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<27> MessageDetails_class_data_;
+class NotificationLobbyInvitation;
+struct NotificationLobbyInvitationDefaultTypeInternal;
+extern NotificationLobbyInvitationDefaultTypeInternal _NotificationLobbyInvitation_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<40> NotificationLobbyInvitation_class_data_;
+class NotificationLobbyMemberDataInternalUpdate;
+struct NotificationLobbyMemberDataInternalUpdateDefaultTypeInternal;
+extern NotificationLobbyMemberDataInternalUpdateDefaultTypeInternal _NotificationLobbyMemberDataInternalUpdate_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<54> NotificationLobbyMemberDataInternalUpdate_class_data_;
+class NotificationLobbyMemberUpdate;
+struct NotificationLobbyMemberUpdateDefaultTypeInternal;
+extern NotificationLobbyMemberUpdateDefaultTypeInternal _NotificationLobbyMemberUpdate_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<42> NotificationLobbyMemberUpdate_class_data_;
+class NotificationLobbyMessage;
+struct NotificationLobbyMessageDefaultTypeInternal;
+extern NotificationLobbyMessageDefaultTypeInternal _NotificationLobbyMessage_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<37> NotificationLobbyMessage_class_data_;
 class NotificationUserJoinedRoom;
 struct NotificationUserJoinedRoomDefaultTypeInternal;
 extern NotificationUserJoinedRoomDefaultTypeInternal _NotificationUserJoinedRoom_default_instance_;
@@ -287,6 +351,14 @@ class SearchRoomResponse;
 struct SearchRoomResponseDefaultTypeInternal;
 extern SearchRoomResponseDefaultTypeInternal _SearchRoomResponse_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<31> SearchRoomResponse_class_data_;
+class SendLobbyInvitationRequest;
+struct SendLobbyInvitationRequestDefaultTypeInternal;
+extern SendLobbyInvitationRequestDefaultTypeInternal _SendLobbyInvitationRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<39> SendLobbyInvitationRequest_class_data_;
+class SendLobbyMessageRequest;
+struct SendLobbyMessageRequestDefaultTypeInternal;
+extern SendLobbyMessageRequestDefaultTypeInternal _SendLobbyMessageRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<36> SendLobbyMessageRequest_class_data_;
 class SendMessageRequest;
 struct SendMessageRequestDefaultTypeInternal;
 extern SendMessageRequestDefaultTypeInternal _SendMessageRequest_default_instance_;
@@ -295,6 +367,10 @@ class SendRoomMessageRequest;
 struct SendRoomMessageRequestDefaultTypeInternal;
 extern SendRoomMessageRequestDefaultTypeInternal _SendRoomMessageRequest_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<35> SendRoomMessageRequest_class_data_;
+class SetLobbyMemberDataInternalRequest;
+struct SetLobbyMemberDataInternalRequestDefaultTypeInternal;
+extern SetLobbyMemberDataInternalRequestDefaultTypeInternal _SetLobbyMemberDataInternalRequest_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<46> SetLobbyMemberDataInternalRequest_class_data_;
 class SetPresenceRequest;
 struct SetPresenceRequestDefaultTypeInternal;
 extern SetPresenceRequestDefaultTypeInternal _SetPresenceRequest_default_instance_;
@@ -2745,6 +2821,246 @@ class SendMessageRequest final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<31> SendMessageRequest_class_data_;
 // -------------------------------------------------------------------
 
+class SendLobbyMessageRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.SendLobbyMessageRequest) */ {
+ public:
+  inline SendLobbyMessageRequest() : SendLobbyMessageRequest(nullptr) {}
+  ~SendLobbyMessageRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(SendLobbyMessageRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(SendLobbyMessageRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR SendLobbyMessageRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline SendLobbyMessageRequest(const SendLobbyMessageRequest& from) : SendLobbyMessageRequest(nullptr, from) {}
+  inline SendLobbyMessageRequest(SendLobbyMessageRequest&& from) noexcept
+      : SendLobbyMessageRequest(nullptr, ::std::move(from)) {}
+  inline SendLobbyMessageRequest& operator=(const SendLobbyMessageRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SendLobbyMessageRequest& operator=(SendLobbyMessageRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const SendLobbyMessageRequest& default_instance() {
+    return *reinterpret_cast<const SendLobbyMessageRequest*>(
+        &_SendLobbyMessageRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 103;
+  friend void swap(SendLobbyMessageRequest& a, SendLobbyMessageRequest& b) { a.Swap(&b); }
+  inline void Swap(SendLobbyMessageRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SendLobbyMessageRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SendLobbyMessageRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<SendLobbyMessageRequest>(arena);
+  }
+  void CopyFrom(const SendLobbyMessageRequest& from);
+  void MergeFrom(const SendLobbyMessageRequest& from) { SendLobbyMessageRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(SendLobbyMessageRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.SendLobbyMessageRequest"; }
+
+  explicit SendLobbyMessageRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  SendLobbyMessageRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const SendLobbyMessageRequest& from);
+  SendLobbyMessageRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, SendLobbyMessageRequest&& from) noexcept
+      : SendLobbyMessageRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kDstFieldNumber = 3,
+    kMsgFieldNumber = 4,
+    kLobbyIdFieldNumber = 1,
+    kCastTypeFieldNumber = 2,
+    kOptionFieldNumber = 5,
+  };
+  // repeated uint32 dst = 3;
+  int dst_size() const;
+  private:
+  int _internal_dst_size() const;
+
+  public:
+  void clear_dst() ;
+  ::uint32_t dst(int index) const;
+  void set_dst(int index, ::uint32_t value);
+  void add_dst(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_dst();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_dst();
+
+  public:
+  // bytes msg = 4;
+  void clear_msg() ;
+  const ::std::string& msg() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_msg(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_msg();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_msg();
+  void set_allocated_msg(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_msg() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_msg(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_msg();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 castType = 2;
+  void clear_casttype() ;
+  ::uint32_t casttype() const;
+  void set_casttype(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_casttype() const;
+  void _internal_set_casttype(::uint32_t value);
+
+  public:
+  // uint32 option = 5;
+  void clear_option() ;
+  ::uint32_t option() const;
+  void set_option(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_option() const;
+  void _internal_set_option(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.SendLobbyMessageRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 5,
+                                   0, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const SendLobbyMessageRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> dst_;
+    ::google::protobuf::internal::CachedSize _dst_cached_byte_size_;
+    ::google::protobuf::internal::ArenaStringPtr msg_;
+    ::uint64_t lobbyid_;
+    ::uint32_t casttype_;
+    ::uint32_t option_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<36> SendLobbyMessageRequest_class_data_;
+// -------------------------------------------------------------------
+
 class ScoreRankData final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.ScoreRankData) */ {
  public:
@@ -4632,6 +4948,244 @@ class MatchingAttr final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<25> MatchingAttr_class_data_;
 // -------------------------------------------------------------------
 
+class JoinedSessionInfo final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.JoinedSessionInfo) */ {
+ public:
+  inline JoinedSessionInfo() : JoinedSessionInfo(nullptr) {}
+  ~JoinedSessionInfo() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(JoinedSessionInfo* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(JoinedSessionInfo));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR JoinedSessionInfo(::google::protobuf::internal::ConstantInitialized);
+
+  inline JoinedSessionInfo(const JoinedSessionInfo& from) : JoinedSessionInfo(nullptr, from) {}
+  inline JoinedSessionInfo(JoinedSessionInfo&& from) noexcept
+      : JoinedSessionInfo(nullptr, ::std::move(from)) {}
+  inline JoinedSessionInfo& operator=(const JoinedSessionInfo& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline JoinedSessionInfo& operator=(JoinedSessionInfo&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const JoinedSessionInfo& default_instance() {
+    return *reinterpret_cast<const JoinedSessionInfo*>(
+        &_JoinedSessionInfo_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 91;
+  friend void swap(JoinedSessionInfo& a, JoinedSessionInfo& b) { a.Swap(&b); }
+  inline void Swap(JoinedSessionInfo* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(JoinedSessionInfo* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  JoinedSessionInfo* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<JoinedSessionInfo>(arena);
+  }
+  void CopyFrom(const JoinedSessionInfo& from);
+  void MergeFrom(const JoinedSessionInfo& from) { JoinedSessionInfo::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(JoinedSessionInfo* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.JoinedSessionInfo"; }
+
+  explicit JoinedSessionInfo(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  JoinedSessionInfo(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const JoinedSessionInfo& from);
+  JoinedSessionInfo(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, JoinedSessionInfo&& from) noexcept
+      : JoinedSessionInfo(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kSessionTypeFieldNumber = 1,
+    kServerIdFieldNumber = 2,
+    kLobbyIdFieldNumber = 4,
+    kRoomIdFieldNumber = 5,
+    kJoinDateFieldNumber = 6,
+    kWorldIdFieldNumber = 3,
+  };
+  // uint32 sessionType = 1;
+  void clear_sessiontype() ;
+  ::uint32_t sessiontype() const;
+  void set_sessiontype(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_sessiontype() const;
+  void _internal_set_sessiontype(::uint32_t value);
+
+  public:
+  // uint32 serverId = 2;
+  void clear_serverid() ;
+  ::uint32_t serverid() const;
+  void set_serverid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_serverid() const;
+  void _internal_set_serverid(::uint32_t value);
+
+  public:
+  // uint64 lobbyId = 4;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint64 roomId = 5;
+  void clear_roomid() ;
+  ::uint64_t roomid() const;
+  void set_roomid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_roomid() const;
+  void _internal_set_roomid(::uint64_t value);
+
+  public:
+  // uint64 joinDate = 6;
+  void clear_joindate() ;
+  ::uint64_t joindate() const;
+  void set_joindate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_joindate() const;
+  void _internal_set_joindate(::uint64_t value);
+
+  public:
+  // uint32 worldId = 3;
+  void clear_worldid() ;
+  ::uint32_t worldid() const;
+  void set_worldid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_worldid() const;
+  void _internal_set_worldid(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.JoinedSessionInfo)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 6,
+                                   0, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const JoinedSessionInfo& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::uint32_t sessiontype_;
+    ::uint32_t serverid_;
+    ::uint64_t lobbyid_;
+    ::uint64_t roomid_;
+    ::uint64_t joindate_;
+    ::uint32_t worldid_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<30> JoinedSessionInfo_class_data_;
+// -------------------------------------------------------------------
+
 class GroupConfig final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.GroupConfig) */ {
  public:
@@ -5496,6 +6050,461 @@ class GetScoreFriendsRequest final : public ::google::protobuf::MessageLite
 };
 
 extern const ::google::protobuf::internal::ClassDataLite<35> GetScoreFriendsRequest_class_data_;
+// -------------------------------------------------------------------
+
+class GetLobbyMemberDataInternalListRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.GetLobbyMemberDataInternalListRequest) */ {
+ public:
+  inline GetLobbyMemberDataInternalListRequest() : GetLobbyMemberDataInternalListRequest(nullptr) {}
+  ~GetLobbyMemberDataInternalListRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(GetLobbyMemberDataInternalListRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(GetLobbyMemberDataInternalListRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR GetLobbyMemberDataInternalListRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetLobbyMemberDataInternalListRequest(const GetLobbyMemberDataInternalListRequest& from) : GetLobbyMemberDataInternalListRequest(nullptr, from) {}
+  inline GetLobbyMemberDataInternalListRequest(GetLobbyMemberDataInternalListRequest&& from) noexcept
+      : GetLobbyMemberDataInternalListRequest(nullptr, ::std::move(from)) {}
+  inline GetLobbyMemberDataInternalListRequest& operator=(const GetLobbyMemberDataInternalListRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetLobbyMemberDataInternalListRequest& operator=(GetLobbyMemberDataInternalListRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const GetLobbyMemberDataInternalListRequest& default_instance() {
+    return *reinterpret_cast<const GetLobbyMemberDataInternalListRequest*>(
+        &_GetLobbyMemberDataInternalListRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 101;
+  friend void swap(GetLobbyMemberDataInternalListRequest& a, GetLobbyMemberDataInternalListRequest& b) { a.Swap(&b); }
+  inline void Swap(GetLobbyMemberDataInternalListRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetLobbyMemberDataInternalListRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetLobbyMemberDataInternalListRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<GetLobbyMemberDataInternalListRequest>(arena);
+  }
+  void CopyFrom(const GetLobbyMemberDataInternalListRequest& from);
+  void MergeFrom(const GetLobbyMemberDataInternalListRequest& from) { GetLobbyMemberDataInternalListRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(GetLobbyMemberDataInternalListRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.GetLobbyMemberDataInternalListRequest"; }
+
+  explicit GetLobbyMemberDataInternalListRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  GetLobbyMemberDataInternalListRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const GetLobbyMemberDataInternalListRequest& from);
+  GetLobbyMemberDataInternalListRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, GetLobbyMemberDataInternalListRequest&& from) noexcept
+      : GetLobbyMemberDataInternalListRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kMemberIdFieldNumber = 2,
+    kAttrIdFieldNumber = 3,
+    kLobbyIdFieldNumber = 1,
+    kExtendedDataFieldNumber = 4,
+  };
+  // repeated uint32 memberId = 2;
+  int memberid_size() const;
+  private:
+  int _internal_memberid_size() const;
+
+  public:
+  void clear_memberid() ;
+  ::uint32_t memberid(int index) const;
+  void set_memberid(int index, ::uint32_t value);
+  void add_memberid(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& memberid() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_memberid();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_memberid() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_memberid();
+
+  public:
+  // repeated uint32 attrId = 3;
+  int attrid_size() const;
+  private:
+  int _internal_attrid_size() const;
+
+  public:
+  void clear_attrid() ;
+  ::uint32_t attrid(int index) const;
+  void set_attrid(int index, ::uint32_t value);
+  void add_attrid(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& attrid() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_attrid();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_attrid() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_attrid();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // bool extendedData = 4;
+  void clear_extendeddata() ;
+  bool extendeddata() const;
+  void set_extendeddata(bool value);
+
+  private:
+  bool _internal_extendeddata() const;
+  void _internal_set_extendeddata(bool value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.GetLobbyMemberDataInternalListRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 4,
+                                   0, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const GetLobbyMemberDataInternalListRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> memberid_;
+    ::google::protobuf::internal::CachedSize _memberid_cached_byte_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> attrid_;
+    ::google::protobuf::internal::CachedSize _attrid_cached_byte_size_;
+    ::uint64_t lobbyid_;
+    bool extendeddata_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<50> GetLobbyMemberDataInternalListRequest_class_data_;
+// -------------------------------------------------------------------
+
+class GetLobbyInfoListRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.GetLobbyInfoListRequest) */ {
+ public:
+  inline GetLobbyInfoListRequest() : GetLobbyInfoListRequest(nullptr) {}
+  ~GetLobbyInfoListRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(GetLobbyInfoListRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(GetLobbyInfoListRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR GetLobbyInfoListRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetLobbyInfoListRequest(const GetLobbyInfoListRequest& from) : GetLobbyInfoListRequest(nullptr, from) {}
+  inline GetLobbyInfoListRequest(GetLobbyInfoListRequest&& from) noexcept
+      : GetLobbyInfoListRequest(nullptr, ::std::move(from)) {}
+  inline GetLobbyInfoListRequest& operator=(const GetLobbyInfoListRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetLobbyInfoListRequest& operator=(GetLobbyInfoListRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const GetLobbyInfoListRequest& default_instance() {
+    return *reinterpret_cast<const GetLobbyInfoListRequest*>(
+        &_GetLobbyInfoListRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 93;
+  friend void swap(GetLobbyInfoListRequest& a, GetLobbyInfoListRequest& b) { a.Swap(&b); }
+  inline void Swap(GetLobbyInfoListRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetLobbyInfoListRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetLobbyInfoListRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<GetLobbyInfoListRequest>(arena);
+  }
+  void CopyFrom(const GetLobbyInfoListRequest& from);
+  void MergeFrom(const GetLobbyInfoListRequest& from) { GetLobbyInfoListRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(GetLobbyInfoListRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.GetLobbyInfoListRequest"; }
+
+  explicit GetLobbyInfoListRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  GetLobbyInfoListRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const GetLobbyInfoListRequest& from);
+  GetLobbyInfoListRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, GetLobbyInfoListRequest&& from) noexcept
+      : GetLobbyInfoListRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kAttrIdFieldNumber = 4,
+    kWorldIdFieldNumber = 1,
+    kRangeFilterStartIndexFieldNumber = 2,
+    kRangeFilterMaxFieldNumber = 3,
+  };
+  // repeated uint32 attrId = 4;
+  int attrid_size() const;
+  private:
+  int _internal_attrid_size() const;
+
+  public:
+  void clear_attrid() ;
+  ::uint32_t attrid(int index) const;
+  void set_attrid(int index, ::uint32_t value);
+  void add_attrid(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& attrid() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_attrid();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_attrid() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_attrid();
+
+  public:
+  // uint32 worldId = 1;
+  void clear_worldid() ;
+  ::uint32_t worldid() const;
+  void set_worldid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_worldid() const;
+  void _internal_set_worldid(::uint32_t value);
+
+  public:
+  // uint32 rangeFilter_startIndex = 2;
+  void clear_rangefilter_startindex() ;
+  ::uint32_t rangefilter_startindex() const;
+  void set_rangefilter_startindex(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_rangefilter_startindex() const;
+  void _internal_set_rangefilter_startindex(::uint32_t value);
+
+  public:
+  // uint32 rangeFilter_max = 3;
+  void clear_rangefilter_max() ;
+  ::uint32_t rangefilter_max() const;
+  void set_rangefilter_max(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_rangefilter_max() const;
+  void _internal_set_rangefilter_max(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.GetLobbyInfoListRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 4,
+                                   0, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const GetLobbyInfoListRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> attrid_;
+    ::google::protobuf::internal::CachedSize _attrid_cached_byte_size_;
+    ::uint32_t worldid_;
+    ::uint32_t rangefilter_startindex_;
+    ::uint32_t rangefilter_max_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<36> GetLobbyInfoListRequest_class_data_;
 // -------------------------------------------------------------------
 
 class BoardInfo final : public ::google::protobuf::MessageLite
@@ -9162,6 +10171,265 @@ class SendRoomMessageRequest final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<35> SendRoomMessageRequest_class_data_;
 // -------------------------------------------------------------------
 
+class SendLobbyInvitationRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.SendLobbyInvitationRequest) */ {
+ public:
+  inline SendLobbyInvitationRequest() : SendLobbyInvitationRequest(nullptr) {}
+  ~SendLobbyInvitationRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(SendLobbyInvitationRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(SendLobbyInvitationRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR SendLobbyInvitationRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline SendLobbyInvitationRequest(const SendLobbyInvitationRequest& from) : SendLobbyInvitationRequest(nullptr, from) {}
+  inline SendLobbyInvitationRequest(SendLobbyInvitationRequest&& from) noexcept
+      : SendLobbyInvitationRequest(nullptr, ::std::move(from)) {}
+  inline SendLobbyInvitationRequest& operator=(const SendLobbyInvitationRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SendLobbyInvitationRequest& operator=(SendLobbyInvitationRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const SendLobbyInvitationRequest& default_instance() {
+    return *reinterpret_cast<const SendLobbyInvitationRequest*>(
+        &_SendLobbyInvitationRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 104;
+  friend void swap(SendLobbyInvitationRequest& a, SendLobbyInvitationRequest& b) { a.Swap(&b); }
+  inline void Swap(SendLobbyInvitationRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SendLobbyInvitationRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SendLobbyInvitationRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<SendLobbyInvitationRequest>(arena);
+  }
+  void CopyFrom(const SendLobbyInvitationRequest& from);
+  void MergeFrom(const SendLobbyInvitationRequest& from) { SendLobbyInvitationRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(SendLobbyInvitationRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.SendLobbyInvitationRequest"; }
+
+  explicit SendLobbyInvitationRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  SendLobbyInvitationRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const SendLobbyInvitationRequest& from);
+  SendLobbyInvitationRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, SendLobbyInvitationRequest&& from) noexcept
+      : SendLobbyInvitationRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kDstFieldNumber = 3,
+    kTargetSessionFieldNumber = 4,
+    kOptDataFieldNumber = 5,
+    kLobbyIdFieldNumber = 1,
+    kCastTypeFieldNumber = 2,
+    kOptionFieldNumber = 6,
+  };
+  // repeated uint32 dst = 3;
+  int dst_size() const;
+  private:
+  int _internal_dst_size() const;
+
+  public:
+  void clear_dst() ;
+  ::uint32_t dst(int index) const;
+  void set_dst(int index, ::uint32_t value);
+  void add_dst(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_dst();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_dst();
+
+  public:
+  // repeated .np2_structs.JoinedSessionInfo targetSession = 4;
+  int targetsession_size() const;
+  private:
+  int _internal_targetsession_size() const;
+
+  public:
+  void clear_targetsession() ;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL mutable_targetsession(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL mutable_targetsession();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& _internal_targetsession() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL _internal_mutable_targetsession();
+  public:
+  const ::np2_structs::JoinedSessionInfo& targetsession(int index) const;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL add_targetsession();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& targetsession() const;
+  // bytes optData = 5;
+  void clear_optdata() ;
+  const ::std::string& optdata() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_optdata(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_optdata();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_optdata();
+  void set_allocated_optdata(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_optdata() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_optdata(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_optdata();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 castType = 2;
+  void clear_casttype() ;
+  ::uint32_t casttype() const;
+  void set_casttype(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_casttype() const;
+  void _internal_set_casttype(::uint32_t value);
+
+  public:
+  // uint32 option = 6;
+  void clear_option() ;
+  ::uint32_t option() const;
+  void set_option(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_option() const;
+  void _internal_set_option(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.SendLobbyInvitationRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 6,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const SendLobbyInvitationRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> dst_;
+    ::google::protobuf::internal::CachedSize _dst_cached_byte_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::JoinedSessionInfo > targetsession_;
+    ::google::protobuf::internal::ArenaStringPtr optdata_;
+    ::uint64_t lobbyid_;
+    ::uint32_t casttype_;
+    ::uint32_t option_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<39> SendLobbyInvitationRequest_class_data_;
+// -------------------------------------------------------------------
+
 class SearchJoinRoomGUIRequest final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.SearchJoinRoomGUIRequest) */ {
  public:
@@ -10883,6 +12151,551 @@ class OptParam final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<21> OptParam_class_data_;
 // -------------------------------------------------------------------
 
+class NotificationLobbyMessage final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.NotificationLobbyMessage) */ {
+ public:
+  inline NotificationLobbyMessage() : NotificationLobbyMessage(nullptr) {}
+  ~NotificationLobbyMessage() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(NotificationLobbyMessage* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(NotificationLobbyMessage));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR NotificationLobbyMessage(::google::protobuf::internal::ConstantInitialized);
+
+  inline NotificationLobbyMessage(const NotificationLobbyMessage& from) : NotificationLobbyMessage(nullptr, from) {}
+  inline NotificationLobbyMessage(NotificationLobbyMessage&& from) noexcept
+      : NotificationLobbyMessage(nullptr, ::std::move(from)) {}
+  inline NotificationLobbyMessage& operator=(const NotificationLobbyMessage& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NotificationLobbyMessage& operator=(NotificationLobbyMessage&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const NotificationLobbyMessage& default_instance() {
+    return *reinterpret_cast<const NotificationLobbyMessage*>(
+        &_NotificationLobbyMessage_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 108;
+  friend void swap(NotificationLobbyMessage& a, NotificationLobbyMessage& b) { a.Swap(&b); }
+  inline void Swap(NotificationLobbyMessage* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NotificationLobbyMessage* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NotificationLobbyMessage* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<NotificationLobbyMessage>(arena);
+  }
+  void CopyFrom(const NotificationLobbyMessage& from);
+  void MergeFrom(const NotificationLobbyMessage& from) { NotificationLobbyMessage::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(NotificationLobbyMessage* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.NotificationLobbyMessage"; }
+
+  explicit NotificationLobbyMessage(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  NotificationLobbyMessage(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const NotificationLobbyMessage& from);
+  NotificationLobbyMessage(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, NotificationLobbyMessage&& from) noexcept
+      : NotificationLobbyMessage(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kDstFieldNumber = 5,
+    kMsgFieldNumber = 7,
+    kSrcMemberFieldNumber = 6,
+    kLobbyIdFieldNumber = 1,
+    kSrcMemberIdFieldNumber = 2,
+    kFilteredFieldNumber = 3,
+    kCastTypeFieldNumber = 4,
+  };
+  // repeated uint32 dst = 5;
+  int dst_size() const;
+  private:
+  int _internal_dst_size() const;
+
+  public:
+  void clear_dst() ;
+  ::uint32_t dst(int index) const;
+  void set_dst(int index, ::uint32_t value);
+  void add_dst(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_dst();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_dst();
+
+  public:
+  // bytes msg = 7;
+  void clear_msg() ;
+  const ::std::string& msg() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_msg(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_msg();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_msg();
+  void set_allocated_msg(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_msg() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_msg(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_msg();
+
+  public:
+  // .np2_structs.UserInfo srcMember = 6;
+  bool has_srcmember() const;
+  void clear_srcmember() ;
+  const ::np2_structs::UserInfo& srcmember() const;
+  [[nodiscard]] ::np2_structs::UserInfo* PROTOBUF_NULLABLE release_srcmember();
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL mutable_srcmember();
+  void set_allocated_srcmember(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_srcmember(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  ::np2_structs::UserInfo* PROTOBUF_NULLABLE unsafe_arena_release_srcmember();
+
+  private:
+  const ::np2_structs::UserInfo& _internal_srcmember() const;
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL _internal_mutable_srcmember();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 srcMemberId = 2;
+  void clear_srcmemberid() ;
+  ::uint32_t srcmemberid() const;
+  void set_srcmemberid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_srcmemberid() const;
+  void _internal_set_srcmemberid(::uint32_t value);
+
+  public:
+  // bool filtered = 3;
+  void clear_filtered() ;
+  bool filtered() const;
+  void set_filtered(bool value);
+
+  private:
+  bool _internal_filtered() const;
+  void _internal_set_filtered(bool value);
+
+  public:
+  // uint32 castType = 4;
+  void clear_casttype() ;
+  ::uint32_t casttype() const;
+  void set_casttype(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_casttype() const;
+  void _internal_set_casttype(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.NotificationLobbyMessage)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 7,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const NotificationLobbyMessage& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> dst_;
+    ::google::protobuf::internal::CachedSize _dst_cached_byte_size_;
+    ::google::protobuf::internal::ArenaStringPtr msg_;
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE srcmember_;
+    ::uint64_t lobbyid_;
+    ::uint32_t srcmemberid_;
+    bool filtered_;
+    ::uint32_t casttype_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<37> NotificationLobbyMessage_class_data_;
+// -------------------------------------------------------------------
+
+class NotificationLobbyInvitation final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.NotificationLobbyInvitation) */ {
+ public:
+  inline NotificationLobbyInvitation() : NotificationLobbyInvitation(nullptr) {}
+  ~NotificationLobbyInvitation() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(NotificationLobbyInvitation* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(NotificationLobbyInvitation));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR NotificationLobbyInvitation(::google::protobuf::internal::ConstantInitialized);
+
+  inline NotificationLobbyInvitation(const NotificationLobbyInvitation& from) : NotificationLobbyInvitation(nullptr, from) {}
+  inline NotificationLobbyInvitation(NotificationLobbyInvitation&& from) noexcept
+      : NotificationLobbyInvitation(nullptr, ::std::move(from)) {}
+  inline NotificationLobbyInvitation& operator=(const NotificationLobbyInvitation& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NotificationLobbyInvitation& operator=(NotificationLobbyInvitation&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const NotificationLobbyInvitation& default_instance() {
+    return *reinterpret_cast<const NotificationLobbyInvitation*>(
+        &_NotificationLobbyInvitation_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 109;
+  friend void swap(NotificationLobbyInvitation& a, NotificationLobbyInvitation& b) { a.Swap(&b); }
+  inline void Swap(NotificationLobbyInvitation* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NotificationLobbyInvitation* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NotificationLobbyInvitation* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<NotificationLobbyInvitation>(arena);
+  }
+  void CopyFrom(const NotificationLobbyInvitation& from);
+  void MergeFrom(const NotificationLobbyInvitation& from) { NotificationLobbyInvitation::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(NotificationLobbyInvitation* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.NotificationLobbyInvitation"; }
+
+  explicit NotificationLobbyInvitation(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  NotificationLobbyInvitation(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const NotificationLobbyInvitation& from);
+  NotificationLobbyInvitation(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, NotificationLobbyInvitation&& from) noexcept
+      : NotificationLobbyInvitation(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kDstFieldNumber = 4,
+    kTargetSessionFieldNumber = 6,
+    kOptDataFieldNumber = 7,
+    kSrcMemberFieldNumber = 5,
+    kLobbyIdFieldNumber = 1,
+    kSrcMemberIdFieldNumber = 2,
+    kCastTypeFieldNumber = 3,
+  };
+  // repeated uint32 dst = 4;
+  int dst_size() const;
+  private:
+  int _internal_dst_size() const;
+
+  public:
+  void clear_dst() ;
+  ::uint32_t dst(int index) const;
+  void set_dst(int index, ::uint32_t value);
+  void add_dst(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_dst();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_dst() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_dst();
+
+  public:
+  // repeated .np2_structs.JoinedSessionInfo targetSession = 6;
+  int targetsession_size() const;
+  private:
+  int _internal_targetsession_size() const;
+
+  public:
+  void clear_targetsession() ;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL mutable_targetsession(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL mutable_targetsession();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& _internal_targetsession() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL _internal_mutable_targetsession();
+  public:
+  const ::np2_structs::JoinedSessionInfo& targetsession(int index) const;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL add_targetsession();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& targetsession() const;
+  // bytes optData = 7;
+  void clear_optdata() ;
+  const ::std::string& optdata() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_optdata(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_optdata();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_optdata();
+  void set_allocated_optdata(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_optdata() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_optdata(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_optdata();
+
+  public:
+  // .np2_structs.UserInfo srcMember = 5;
+  bool has_srcmember() const;
+  void clear_srcmember() ;
+  const ::np2_structs::UserInfo& srcmember() const;
+  [[nodiscard]] ::np2_structs::UserInfo* PROTOBUF_NULLABLE release_srcmember();
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL mutable_srcmember();
+  void set_allocated_srcmember(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_srcmember(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  ::np2_structs::UserInfo* PROTOBUF_NULLABLE unsafe_arena_release_srcmember();
+
+  private:
+  const ::np2_structs::UserInfo& _internal_srcmember() const;
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL _internal_mutable_srcmember();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 srcMemberId = 2;
+  void clear_srcmemberid() ;
+  ::uint32_t srcmemberid() const;
+  void set_srcmemberid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_srcmemberid() const;
+  void _internal_set_srcmemberid(::uint32_t value);
+
+  public:
+  // uint32 castType = 3;
+  void clear_casttype() ;
+  ::uint32_t casttype() const;
+  void set_casttype(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_casttype() const;
+  void _internal_set_casttype(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.NotificationLobbyInvitation)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 7,
+                                   2, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const NotificationLobbyInvitation& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> dst_;
+    ::google::protobuf::internal::CachedSize _dst_cached_byte_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::JoinedSessionInfo > targetsession_;
+    ::google::protobuf::internal::ArenaStringPtr optdata_;
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE srcmember_;
+    ::uint64_t lobbyid_;
+    ::uint32_t srcmemberid_;
+    ::uint32_t casttype_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<40> NotificationLobbyInvitation_class_data_;
+// -------------------------------------------------------------------
+
 class MessageDetails final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.MessageDetails) */ {
  public:
@@ -11570,6 +13383,201 @@ class LeaveRoomRequest final : public ::google::protobuf::MessageLite
 };
 
 extern const ::google::protobuf::internal::ClassDataLite<29> LeaveRoomRequest_class_data_;
+// -------------------------------------------------------------------
+
+class LeaveLobbyRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.LeaveLobbyRequest) */ {
+ public:
+  inline LeaveLobbyRequest() : LeaveLobbyRequest(nullptr) {}
+  ~LeaveLobbyRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(LeaveLobbyRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(LeaveLobbyRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LeaveLobbyRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline LeaveLobbyRequest(const LeaveLobbyRequest& from) : LeaveLobbyRequest(nullptr, from) {}
+  inline LeaveLobbyRequest(LeaveLobbyRequest&& from) noexcept
+      : LeaveLobbyRequest(nullptr, ::std::move(from)) {}
+  inline LeaveLobbyRequest& operator=(const LeaveLobbyRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LeaveLobbyRequest& operator=(LeaveLobbyRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const LeaveLobbyRequest& default_instance() {
+    return *reinterpret_cast<const LeaveLobbyRequest*>(
+        &_LeaveLobbyRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 99;
+  friend void swap(LeaveLobbyRequest& a, LeaveLobbyRequest& b) { a.Swap(&b); }
+  inline void Swap(LeaveLobbyRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LeaveLobbyRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LeaveLobbyRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<LeaveLobbyRequest>(arena);
+  }
+  void CopyFrom(const LeaveLobbyRequest& from);
+  void MergeFrom(const LeaveLobbyRequest& from) { LeaveLobbyRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(LeaveLobbyRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.LeaveLobbyRequest"; }
+
+  explicit LeaveLobbyRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  LeaveLobbyRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const LeaveLobbyRequest& from);
+  LeaveLobbyRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, LeaveLobbyRequest&& from) noexcept
+      : LeaveLobbyRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kOptDataFieldNumber = 2,
+    kLobbyIdFieldNumber = 1,
+  };
+  // .np2_structs.PresenceOptionData optData = 2;
+  bool has_optdata() const;
+  void clear_optdata() ;
+  const ::np2_structs::PresenceOptionData& optdata() const;
+  [[nodiscard]] ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE release_optdata();
+  ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL mutable_optdata();
+  void set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value);
+  ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE unsafe_arena_release_optdata();
+
+  private:
+  const ::np2_structs::PresenceOptionData& _internal_optdata() const;
+  ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL _internal_mutable_optdata();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.LeaveLobbyRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<1, 2,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const LeaveLobbyRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE optdata_;
+    ::uint64_t lobbyid_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<30> LeaveLobbyRequest_class_data_;
 // -------------------------------------------------------------------
 
 class IntAttr final : public ::google::protobuf::MessageLite
@@ -14880,6 +16888,258 @@ class SetRoomDataExternalRequest final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<39> SetRoomDataExternalRequest_class_data_;
 // -------------------------------------------------------------------
 
+class SetLobbyMemberDataInternalRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.SetLobbyMemberDataInternalRequest) */ {
+ public:
+  inline SetLobbyMemberDataInternalRequest() : SetLobbyMemberDataInternalRequest(nullptr) {}
+  ~SetLobbyMemberDataInternalRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(SetLobbyMemberDataInternalRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(SetLobbyMemberDataInternalRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR SetLobbyMemberDataInternalRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline SetLobbyMemberDataInternalRequest(const SetLobbyMemberDataInternalRequest& from) : SetLobbyMemberDataInternalRequest(nullptr, from) {}
+  inline SetLobbyMemberDataInternalRequest(SetLobbyMemberDataInternalRequest&& from) noexcept
+      : SetLobbyMemberDataInternalRequest(nullptr, ::std::move(from)) {}
+  inline SetLobbyMemberDataInternalRequest& operator=(const SetLobbyMemberDataInternalRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline SetLobbyMemberDataInternalRequest& operator=(SetLobbyMemberDataInternalRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const SetLobbyMemberDataInternalRequest& default_instance() {
+    return *reinterpret_cast<const SetLobbyMemberDataInternalRequest*>(
+        &_SetLobbyMemberDataInternalRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 100;
+  friend void swap(SetLobbyMemberDataInternalRequest& a, SetLobbyMemberDataInternalRequest& b) { a.Swap(&b); }
+  inline void Swap(SetLobbyMemberDataInternalRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(SetLobbyMemberDataInternalRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  SetLobbyMemberDataInternalRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<SetLobbyMemberDataInternalRequest>(arena);
+  }
+  void CopyFrom(const SetLobbyMemberDataInternalRequest& from);
+  void MergeFrom(const SetLobbyMemberDataInternalRequest& from) { SetLobbyMemberDataInternalRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(SetLobbyMemberDataInternalRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.SetLobbyMemberDataInternalRequest"; }
+
+  explicit SetLobbyMemberDataInternalRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  SetLobbyMemberDataInternalRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const SetLobbyMemberDataInternalRequest& from);
+  SetLobbyMemberDataInternalRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, SetLobbyMemberDataInternalRequest&& from) noexcept
+      : SetLobbyMemberDataInternalRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kJoinedSessionInfoFieldNumber = 5,
+    kLobbyMemberBinAttrInternalFieldNumber = 6,
+    kLobbyIdFieldNumber = 1,
+    kMemberIdFieldNumber = 2,
+    kFlagFilterFieldNumber = 3,
+    kFlagAttrFieldNumber = 4,
+  };
+  // repeated .np2_structs.JoinedSessionInfo joinedSessionInfo = 5;
+  int joinedsessioninfo_size() const;
+  private:
+  int _internal_joinedsessioninfo_size() const;
+
+  public:
+  void clear_joinedsessioninfo() ;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL mutable_joinedsessioninfo(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL mutable_joinedsessioninfo();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& _internal_joinedsessioninfo() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL _internal_mutable_joinedsessioninfo();
+  public:
+  const ::np2_structs::JoinedSessionInfo& joinedsessioninfo(int index) const;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL add_joinedsessioninfo();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& joinedsessioninfo() const;
+  // repeated .np2_structs.BinAttr lobbyMemberBinAttrInternal = 6;
+  int lobbymemberbinattrinternal_size() const;
+  private:
+  int _internal_lobbymemberbinattrinternal_size() const;
+
+  public:
+  void clear_lobbymemberbinattrinternal() ;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL mutable_lobbymemberbinattrinternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL mutable_lobbymemberbinattrinternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& _internal_lobbymemberbinattrinternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL _internal_mutable_lobbymemberbinattrinternal();
+  public:
+  const ::np2_structs::BinAttr& lobbymemberbinattrinternal(int index) const;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL add_lobbymemberbinattrinternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& lobbymemberbinattrinternal() const;
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 memberId = 2;
+  void clear_memberid() ;
+  ::uint32_t memberid() const;
+  void set_memberid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_memberid() const;
+  void _internal_set_memberid(::uint32_t value);
+
+  public:
+  // uint32 flagFilter = 3;
+  void clear_flagfilter() ;
+  ::uint32_t flagfilter() const;
+  void set_flagfilter(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_flagfilter() const;
+  void _internal_set_flagfilter(::uint32_t value);
+
+  public:
+  // uint32 flagAttr = 4;
+  void clear_flagattr() ;
+  ::uint32_t flagattr() const;
+  void set_flagattr(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_flagattr() const;
+  void _internal_set_flagattr(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.SetLobbyMemberDataInternalRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 6,
+                                   2, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const SetLobbyMemberDataInternalRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::JoinedSessionInfo > joinedsessioninfo_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::BinAttr > lobbymemberbinattrinternal_;
+    ::uint64_t lobbyid_;
+    ::uint32_t memberid_;
+    ::uint32_t flagfilter_;
+    ::uint32_t flagattr_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<46> SetLobbyMemberDataInternalRequest_class_data_;
+// -------------------------------------------------------------------
+
 class RoomMemberBinAttrInternal final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.RoomMemberBinAttrInternal) */ {
  public:
@@ -16358,6 +18618,301 @@ class Matching2SignalingInfo final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<35> Matching2SignalingInfo_class_data_;
 // -------------------------------------------------------------------
 
+class LobbyDataExternal final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.LobbyDataExternal) */ {
+ public:
+  inline LobbyDataExternal() : LobbyDataExternal(nullptr) {}
+  ~LobbyDataExternal() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(LobbyDataExternal* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(LobbyDataExternal));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LobbyDataExternal(::google::protobuf::internal::ConstantInitialized);
+
+  inline LobbyDataExternal(const LobbyDataExternal& from) : LobbyDataExternal(nullptr, from) {}
+  inline LobbyDataExternal(LobbyDataExternal&& from) noexcept
+      : LobbyDataExternal(nullptr, ::std::move(from)) {}
+  inline LobbyDataExternal& operator=(const LobbyDataExternal& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LobbyDataExternal& operator=(LobbyDataExternal&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const LobbyDataExternal& default_instance() {
+    return *reinterpret_cast<const LobbyDataExternal*>(
+        &_LobbyDataExternal_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 92;
+  friend void swap(LobbyDataExternal& a, LobbyDataExternal& b) { a.Swap(&b); }
+  inline void Swap(LobbyDataExternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LobbyDataExternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LobbyDataExternal* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<LobbyDataExternal>(arena);
+  }
+  void CopyFrom(const LobbyDataExternal& from);
+  void MergeFrom(const LobbyDataExternal& from) { LobbyDataExternal::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(LobbyDataExternal* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.LobbyDataExternal"; }
+
+  explicit LobbyDataExternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  LobbyDataExternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const LobbyDataExternal& from);
+  LobbyDataExternal(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, LobbyDataExternal&& from) noexcept
+      : LobbyDataExternal(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kLobbySearchableIntAttrExternalFieldNumber = 7,
+    kLobbySearchableBinAttrExternalFieldNumber = 8,
+    kLobbyBinAttrExternalFieldNumber = 9,
+    kServerIdFieldNumber = 1,
+    kWorldIdFieldNumber = 2,
+    kLobbyIdFieldNumber = 3,
+    kMaxSlotFieldNumber = 4,
+    kCurMemberNumFieldNumber = 5,
+    kFlagAttrFieldNumber = 6,
+  };
+  // repeated .np2_structs.IntAttr lobbySearchableIntAttrExternal = 7;
+  int lobbysearchableintattrexternal_size() const;
+  private:
+  int _internal_lobbysearchableintattrexternal_size() const;
+
+  public:
+  void clear_lobbysearchableintattrexternal() ;
+  ::np2_structs::IntAttr* PROTOBUF_NONNULL mutable_lobbysearchableintattrexternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>* PROTOBUF_NONNULL mutable_lobbysearchableintattrexternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>& _internal_lobbysearchableintattrexternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>* PROTOBUF_NONNULL _internal_mutable_lobbysearchableintattrexternal();
+  public:
+  const ::np2_structs::IntAttr& lobbysearchableintattrexternal(int index) const;
+  ::np2_structs::IntAttr* PROTOBUF_NONNULL add_lobbysearchableintattrexternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>& lobbysearchableintattrexternal() const;
+  // repeated .np2_structs.BinAttr lobbySearchableBinAttrExternal = 8;
+  int lobbysearchablebinattrexternal_size() const;
+  private:
+  int _internal_lobbysearchablebinattrexternal_size() const;
+
+  public:
+  void clear_lobbysearchablebinattrexternal() ;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL mutable_lobbysearchablebinattrexternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL mutable_lobbysearchablebinattrexternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& _internal_lobbysearchablebinattrexternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL _internal_mutable_lobbysearchablebinattrexternal();
+  public:
+  const ::np2_structs::BinAttr& lobbysearchablebinattrexternal(int index) const;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL add_lobbysearchablebinattrexternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& lobbysearchablebinattrexternal() const;
+  // repeated .np2_structs.BinAttr lobbyBinAttrExternal = 9;
+  int lobbybinattrexternal_size() const;
+  private:
+  int _internal_lobbybinattrexternal_size() const;
+
+  public:
+  void clear_lobbybinattrexternal() ;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL mutable_lobbybinattrexternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL mutable_lobbybinattrexternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& _internal_lobbybinattrexternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL _internal_mutable_lobbybinattrexternal();
+  public:
+  const ::np2_structs::BinAttr& lobbybinattrexternal(int index) const;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL add_lobbybinattrexternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& lobbybinattrexternal() const;
+  // uint32 serverId = 1;
+  void clear_serverid() ;
+  ::uint32_t serverid() const;
+  void set_serverid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_serverid() const;
+  void _internal_set_serverid(::uint32_t value);
+
+  public:
+  // uint32 worldId = 2;
+  void clear_worldid() ;
+  ::uint32_t worldid() const;
+  void set_worldid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_worldid() const;
+  void _internal_set_worldid(::uint32_t value);
+
+  public:
+  // uint64 lobbyId = 3;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 maxSlot = 4;
+  void clear_maxslot() ;
+  ::uint32_t maxslot() const;
+  void set_maxslot(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_maxslot() const;
+  void _internal_set_maxslot(::uint32_t value);
+
+  public:
+  // uint32 curMemberNum = 5;
+  void clear_curmembernum() ;
+  ::uint32_t curmembernum() const;
+  void set_curmembernum(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_curmembernum() const;
+  void _internal_set_curmembernum(::uint32_t value);
+
+  public:
+  // uint32 flagAttr = 6;
+  void clear_flagattr() ;
+  ::uint32_t flagattr() const;
+  void set_flagattr(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_flagattr() const;
+  void _internal_set_flagattr(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.LobbyDataExternal)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<4, 9,
+                                   3, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const LobbyDataExternal& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::IntAttr > lobbysearchableintattrexternal_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::BinAttr > lobbysearchablebinattrexternal_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::BinAttr > lobbybinattrexternal_;
+    ::uint32_t serverid_;
+    ::uint32_t worldid_;
+    ::uint64_t lobbyid_;
+    ::uint32_t maxslot_;
+    ::uint32_t curmembernum_;
+    ::uint32_t flagattr_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<30> LobbyDataExternal_class_data_;
+// -------------------------------------------------------------------
+
 class JoinRoomRequest final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.JoinRoomRequest) */ {
  public:
@@ -16621,6 +19176,239 @@ class JoinRoomRequest final : public ::google::protobuf::MessageLite
 };
 
 extern const ::google::protobuf::internal::ClassDataLite<28> JoinRoomRequest_class_data_;
+// -------------------------------------------------------------------
+
+class JoinLobbyRequest final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.JoinLobbyRequest) */ {
+ public:
+  inline JoinLobbyRequest() : JoinLobbyRequest(nullptr) {}
+  ~JoinLobbyRequest() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(JoinLobbyRequest* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(JoinLobbyRequest));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR JoinLobbyRequest(::google::protobuf::internal::ConstantInitialized);
+
+  inline JoinLobbyRequest(const JoinLobbyRequest& from) : JoinLobbyRequest(nullptr, from) {}
+  inline JoinLobbyRequest(JoinLobbyRequest&& from) noexcept
+      : JoinLobbyRequest(nullptr, ::std::move(from)) {}
+  inline JoinLobbyRequest& operator=(const JoinLobbyRequest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline JoinLobbyRequest& operator=(JoinLobbyRequest&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const JoinLobbyRequest& default_instance() {
+    return *reinterpret_cast<const JoinLobbyRequest*>(
+        &_JoinLobbyRequest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 97;
+  friend void swap(JoinLobbyRequest& a, JoinLobbyRequest& b) { a.Swap(&b); }
+  inline void Swap(JoinLobbyRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(JoinLobbyRequest* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  JoinLobbyRequest* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<JoinLobbyRequest>(arena);
+  }
+  void CopyFrom(const JoinLobbyRequest& from);
+  void MergeFrom(const JoinLobbyRequest& from) { JoinLobbyRequest::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(JoinLobbyRequest* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.JoinLobbyRequest"; }
+
+  explicit JoinLobbyRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  JoinLobbyRequest(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const JoinLobbyRequest& from);
+  JoinLobbyRequest(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, JoinLobbyRequest&& from) noexcept
+      : JoinLobbyRequest(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kJoinedSessionInfoFieldNumber = 2,
+    kLobbyMemberBinAttrInternalFieldNumber = 3,
+    kOptDataFieldNumber = 4,
+    kLobbyIdFieldNumber = 1,
+  };
+  // repeated .np2_structs.JoinedSessionInfo joinedSessionInfo = 2;
+  int joinedsessioninfo_size() const;
+  private:
+  int _internal_joinedsessioninfo_size() const;
+
+  public:
+  void clear_joinedsessioninfo() ;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL mutable_joinedsessioninfo(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL mutable_joinedsessioninfo();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& _internal_joinedsessioninfo() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL _internal_mutable_joinedsessioninfo();
+  public:
+  const ::np2_structs::JoinedSessionInfo& joinedsessioninfo(int index) const;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL add_joinedsessioninfo();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& joinedsessioninfo() const;
+  // repeated .np2_structs.BinAttr lobbyMemberBinAttrInternal = 3;
+  int lobbymemberbinattrinternal_size() const;
+  private:
+  int _internal_lobbymemberbinattrinternal_size() const;
+
+  public:
+  void clear_lobbymemberbinattrinternal() ;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL mutable_lobbymemberbinattrinternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL mutable_lobbymemberbinattrinternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& _internal_lobbymemberbinattrinternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL _internal_mutable_lobbymemberbinattrinternal();
+  public:
+  const ::np2_structs::BinAttr& lobbymemberbinattrinternal(int index) const;
+  ::np2_structs::BinAttr* PROTOBUF_NONNULL add_lobbymemberbinattrinternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& lobbymemberbinattrinternal() const;
+  // .np2_structs.PresenceOptionData optData = 4;
+  bool has_optdata() const;
+  void clear_optdata() ;
+  const ::np2_structs::PresenceOptionData& optdata() const;
+  [[nodiscard]] ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE release_optdata();
+  ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL mutable_optdata();
+  void set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value);
+  ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE unsafe_arena_release_optdata();
+
+  private:
+  const ::np2_structs::PresenceOptionData& _internal_optdata() const;
+  ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL _internal_mutable_optdata();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.JoinLobbyRequest)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 4,
+                                   3, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const JoinLobbyRequest& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::JoinedSessionInfo > joinedsessioninfo_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::BinAttr > lobbymemberbinattrinternal_;
+    ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE optdata_;
+    ::uint64_t lobbyid_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<29> JoinLobbyRequest_class_data_;
 // -------------------------------------------------------------------
 
 class IntSearchFilter final : public ::google::protobuf::MessageLite
@@ -18681,6 +21469,275 @@ class RoomMemberDataInternal final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<35> RoomMemberDataInternal_class_data_;
 // -------------------------------------------------------------------
 
+class NotificationLobbyMemberDataInternalUpdate final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.NotificationLobbyMemberDataInternalUpdate) */ {
+ public:
+  inline NotificationLobbyMemberDataInternalUpdate() : NotificationLobbyMemberDataInternalUpdate(nullptr) {}
+  ~NotificationLobbyMemberDataInternalUpdate() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(NotificationLobbyMemberDataInternalUpdate* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(NotificationLobbyMemberDataInternalUpdate));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR NotificationLobbyMemberDataInternalUpdate(::google::protobuf::internal::ConstantInitialized);
+
+  inline NotificationLobbyMemberDataInternalUpdate(const NotificationLobbyMemberDataInternalUpdate& from) : NotificationLobbyMemberDataInternalUpdate(nullptr, from) {}
+  inline NotificationLobbyMemberDataInternalUpdate(NotificationLobbyMemberDataInternalUpdate&& from) noexcept
+      : NotificationLobbyMemberDataInternalUpdate(nullptr, ::std::move(from)) {}
+  inline NotificationLobbyMemberDataInternalUpdate& operator=(const NotificationLobbyMemberDataInternalUpdate& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NotificationLobbyMemberDataInternalUpdate& operator=(NotificationLobbyMemberDataInternalUpdate&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const NotificationLobbyMemberDataInternalUpdate& default_instance() {
+    return *reinterpret_cast<const NotificationLobbyMemberDataInternalUpdate*>(
+        &_NotificationLobbyMemberDataInternalUpdate_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 107;
+  friend void swap(NotificationLobbyMemberDataInternalUpdate& a, NotificationLobbyMemberDataInternalUpdate& b) { a.Swap(&b); }
+  inline void Swap(NotificationLobbyMemberDataInternalUpdate* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NotificationLobbyMemberDataInternalUpdate* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NotificationLobbyMemberDataInternalUpdate* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<NotificationLobbyMemberDataInternalUpdate>(arena);
+  }
+  void CopyFrom(const NotificationLobbyMemberDataInternalUpdate& from);
+  void MergeFrom(const NotificationLobbyMemberDataInternalUpdate& from) { NotificationLobbyMemberDataInternalUpdate::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(NotificationLobbyMemberDataInternalUpdate* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.NotificationLobbyMemberDataInternalUpdate"; }
+
+  explicit NotificationLobbyMemberDataInternalUpdate(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  NotificationLobbyMemberDataInternalUpdate(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const NotificationLobbyMemberDataInternalUpdate& from);
+  NotificationLobbyMemberDataInternalUpdate(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, NotificationLobbyMemberDataInternalUpdate&& from) noexcept
+      : NotificationLobbyMemberDataInternalUpdate(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kNewJoinedSessionInfoFieldNumber = 6,
+    kNewLobbyMemberBinAttrInternalFieldNumber = 7,
+    kNpIdFieldNumber = 3,
+    kLobbyIdFieldNumber = 1,
+    kMemberIdFieldNumber = 2,
+    kFlagFilterFieldNumber = 4,
+    kNewFlagAttrFieldNumber = 5,
+  };
+  // repeated .np2_structs.JoinedSessionInfo newJoinedSessionInfo = 6;
+  int newjoinedsessioninfo_size() const;
+  private:
+  int _internal_newjoinedsessioninfo_size() const;
+
+  public:
+  void clear_newjoinedsessioninfo() ;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL mutable_newjoinedsessioninfo(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL mutable_newjoinedsessioninfo();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& _internal_newjoinedsessioninfo() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL _internal_mutable_newjoinedsessioninfo();
+  public:
+  const ::np2_structs::JoinedSessionInfo& newjoinedsessioninfo(int index) const;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL add_newjoinedsessioninfo();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& newjoinedsessioninfo() const;
+  // repeated .np2_structs.RoomMemberBinAttrInternal newLobbyMemberBinAttrInternal = 7;
+  int newlobbymemberbinattrinternal_size() const;
+  private:
+  int _internal_newlobbymemberbinattrinternal_size() const;
+
+  public:
+  void clear_newlobbymemberbinattrinternal() ;
+  ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL mutable_newlobbymemberbinattrinternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL mutable_newlobbymemberbinattrinternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>& _internal_newlobbymemberbinattrinternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL _internal_mutable_newlobbymemberbinattrinternal();
+  public:
+  const ::np2_structs::RoomMemberBinAttrInternal& newlobbymemberbinattrinternal(int index) const;
+  ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL add_newlobbymemberbinattrinternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>& newlobbymemberbinattrinternal() const;
+  // string npId = 3;
+  void clear_npid() ;
+  const ::std::string& npid() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_npid(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_npid();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_npid();
+  void set_allocated_npid(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_npid() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_npid(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_npid();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 memberId = 2;
+  void clear_memberid() ;
+  ::uint32_t memberid() const;
+  void set_memberid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_memberid() const;
+  void _internal_set_memberid(::uint32_t value);
+
+  public:
+  // uint32 flagFilter = 4;
+  void clear_flagfilter() ;
+  ::uint32_t flagfilter() const;
+  void set_flagfilter(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_flagfilter() const;
+  void _internal_set_flagfilter(::uint32_t value);
+
+  public:
+  // uint32 newFlagAttr = 5;
+  void clear_newflagattr() ;
+  ::uint32_t newflagattr() const;
+  void set_newflagattr(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_newflagattr() const;
+  void _internal_set_newflagattr(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.NotificationLobbyMemberDataInternalUpdate)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 7,
+                                   2, 66,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const NotificationLobbyMemberDataInternalUpdate& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::JoinedSessionInfo > newjoinedsessioninfo_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::RoomMemberBinAttrInternal > newlobbymemberbinattrinternal_;
+    ::google::protobuf::internal::ArenaStringPtr npid_;
+    ::uint64_t lobbyid_;
+    ::uint32_t memberid_;
+    ::uint32_t flagfilter_;
+    ::uint32_t newflagattr_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<54> NotificationLobbyMemberDataInternalUpdate_class_data_;
+// -------------------------------------------------------------------
+
 class MatchingSearchJoinRoomInfo final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.MatchingSearchJoinRoomInfo) */ {
  public:
@@ -18883,6 +21940,541 @@ class MatchingSearchJoinRoomInfo final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<39> MatchingSearchJoinRoomInfo_class_data_;
 // -------------------------------------------------------------------
 
+class LobbyMemberDataInternal final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.LobbyMemberDataInternal) */ {
+ public:
+  inline LobbyMemberDataInternal() : LobbyMemberDataInternal(nullptr) {}
+  ~LobbyMemberDataInternal() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(LobbyMemberDataInternal* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(LobbyMemberDataInternal));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LobbyMemberDataInternal(::google::protobuf::internal::ConstantInitialized);
+
+  inline LobbyMemberDataInternal(const LobbyMemberDataInternal& from) : LobbyMemberDataInternal(nullptr, from) {}
+  inline LobbyMemberDataInternal(LobbyMemberDataInternal&& from) noexcept
+      : LobbyMemberDataInternal(nullptr, ::std::move(from)) {}
+  inline LobbyMemberDataInternal& operator=(const LobbyMemberDataInternal& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LobbyMemberDataInternal& operator=(LobbyMemberDataInternal&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const LobbyMemberDataInternal& default_instance() {
+    return *reinterpret_cast<const LobbyMemberDataInternal*>(
+        &_LobbyMemberDataInternal_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 95;
+  friend void swap(LobbyMemberDataInternal& a, LobbyMemberDataInternal& b) { a.Swap(&b); }
+  inline void Swap(LobbyMemberDataInternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LobbyMemberDataInternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LobbyMemberDataInternal* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<LobbyMemberDataInternal>(arena);
+  }
+  void CopyFrom(const LobbyMemberDataInternal& from);
+  void MergeFrom(const LobbyMemberDataInternal& from) { LobbyMemberDataInternal::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(LobbyMemberDataInternal* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.LobbyMemberDataInternal"; }
+
+  explicit LobbyMemberDataInternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  LobbyMemberDataInternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const LobbyMemberDataInternal& from);
+  LobbyMemberDataInternal(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, LobbyMemberDataInternal&& from) noexcept
+      : LobbyMemberDataInternal(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kJoinedSessionInfoFieldNumber = 5,
+    kLobbyMemberBinAttrInternalFieldNumber = 6,
+    kUserInfoFieldNumber = 1,
+    kJoinDateFieldNumber = 2,
+    kMemberIdFieldNumber = 3,
+    kFlagAttrFieldNumber = 4,
+  };
+  // repeated .np2_structs.JoinedSessionInfo joinedSessionInfo = 5;
+  int joinedsessioninfo_size() const;
+  private:
+  int _internal_joinedsessioninfo_size() const;
+
+  public:
+  void clear_joinedsessioninfo() ;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL mutable_joinedsessioninfo(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL mutable_joinedsessioninfo();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& _internal_joinedsessioninfo() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL _internal_mutable_joinedsessioninfo();
+  public:
+  const ::np2_structs::JoinedSessionInfo& joinedsessioninfo(int index) const;
+  ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL add_joinedsessioninfo();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& joinedsessioninfo() const;
+  // repeated .np2_structs.RoomMemberBinAttrInternal lobbyMemberBinAttrInternal = 6;
+  int lobbymemberbinattrinternal_size() const;
+  private:
+  int _internal_lobbymemberbinattrinternal_size() const;
+
+  public:
+  void clear_lobbymemberbinattrinternal() ;
+  ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL mutable_lobbymemberbinattrinternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL mutable_lobbymemberbinattrinternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>& _internal_lobbymemberbinattrinternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL _internal_mutable_lobbymemberbinattrinternal();
+  public:
+  const ::np2_structs::RoomMemberBinAttrInternal& lobbymemberbinattrinternal(int index) const;
+  ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL add_lobbymemberbinattrinternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>& lobbymemberbinattrinternal() const;
+  // .np2_structs.UserInfo userInfo = 1;
+  bool has_userinfo() const;
+  void clear_userinfo() ;
+  const ::np2_structs::UserInfo& userinfo() const;
+  [[nodiscard]] ::np2_structs::UserInfo* PROTOBUF_NULLABLE release_userinfo();
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL mutable_userinfo();
+  void set_allocated_userinfo(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_userinfo(::np2_structs::UserInfo* PROTOBUF_NULLABLE value);
+  ::np2_structs::UserInfo* PROTOBUF_NULLABLE unsafe_arena_release_userinfo();
+
+  private:
+  const ::np2_structs::UserInfo& _internal_userinfo() const;
+  ::np2_structs::UserInfo* PROTOBUF_NONNULL _internal_mutable_userinfo();
+
+  public:
+  // uint64 joinDate = 2;
+  void clear_joindate() ;
+  ::uint64_t joindate() const;
+  void set_joindate(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_joindate() const;
+  void _internal_set_joindate(::uint64_t value);
+
+  public:
+  // uint32 memberId = 3;
+  void clear_memberid() ;
+  ::uint32_t memberid() const;
+  void set_memberid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_memberid() const;
+  void _internal_set_memberid(::uint32_t value);
+
+  public:
+  // uint32 flagAttr = 4;
+  void clear_flagattr() ;
+  ::uint32_t flagattr() const;
+  void set_flagattr(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_flagattr() const;
+  void _internal_set_flagattr(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.LobbyMemberDataInternal)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 6,
+                                   3, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const LobbyMemberDataInternal& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::JoinedSessionInfo > joinedsessioninfo_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::RoomMemberBinAttrInternal > lobbymemberbinattrinternal_;
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE userinfo_;
+    ::uint64_t joindate_;
+    ::uint32_t memberid_;
+    ::uint32_t flagattr_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<36> LobbyMemberDataInternal_class_data_;
+// -------------------------------------------------------------------
+
+class LobbyDataInternal final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.LobbyDataInternal) */ {
+ public:
+  inline LobbyDataInternal() : LobbyDataInternal(nullptr) {}
+  ~LobbyDataInternal() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(LobbyDataInternal* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(LobbyDataInternal));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LobbyDataInternal(::google::protobuf::internal::ConstantInitialized);
+
+  inline LobbyDataInternal(const LobbyDataInternal& from) : LobbyDataInternal(nullptr, from) {}
+  inline LobbyDataInternal(LobbyDataInternal&& from) noexcept
+      : LobbyDataInternal(nullptr, ::std::move(from)) {}
+  inline LobbyDataInternal& operator=(const LobbyDataInternal& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LobbyDataInternal& operator=(LobbyDataInternal&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const LobbyDataInternal& default_instance() {
+    return *reinterpret_cast<const LobbyDataInternal*>(
+        &_LobbyDataInternal_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 96;
+  friend void swap(LobbyDataInternal& a, LobbyDataInternal& b) { a.Swap(&b); }
+  inline void Swap(LobbyDataInternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LobbyDataInternal* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LobbyDataInternal* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<LobbyDataInternal>(arena);
+  }
+  void CopyFrom(const LobbyDataInternal& from);
+  void MergeFrom(const LobbyDataInternal& from) { LobbyDataInternal::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(LobbyDataInternal* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.LobbyDataInternal"; }
+
+  explicit LobbyDataInternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  LobbyDataInternal(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const LobbyDataInternal& from);
+  LobbyDataInternal(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, LobbyDataInternal&& from) noexcept
+      : LobbyDataInternal(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kMemberIdsFieldNumber = 5,
+    kLobbyBinAttrInternalFieldNumber = 8,
+    kServerIdFieldNumber = 1,
+    kWorldIdFieldNumber = 2,
+    kLobbyIdFieldNumber = 3,
+    kMaxSlotFieldNumber = 4,
+    kMeFieldNumber = 6,
+    kFlagAttrFieldNumber = 7,
+  };
+  // repeated uint32 memberIds = 5;
+  int memberids_size() const;
+  private:
+  int _internal_memberids_size() const;
+
+  public:
+  void clear_memberids() ;
+  ::uint32_t memberids(int index) const;
+  void set_memberids(int index, ::uint32_t value);
+  void add_memberids(::uint32_t value);
+  const ::google::protobuf::RepeatedField<::uint32_t>& memberids() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL mutable_memberids();
+
+  private:
+  const ::google::protobuf::RepeatedField<::uint32_t>& _internal_memberids() const;
+  ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL _internal_mutable_memberids();
+
+  public:
+  // repeated .np2_structs.BinAttrInternal lobbyBinAttrInternal = 8;
+  int lobbybinattrinternal_size() const;
+  private:
+  int _internal_lobbybinattrinternal_size() const;
+
+  public:
+  void clear_lobbybinattrinternal() ;
+  ::np2_structs::BinAttrInternal* PROTOBUF_NONNULL mutable_lobbybinattrinternal(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>* PROTOBUF_NONNULL mutable_lobbybinattrinternal();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>& _internal_lobbybinattrinternal() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>* PROTOBUF_NONNULL _internal_mutable_lobbybinattrinternal();
+  public:
+  const ::np2_structs::BinAttrInternal& lobbybinattrinternal(int index) const;
+  ::np2_structs::BinAttrInternal* PROTOBUF_NONNULL add_lobbybinattrinternal();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>& lobbybinattrinternal() const;
+  // uint32 serverId = 1;
+  void clear_serverid() ;
+  ::uint32_t serverid() const;
+  void set_serverid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_serverid() const;
+  void _internal_set_serverid(::uint32_t value);
+
+  public:
+  // uint32 worldId = 2;
+  void clear_worldid() ;
+  ::uint32_t worldid() const;
+  void set_worldid(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_worldid() const;
+  void _internal_set_worldid(::uint32_t value);
+
+  public:
+  // uint64 lobbyId = 3;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // uint32 maxSlot = 4;
+  void clear_maxslot() ;
+  ::uint32_t maxslot() const;
+  void set_maxslot(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_maxslot() const;
+  void _internal_set_maxslot(::uint32_t value);
+
+  public:
+  // uint32 me = 6;
+  void clear_me() ;
+  ::uint32_t me() const;
+  void set_me(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_me() const;
+  void _internal_set_me(::uint32_t value);
+
+  public:
+  // uint32 flagAttr = 7;
+  void clear_flagattr() ;
+  ::uint32_t flagattr() const;
+  void set_flagattr(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_flagattr() const;
+  void _internal_set_flagattr(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.LobbyDataInternal)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 8,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const LobbyDataInternal& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedField<::uint32_t> memberids_;
+    ::google::protobuf::internal::CachedSize _memberids_cached_byte_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::BinAttrInternal > lobbybinattrinternal_;
+    ::uint32_t serverid_;
+    ::uint32_t worldid_;
+    ::uint64_t lobbyid_;
+    ::uint32_t maxslot_;
+    ::uint32_t me_;
+    ::uint32_t flagattr_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<30> LobbyDataInternal_class_data_;
+// -------------------------------------------------------------------
+
 class GetRoomDataExternalListResponse final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.GetRoomDataExternalListResponse) */ {
  public:
@@ -19066,6 +22658,215 @@ class GetRoomDataExternalListResponse final : public ::google::protobuf::Message
 };
 
 extern const ::google::protobuf::internal::ClassDataLite<44> GetRoomDataExternalListResponse_class_data_;
+// -------------------------------------------------------------------
+
+class GetLobbyInfoListResponse final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.GetLobbyInfoListResponse) */ {
+ public:
+  inline GetLobbyInfoListResponse() : GetLobbyInfoListResponse(nullptr) {}
+  ~GetLobbyInfoListResponse() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(GetLobbyInfoListResponse* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(GetLobbyInfoListResponse));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR GetLobbyInfoListResponse(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetLobbyInfoListResponse(const GetLobbyInfoListResponse& from) : GetLobbyInfoListResponse(nullptr, from) {}
+  inline GetLobbyInfoListResponse(GetLobbyInfoListResponse&& from) noexcept
+      : GetLobbyInfoListResponse(nullptr, ::std::move(from)) {}
+  inline GetLobbyInfoListResponse& operator=(const GetLobbyInfoListResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetLobbyInfoListResponse& operator=(GetLobbyInfoListResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const GetLobbyInfoListResponse& default_instance() {
+    return *reinterpret_cast<const GetLobbyInfoListResponse*>(
+        &_GetLobbyInfoListResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 94;
+  friend void swap(GetLobbyInfoListResponse& a, GetLobbyInfoListResponse& b) { a.Swap(&b); }
+  inline void Swap(GetLobbyInfoListResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetLobbyInfoListResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetLobbyInfoListResponse* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<GetLobbyInfoListResponse>(arena);
+  }
+  void CopyFrom(const GetLobbyInfoListResponse& from);
+  void MergeFrom(const GetLobbyInfoListResponse& from) { GetLobbyInfoListResponse::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(GetLobbyInfoListResponse* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.GetLobbyInfoListResponse"; }
+
+  explicit GetLobbyInfoListResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  GetLobbyInfoListResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const GetLobbyInfoListResponse& from);
+  GetLobbyInfoListResponse(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, GetLobbyInfoListResponse&& from) noexcept
+      : GetLobbyInfoListResponse(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kLobbiesFieldNumber = 3,
+    kStartIndexFieldNumber = 1,
+    kTotalFieldNumber = 2,
+  };
+  // repeated .np2_structs.LobbyDataExternal lobbies = 3;
+  int lobbies_size() const;
+  private:
+  int _internal_lobbies_size() const;
+
+  public:
+  void clear_lobbies() ;
+  ::np2_structs::LobbyDataExternal* PROTOBUF_NONNULL mutable_lobbies(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>* PROTOBUF_NONNULL mutable_lobbies();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>& _internal_lobbies() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>* PROTOBUF_NONNULL _internal_mutable_lobbies();
+  public:
+  const ::np2_structs::LobbyDataExternal& lobbies(int index) const;
+  ::np2_structs::LobbyDataExternal* PROTOBUF_NONNULL add_lobbies();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>& lobbies() const;
+  // uint32 startIndex = 1;
+  void clear_startindex() ;
+  ::uint32_t startindex() const;
+  void set_startindex(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_startindex() const;
+  void _internal_set_startindex(::uint32_t value);
+
+  public:
+  // uint32 total = 2;
+  void clear_total() ;
+  ::uint32_t total() const;
+  void set_total(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_total() const;
+  void _internal_set_total(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.GetLobbyInfoListResponse)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 3,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const GetLobbyInfoListResponse& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::LobbyDataExternal > lobbies_;
+    ::uint32_t startindex_;
+    ::uint32_t total_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<37> GetLobbyInfoListResponse_class_data_;
 // -------------------------------------------------------------------
 
 class RoomMemberUpdateInfo final : public ::google::protobuf::MessageLite
@@ -19845,6 +23646,586 @@ class RoomDataInternal final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<29> RoomDataInternal_class_data_;
 // -------------------------------------------------------------------
 
+class LobbyMemberUpdateInfo final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.LobbyMemberUpdateInfo) */ {
+ public:
+  inline LobbyMemberUpdateInfo() : LobbyMemberUpdateInfo(nullptr) {}
+  ~LobbyMemberUpdateInfo() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(LobbyMemberUpdateInfo* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(LobbyMemberUpdateInfo));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR LobbyMemberUpdateInfo(::google::protobuf::internal::ConstantInitialized);
+
+  inline LobbyMemberUpdateInfo(const LobbyMemberUpdateInfo& from) : LobbyMemberUpdateInfo(nullptr, from) {}
+  inline LobbyMemberUpdateInfo(LobbyMemberUpdateInfo&& from) noexcept
+      : LobbyMemberUpdateInfo(nullptr, ::std::move(from)) {}
+  inline LobbyMemberUpdateInfo& operator=(const LobbyMemberUpdateInfo& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline LobbyMemberUpdateInfo& operator=(LobbyMemberUpdateInfo&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const LobbyMemberUpdateInfo& default_instance() {
+    return *reinterpret_cast<const LobbyMemberUpdateInfo*>(
+        &_LobbyMemberUpdateInfo_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 105;
+  friend void swap(LobbyMemberUpdateInfo& a, LobbyMemberUpdateInfo& b) { a.Swap(&b); }
+  inline void Swap(LobbyMemberUpdateInfo* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(LobbyMemberUpdateInfo* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  LobbyMemberUpdateInfo* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<LobbyMemberUpdateInfo>(arena);
+  }
+  void CopyFrom(const LobbyMemberUpdateInfo& from);
+  void MergeFrom(const LobbyMemberUpdateInfo& from) { LobbyMemberUpdateInfo::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(LobbyMemberUpdateInfo* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.LobbyMemberUpdateInfo"; }
+
+  explicit LobbyMemberUpdateInfo(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  LobbyMemberUpdateInfo(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const LobbyMemberUpdateInfo& from);
+  LobbyMemberUpdateInfo(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, LobbyMemberUpdateInfo&& from) noexcept
+      : LobbyMemberUpdateInfo(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kLobbyMemberDataInternalFieldNumber = 1,
+    kOptDataFieldNumber = 3,
+    kEventCauseFieldNumber = 2,
+  };
+  // .np2_structs.LobbyMemberDataInternal lobbyMemberDataInternal = 1;
+  bool has_lobbymemberdatainternal() const;
+  void clear_lobbymemberdatainternal() ;
+  const ::np2_structs::LobbyMemberDataInternal& lobbymemberdatainternal() const;
+  [[nodiscard]] ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE release_lobbymemberdatainternal();
+  ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL mutable_lobbymemberdatainternal();
+  void set_allocated_lobbymemberdatainternal(::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_lobbymemberdatainternal(::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE value);
+  ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE unsafe_arena_release_lobbymemberdatainternal();
+
+  private:
+  const ::np2_structs::LobbyMemberDataInternal& _internal_lobbymemberdatainternal() const;
+  ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL _internal_mutable_lobbymemberdatainternal();
+
+  public:
+  // .np2_structs.PresenceOptionData optData = 3;
+  bool has_optdata() const;
+  void clear_optdata() ;
+  const ::np2_structs::PresenceOptionData& optdata() const;
+  [[nodiscard]] ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE release_optdata();
+  ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL mutable_optdata();
+  void set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value);
+  ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE unsafe_arena_release_optdata();
+
+  private:
+  const ::np2_structs::PresenceOptionData& _internal_optdata() const;
+  ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL _internal_mutable_optdata();
+
+  public:
+  // uint32 eventCause = 2;
+  void clear_eventcause() ;
+  ::uint32_t eventcause() const;
+  void set_eventcause(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_eventcause() const;
+  void _internal_set_eventcause(::uint32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.LobbyMemberUpdateInfo)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<2, 3,
+                                   2, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const LobbyMemberUpdateInfo& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE lobbymemberdatainternal_;
+    ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE optdata_;
+    ::uint32_t eventcause_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<34> LobbyMemberUpdateInfo_class_data_;
+// -------------------------------------------------------------------
+
+class JoinLobbyResponse final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.JoinLobbyResponse) */ {
+ public:
+  inline JoinLobbyResponse() : JoinLobbyResponse(nullptr) {}
+  ~JoinLobbyResponse() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(JoinLobbyResponse* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(JoinLobbyResponse));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR JoinLobbyResponse(::google::protobuf::internal::ConstantInitialized);
+
+  inline JoinLobbyResponse(const JoinLobbyResponse& from) : JoinLobbyResponse(nullptr, from) {}
+  inline JoinLobbyResponse(JoinLobbyResponse&& from) noexcept
+      : JoinLobbyResponse(nullptr, ::std::move(from)) {}
+  inline JoinLobbyResponse& operator=(const JoinLobbyResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline JoinLobbyResponse& operator=(JoinLobbyResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const JoinLobbyResponse& default_instance() {
+    return *reinterpret_cast<const JoinLobbyResponse*>(
+        &_JoinLobbyResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 98;
+  friend void swap(JoinLobbyResponse& a, JoinLobbyResponse& b) { a.Swap(&b); }
+  inline void Swap(JoinLobbyResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(JoinLobbyResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  JoinLobbyResponse* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<JoinLobbyResponse>(arena);
+  }
+  void CopyFrom(const JoinLobbyResponse& from);
+  void MergeFrom(const JoinLobbyResponse& from) { JoinLobbyResponse::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(JoinLobbyResponse* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.JoinLobbyResponse"; }
+
+  explicit JoinLobbyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  JoinLobbyResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const JoinLobbyResponse& from);
+  JoinLobbyResponse(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, JoinLobbyResponse&& from) noexcept
+      : JoinLobbyResponse(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kLobbyDataFieldNumber = 1,
+  };
+  // .np2_structs.LobbyDataInternal lobbyData = 1;
+  bool has_lobbydata() const;
+  void clear_lobbydata() ;
+  const ::np2_structs::LobbyDataInternal& lobbydata() const;
+  [[nodiscard]] ::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE release_lobbydata();
+  ::np2_structs::LobbyDataInternal* PROTOBUF_NONNULL mutable_lobbydata();
+  void set_allocated_lobbydata(::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_lobbydata(::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE value);
+  ::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE unsafe_arena_release_lobbydata();
+
+  private:
+  const ::np2_structs::LobbyDataInternal& _internal_lobbydata() const;
+  ::np2_structs::LobbyDataInternal* PROTOBUF_NONNULL _internal_mutable_lobbydata();
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.JoinLobbyResponse)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<0, 1,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const JoinLobbyResponse& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE lobbydata_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<30> JoinLobbyResponse_class_data_;
+// -------------------------------------------------------------------
+
+class GetLobbyMemberDataInternalListResponse final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.GetLobbyMemberDataInternalListResponse) */ {
+ public:
+  inline GetLobbyMemberDataInternalListResponse() : GetLobbyMemberDataInternalListResponse(nullptr) {}
+  ~GetLobbyMemberDataInternalListResponse() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(GetLobbyMemberDataInternalListResponse* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(GetLobbyMemberDataInternalListResponse));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR GetLobbyMemberDataInternalListResponse(::google::protobuf::internal::ConstantInitialized);
+
+  inline GetLobbyMemberDataInternalListResponse(const GetLobbyMemberDataInternalListResponse& from) : GetLobbyMemberDataInternalListResponse(nullptr, from) {}
+  inline GetLobbyMemberDataInternalListResponse(GetLobbyMemberDataInternalListResponse&& from) noexcept
+      : GetLobbyMemberDataInternalListResponse(nullptr, ::std::move(from)) {}
+  inline GetLobbyMemberDataInternalListResponse& operator=(const GetLobbyMemberDataInternalListResponse& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline GetLobbyMemberDataInternalListResponse& operator=(GetLobbyMemberDataInternalListResponse&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const GetLobbyMemberDataInternalListResponse& default_instance() {
+    return *reinterpret_cast<const GetLobbyMemberDataInternalListResponse*>(
+        &_GetLobbyMemberDataInternalListResponse_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 102;
+  friend void swap(GetLobbyMemberDataInternalListResponse& a, GetLobbyMemberDataInternalListResponse& b) { a.Swap(&b); }
+  inline void Swap(GetLobbyMemberDataInternalListResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(GetLobbyMemberDataInternalListResponse* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  GetLobbyMemberDataInternalListResponse* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<GetLobbyMemberDataInternalListResponse>(arena);
+  }
+  void CopyFrom(const GetLobbyMemberDataInternalListResponse& from);
+  void MergeFrom(const GetLobbyMemberDataInternalListResponse& from) { GetLobbyMemberDataInternalListResponse::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(GetLobbyMemberDataInternalListResponse* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.GetLobbyMemberDataInternalListResponse"; }
+
+  explicit GetLobbyMemberDataInternalListResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  GetLobbyMemberDataInternalListResponse(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const GetLobbyMemberDataInternalListResponse& from);
+  GetLobbyMemberDataInternalListResponse(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, GetLobbyMemberDataInternalListResponse&& from) noexcept
+      : GetLobbyMemberDataInternalListResponse(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kMembersFieldNumber = 1,
+  };
+  // repeated .np2_structs.LobbyMemberDataInternal members = 1;
+  int members_size() const;
+  private:
+  int _internal_members_size() const;
+
+  public:
+  void clear_members() ;
+  ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL mutable_members(int index);
+  ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>* PROTOBUF_NONNULL mutable_members();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>& _internal_members() const;
+  ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>* PROTOBUF_NONNULL _internal_mutable_members();
+  public:
+  const ::np2_structs::LobbyMemberDataInternal& members(int index) const;
+  ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL add_members();
+  const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>& members() const;
+  // @@protoc_insertion_point(class_scope:np2_structs.GetLobbyMemberDataInternalListResponse)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<0, 1,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const GetLobbyMemberDataInternalListResponse& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::RepeatedPtrField< ::np2_structs::LobbyMemberDataInternal > members_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<51> GetLobbyMemberDataInternalListResponse_class_data_;
+// -------------------------------------------------------------------
+
 class RoomDataInternalUpdateInfo final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:np2_structs.RoomDataInternalUpdateInfo) */ {
  public:
@@ -20298,6 +24679,201 @@ class NotificationUserJoinedRoom final : public ::google::protobuf::MessageLite
 };
 
 extern const ::google::protobuf::internal::ClassDataLite<39> NotificationUserJoinedRoom_class_data_;
+// -------------------------------------------------------------------
+
+class NotificationLobbyMemberUpdate final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:np2_structs.NotificationLobbyMemberUpdate) */ {
+ public:
+  inline NotificationLobbyMemberUpdate() : NotificationLobbyMemberUpdate(nullptr) {}
+  ~NotificationLobbyMemberUpdate() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(NotificationLobbyMemberUpdate* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(NotificationLobbyMemberUpdate));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR NotificationLobbyMemberUpdate(::google::protobuf::internal::ConstantInitialized);
+
+  inline NotificationLobbyMemberUpdate(const NotificationLobbyMemberUpdate& from) : NotificationLobbyMemberUpdate(nullptr, from) {}
+  inline NotificationLobbyMemberUpdate(NotificationLobbyMemberUpdate&& from) noexcept
+      : NotificationLobbyMemberUpdate(nullptr, ::std::move(from)) {}
+  inline NotificationLobbyMemberUpdate& operator=(const NotificationLobbyMemberUpdate& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline NotificationLobbyMemberUpdate& operator=(NotificationLobbyMemberUpdate&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const NotificationLobbyMemberUpdate& default_instance() {
+    return *reinterpret_cast<const NotificationLobbyMemberUpdate*>(
+        &_NotificationLobbyMemberUpdate_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 106;
+  friend void swap(NotificationLobbyMemberUpdate& a, NotificationLobbyMemberUpdate& b) { a.Swap(&b); }
+  inline void Swap(NotificationLobbyMemberUpdate* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(NotificationLobbyMemberUpdate* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  NotificationLobbyMemberUpdate* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<NotificationLobbyMemberUpdate>(arena);
+  }
+  void CopyFrom(const NotificationLobbyMemberUpdate& from);
+  void MergeFrom(const NotificationLobbyMemberUpdate& from) { NotificationLobbyMemberUpdate::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(NotificationLobbyMemberUpdate* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "np2_structs.NotificationLobbyMemberUpdate"; }
+
+  explicit NotificationLobbyMemberUpdate(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  NotificationLobbyMemberUpdate(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const NotificationLobbyMemberUpdate& from);
+  NotificationLobbyMemberUpdate(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, NotificationLobbyMemberUpdate&& from) noexcept
+      : NotificationLobbyMemberUpdate(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kUpdateInfoFieldNumber = 2,
+    kLobbyIdFieldNumber = 1,
+  };
+  // .np2_structs.LobbyMemberUpdateInfo updateInfo = 2;
+  bool has_updateinfo() const;
+  void clear_updateinfo() ;
+  const ::np2_structs::LobbyMemberUpdateInfo& updateinfo() const;
+  [[nodiscard]] ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE release_updateinfo();
+  ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NONNULL mutable_updateinfo();
+  void set_allocated_updateinfo(::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_updateinfo(::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE value);
+  ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE unsafe_arena_release_updateinfo();
+
+  private:
+  const ::np2_structs::LobbyMemberUpdateInfo& _internal_updateinfo() const;
+  ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NONNULL _internal_mutable_updateinfo();
+
+  public:
+  // uint64 lobbyId = 1;
+  void clear_lobbyid() ;
+  ::uint64_t lobbyid() const;
+  void set_lobbyid(::uint64_t value);
+
+  private:
+  ::uint64_t _internal_lobbyid() const;
+  void _internal_set_lobbyid(::uint64_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:np2_structs.NotificationLobbyMemberUpdate)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<1, 2,
+                                   1, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const NotificationLobbyMemberUpdate& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE updateinfo_;
+    ::uint64_t lobbyid_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_np2_5fstructs_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<42> NotificationLobbyMemberUpdate_class_data_;
 // -------------------------------------------------------------------
 
 class JoinRoomResponse final : public ::google::protobuf::MessageLite
@@ -39293,6 +43869,3919 @@ inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberDataExterna
 GetRoomMemberDataExternalListResponse::_internal_mutable_members() {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return &_impl_.members_;
+}
+
+// -------------------------------------------------------------------
+
+// JoinedSessionInfo
+
+// uint32 sessionType = 1;
+inline void JoinedSessionInfo::clear_sessiontype() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.sessiontype_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t JoinedSessionInfo::sessiontype() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinedSessionInfo.sessionType)
+  return _internal_sessiontype();
+}
+inline void JoinedSessionInfo::set_sessiontype(::uint32_t value) {
+  _internal_set_sessiontype(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinedSessionInfo.sessionType)
+}
+inline ::uint32_t JoinedSessionInfo::_internal_sessiontype() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.sessiontype_;
+}
+inline void JoinedSessionInfo::_internal_set_sessiontype(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.sessiontype_ = value;
+}
+
+// uint32 serverId = 2;
+inline void JoinedSessionInfo::clear_serverid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.serverid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::uint32_t JoinedSessionInfo::serverid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinedSessionInfo.serverId)
+  return _internal_serverid();
+}
+inline void JoinedSessionInfo::set_serverid(::uint32_t value) {
+  _internal_set_serverid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinedSessionInfo.serverId)
+}
+inline ::uint32_t JoinedSessionInfo::_internal_serverid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.serverid_;
+}
+inline void JoinedSessionInfo::_internal_set_serverid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.serverid_ = value;
+}
+
+// uint32 worldId = 3;
+inline void JoinedSessionInfo::clear_worldid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t JoinedSessionInfo::worldid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinedSessionInfo.worldId)
+  return _internal_worldid();
+}
+inline void JoinedSessionInfo::set_worldid(::uint32_t value) {
+  _internal_set_worldid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinedSessionInfo.worldId)
+}
+inline ::uint32_t JoinedSessionInfo::_internal_worldid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.worldid_;
+}
+inline void JoinedSessionInfo::_internal_set_worldid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = value;
+}
+
+// uint64 lobbyId = 4;
+inline void JoinedSessionInfo::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint64_t JoinedSessionInfo::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinedSessionInfo.lobbyId)
+  return _internal_lobbyid();
+}
+inline void JoinedSessionInfo::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinedSessionInfo.lobbyId)
+}
+inline ::uint64_t JoinedSessionInfo::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void JoinedSessionInfo::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint64 roomId = 5;
+inline void JoinedSessionInfo::clear_roomid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.roomid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint64_t JoinedSessionInfo::roomid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinedSessionInfo.roomId)
+  return _internal_roomid();
+}
+inline void JoinedSessionInfo::set_roomid(::uint64_t value) {
+  _internal_set_roomid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinedSessionInfo.roomId)
+}
+inline ::uint64_t JoinedSessionInfo::_internal_roomid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.roomid_;
+}
+inline void JoinedSessionInfo::_internal_set_roomid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.roomid_ = value;
+}
+
+// uint64 joinDate = 6;
+inline void JoinedSessionInfo::clear_joindate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joindate_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint64_t JoinedSessionInfo::joindate() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinedSessionInfo.joinDate)
+  return _internal_joindate();
+}
+inline void JoinedSessionInfo::set_joindate(::uint64_t value) {
+  _internal_set_joindate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinedSessionInfo.joinDate)
+}
+inline ::uint64_t JoinedSessionInfo::_internal_joindate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.joindate_;
+}
+inline void JoinedSessionInfo::_internal_set_joindate(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joindate_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// LobbyDataExternal
+
+// uint32 serverId = 1;
+inline void LobbyDataExternal::clear_serverid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.serverid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint32_t LobbyDataExternal::serverid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.serverId)
+  return _internal_serverid();
+}
+inline void LobbyDataExternal::set_serverid(::uint32_t value) {
+  _internal_set_serverid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataExternal.serverId)
+}
+inline ::uint32_t LobbyDataExternal::_internal_serverid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.serverid_;
+}
+inline void LobbyDataExternal::_internal_set_serverid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.serverid_ = value;
+}
+
+// uint32 worldId = 2;
+inline void LobbyDataExternal::clear_worldid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t LobbyDataExternal::worldid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.worldId)
+  return _internal_worldid();
+}
+inline void LobbyDataExternal::set_worldid(::uint32_t value) {
+  _internal_set_worldid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataExternal.worldId)
+}
+inline ::uint32_t LobbyDataExternal::_internal_worldid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.worldid_;
+}
+inline void LobbyDataExternal::_internal_set_worldid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = value;
+}
+
+// uint64 lobbyId = 3;
+inline void LobbyDataExternal::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint64_t LobbyDataExternal::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.lobbyId)
+  return _internal_lobbyid();
+}
+inline void LobbyDataExternal::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataExternal.lobbyId)
+}
+inline ::uint64_t LobbyDataExternal::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void LobbyDataExternal::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 maxSlot = 4;
+inline void LobbyDataExternal::clear_maxslot() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.maxslot_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline ::uint32_t LobbyDataExternal::maxslot() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.maxSlot)
+  return _internal_maxslot();
+}
+inline void LobbyDataExternal::set_maxslot(::uint32_t value) {
+  _internal_set_maxslot(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataExternal.maxSlot)
+}
+inline ::uint32_t LobbyDataExternal::_internal_maxslot() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.maxslot_;
+}
+inline void LobbyDataExternal::_internal_set_maxslot(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.maxslot_ = value;
+}
+
+// uint32 curMemberNum = 5;
+inline void LobbyDataExternal::clear_curmembernum() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.curmembernum_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000080U);
+}
+inline ::uint32_t LobbyDataExternal::curmembernum() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.curMemberNum)
+  return _internal_curmembernum();
+}
+inline void LobbyDataExternal::set_curmembernum(::uint32_t value) {
+  _internal_set_curmembernum(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataExternal.curMemberNum)
+}
+inline ::uint32_t LobbyDataExternal::_internal_curmembernum() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.curmembernum_;
+}
+inline void LobbyDataExternal::_internal_set_curmembernum(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.curmembernum_ = value;
+}
+
+// uint32 flagAttr = 6;
+inline void LobbyDataExternal::clear_flagattr() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000100U);
+}
+inline ::uint32_t LobbyDataExternal::flagattr() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.flagAttr)
+  return _internal_flagattr();
+}
+inline void LobbyDataExternal::set_flagattr(::uint32_t value) {
+  _internal_set_flagattr(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataExternal.flagAttr)
+}
+inline ::uint32_t LobbyDataExternal::_internal_flagattr() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.flagattr_;
+}
+inline void LobbyDataExternal::_internal_set_flagattr(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = value;
+}
+
+// repeated .np2_structs.IntAttr lobbySearchableIntAttrExternal = 7;
+inline int LobbyDataExternal::_internal_lobbysearchableintattrexternal_size() const {
+  return _internal_lobbysearchableintattrexternal().size();
+}
+inline int LobbyDataExternal::lobbysearchableintattrexternal_size() const {
+  return _internal_lobbysearchableintattrexternal_size();
+}
+inline void LobbyDataExternal::clear_lobbysearchableintattrexternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbysearchableintattrexternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::IntAttr* PROTOBUF_NONNULL LobbyDataExternal::mutable_lobbysearchableintattrexternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyDataExternal.lobbySearchableIntAttrExternal)
+  return _internal_mutable_lobbysearchableintattrexternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>* PROTOBUF_NONNULL LobbyDataExternal::mutable_lobbysearchableintattrexternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyDataExternal.lobbySearchableIntAttrExternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbysearchableintattrexternal();
+}
+inline const ::np2_structs::IntAttr& LobbyDataExternal::lobbysearchableintattrexternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.lobbySearchableIntAttrExternal)
+  return _internal_lobbysearchableintattrexternal().Get(index);
+}
+inline ::np2_structs::IntAttr* PROTOBUF_NONNULL LobbyDataExternal::add_lobbysearchableintattrexternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::IntAttr* _add =
+      _internal_mutable_lobbysearchableintattrexternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyDataExternal.lobbySearchableIntAttrExternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>& LobbyDataExternal::lobbysearchableintattrexternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyDataExternal.lobbySearchableIntAttrExternal)
+  return _internal_lobbysearchableintattrexternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>&
+LobbyDataExternal::_internal_lobbysearchableintattrexternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbysearchableintattrexternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::IntAttr>* PROTOBUF_NONNULL
+LobbyDataExternal::_internal_mutable_lobbysearchableintattrexternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbysearchableintattrexternal_;
+}
+
+// repeated .np2_structs.BinAttr lobbySearchableBinAttrExternal = 8;
+inline int LobbyDataExternal::_internal_lobbysearchablebinattrexternal_size() const {
+  return _internal_lobbysearchablebinattrexternal().size();
+}
+inline int LobbyDataExternal::lobbysearchablebinattrexternal_size() const {
+  return _internal_lobbysearchablebinattrexternal_size();
+}
+inline void LobbyDataExternal::clear_lobbysearchablebinattrexternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbysearchablebinattrexternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL LobbyDataExternal::mutable_lobbysearchablebinattrexternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyDataExternal.lobbySearchableBinAttrExternal)
+  return _internal_mutable_lobbysearchablebinattrexternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL LobbyDataExternal::mutable_lobbysearchablebinattrexternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyDataExternal.lobbySearchableBinAttrExternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbysearchablebinattrexternal();
+}
+inline const ::np2_structs::BinAttr& LobbyDataExternal::lobbysearchablebinattrexternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.lobbySearchableBinAttrExternal)
+  return _internal_lobbysearchablebinattrexternal().Get(index);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL LobbyDataExternal::add_lobbysearchablebinattrexternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::BinAttr* _add =
+      _internal_mutable_lobbysearchablebinattrexternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyDataExternal.lobbySearchableBinAttrExternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& LobbyDataExternal::lobbysearchablebinattrexternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyDataExternal.lobbySearchableBinAttrExternal)
+  return _internal_lobbysearchablebinattrexternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>&
+LobbyDataExternal::_internal_lobbysearchablebinattrexternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbysearchablebinattrexternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL
+LobbyDataExternal::_internal_mutable_lobbysearchablebinattrexternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbysearchablebinattrexternal_;
+}
+
+// repeated .np2_structs.BinAttr lobbyBinAttrExternal = 9;
+inline int LobbyDataExternal::_internal_lobbybinattrexternal_size() const {
+  return _internal_lobbybinattrexternal().size();
+}
+inline int LobbyDataExternal::lobbybinattrexternal_size() const {
+  return _internal_lobbybinattrexternal_size();
+}
+inline void LobbyDataExternal::clear_lobbybinattrexternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbybinattrexternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL LobbyDataExternal::mutable_lobbybinattrexternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyDataExternal.lobbyBinAttrExternal)
+  return _internal_mutable_lobbybinattrexternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL LobbyDataExternal::mutable_lobbybinattrexternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyDataExternal.lobbyBinAttrExternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbybinattrexternal();
+}
+inline const ::np2_structs::BinAttr& LobbyDataExternal::lobbybinattrexternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataExternal.lobbyBinAttrExternal)
+  return _internal_lobbybinattrexternal().Get(index);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL LobbyDataExternal::add_lobbybinattrexternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::BinAttr* _add =
+      _internal_mutable_lobbybinattrexternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyDataExternal.lobbyBinAttrExternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& LobbyDataExternal::lobbybinattrexternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyDataExternal.lobbyBinAttrExternal)
+  return _internal_lobbybinattrexternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>&
+LobbyDataExternal::_internal_lobbybinattrexternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbybinattrexternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL
+LobbyDataExternal::_internal_mutable_lobbybinattrexternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbybinattrexternal_;
+}
+
+// -------------------------------------------------------------------
+
+// GetLobbyInfoListRequest
+
+// uint32 worldId = 1;
+inline void GetLobbyInfoListRequest::clear_worldid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::uint32_t GetLobbyInfoListRequest::worldid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListRequest.worldId)
+  return _internal_worldid();
+}
+inline void GetLobbyInfoListRequest::set_worldid(::uint32_t value) {
+  _internal_set_worldid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyInfoListRequest.worldId)
+}
+inline ::uint32_t GetLobbyInfoListRequest::_internal_worldid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.worldid_;
+}
+inline void GetLobbyInfoListRequest::_internal_set_worldid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = value;
+}
+
+// uint32 rangeFilter_startIndex = 2;
+inline void GetLobbyInfoListRequest::clear_rangefilter_startindex() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rangefilter_startindex_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint32_t GetLobbyInfoListRequest::rangefilter_startindex() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListRequest.rangeFilter_startIndex)
+  return _internal_rangefilter_startindex();
+}
+inline void GetLobbyInfoListRequest::set_rangefilter_startindex(::uint32_t value) {
+  _internal_set_rangefilter_startindex(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyInfoListRequest.rangeFilter_startIndex)
+}
+inline ::uint32_t GetLobbyInfoListRequest::_internal_rangefilter_startindex() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.rangefilter_startindex_;
+}
+inline void GetLobbyInfoListRequest::_internal_set_rangefilter_startindex(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rangefilter_startindex_ = value;
+}
+
+// uint32 rangeFilter_max = 3;
+inline void GetLobbyInfoListRequest::clear_rangefilter_max() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rangefilter_max_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint32_t GetLobbyInfoListRequest::rangefilter_max() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListRequest.rangeFilter_max)
+  return _internal_rangefilter_max();
+}
+inline void GetLobbyInfoListRequest::set_rangefilter_max(::uint32_t value) {
+  _internal_set_rangefilter_max(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyInfoListRequest.rangeFilter_max)
+}
+inline ::uint32_t GetLobbyInfoListRequest::_internal_rangefilter_max() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.rangefilter_max_;
+}
+inline void GetLobbyInfoListRequest::_internal_set_rangefilter_max(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rangefilter_max_ = value;
+}
+
+// repeated uint32 attrId = 4;
+inline int GetLobbyInfoListRequest::_internal_attrid_size() const {
+  return _internal_attrid().size();
+}
+inline int GetLobbyInfoListRequest::attrid_size() const {
+  return _internal_attrid_size();
+}
+inline void GetLobbyInfoListRequest::clear_attrid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.attrid_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t GetLobbyInfoListRequest::attrid(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListRequest.attrId)
+  return _internal_attrid().Get(index);
+}
+inline void GetLobbyInfoListRequest::set_attrid(int index, ::uint32_t value) {
+  _internal_mutable_attrid()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyInfoListRequest.attrId)
+}
+inline void GetLobbyInfoListRequest::add_attrid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_attrid()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.GetLobbyInfoListRequest.attrId)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& GetLobbyInfoListRequest::attrid() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.GetLobbyInfoListRequest.attrId)
+  return _internal_attrid();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL GetLobbyInfoListRequest::mutable_attrid()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.GetLobbyInfoListRequest.attrId)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_attrid();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+GetLobbyInfoListRequest::_internal_attrid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.attrid_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+GetLobbyInfoListRequest::_internal_mutable_attrid() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.attrid_;
+}
+
+// -------------------------------------------------------------------
+
+// GetLobbyInfoListResponse
+
+// uint32 startIndex = 1;
+inline void GetLobbyInfoListResponse::clear_startindex() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.startindex_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::uint32_t GetLobbyInfoListResponse::startindex() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListResponse.startIndex)
+  return _internal_startindex();
+}
+inline void GetLobbyInfoListResponse::set_startindex(::uint32_t value) {
+  _internal_set_startindex(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyInfoListResponse.startIndex)
+}
+inline ::uint32_t GetLobbyInfoListResponse::_internal_startindex() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.startindex_;
+}
+inline void GetLobbyInfoListResponse::_internal_set_startindex(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.startindex_ = value;
+}
+
+// uint32 total = 2;
+inline void GetLobbyInfoListResponse::clear_total() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.total_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint32_t GetLobbyInfoListResponse::total() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListResponse.total)
+  return _internal_total();
+}
+inline void GetLobbyInfoListResponse::set_total(::uint32_t value) {
+  _internal_set_total(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyInfoListResponse.total)
+}
+inline ::uint32_t GetLobbyInfoListResponse::_internal_total() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.total_;
+}
+inline void GetLobbyInfoListResponse::_internal_set_total(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.total_ = value;
+}
+
+// repeated .np2_structs.LobbyDataExternal lobbies = 3;
+inline int GetLobbyInfoListResponse::_internal_lobbies_size() const {
+  return _internal_lobbies().size();
+}
+inline int GetLobbyInfoListResponse::lobbies_size() const {
+  return _internal_lobbies_size();
+}
+inline void GetLobbyInfoListResponse::clear_lobbies() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbies_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::LobbyDataExternal* PROTOBUF_NONNULL GetLobbyInfoListResponse::mutable_lobbies(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.GetLobbyInfoListResponse.lobbies)
+  return _internal_mutable_lobbies()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>* PROTOBUF_NONNULL GetLobbyInfoListResponse::mutable_lobbies()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.GetLobbyInfoListResponse.lobbies)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbies();
+}
+inline const ::np2_structs::LobbyDataExternal& GetLobbyInfoListResponse::lobbies(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyInfoListResponse.lobbies)
+  return _internal_lobbies().Get(index);
+}
+inline ::np2_structs::LobbyDataExternal* PROTOBUF_NONNULL GetLobbyInfoListResponse::add_lobbies()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::LobbyDataExternal* _add =
+      _internal_mutable_lobbies()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.GetLobbyInfoListResponse.lobbies)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>& GetLobbyInfoListResponse::lobbies() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.GetLobbyInfoListResponse.lobbies)
+  return _internal_lobbies();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>&
+GetLobbyInfoListResponse::_internal_lobbies() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbies_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyDataExternal>* PROTOBUF_NONNULL
+GetLobbyInfoListResponse::_internal_mutable_lobbies() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbies_;
+}
+
+// -------------------------------------------------------------------
+
+// LobbyMemberDataInternal
+
+// .np2_structs.UserInfo userInfo = 1;
+inline bool LobbyMemberDataInternal::has_userinfo() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
+  PROTOBUF_ASSUME(!value || _impl_.userinfo_ != nullptr);
+  return value;
+}
+inline void LobbyMemberDataInternal::clear_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.userinfo_ != nullptr) _impl_.userinfo_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline const ::np2_structs::UserInfo& LobbyMemberDataInternal::_internal_userinfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::UserInfo* p = _impl_.userinfo_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::UserInfo&>(::np2_structs::_UserInfo_default_instance_);
+}
+inline const ::np2_structs::UserInfo& LobbyMemberDataInternal::userinfo() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberDataInternal.userInfo)
+  return _internal_userinfo();
+}
+inline void LobbyMemberDataInternal::unsafe_arena_set_allocated_userinfo(
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.userinfo_);
+  }
+  _impl_.userinfo_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.LobbyMemberDataInternal.userInfo)
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE LobbyMemberDataInternal::release_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::UserInfo* released = _impl_.userinfo_;
+  _impl_.userinfo_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE LobbyMemberDataInternal::unsafe_arena_release_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.LobbyMemberDataInternal.userInfo)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::UserInfo* temp = _impl_.userinfo_;
+  _impl_.userinfo_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL LobbyMemberDataInternal::_internal_mutable_userinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.userinfo_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::UserInfo>(GetArena());
+    _impl_.userinfo_ = reinterpret_cast<::np2_structs::UserInfo*>(p);
+  }
+  return _impl_.userinfo_;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL LobbyMemberDataInternal::mutable_userinfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::UserInfo* _msg = _internal_mutable_userinfo();
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyMemberDataInternal.userInfo)
+  return _msg;
+}
+inline void LobbyMemberDataInternal::set_allocated_userinfo(::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.userinfo_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+
+  _impl_.userinfo_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.LobbyMemberDataInternal.userInfo)
+}
+
+// uint64 joinDate = 2;
+inline void LobbyMemberDataInternal::clear_joindate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joindate_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint64_t LobbyMemberDataInternal::joindate() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberDataInternal.joinDate)
+  return _internal_joindate();
+}
+inline void LobbyMemberDataInternal::set_joindate(::uint64_t value) {
+  _internal_set_joindate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyMemberDataInternal.joinDate)
+}
+inline ::uint64_t LobbyMemberDataInternal::_internal_joindate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.joindate_;
+}
+inline void LobbyMemberDataInternal::_internal_set_joindate(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joindate_ = value;
+}
+
+// uint32 memberId = 3;
+inline void LobbyMemberDataInternal::clear_memberid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t LobbyMemberDataInternal::memberid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberDataInternal.memberId)
+  return _internal_memberid();
+}
+inline void LobbyMemberDataInternal::set_memberid(::uint32_t value) {
+  _internal_set_memberid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyMemberDataInternal.memberId)
+}
+inline ::uint32_t LobbyMemberDataInternal::_internal_memberid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.memberid_;
+}
+inline void LobbyMemberDataInternal::_internal_set_memberid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_ = value;
+}
+
+// uint32 flagAttr = 4;
+inline void LobbyMemberDataInternal::clear_flagattr() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t LobbyMemberDataInternal::flagattr() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberDataInternal.flagAttr)
+  return _internal_flagattr();
+}
+inline void LobbyMemberDataInternal::set_flagattr(::uint32_t value) {
+  _internal_set_flagattr(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyMemberDataInternal.flagAttr)
+}
+inline ::uint32_t LobbyMemberDataInternal::_internal_flagattr() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.flagattr_;
+}
+inline void LobbyMemberDataInternal::_internal_set_flagattr(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = value;
+}
+
+// repeated .np2_structs.JoinedSessionInfo joinedSessionInfo = 5;
+inline int LobbyMemberDataInternal::_internal_joinedsessioninfo_size() const {
+  return _internal_joinedsessioninfo().size();
+}
+inline int LobbyMemberDataInternal::joinedsessioninfo_size() const {
+  return _internal_joinedsessioninfo_size();
+}
+inline void LobbyMemberDataInternal::clear_joinedsessioninfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joinedsessioninfo_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL LobbyMemberDataInternal::mutable_joinedsessioninfo(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyMemberDataInternal.joinedSessionInfo)
+  return _internal_mutable_joinedsessioninfo()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL LobbyMemberDataInternal::mutable_joinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyMemberDataInternal.joinedSessionInfo)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_joinedsessioninfo();
+}
+inline const ::np2_structs::JoinedSessionInfo& LobbyMemberDataInternal::joinedsessioninfo(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberDataInternal.joinedSessionInfo)
+  return _internal_joinedsessioninfo().Get(index);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL LobbyMemberDataInternal::add_joinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::JoinedSessionInfo* _add =
+      _internal_mutable_joinedsessioninfo()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyMemberDataInternal.joinedSessionInfo)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& LobbyMemberDataInternal::joinedsessioninfo() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyMemberDataInternal.joinedSessionInfo)
+  return _internal_joinedsessioninfo();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>&
+LobbyMemberDataInternal::_internal_joinedsessioninfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.joinedsessioninfo_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL
+LobbyMemberDataInternal::_internal_mutable_joinedsessioninfo() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.joinedsessioninfo_;
+}
+
+// repeated .np2_structs.RoomMemberBinAttrInternal lobbyMemberBinAttrInternal = 6;
+inline int LobbyMemberDataInternal::_internal_lobbymemberbinattrinternal_size() const {
+  return _internal_lobbymemberbinattrinternal().size();
+}
+inline int LobbyMemberDataInternal::lobbymemberbinattrinternal_size() const {
+  return _internal_lobbymemberbinattrinternal_size();
+}
+inline void LobbyMemberDataInternal::clear_lobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbymemberbinattrinternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL LobbyMemberDataInternal::mutable_lobbymemberbinattrinternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyMemberDataInternal.lobbyMemberBinAttrInternal)
+  return _internal_mutable_lobbymemberbinattrinternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL LobbyMemberDataInternal::mutable_lobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyMemberDataInternal.lobbyMemberBinAttrInternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbymemberbinattrinternal();
+}
+inline const ::np2_structs::RoomMemberBinAttrInternal& LobbyMemberDataInternal::lobbymemberbinattrinternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberDataInternal.lobbyMemberBinAttrInternal)
+  return _internal_lobbymemberbinattrinternal().Get(index);
+}
+inline ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL LobbyMemberDataInternal::add_lobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::RoomMemberBinAttrInternal* _add =
+      _internal_mutable_lobbymemberbinattrinternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyMemberDataInternal.lobbyMemberBinAttrInternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>& LobbyMemberDataInternal::lobbymemberbinattrinternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyMemberDataInternal.lobbyMemberBinAttrInternal)
+  return _internal_lobbymemberbinattrinternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>&
+LobbyMemberDataInternal::_internal_lobbymemberbinattrinternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbymemberbinattrinternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL
+LobbyMemberDataInternal::_internal_mutable_lobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbymemberbinattrinternal_;
+}
+
+// -------------------------------------------------------------------
+
+// LobbyDataInternal
+
+// uint32 serverId = 1;
+inline void LobbyDataInternal::clear_serverid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.serverid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint32_t LobbyDataInternal::serverid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.serverId)
+  return _internal_serverid();
+}
+inline void LobbyDataInternal::set_serverid(::uint32_t value) {
+  _internal_set_serverid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.serverId)
+}
+inline ::uint32_t LobbyDataInternal::_internal_serverid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.serverid_;
+}
+inline void LobbyDataInternal::_internal_set_serverid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.serverid_ = value;
+}
+
+// uint32 worldId = 2;
+inline void LobbyDataInternal::clear_worldid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint32_t LobbyDataInternal::worldid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.worldId)
+  return _internal_worldid();
+}
+inline void LobbyDataInternal::set_worldid(::uint32_t value) {
+  _internal_set_worldid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.worldId)
+}
+inline ::uint32_t LobbyDataInternal::_internal_worldid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.worldid_;
+}
+inline void LobbyDataInternal::_internal_set_worldid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.worldid_ = value;
+}
+
+// uint64 lobbyId = 3;
+inline void LobbyDataInternal::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint64_t LobbyDataInternal::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.lobbyId)
+  return _internal_lobbyid();
+}
+inline void LobbyDataInternal::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.lobbyId)
+}
+inline ::uint64_t LobbyDataInternal::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void LobbyDataInternal::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 maxSlot = 4;
+inline void LobbyDataInternal::clear_maxslot() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.maxslot_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t LobbyDataInternal::maxslot() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.maxSlot)
+  return _internal_maxslot();
+}
+inline void LobbyDataInternal::set_maxslot(::uint32_t value) {
+  _internal_set_maxslot(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.maxSlot)
+}
+inline ::uint32_t LobbyDataInternal::_internal_maxslot() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.maxslot_;
+}
+inline void LobbyDataInternal::_internal_set_maxslot(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.maxslot_ = value;
+}
+
+// repeated uint32 memberIds = 5;
+inline int LobbyDataInternal::_internal_memberids_size() const {
+  return _internal_memberids().size();
+}
+inline int LobbyDataInternal::memberids_size() const {
+  return _internal_memberids_size();
+}
+inline void LobbyDataInternal::clear_memberids() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberids_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t LobbyDataInternal::memberids(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.memberIds)
+  return _internal_memberids().Get(index);
+}
+inline void LobbyDataInternal::set_memberids(int index, ::uint32_t value) {
+  _internal_mutable_memberids()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.memberIds)
+}
+inline void LobbyDataInternal::add_memberids(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_memberids()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyDataInternal.memberIds)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& LobbyDataInternal::memberids() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyDataInternal.memberIds)
+  return _internal_memberids();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL LobbyDataInternal::mutable_memberids()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyDataInternal.memberIds)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_memberids();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+LobbyDataInternal::_internal_memberids() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.memberids_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+LobbyDataInternal::_internal_mutable_memberids() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.memberids_;
+}
+
+// uint32 me = 6;
+inline void LobbyDataInternal::clear_me() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.me_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline ::uint32_t LobbyDataInternal::me() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.me)
+  return _internal_me();
+}
+inline void LobbyDataInternal::set_me(::uint32_t value) {
+  _internal_set_me(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.me)
+}
+inline ::uint32_t LobbyDataInternal::_internal_me() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.me_;
+}
+inline void LobbyDataInternal::_internal_set_me(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.me_ = value;
+}
+
+// uint32 flagAttr = 7;
+inline void LobbyDataInternal::clear_flagattr() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000080U);
+}
+inline ::uint32_t LobbyDataInternal::flagattr() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.flagAttr)
+  return _internal_flagattr();
+}
+inline void LobbyDataInternal::set_flagattr(::uint32_t value) {
+  _internal_set_flagattr(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyDataInternal.flagAttr)
+}
+inline ::uint32_t LobbyDataInternal::_internal_flagattr() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.flagattr_;
+}
+inline void LobbyDataInternal::_internal_set_flagattr(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = value;
+}
+
+// repeated .np2_structs.BinAttrInternal lobbyBinAttrInternal = 8;
+inline int LobbyDataInternal::_internal_lobbybinattrinternal_size() const {
+  return _internal_lobbybinattrinternal().size();
+}
+inline int LobbyDataInternal::lobbybinattrinternal_size() const {
+  return _internal_lobbybinattrinternal_size();
+}
+inline void LobbyDataInternal::clear_lobbybinattrinternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbybinattrinternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::BinAttrInternal* PROTOBUF_NONNULL LobbyDataInternal::mutable_lobbybinattrinternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyDataInternal.lobbyBinAttrInternal)
+  return _internal_mutable_lobbybinattrinternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>* PROTOBUF_NONNULL LobbyDataInternal::mutable_lobbybinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.LobbyDataInternal.lobbyBinAttrInternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbybinattrinternal();
+}
+inline const ::np2_structs::BinAttrInternal& LobbyDataInternal::lobbybinattrinternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyDataInternal.lobbyBinAttrInternal)
+  return _internal_lobbybinattrinternal().Get(index);
+}
+inline ::np2_structs::BinAttrInternal* PROTOBUF_NONNULL LobbyDataInternal::add_lobbybinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::BinAttrInternal* _add =
+      _internal_mutable_lobbybinattrinternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.LobbyDataInternal.lobbyBinAttrInternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>& LobbyDataInternal::lobbybinattrinternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.LobbyDataInternal.lobbyBinAttrInternal)
+  return _internal_lobbybinattrinternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>&
+LobbyDataInternal::_internal_lobbybinattrinternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbybinattrinternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttrInternal>* PROTOBUF_NONNULL
+LobbyDataInternal::_internal_mutable_lobbybinattrinternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbybinattrinternal_;
+}
+
+// -------------------------------------------------------------------
+
+// JoinLobbyRequest
+
+// uint64 lobbyId = 1;
+inline void JoinLobbyRequest::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint64_t JoinLobbyRequest::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinLobbyRequest.lobbyId)
+  return _internal_lobbyid();
+}
+inline void JoinLobbyRequest::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.JoinLobbyRequest.lobbyId)
+}
+inline ::uint64_t JoinLobbyRequest::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void JoinLobbyRequest::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// repeated .np2_structs.JoinedSessionInfo joinedSessionInfo = 2;
+inline int JoinLobbyRequest::_internal_joinedsessioninfo_size() const {
+  return _internal_joinedsessioninfo().size();
+}
+inline int JoinLobbyRequest::joinedsessioninfo_size() const {
+  return _internal_joinedsessioninfo_size();
+}
+inline void JoinLobbyRequest::clear_joinedsessioninfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joinedsessioninfo_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL JoinLobbyRequest::mutable_joinedsessioninfo(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.JoinLobbyRequest.joinedSessionInfo)
+  return _internal_mutable_joinedsessioninfo()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL JoinLobbyRequest::mutable_joinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.JoinLobbyRequest.joinedSessionInfo)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_joinedsessioninfo();
+}
+inline const ::np2_structs::JoinedSessionInfo& JoinLobbyRequest::joinedsessioninfo(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinLobbyRequest.joinedSessionInfo)
+  return _internal_joinedsessioninfo().Get(index);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL JoinLobbyRequest::add_joinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::JoinedSessionInfo* _add =
+      _internal_mutable_joinedsessioninfo()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.JoinLobbyRequest.joinedSessionInfo)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& JoinLobbyRequest::joinedsessioninfo() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.JoinLobbyRequest.joinedSessionInfo)
+  return _internal_joinedsessioninfo();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>&
+JoinLobbyRequest::_internal_joinedsessioninfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.joinedsessioninfo_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL
+JoinLobbyRequest::_internal_mutable_joinedsessioninfo() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.joinedsessioninfo_;
+}
+
+// repeated .np2_structs.BinAttr lobbyMemberBinAttrInternal = 3;
+inline int JoinLobbyRequest::_internal_lobbymemberbinattrinternal_size() const {
+  return _internal_lobbymemberbinattrinternal().size();
+}
+inline int JoinLobbyRequest::lobbymemberbinattrinternal_size() const {
+  return _internal_lobbymemberbinattrinternal_size();
+}
+inline void JoinLobbyRequest::clear_lobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbymemberbinattrinternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL JoinLobbyRequest::mutable_lobbymemberbinattrinternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.JoinLobbyRequest.lobbyMemberBinAttrInternal)
+  return _internal_mutable_lobbymemberbinattrinternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL JoinLobbyRequest::mutable_lobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.JoinLobbyRequest.lobbyMemberBinAttrInternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbymemberbinattrinternal();
+}
+inline const ::np2_structs::BinAttr& JoinLobbyRequest::lobbymemberbinattrinternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinLobbyRequest.lobbyMemberBinAttrInternal)
+  return _internal_lobbymemberbinattrinternal().Get(index);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL JoinLobbyRequest::add_lobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::BinAttr* _add =
+      _internal_mutable_lobbymemberbinattrinternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.JoinLobbyRequest.lobbyMemberBinAttrInternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& JoinLobbyRequest::lobbymemberbinattrinternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.JoinLobbyRequest.lobbyMemberBinAttrInternal)
+  return _internal_lobbymemberbinattrinternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>&
+JoinLobbyRequest::_internal_lobbymemberbinattrinternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbymemberbinattrinternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL
+JoinLobbyRequest::_internal_mutable_lobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbymemberbinattrinternal_;
+}
+
+// .np2_structs.PresenceOptionData optData = 4;
+inline bool JoinLobbyRequest::has_optdata() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
+  PROTOBUF_ASSUME(!value || _impl_.optdata_ != nullptr);
+  return value;
+}
+inline void JoinLobbyRequest::clear_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.optdata_ != nullptr) _impl_.optdata_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline const ::np2_structs::PresenceOptionData& JoinLobbyRequest::_internal_optdata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::PresenceOptionData* p = _impl_.optdata_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::PresenceOptionData&>(::np2_structs::_PresenceOptionData_default_instance_);
+}
+inline const ::np2_structs::PresenceOptionData& JoinLobbyRequest::optdata() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinLobbyRequest.optData)
+  return _internal_optdata();
+}
+inline void JoinLobbyRequest::unsafe_arena_set_allocated_optdata(
+    ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.optdata_);
+  }
+  _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.JoinLobbyRequest.optData)
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE JoinLobbyRequest::release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::PresenceOptionData* released = _impl_.optdata_;
+  _impl_.optdata_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE JoinLobbyRequest::unsafe_arena_release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.JoinLobbyRequest.optData)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::PresenceOptionData* temp = _impl_.optdata_;
+  _impl_.optdata_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL JoinLobbyRequest::_internal_mutable_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.optdata_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::PresenceOptionData>(GetArena());
+    _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(p);
+  }
+  return _impl_.optdata_;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL JoinLobbyRequest::mutable_optdata()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::PresenceOptionData* _msg = _internal_mutable_optdata();
+  // @@protoc_insertion_point(field_mutable:np2_structs.JoinLobbyRequest.optData)
+  return _msg;
+}
+inline void JoinLobbyRequest::set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.optdata_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+
+  _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.JoinLobbyRequest.optData)
+}
+
+// -------------------------------------------------------------------
+
+// JoinLobbyResponse
+
+// .np2_structs.LobbyDataInternal lobbyData = 1;
+inline bool JoinLobbyResponse::has_lobbydata() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000001U);
+  PROTOBUF_ASSUME(!value || _impl_.lobbydata_ != nullptr);
+  return value;
+}
+inline void JoinLobbyResponse::clear_lobbydata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.lobbydata_ != nullptr) _impl_.lobbydata_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::np2_structs::LobbyDataInternal& JoinLobbyResponse::_internal_lobbydata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::LobbyDataInternal* p = _impl_.lobbydata_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::LobbyDataInternal&>(::np2_structs::_LobbyDataInternal_default_instance_);
+}
+inline const ::np2_structs::LobbyDataInternal& JoinLobbyResponse::lobbydata() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.JoinLobbyResponse.lobbyData)
+  return _internal_lobbydata();
+}
+inline void JoinLobbyResponse::unsafe_arena_set_allocated_lobbydata(
+    ::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.lobbydata_);
+  }
+  _impl_.lobbydata_ = reinterpret_cast<::np2_structs::LobbyDataInternal*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.JoinLobbyResponse.lobbyData)
+}
+inline ::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE JoinLobbyResponse::release_lobbydata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyDataInternal* released = _impl_.lobbydata_;
+  _impl_.lobbydata_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE JoinLobbyResponse::unsafe_arena_release_lobbydata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.JoinLobbyResponse.lobbyData)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyDataInternal* temp = _impl_.lobbydata_;
+  _impl_.lobbydata_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::LobbyDataInternal* PROTOBUF_NONNULL JoinLobbyResponse::_internal_mutable_lobbydata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.lobbydata_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::LobbyDataInternal>(GetArena());
+    _impl_.lobbydata_ = reinterpret_cast<::np2_structs::LobbyDataInternal*>(p);
+  }
+  return _impl_.lobbydata_;
+}
+inline ::np2_structs::LobbyDataInternal* PROTOBUF_NONNULL JoinLobbyResponse::mutable_lobbydata()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyDataInternal* _msg = _internal_mutable_lobbydata();
+  // @@protoc_insertion_point(field_mutable:np2_structs.JoinLobbyResponse.lobbyData)
+  return _msg;
+}
+inline void JoinLobbyResponse::set_allocated_lobbydata(::np2_structs::LobbyDataInternal* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.lobbydata_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+
+  _impl_.lobbydata_ = reinterpret_cast<::np2_structs::LobbyDataInternal*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.JoinLobbyResponse.lobbyData)
+}
+
+// -------------------------------------------------------------------
+
+// LeaveLobbyRequest
+
+// uint64 lobbyId = 1;
+inline void LeaveLobbyRequest::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::uint64_t LeaveLobbyRequest::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LeaveLobbyRequest.lobbyId)
+  return _internal_lobbyid();
+}
+inline void LeaveLobbyRequest::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_set:np2_structs.LeaveLobbyRequest.lobbyId)
+}
+inline ::uint64_t LeaveLobbyRequest::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void LeaveLobbyRequest::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// .np2_structs.PresenceOptionData optData = 2;
+inline bool LeaveLobbyRequest::has_optdata() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000001U);
+  PROTOBUF_ASSUME(!value || _impl_.optdata_ != nullptr);
+  return value;
+}
+inline void LeaveLobbyRequest::clear_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.optdata_ != nullptr) _impl_.optdata_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::np2_structs::PresenceOptionData& LeaveLobbyRequest::_internal_optdata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::PresenceOptionData* p = _impl_.optdata_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::PresenceOptionData&>(::np2_structs::_PresenceOptionData_default_instance_);
+}
+inline const ::np2_structs::PresenceOptionData& LeaveLobbyRequest::optdata() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LeaveLobbyRequest.optData)
+  return _internal_optdata();
+}
+inline void LeaveLobbyRequest::unsafe_arena_set_allocated_optdata(
+    ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.optdata_);
+  }
+  _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.LeaveLobbyRequest.optData)
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE LeaveLobbyRequest::release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::PresenceOptionData* released = _impl_.optdata_;
+  _impl_.optdata_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE LeaveLobbyRequest::unsafe_arena_release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.LeaveLobbyRequest.optData)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::PresenceOptionData* temp = _impl_.optdata_;
+  _impl_.optdata_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL LeaveLobbyRequest::_internal_mutable_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.optdata_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::PresenceOptionData>(GetArena());
+    _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(p);
+  }
+  return _impl_.optdata_;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL LeaveLobbyRequest::mutable_optdata()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::PresenceOptionData* _msg = _internal_mutable_optdata();
+  // @@protoc_insertion_point(field_mutable:np2_structs.LeaveLobbyRequest.optData)
+  return _msg;
+}
+inline void LeaveLobbyRequest::set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.optdata_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+
+  _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.LeaveLobbyRequest.optData)
+}
+
+// -------------------------------------------------------------------
+
+// SetLobbyMemberDataInternalRequest
+
+// uint64 lobbyId = 1;
+inline void SetLobbyMemberDataInternalRequest::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint64_t SetLobbyMemberDataInternalRequest::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SetLobbyMemberDataInternalRequest.lobbyId)
+  return _internal_lobbyid();
+}
+inline void SetLobbyMemberDataInternalRequest::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.SetLobbyMemberDataInternalRequest.lobbyId)
+}
+inline ::uint64_t SetLobbyMemberDataInternalRequest::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void SetLobbyMemberDataInternalRequest::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 memberId = 2;
+inline void SetLobbyMemberDataInternalRequest::clear_memberid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint32_t SetLobbyMemberDataInternalRequest::memberid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SetLobbyMemberDataInternalRequest.memberId)
+  return _internal_memberid();
+}
+inline void SetLobbyMemberDataInternalRequest::set_memberid(::uint32_t value) {
+  _internal_set_memberid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.SetLobbyMemberDataInternalRequest.memberId)
+}
+inline ::uint32_t SetLobbyMemberDataInternalRequest::_internal_memberid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.memberid_;
+}
+inline void SetLobbyMemberDataInternalRequest::_internal_set_memberid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_ = value;
+}
+
+// uint32 flagFilter = 3;
+inline void SetLobbyMemberDataInternalRequest::clear_flagfilter() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagfilter_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t SetLobbyMemberDataInternalRequest::flagfilter() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SetLobbyMemberDataInternalRequest.flagFilter)
+  return _internal_flagfilter();
+}
+inline void SetLobbyMemberDataInternalRequest::set_flagfilter(::uint32_t value) {
+  _internal_set_flagfilter(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.SetLobbyMemberDataInternalRequest.flagFilter)
+}
+inline ::uint32_t SetLobbyMemberDataInternalRequest::_internal_flagfilter() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.flagfilter_;
+}
+inline void SetLobbyMemberDataInternalRequest::_internal_set_flagfilter(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagfilter_ = value;
+}
+
+// uint32 flagAttr = 4;
+inline void SetLobbyMemberDataInternalRequest::clear_flagattr() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t SetLobbyMemberDataInternalRequest::flagattr() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SetLobbyMemberDataInternalRequest.flagAttr)
+  return _internal_flagattr();
+}
+inline void SetLobbyMemberDataInternalRequest::set_flagattr(::uint32_t value) {
+  _internal_set_flagattr(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.SetLobbyMemberDataInternalRequest.flagAttr)
+}
+inline ::uint32_t SetLobbyMemberDataInternalRequest::_internal_flagattr() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.flagattr_;
+}
+inline void SetLobbyMemberDataInternalRequest::_internal_set_flagattr(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagattr_ = value;
+}
+
+// repeated .np2_structs.JoinedSessionInfo joinedSessionInfo = 5;
+inline int SetLobbyMemberDataInternalRequest::_internal_joinedsessioninfo_size() const {
+  return _internal_joinedsessioninfo().size();
+}
+inline int SetLobbyMemberDataInternalRequest::joinedsessioninfo_size() const {
+  return _internal_joinedsessioninfo_size();
+}
+inline void SetLobbyMemberDataInternalRequest::clear_joinedsessioninfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.joinedsessioninfo_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL SetLobbyMemberDataInternalRequest::mutable_joinedsessioninfo(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.SetLobbyMemberDataInternalRequest.joinedSessionInfo)
+  return _internal_mutable_joinedsessioninfo()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL SetLobbyMemberDataInternalRequest::mutable_joinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.SetLobbyMemberDataInternalRequest.joinedSessionInfo)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_joinedsessioninfo();
+}
+inline const ::np2_structs::JoinedSessionInfo& SetLobbyMemberDataInternalRequest::joinedsessioninfo(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.SetLobbyMemberDataInternalRequest.joinedSessionInfo)
+  return _internal_joinedsessioninfo().Get(index);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL SetLobbyMemberDataInternalRequest::add_joinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::JoinedSessionInfo* _add =
+      _internal_mutable_joinedsessioninfo()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.SetLobbyMemberDataInternalRequest.joinedSessionInfo)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& SetLobbyMemberDataInternalRequest::joinedsessioninfo() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.SetLobbyMemberDataInternalRequest.joinedSessionInfo)
+  return _internal_joinedsessioninfo();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>&
+SetLobbyMemberDataInternalRequest::_internal_joinedsessioninfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.joinedsessioninfo_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL
+SetLobbyMemberDataInternalRequest::_internal_mutable_joinedsessioninfo() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.joinedsessioninfo_;
+}
+
+// repeated .np2_structs.BinAttr lobbyMemberBinAttrInternal = 6;
+inline int SetLobbyMemberDataInternalRequest::_internal_lobbymemberbinattrinternal_size() const {
+  return _internal_lobbymemberbinattrinternal().size();
+}
+inline int SetLobbyMemberDataInternalRequest::lobbymemberbinattrinternal_size() const {
+  return _internal_lobbymemberbinattrinternal_size();
+}
+inline void SetLobbyMemberDataInternalRequest::clear_lobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbymemberbinattrinternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL SetLobbyMemberDataInternalRequest::mutable_lobbymemberbinattrinternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.SetLobbyMemberDataInternalRequest.lobbyMemberBinAttrInternal)
+  return _internal_mutable_lobbymemberbinattrinternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL SetLobbyMemberDataInternalRequest::mutable_lobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.SetLobbyMemberDataInternalRequest.lobbyMemberBinAttrInternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_lobbymemberbinattrinternal();
+}
+inline const ::np2_structs::BinAttr& SetLobbyMemberDataInternalRequest::lobbymemberbinattrinternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.SetLobbyMemberDataInternalRequest.lobbyMemberBinAttrInternal)
+  return _internal_lobbymemberbinattrinternal().Get(index);
+}
+inline ::np2_structs::BinAttr* PROTOBUF_NONNULL SetLobbyMemberDataInternalRequest::add_lobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::BinAttr* _add =
+      _internal_mutable_lobbymemberbinattrinternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.SetLobbyMemberDataInternalRequest.lobbyMemberBinAttrInternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>& SetLobbyMemberDataInternalRequest::lobbymemberbinattrinternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.SetLobbyMemberDataInternalRequest.lobbyMemberBinAttrInternal)
+  return _internal_lobbymemberbinattrinternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>&
+SetLobbyMemberDataInternalRequest::_internal_lobbymemberbinattrinternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbymemberbinattrinternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::BinAttr>* PROTOBUF_NONNULL
+SetLobbyMemberDataInternalRequest::_internal_mutable_lobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.lobbymemberbinattrinternal_;
+}
+
+// -------------------------------------------------------------------
+
+// GetLobbyMemberDataInternalListRequest
+
+// uint64 lobbyId = 1;
+inline void GetLobbyMemberDataInternalListRequest::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint64_t GetLobbyMemberDataInternalListRequest::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyMemberDataInternalListRequest.lobbyId)
+  return _internal_lobbyid();
+}
+inline void GetLobbyMemberDataInternalListRequest::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyMemberDataInternalListRequest.lobbyId)
+}
+inline ::uint64_t GetLobbyMemberDataInternalListRequest::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void GetLobbyMemberDataInternalListRequest::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// repeated uint32 memberId = 2;
+inline int GetLobbyMemberDataInternalListRequest::_internal_memberid_size() const {
+  return _internal_memberid().size();
+}
+inline int GetLobbyMemberDataInternalListRequest::memberid_size() const {
+  return _internal_memberid_size();
+}
+inline void GetLobbyMemberDataInternalListRequest::clear_memberid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t GetLobbyMemberDataInternalListRequest::memberid(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyMemberDataInternalListRequest.memberId)
+  return _internal_memberid().Get(index);
+}
+inline void GetLobbyMemberDataInternalListRequest::set_memberid(int index, ::uint32_t value) {
+  _internal_mutable_memberid()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyMemberDataInternalListRequest.memberId)
+}
+inline void GetLobbyMemberDataInternalListRequest::add_memberid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_memberid()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.GetLobbyMemberDataInternalListRequest.memberId)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& GetLobbyMemberDataInternalListRequest::memberid() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.GetLobbyMemberDataInternalListRequest.memberId)
+  return _internal_memberid();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL GetLobbyMemberDataInternalListRequest::mutable_memberid()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.GetLobbyMemberDataInternalListRequest.memberId)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_memberid();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+GetLobbyMemberDataInternalListRequest::_internal_memberid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.memberid_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+GetLobbyMemberDataInternalListRequest::_internal_mutable_memberid() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.memberid_;
+}
+
+// repeated uint32 attrId = 3;
+inline int GetLobbyMemberDataInternalListRequest::_internal_attrid_size() const {
+  return _internal_attrid().size();
+}
+inline int GetLobbyMemberDataInternalListRequest::attrid_size() const {
+  return _internal_attrid_size();
+}
+inline void GetLobbyMemberDataInternalListRequest::clear_attrid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.attrid_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::uint32_t GetLobbyMemberDataInternalListRequest::attrid(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyMemberDataInternalListRequest.attrId)
+  return _internal_attrid().Get(index);
+}
+inline void GetLobbyMemberDataInternalListRequest::set_attrid(int index, ::uint32_t value) {
+  _internal_mutable_attrid()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyMemberDataInternalListRequest.attrId)
+}
+inline void GetLobbyMemberDataInternalListRequest::add_attrid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_attrid()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.GetLobbyMemberDataInternalListRequest.attrId)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& GetLobbyMemberDataInternalListRequest::attrid() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.GetLobbyMemberDataInternalListRequest.attrId)
+  return _internal_attrid();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL GetLobbyMemberDataInternalListRequest::mutable_attrid()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.GetLobbyMemberDataInternalListRequest.attrId)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_attrid();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+GetLobbyMemberDataInternalListRequest::_internal_attrid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.attrid_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+GetLobbyMemberDataInternalListRequest::_internal_mutable_attrid() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.attrid_;
+}
+
+// bool extendedData = 4;
+inline void GetLobbyMemberDataInternalListRequest::clear_extendeddata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.extendeddata_ = false;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline bool GetLobbyMemberDataInternalListRequest::extendeddata() const {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyMemberDataInternalListRequest.extendedData)
+  return _internal_extendeddata();
+}
+inline void GetLobbyMemberDataInternalListRequest::set_extendeddata(bool value) {
+  _internal_set_extendeddata(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.GetLobbyMemberDataInternalListRequest.extendedData)
+}
+inline bool GetLobbyMemberDataInternalListRequest::_internal_extendeddata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.extendeddata_;
+}
+inline void GetLobbyMemberDataInternalListRequest::_internal_set_extendeddata(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.extendeddata_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// GetLobbyMemberDataInternalListResponse
+
+// repeated .np2_structs.LobbyMemberDataInternal members = 1;
+inline int GetLobbyMemberDataInternalListResponse::_internal_members_size() const {
+  return _internal_members().size();
+}
+inline int GetLobbyMemberDataInternalListResponse::members_size() const {
+  return _internal_members_size();
+}
+inline void GetLobbyMemberDataInternalListResponse::clear_members() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.members_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL GetLobbyMemberDataInternalListResponse::mutable_members(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.GetLobbyMemberDataInternalListResponse.members)
+  return _internal_mutable_members()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>* PROTOBUF_NONNULL GetLobbyMemberDataInternalListResponse::mutable_members()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.GetLobbyMemberDataInternalListResponse.members)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_members();
+}
+inline const ::np2_structs::LobbyMemberDataInternal& GetLobbyMemberDataInternalListResponse::members(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.GetLobbyMemberDataInternalListResponse.members)
+  return _internal_members().Get(index);
+}
+inline ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL GetLobbyMemberDataInternalListResponse::add_members()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::LobbyMemberDataInternal* _add =
+      _internal_mutable_members()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.GetLobbyMemberDataInternalListResponse.members)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>& GetLobbyMemberDataInternalListResponse::members() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.GetLobbyMemberDataInternalListResponse.members)
+  return _internal_members();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>&
+GetLobbyMemberDataInternalListResponse::_internal_members() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.members_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::LobbyMemberDataInternal>* PROTOBUF_NONNULL
+GetLobbyMemberDataInternalListResponse::_internal_mutable_members() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.members_;
+}
+
+// -------------------------------------------------------------------
+
+// SendLobbyMessageRequest
+
+// uint64 lobbyId = 1;
+inline void SendLobbyMessageRequest::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint64_t SendLobbyMessageRequest::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyMessageRequest.lobbyId)
+  return _internal_lobbyid();
+}
+inline void SendLobbyMessageRequest::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyMessageRequest.lobbyId)
+}
+inline ::uint64_t SendLobbyMessageRequest::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void SendLobbyMessageRequest::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 castType = 2;
+inline void SendLobbyMessageRequest::clear_casttype() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint32_t SendLobbyMessageRequest::casttype() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyMessageRequest.castType)
+  return _internal_casttype();
+}
+inline void SendLobbyMessageRequest::set_casttype(::uint32_t value) {
+  _internal_set_casttype(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyMessageRequest.castType)
+}
+inline ::uint32_t SendLobbyMessageRequest::_internal_casttype() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.casttype_;
+}
+inline void SendLobbyMessageRequest::_internal_set_casttype(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = value;
+}
+
+// repeated uint32 dst = 3;
+inline int SendLobbyMessageRequest::_internal_dst_size() const {
+  return _internal_dst().size();
+}
+inline int SendLobbyMessageRequest::dst_size() const {
+  return _internal_dst_size();
+}
+inline void SendLobbyMessageRequest::clear_dst() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.dst_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t SendLobbyMessageRequest::dst(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyMessageRequest.dst)
+  return _internal_dst().Get(index);
+}
+inline void SendLobbyMessageRequest::set_dst(int index, ::uint32_t value) {
+  _internal_mutable_dst()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyMessageRequest.dst)
+}
+inline void SendLobbyMessageRequest::add_dst(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_dst()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.SendLobbyMessageRequest.dst)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& SendLobbyMessageRequest::dst() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.SendLobbyMessageRequest.dst)
+  return _internal_dst();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL SendLobbyMessageRequest::mutable_dst()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.SendLobbyMessageRequest.dst)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_dst();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+SendLobbyMessageRequest::_internal_dst() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.dst_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+SendLobbyMessageRequest::_internal_mutable_dst() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.dst_;
+}
+
+// bytes msg = 4;
+inline void SendLobbyMessageRequest::clear_msg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.msg_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::std::string& SendLobbyMessageRequest::msg() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyMessageRequest.msg)
+  return _internal_msg();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void SendLobbyMessageRequest::set_msg(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  _impl_.msg_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyMessageRequest.msg)
+}
+inline ::std::string* PROTOBUF_NONNULL SendLobbyMessageRequest::mutable_msg()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::std::string* _s = _internal_mutable_msg();
+  // @@protoc_insertion_point(field_mutable:np2_structs.SendLobbyMessageRequest.msg)
+  return _s;
+}
+inline const ::std::string& SendLobbyMessageRequest::_internal_msg() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.msg_.Get();
+}
+inline void SendLobbyMessageRequest::_internal_set_msg(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.msg_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL SendLobbyMessageRequest::_internal_mutable_msg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.msg_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE SendLobbyMessageRequest::release_msg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.SendLobbyMessageRequest.msg)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  auto* released = _impl_.msg_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.msg_.Set("", GetArena());
+  }
+  return released;
+}
+inline void SendLobbyMessageRequest::set_allocated_msg(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  _impl_.msg_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.msg_.IsDefault()) {
+    _impl_.msg_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.SendLobbyMessageRequest.msg)
+}
+
+// uint32 option = 5;
+inline void SendLobbyMessageRequest::clear_option() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.option_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t SendLobbyMessageRequest::option() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyMessageRequest.option)
+  return _internal_option();
+}
+inline void SendLobbyMessageRequest::set_option(::uint32_t value) {
+  _internal_set_option(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyMessageRequest.option)
+}
+inline ::uint32_t SendLobbyMessageRequest::_internal_option() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.option_;
+}
+inline void SendLobbyMessageRequest::_internal_set_option(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.option_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// SendLobbyInvitationRequest
+
+// uint64 lobbyId = 1;
+inline void SendLobbyInvitationRequest::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint64_t SendLobbyInvitationRequest::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyInvitationRequest.lobbyId)
+  return _internal_lobbyid();
+}
+inline void SendLobbyInvitationRequest::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyInvitationRequest.lobbyId)
+}
+inline ::uint64_t SendLobbyInvitationRequest::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void SendLobbyInvitationRequest::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 castType = 2;
+inline void SendLobbyInvitationRequest::clear_casttype() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t SendLobbyInvitationRequest::casttype() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyInvitationRequest.castType)
+  return _internal_casttype();
+}
+inline void SendLobbyInvitationRequest::set_casttype(::uint32_t value) {
+  _internal_set_casttype(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyInvitationRequest.castType)
+}
+inline ::uint32_t SendLobbyInvitationRequest::_internal_casttype() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.casttype_;
+}
+inline void SendLobbyInvitationRequest::_internal_set_casttype(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = value;
+}
+
+// repeated uint32 dst = 3;
+inline int SendLobbyInvitationRequest::_internal_dst_size() const {
+  return _internal_dst().size();
+}
+inline int SendLobbyInvitationRequest::dst_size() const {
+  return _internal_dst_size();
+}
+inline void SendLobbyInvitationRequest::clear_dst() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.dst_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t SendLobbyInvitationRequest::dst(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyInvitationRequest.dst)
+  return _internal_dst().Get(index);
+}
+inline void SendLobbyInvitationRequest::set_dst(int index, ::uint32_t value) {
+  _internal_mutable_dst()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyInvitationRequest.dst)
+}
+inline void SendLobbyInvitationRequest::add_dst(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_dst()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.SendLobbyInvitationRequest.dst)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& SendLobbyInvitationRequest::dst() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.SendLobbyInvitationRequest.dst)
+  return _internal_dst();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL SendLobbyInvitationRequest::mutable_dst()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.SendLobbyInvitationRequest.dst)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_dst();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+SendLobbyInvitationRequest::_internal_dst() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.dst_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+SendLobbyInvitationRequest::_internal_mutable_dst() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.dst_;
+}
+
+// repeated .np2_structs.JoinedSessionInfo targetSession = 4;
+inline int SendLobbyInvitationRequest::_internal_targetsession_size() const {
+  return _internal_targetsession().size();
+}
+inline int SendLobbyInvitationRequest::targetsession_size() const {
+  return _internal_targetsession_size();
+}
+inline void SendLobbyInvitationRequest::clear_targetsession() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.targetsession_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL SendLobbyInvitationRequest::mutable_targetsession(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.SendLobbyInvitationRequest.targetSession)
+  return _internal_mutable_targetsession()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL SendLobbyInvitationRequest::mutable_targetsession()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.SendLobbyInvitationRequest.targetSession)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_targetsession();
+}
+inline const ::np2_structs::JoinedSessionInfo& SendLobbyInvitationRequest::targetsession(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyInvitationRequest.targetSession)
+  return _internal_targetsession().Get(index);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL SendLobbyInvitationRequest::add_targetsession()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::JoinedSessionInfo* _add =
+      _internal_mutable_targetsession()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.SendLobbyInvitationRequest.targetSession)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& SendLobbyInvitationRequest::targetsession() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.SendLobbyInvitationRequest.targetSession)
+  return _internal_targetsession();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>&
+SendLobbyInvitationRequest::_internal_targetsession() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.targetsession_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL
+SendLobbyInvitationRequest::_internal_mutable_targetsession() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.targetsession_;
+}
+
+// bytes optData = 5;
+inline void SendLobbyInvitationRequest::clear_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.optdata_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline const ::std::string& SendLobbyInvitationRequest::optdata() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyInvitationRequest.optData)
+  return _internal_optdata();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void SendLobbyInvitationRequest::set_optdata(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  _impl_.optdata_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyInvitationRequest.optData)
+}
+inline ::std::string* PROTOBUF_NONNULL SendLobbyInvitationRequest::mutable_optdata()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::std::string* _s = _internal_mutable_optdata();
+  // @@protoc_insertion_point(field_mutable:np2_structs.SendLobbyInvitationRequest.optData)
+  return _s;
+}
+inline const ::std::string& SendLobbyInvitationRequest::_internal_optdata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.optdata_.Get();
+}
+inline void SendLobbyInvitationRequest::_internal_set_optdata(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.optdata_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL SendLobbyInvitationRequest::_internal_mutable_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.optdata_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE SendLobbyInvitationRequest::release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.SendLobbyInvitationRequest.optData)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000004U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  auto* released = _impl_.optdata_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.optdata_.Set("", GetArena());
+  }
+  return released;
+}
+inline void SendLobbyInvitationRequest::set_allocated_optdata(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+  _impl_.optdata_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.optdata_.IsDefault()) {
+    _impl_.optdata_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.SendLobbyInvitationRequest.optData)
+}
+
+// uint32 option = 6;
+inline void SendLobbyInvitationRequest::clear_option() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.option_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t SendLobbyInvitationRequest::option() const {
+  // @@protoc_insertion_point(field_get:np2_structs.SendLobbyInvitationRequest.option)
+  return _internal_option();
+}
+inline void SendLobbyInvitationRequest::set_option(::uint32_t value) {
+  _internal_set_option(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.SendLobbyInvitationRequest.option)
+}
+inline ::uint32_t SendLobbyInvitationRequest::_internal_option() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.option_;
+}
+inline void SendLobbyInvitationRequest::_internal_set_option(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.option_ = value;
+}
+
+// -------------------------------------------------------------------
+
+// LobbyMemberUpdateInfo
+
+// .np2_structs.LobbyMemberDataInternal lobbyMemberDataInternal = 1;
+inline bool LobbyMemberUpdateInfo::has_lobbymemberdatainternal() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000001U);
+  PROTOBUF_ASSUME(!value || _impl_.lobbymemberdatainternal_ != nullptr);
+  return value;
+}
+inline void LobbyMemberUpdateInfo::clear_lobbymemberdatainternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.lobbymemberdatainternal_ != nullptr) _impl_.lobbymemberdatainternal_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::np2_structs::LobbyMemberDataInternal& LobbyMemberUpdateInfo::_internal_lobbymemberdatainternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::LobbyMemberDataInternal* p = _impl_.lobbymemberdatainternal_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::LobbyMemberDataInternal&>(::np2_structs::_LobbyMemberDataInternal_default_instance_);
+}
+inline const ::np2_structs::LobbyMemberDataInternal& LobbyMemberUpdateInfo::lobbymemberdatainternal() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberUpdateInfo.lobbyMemberDataInternal)
+  return _internal_lobbymemberdatainternal();
+}
+inline void LobbyMemberUpdateInfo::unsafe_arena_set_allocated_lobbymemberdatainternal(
+    ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.lobbymemberdatainternal_);
+  }
+  _impl_.lobbymemberdatainternal_ = reinterpret_cast<::np2_structs::LobbyMemberDataInternal*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.LobbyMemberUpdateInfo.lobbyMemberDataInternal)
+}
+inline ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE LobbyMemberUpdateInfo::release_lobbymemberdatainternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyMemberDataInternal* released = _impl_.lobbymemberdatainternal_;
+  _impl_.lobbymemberdatainternal_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE LobbyMemberUpdateInfo::unsafe_arena_release_lobbymemberdatainternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.LobbyMemberUpdateInfo.lobbyMemberDataInternal)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyMemberDataInternal* temp = _impl_.lobbymemberdatainternal_;
+  _impl_.lobbymemberdatainternal_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL LobbyMemberUpdateInfo::_internal_mutable_lobbymemberdatainternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.lobbymemberdatainternal_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::LobbyMemberDataInternal>(GetArena());
+    _impl_.lobbymemberdatainternal_ = reinterpret_cast<::np2_structs::LobbyMemberDataInternal*>(p);
+  }
+  return _impl_.lobbymemberdatainternal_;
+}
+inline ::np2_structs::LobbyMemberDataInternal* PROTOBUF_NONNULL LobbyMemberUpdateInfo::mutable_lobbymemberdatainternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyMemberDataInternal* _msg = _internal_mutable_lobbymemberdatainternal();
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyMemberUpdateInfo.lobbyMemberDataInternal)
+  return _msg;
+}
+inline void LobbyMemberUpdateInfo::set_allocated_lobbymemberdatainternal(::np2_structs::LobbyMemberDataInternal* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.lobbymemberdatainternal_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+
+  _impl_.lobbymemberdatainternal_ = reinterpret_cast<::np2_structs::LobbyMemberDataInternal*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.LobbyMemberUpdateInfo.lobbyMemberDataInternal)
+}
+
+// uint32 eventCause = 2;
+inline void LobbyMemberUpdateInfo::clear_eventcause() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.eventcause_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline ::uint32_t LobbyMemberUpdateInfo::eventcause() const {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberUpdateInfo.eventCause)
+  return _internal_eventcause();
+}
+inline void LobbyMemberUpdateInfo::set_eventcause(::uint32_t value) {
+  _internal_set_eventcause(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:np2_structs.LobbyMemberUpdateInfo.eventCause)
+}
+inline ::uint32_t LobbyMemberUpdateInfo::_internal_eventcause() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.eventcause_;
+}
+inline void LobbyMemberUpdateInfo::_internal_set_eventcause(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.eventcause_ = value;
+}
+
+// .np2_structs.PresenceOptionData optData = 3;
+inline bool LobbyMemberUpdateInfo::has_optdata() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
+  PROTOBUF_ASSUME(!value || _impl_.optdata_ != nullptr);
+  return value;
+}
+inline void LobbyMemberUpdateInfo::clear_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.optdata_ != nullptr) _impl_.optdata_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::np2_structs::PresenceOptionData& LobbyMemberUpdateInfo::_internal_optdata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::PresenceOptionData* p = _impl_.optdata_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::PresenceOptionData&>(::np2_structs::_PresenceOptionData_default_instance_);
+}
+inline const ::np2_structs::PresenceOptionData& LobbyMemberUpdateInfo::optdata() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.LobbyMemberUpdateInfo.optData)
+  return _internal_optdata();
+}
+inline void LobbyMemberUpdateInfo::unsafe_arena_set_allocated_optdata(
+    ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.optdata_);
+  }
+  _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.LobbyMemberUpdateInfo.optData)
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE LobbyMemberUpdateInfo::release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::np2_structs::PresenceOptionData* released = _impl_.optdata_;
+  _impl_.optdata_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE LobbyMemberUpdateInfo::unsafe_arena_release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.LobbyMemberUpdateInfo.optData)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::np2_structs::PresenceOptionData* temp = _impl_.optdata_;
+  _impl_.optdata_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL LobbyMemberUpdateInfo::_internal_mutable_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.optdata_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::PresenceOptionData>(GetArena());
+    _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(p);
+  }
+  return _impl_.optdata_;
+}
+inline ::np2_structs::PresenceOptionData* PROTOBUF_NONNULL LobbyMemberUpdateInfo::mutable_optdata()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::np2_structs::PresenceOptionData* _msg = _internal_mutable_optdata();
+  // @@protoc_insertion_point(field_mutable:np2_structs.LobbyMemberUpdateInfo.optData)
+  return _msg;
+}
+inline void LobbyMemberUpdateInfo::set_allocated_optdata(::np2_structs::PresenceOptionData* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.optdata_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+
+  _impl_.optdata_ = reinterpret_cast<::np2_structs::PresenceOptionData*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.LobbyMemberUpdateInfo.optData)
+}
+
+// -------------------------------------------------------------------
+
+// NotificationLobbyMemberUpdate
+
+// uint64 lobbyId = 1;
+inline void NotificationLobbyMemberUpdate::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::uint64_t NotificationLobbyMemberUpdate::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberUpdate.lobbyId)
+  return _internal_lobbyid();
+}
+inline void NotificationLobbyMemberUpdate::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMemberUpdate.lobbyId)
+}
+inline ::uint64_t NotificationLobbyMemberUpdate::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void NotificationLobbyMemberUpdate::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// .np2_structs.LobbyMemberUpdateInfo updateInfo = 2;
+inline bool NotificationLobbyMemberUpdate::has_updateinfo() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000001U);
+  PROTOBUF_ASSUME(!value || _impl_.updateinfo_ != nullptr);
+  return value;
+}
+inline void NotificationLobbyMemberUpdate::clear_updateinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.updateinfo_ != nullptr) _impl_.updateinfo_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline const ::np2_structs::LobbyMemberUpdateInfo& NotificationLobbyMemberUpdate::_internal_updateinfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::LobbyMemberUpdateInfo* p = _impl_.updateinfo_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::LobbyMemberUpdateInfo&>(::np2_structs::_LobbyMemberUpdateInfo_default_instance_);
+}
+inline const ::np2_structs::LobbyMemberUpdateInfo& NotificationLobbyMemberUpdate::updateinfo() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberUpdate.updateInfo)
+  return _internal_updateinfo();
+}
+inline void NotificationLobbyMemberUpdate::unsafe_arena_set_allocated_updateinfo(
+    ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.updateinfo_);
+  }
+  _impl_.updateinfo_ = reinterpret_cast<::np2_structs::LobbyMemberUpdateInfo*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.NotificationLobbyMemberUpdate.updateInfo)
+}
+inline ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE NotificationLobbyMemberUpdate::release_updateinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyMemberUpdateInfo* released = _impl_.updateinfo_;
+  _impl_.updateinfo_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE NotificationLobbyMemberUpdate::unsafe_arena_release_updateinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.NotificationLobbyMemberUpdate.updateInfo)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyMemberUpdateInfo* temp = _impl_.updateinfo_;
+  _impl_.updateinfo_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NONNULL NotificationLobbyMemberUpdate::_internal_mutable_updateinfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.updateinfo_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::LobbyMemberUpdateInfo>(GetArena());
+    _impl_.updateinfo_ = reinterpret_cast<::np2_structs::LobbyMemberUpdateInfo*>(p);
+  }
+  return _impl_.updateinfo_;
+}
+inline ::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NONNULL NotificationLobbyMemberUpdate::mutable_updateinfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  ::np2_structs::LobbyMemberUpdateInfo* _msg = _internal_mutable_updateinfo();
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyMemberUpdate.updateInfo)
+  return _msg;
+}
+inline void NotificationLobbyMemberUpdate::set_allocated_updateinfo(::np2_structs::LobbyMemberUpdateInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.updateinfo_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000001U);
+  }
+
+  _impl_.updateinfo_ = reinterpret_cast<::np2_structs::LobbyMemberUpdateInfo*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.NotificationLobbyMemberUpdate.updateInfo)
+}
+
+// -------------------------------------------------------------------
+
+// NotificationLobbyMemberDataInternalUpdate
+
+// uint64 lobbyId = 1;
+inline void NotificationLobbyMemberDataInternalUpdate::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint64_t NotificationLobbyMemberDataInternalUpdate::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.lobbyId)
+  return _internal_lobbyid();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMemberDataInternalUpdate.lobbyId)
+}
+inline ::uint64_t NotificationLobbyMemberDataInternalUpdate::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void NotificationLobbyMemberDataInternalUpdate::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 memberId = 2;
+inline void NotificationLobbyMemberDataInternalUpdate::clear_memberid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t NotificationLobbyMemberDataInternalUpdate::memberid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.memberId)
+  return _internal_memberid();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::set_memberid(::uint32_t value) {
+  _internal_set_memberid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMemberDataInternalUpdate.memberId)
+}
+inline ::uint32_t NotificationLobbyMemberDataInternalUpdate::_internal_memberid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.memberid_;
+}
+inline void NotificationLobbyMemberDataInternalUpdate::_internal_set_memberid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.memberid_ = value;
+}
+
+// string npId = 3;
+inline void NotificationLobbyMemberDataInternalUpdate::clear_npid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.npid_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline const ::std::string& NotificationLobbyMemberDataInternalUpdate::npid() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.npId)
+  return _internal_npid();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void NotificationLobbyMemberDataInternalUpdate::set_npid(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  _impl_.npid_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMemberDataInternalUpdate.npId)
+}
+inline ::std::string* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::mutable_npid()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::std::string* _s = _internal_mutable_npid();
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyMemberDataInternalUpdate.npId)
+  return _s;
+}
+inline const ::std::string& NotificationLobbyMemberDataInternalUpdate::_internal_npid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.npid_.Get();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::_internal_set_npid(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.npid_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::_internal_mutable_npid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.npid_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE NotificationLobbyMemberDataInternalUpdate::release_npid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.NotificationLobbyMemberDataInternalUpdate.npId)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000004U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  auto* released = _impl_.npid_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.npid_.Set("", GetArena());
+  }
+  return released;
+}
+inline void NotificationLobbyMemberDataInternalUpdate::set_allocated_npid(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+  _impl_.npid_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.npid_.IsDefault()) {
+    _impl_.npid_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.NotificationLobbyMemberDataInternalUpdate.npId)
+}
+
+// uint32 flagFilter = 4;
+inline void NotificationLobbyMemberDataInternalUpdate::clear_flagfilter() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagfilter_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t NotificationLobbyMemberDataInternalUpdate::flagfilter() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.flagFilter)
+  return _internal_flagfilter();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::set_flagfilter(::uint32_t value) {
+  _internal_set_flagfilter(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMemberDataInternalUpdate.flagFilter)
+}
+inline ::uint32_t NotificationLobbyMemberDataInternalUpdate::_internal_flagfilter() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.flagfilter_;
+}
+inline void NotificationLobbyMemberDataInternalUpdate::_internal_set_flagfilter(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.flagfilter_ = value;
+}
+
+// uint32 newFlagAttr = 5;
+inline void NotificationLobbyMemberDataInternalUpdate::clear_newflagattr() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.newflagattr_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline ::uint32_t NotificationLobbyMemberDataInternalUpdate::newflagattr() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.newFlagAttr)
+  return _internal_newflagattr();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::set_newflagattr(::uint32_t value) {
+  _internal_set_newflagattr(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMemberDataInternalUpdate.newFlagAttr)
+}
+inline ::uint32_t NotificationLobbyMemberDataInternalUpdate::_internal_newflagattr() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.newflagattr_;
+}
+inline void NotificationLobbyMemberDataInternalUpdate::_internal_set_newflagattr(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.newflagattr_ = value;
+}
+
+// repeated .np2_structs.JoinedSessionInfo newJoinedSessionInfo = 6;
+inline int NotificationLobbyMemberDataInternalUpdate::_internal_newjoinedsessioninfo_size() const {
+  return _internal_newjoinedsessioninfo().size();
+}
+inline int NotificationLobbyMemberDataInternalUpdate::newjoinedsessioninfo_size() const {
+  return _internal_newjoinedsessioninfo_size();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::clear_newjoinedsessioninfo() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.newjoinedsessioninfo_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::mutable_newjoinedsessioninfo(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyMemberDataInternalUpdate.newJoinedSessionInfo)
+  return _internal_mutable_newjoinedsessioninfo()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::mutable_newjoinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.NotificationLobbyMemberDataInternalUpdate.newJoinedSessionInfo)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_newjoinedsessioninfo();
+}
+inline const ::np2_structs::JoinedSessionInfo& NotificationLobbyMemberDataInternalUpdate::newjoinedsessioninfo(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.newJoinedSessionInfo)
+  return _internal_newjoinedsessioninfo().Get(index);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::add_newjoinedsessioninfo()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::JoinedSessionInfo* _add =
+      _internal_mutable_newjoinedsessioninfo()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.NotificationLobbyMemberDataInternalUpdate.newJoinedSessionInfo)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& NotificationLobbyMemberDataInternalUpdate::newjoinedsessioninfo() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.NotificationLobbyMemberDataInternalUpdate.newJoinedSessionInfo)
+  return _internal_newjoinedsessioninfo();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>&
+NotificationLobbyMemberDataInternalUpdate::_internal_newjoinedsessioninfo() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.newjoinedsessioninfo_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL
+NotificationLobbyMemberDataInternalUpdate::_internal_mutable_newjoinedsessioninfo() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.newjoinedsessioninfo_;
+}
+
+// repeated .np2_structs.RoomMemberBinAttrInternal newLobbyMemberBinAttrInternal = 7;
+inline int NotificationLobbyMemberDataInternalUpdate::_internal_newlobbymemberbinattrinternal_size() const {
+  return _internal_newlobbymemberbinattrinternal().size();
+}
+inline int NotificationLobbyMemberDataInternalUpdate::newlobbymemberbinattrinternal_size() const {
+  return _internal_newlobbymemberbinattrinternal_size();
+}
+inline void NotificationLobbyMemberDataInternalUpdate::clear_newlobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.newlobbymemberbinattrinternal_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::mutable_newlobbymemberbinattrinternal(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyMemberDataInternalUpdate.newLobbyMemberBinAttrInternal)
+  return _internal_mutable_newlobbymemberbinattrinternal()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::mutable_newlobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.NotificationLobbyMemberDataInternalUpdate.newLobbyMemberBinAttrInternal)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_newlobbymemberbinattrinternal();
+}
+inline const ::np2_structs::RoomMemberBinAttrInternal& NotificationLobbyMemberDataInternalUpdate::newlobbymemberbinattrinternal(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMemberDataInternalUpdate.newLobbyMemberBinAttrInternal)
+  return _internal_newlobbymemberbinattrinternal().Get(index);
+}
+inline ::np2_structs::RoomMemberBinAttrInternal* PROTOBUF_NONNULL NotificationLobbyMemberDataInternalUpdate::add_newlobbymemberbinattrinternal()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::RoomMemberBinAttrInternal* _add =
+      _internal_mutable_newlobbymemberbinattrinternal()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.NotificationLobbyMemberDataInternalUpdate.newLobbyMemberBinAttrInternal)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>& NotificationLobbyMemberDataInternalUpdate::newlobbymemberbinattrinternal() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.NotificationLobbyMemberDataInternalUpdate.newLobbyMemberBinAttrInternal)
+  return _internal_newlobbymemberbinattrinternal();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>&
+NotificationLobbyMemberDataInternalUpdate::_internal_newlobbymemberbinattrinternal() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.newlobbymemberbinattrinternal_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::RoomMemberBinAttrInternal>* PROTOBUF_NONNULL
+NotificationLobbyMemberDataInternalUpdate::_internal_mutable_newlobbymemberbinattrinternal() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.newlobbymemberbinattrinternal_;
+}
+
+// -------------------------------------------------------------------
+
+// NotificationLobbyMessage
+
+// uint64 lobbyId = 1;
+inline void NotificationLobbyMessage::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline ::uint64_t NotificationLobbyMessage::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.lobbyId)
+  return _internal_lobbyid();
+}
+inline void NotificationLobbyMessage::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMessage.lobbyId)
+}
+inline ::uint64_t NotificationLobbyMessage::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void NotificationLobbyMessage::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 srcMemberId = 2;
+inline void NotificationLobbyMessage::clear_srcmemberid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.srcmemberid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint32_t NotificationLobbyMessage::srcmemberid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.srcMemberId)
+  return _internal_srcmemberid();
+}
+inline void NotificationLobbyMessage::set_srcmemberid(::uint32_t value) {
+  _internal_set_srcmemberid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMessage.srcMemberId)
+}
+inline ::uint32_t NotificationLobbyMessage::_internal_srcmemberid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.srcmemberid_;
+}
+inline void NotificationLobbyMessage::_internal_set_srcmemberid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.srcmemberid_ = value;
+}
+
+// bool filtered = 3;
+inline void NotificationLobbyMessage::clear_filtered() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.filtered_ = false;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline bool NotificationLobbyMessage::filtered() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.filtered)
+  return _internal_filtered();
+}
+inline void NotificationLobbyMessage::set_filtered(bool value) {
+  _internal_set_filtered(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMessage.filtered)
+}
+inline bool NotificationLobbyMessage::_internal_filtered() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.filtered_;
+}
+inline void NotificationLobbyMessage::_internal_set_filtered(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.filtered_ = value;
+}
+
+// uint32 castType = 4;
+inline void NotificationLobbyMessage::clear_casttype() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline ::uint32_t NotificationLobbyMessage::casttype() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.castType)
+  return _internal_casttype();
+}
+inline void NotificationLobbyMessage::set_casttype(::uint32_t value) {
+  _internal_set_casttype(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMessage.castType)
+}
+inline ::uint32_t NotificationLobbyMessage::_internal_casttype() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.casttype_;
+}
+inline void NotificationLobbyMessage::_internal_set_casttype(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = value;
+}
+
+// repeated uint32 dst = 5;
+inline int NotificationLobbyMessage::_internal_dst_size() const {
+  return _internal_dst().size();
+}
+inline int NotificationLobbyMessage::dst_size() const {
+  return _internal_dst_size();
+}
+inline void NotificationLobbyMessage::clear_dst() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.dst_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t NotificationLobbyMessage::dst(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.dst)
+  return _internal_dst().Get(index);
+}
+inline void NotificationLobbyMessage::set_dst(int index, ::uint32_t value) {
+  _internal_mutable_dst()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMessage.dst)
+}
+inline void NotificationLobbyMessage::add_dst(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_dst()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.NotificationLobbyMessage.dst)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& NotificationLobbyMessage::dst() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.NotificationLobbyMessage.dst)
+  return _internal_dst();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL NotificationLobbyMessage::mutable_dst()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.NotificationLobbyMessage.dst)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_dst();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+NotificationLobbyMessage::_internal_dst() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.dst_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+NotificationLobbyMessage::_internal_mutable_dst() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.dst_;
+}
+
+// .np2_structs.UserInfo srcMember = 6;
+inline bool NotificationLobbyMessage::has_srcmember() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000004U);
+  PROTOBUF_ASSUME(!value || _impl_.srcmember_ != nullptr);
+  return value;
+}
+inline void NotificationLobbyMessage::clear_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.srcmember_ != nullptr) _impl_.srcmember_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline const ::np2_structs::UserInfo& NotificationLobbyMessage::_internal_srcmember() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::UserInfo* p = _impl_.srcmember_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::UserInfo&>(::np2_structs::_UserInfo_default_instance_);
+}
+inline const ::np2_structs::UserInfo& NotificationLobbyMessage::srcmember() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.srcMember)
+  return _internal_srcmember();
+}
+inline void NotificationLobbyMessage::unsafe_arena_set_allocated_srcmember(
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.srcmember_);
+  }
+  _impl_.srcmember_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.NotificationLobbyMessage.srcMember)
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE NotificationLobbyMessage::release_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::UserInfo* released = _impl_.srcmember_;
+  _impl_.srcmember_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE NotificationLobbyMessage::unsafe_arena_release_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.NotificationLobbyMessage.srcMember)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::UserInfo* temp = _impl_.srcmember_;
+  _impl_.srcmember_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL NotificationLobbyMessage::_internal_mutable_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.srcmember_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::UserInfo>(GetArena());
+    _impl_.srcmember_ = reinterpret_cast<::np2_structs::UserInfo*>(p);
+  }
+  return _impl_.srcmember_;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL NotificationLobbyMessage::mutable_srcmember()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::np2_structs::UserInfo* _msg = _internal_mutable_srcmember();
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyMessage.srcMember)
+  return _msg;
+}
+inline void NotificationLobbyMessage::set_allocated_srcmember(::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.srcmember_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+
+  _impl_.srcmember_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.NotificationLobbyMessage.srcMember)
+}
+
+// bytes msg = 7;
+inline void NotificationLobbyMessage::clear_msg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.msg_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline const ::std::string& NotificationLobbyMessage::msg() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyMessage.msg)
+  return _internal_msg();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void NotificationLobbyMessage::set_msg(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  _impl_.msg_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyMessage.msg)
+}
+inline ::std::string* PROTOBUF_NONNULL NotificationLobbyMessage::mutable_msg()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::std::string* _s = _internal_mutable_msg();
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyMessage.msg)
+  return _s;
+}
+inline const ::std::string& NotificationLobbyMessage::_internal_msg() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.msg_.Get();
+}
+inline void NotificationLobbyMessage::_internal_set_msg(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.msg_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL NotificationLobbyMessage::_internal_mutable_msg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.msg_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE NotificationLobbyMessage::release_msg() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.NotificationLobbyMessage.msg)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000002U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  auto* released = _impl_.msg_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.msg_.Set("", GetArena());
+  }
+  return released;
+}
+inline void NotificationLobbyMessage::set_allocated_msg(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  _impl_.msg_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.msg_.IsDefault()) {
+    _impl_.msg_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.NotificationLobbyMessage.msg)
+}
+
+// -------------------------------------------------------------------
+
+// NotificationLobbyInvitation
+
+// uint64 lobbyId = 1;
+inline void NotificationLobbyInvitation::clear_lobbyid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = ::uint64_t{0u};
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline ::uint64_t NotificationLobbyInvitation::lobbyid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.lobbyId)
+  return _internal_lobbyid();
+}
+inline void NotificationLobbyInvitation::set_lobbyid(::uint64_t value) {
+  _internal_set_lobbyid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyInvitation.lobbyId)
+}
+inline ::uint64_t NotificationLobbyInvitation::_internal_lobbyid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.lobbyid_;
+}
+inline void NotificationLobbyInvitation::_internal_set_lobbyid(::uint64_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.lobbyid_ = value;
+}
+
+// uint32 srcMemberId = 2;
+inline void NotificationLobbyInvitation::clear_srcmemberid() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.srcmemberid_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline ::uint32_t NotificationLobbyInvitation::srcmemberid() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.srcMemberId)
+  return _internal_srcmemberid();
+}
+inline void NotificationLobbyInvitation::set_srcmemberid(::uint32_t value) {
+  _internal_set_srcmemberid(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyInvitation.srcMemberId)
+}
+inline ::uint32_t NotificationLobbyInvitation::_internal_srcmemberid() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.srcmemberid_;
+}
+inline void NotificationLobbyInvitation::_internal_set_srcmemberid(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.srcmemberid_ = value;
+}
+
+// uint32 castType = 3;
+inline void NotificationLobbyInvitation::clear_casttype() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline ::uint32_t NotificationLobbyInvitation::casttype() const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.castType)
+  return _internal_casttype();
+}
+inline void NotificationLobbyInvitation::set_casttype(::uint32_t value) {
+  _internal_set_casttype(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyInvitation.castType)
+}
+inline ::uint32_t NotificationLobbyInvitation::_internal_casttype() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.casttype_;
+}
+inline void NotificationLobbyInvitation::_internal_set_casttype(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.casttype_ = value;
+}
+
+// repeated uint32 dst = 4;
+inline int NotificationLobbyInvitation::_internal_dst_size() const {
+  return _internal_dst().size();
+}
+inline int NotificationLobbyInvitation::dst_size() const {
+  return _internal_dst_size();
+}
+inline void NotificationLobbyInvitation::clear_dst() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.dst_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::uint32_t NotificationLobbyInvitation::dst(int index) const {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.dst)
+  return _internal_dst().Get(index);
+}
+inline void NotificationLobbyInvitation::set_dst(int index, ::uint32_t value) {
+  _internal_mutable_dst()->Set(index, value);
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyInvitation.dst)
+}
+inline void NotificationLobbyInvitation::add_dst(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _internal_mutable_dst()->Add(value);
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_add:np2_structs.NotificationLobbyInvitation.dst)
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>& NotificationLobbyInvitation::dst() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.NotificationLobbyInvitation.dst)
+  return _internal_dst();
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL NotificationLobbyInvitation::mutable_dst()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.NotificationLobbyInvitation.dst)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_dst();
+}
+inline const ::google::protobuf::RepeatedField<::uint32_t>&
+NotificationLobbyInvitation::_internal_dst() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.dst_;
+}
+inline ::google::protobuf::RepeatedField<::uint32_t>* PROTOBUF_NONNULL
+NotificationLobbyInvitation::_internal_mutable_dst() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.dst_;
+}
+
+// .np2_structs.UserInfo srcMember = 5;
+inline bool NotificationLobbyInvitation::has_srcmember() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000008U);
+  PROTOBUF_ASSUME(!value || _impl_.srcmember_ != nullptr);
+  return value;
+}
+inline void NotificationLobbyInvitation::clear_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.srcmember_ != nullptr) _impl_.srcmember_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline const ::np2_structs::UserInfo& NotificationLobbyInvitation::_internal_srcmember() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::np2_structs::UserInfo* p = _impl_.srcmember_;
+  return p != nullptr ? *p : reinterpret_cast<const ::np2_structs::UserInfo&>(::np2_structs::_UserInfo_default_instance_);
+}
+inline const ::np2_structs::UserInfo& NotificationLobbyInvitation::srcmember() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.srcMember)
+  return _internal_srcmember();
+}
+inline void NotificationLobbyInvitation::unsafe_arena_set_allocated_srcmember(
+    ::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.srcmember_);
+  }
+  _impl_.srcmember_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:np2_structs.NotificationLobbyInvitation.srcMember)
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE NotificationLobbyInvitation::release_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::np2_structs::UserInfo* released = _impl_.srcmember_;
+  _impl_.srcmember_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NULLABLE NotificationLobbyInvitation::unsafe_arena_release_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.NotificationLobbyInvitation.srcMember)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::np2_structs::UserInfo* temp = _impl_.srcmember_;
+  _impl_.srcmember_ = nullptr;
+  return temp;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL NotificationLobbyInvitation::_internal_mutable_srcmember() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.srcmember_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::np2_structs::UserInfo>(GetArena());
+    _impl_.srcmember_ = reinterpret_cast<::np2_structs::UserInfo*>(p);
+  }
+  return _impl_.srcmember_;
+}
+inline ::np2_structs::UserInfo* PROTOBUF_NONNULL NotificationLobbyInvitation::mutable_srcmember()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  ::np2_structs::UserInfo* _msg = _internal_mutable_srcmember();
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyInvitation.srcMember)
+  return _msg;
+}
+inline void NotificationLobbyInvitation::set_allocated_srcmember(::np2_structs::UserInfo* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.srcmember_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000008U);
+  }
+
+  _impl_.srcmember_ = reinterpret_cast<::np2_structs::UserInfo*>(value);
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.NotificationLobbyInvitation.srcMember)
+}
+
+// repeated .np2_structs.JoinedSessionInfo targetSession = 6;
+inline int NotificationLobbyInvitation::_internal_targetsession_size() const {
+  return _internal_targetsession().size();
+}
+inline int NotificationLobbyInvitation::targetsession_size() const {
+  return _internal_targetsession_size();
+}
+inline void NotificationLobbyInvitation::clear_targetsession() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.targetsession_.Clear();
+  ClearHasBitForRepeated(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL NotificationLobbyInvitation::mutable_targetsession(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyInvitation.targetSession)
+  return _internal_mutable_targetsession()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL NotificationLobbyInvitation::mutable_targetsession()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_mutable_list:np2_structs.NotificationLobbyInvitation.targetSession)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_targetsession();
+}
+inline const ::np2_structs::JoinedSessionInfo& NotificationLobbyInvitation::targetsession(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.targetSession)
+  return _internal_targetsession().Get(index);
+}
+inline ::np2_structs::JoinedSessionInfo* PROTOBUF_NONNULL NotificationLobbyInvitation::add_targetsession()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::np2_structs::JoinedSessionInfo* _add =
+      _internal_mutable_targetsession()->InternalAddWithArena(
+          ::google::protobuf::MessageLite::internal_visibility(), GetArena());
+  SetHasBitForRepeated(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_add:np2_structs.NotificationLobbyInvitation.targetSession)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>& NotificationLobbyInvitation::targetsession() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:np2_structs.NotificationLobbyInvitation.targetSession)
+  return _internal_targetsession();
+}
+inline const ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>&
+NotificationLobbyInvitation::_internal_targetsession() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.targetsession_;
+}
+inline ::google::protobuf::RepeatedPtrField<::np2_structs::JoinedSessionInfo>* PROTOBUF_NONNULL
+NotificationLobbyInvitation::_internal_mutable_targetsession() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.targetsession_;
+}
+
+// bytes optData = 7;
+inline void NotificationLobbyInvitation::clear_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.optdata_.ClearToEmpty();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline const ::std::string& NotificationLobbyInvitation::optdata() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:np2_structs.NotificationLobbyInvitation.optData)
+  return _internal_optdata();
+}
+template <typename Arg_, typename... Args_>
+PROTOBUF_ALWAYS_INLINE void NotificationLobbyInvitation::set_optdata(Arg_&& arg, Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  _impl_.optdata_.SetBytes(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:np2_structs.NotificationLobbyInvitation.optData)
+}
+inline ::std::string* PROTOBUF_NONNULL NotificationLobbyInvitation::mutable_optdata()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  ::std::string* _s = _internal_mutable_optdata();
+  // @@protoc_insertion_point(field_mutable:np2_structs.NotificationLobbyInvitation.optData)
+  return _s;
+}
+inline const ::std::string& NotificationLobbyInvitation::_internal_optdata() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.optdata_.Get();
+}
+inline void NotificationLobbyInvitation::_internal_set_optdata(const ::std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.optdata_.Set(value, GetArena());
+}
+inline ::std::string* PROTOBUF_NONNULL NotificationLobbyInvitation::_internal_mutable_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.optdata_.Mutable( GetArena());
+}
+inline ::std::string* PROTOBUF_NULLABLE NotificationLobbyInvitation::release_optdata() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:np2_structs.NotificationLobbyInvitation.optData)
+  if (!CheckHasBit(_impl_._has_bits_[0], 0x00000004U)) {
+    return nullptr;
+  }
+  ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  auto* released = _impl_.optdata_.Release();
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString()) {
+    _impl_.optdata_.Set("", GetArena());
+  }
+  return released;
+}
+inline void NotificationLobbyInvitation::set_allocated_optdata(::std::string* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000004U);
+  }
+  _impl_.optdata_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.optdata_.IsDefault()) {
+    _impl_.optdata_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:np2_structs.NotificationLobbyInvitation.optData)
 }
 
 #ifdef __GNUC__

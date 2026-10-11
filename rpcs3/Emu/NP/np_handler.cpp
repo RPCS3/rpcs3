@@ -1007,6 +1007,17 @@ namespace np
 		room_msg_cb = {};
 		room_msg_cb_ctx = 0;
 		room_msg_cb_arg = {};
+		lobby_event_cb = {};
+		lobby_event_cb_ctx = 0;
+		lobby_event_cb_arg = {};
+		lobby_msg_cb = {};
+		lobby_msg_cb_ctx = 0;
+		lobby_msg_cb_arg = {};
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			joined_lobbies.clear();
+		}
 
 		presence_self.pr_status = {};
 		presence_self.pr_data = {};
@@ -1342,6 +1353,13 @@ namespace np
 					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::GetTss: reply_get_tss(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetLobbyInfoList: reply_get_lobby_info_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::JoinLobby: reply_join_lobby(req_id, error, reply_data); break;
+					case rpcn::CommandType::LeaveLobby: reply_leave_lobby(req_id, error, reply_data); break;
+					case rpcn::CommandType::SetLobbyMemberDataInternal: reply_set_lobby_member_data_internal(req_id, error); break;
+					case rpcn::CommandType::GetLobbyMemberDataInternalList: reply_get_lobby_member_data_internal_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::SendLobbyChatMessage: reply_send_lobby_chat_message(req_id, error); break;
+					case rpcn::CommandType::SendLobbyInvitation: reply_send_lobby_invitation(req_id, error); break;
 					default: fmt::throw_exception("Unknown reply(%d) received!", command); break;
 					}
 				}
@@ -1366,6 +1384,11 @@ namespace np
 					case rpcn::NotificationType::RoomOwnerChangedGUI: notif_room_owner_changed_gui(noti_data); break;
 					case rpcn::NotificationType::UserKickedGUI: notif_user_kicked_gui(noti_data); break;
 					case rpcn::NotificationType::QuickMatchCompleteGUI: notif_quickmatch_complete_gui(noti_data); break;
+					case rpcn::NotificationType::MemberJoinedLobby: notif_member_joined_lobby(noti_data); break;
+					case rpcn::NotificationType::MemberLeftLobby: notif_member_left_lobby(noti_data); break;
+					case rpcn::NotificationType::UpdatedLobbyMemberDataInternal: notif_updated_lobby_member_data_internal(noti_data); break;
+					case rpcn::NotificationType::LobbyMessageReceived: notif_lobby_message_received(noti_data); break;
+					case rpcn::NotificationType::LobbyInvitationReceived: notif_lobby_invitation_received(noti_data); break;
 					default: fmt::throw_exception("Unknown notification(%d) received!", notif.first); break;
 					}
 				}

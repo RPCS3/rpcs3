@@ -617,3 +617,153 @@ message GetRoomMemberDataExternalListResponse
 {
   repeated RoomMemberDataExternal members = 1;
 }
+
+// Lobbies
+
+message JoinedSessionInfo {
+  uint32 sessionType = 1;
+  uint32 serverId = 2;
+  uint32 worldId = 3;
+  uint64 lobbyId = 4;
+  uint64 roomId = 5;
+  uint64 joinDate = 6;
+}
+
+message LobbyDataExternal {
+  uint32 serverId = 1;
+  uint32 worldId = 2;
+  uint64 lobbyId = 3;
+  uint32 maxSlot = 4;
+  uint32 curMemberNum = 5;
+  uint32 flagAttr = 6;
+  repeated IntAttr lobbySearchableIntAttrExternal = 7;
+  repeated BinAttr lobbySearchableBinAttrExternal = 8;
+  repeated BinAttr lobbyBinAttrExternal = 9;
+}
+
+message GetLobbyInfoListRequest {
+  uint32 worldId = 1;
+  uint32 rangeFilter_startIndex = 2;
+  uint32 rangeFilter_max = 3;
+  repeated uint32 attrId = 4;
+}
+
+message GetLobbyInfoListResponse {
+  uint32 startIndex = 1;
+  uint32 total = 2;
+  repeated LobbyDataExternal lobbies = 3;
+}
+
+message LobbyMemberDataInternal {
+  UserInfo userInfo = 1;
+  uint64 joinDate = 2;
+  uint32 memberId = 3;
+  uint32 flagAttr = 4;
+  repeated JoinedSessionInfo joinedSessionInfo = 5;
+  repeated RoomMemberBinAttrInternal lobbyMemberBinAttrInternal = 6;
+}
+
+message LobbyDataInternal {
+  uint32 serverId = 1;
+  uint32 worldId = 2;
+  uint64 lobbyId = 3;
+  uint32 maxSlot = 4;
+  repeated uint32 memberIds = 5;
+  uint32 me = 6;
+  uint32 flagAttr = 7;
+  repeated BinAttrInternal lobbyBinAttrInternal = 8;
+}
+
+message JoinLobbyRequest {
+  uint64 lobbyId = 1;
+  repeated JoinedSessionInfo joinedSessionInfo = 2;
+  repeated BinAttr lobbyMemberBinAttrInternal = 3;
+  PresenceOptionData optData = 4;
+}
+
+message JoinLobbyResponse {
+  LobbyDataInternal lobbyData = 1;
+}
+
+message LeaveLobbyRequest {
+  uint64 lobbyId = 1;
+  PresenceOptionData optData = 2;
+}
+
+message SetLobbyMemberDataInternalRequest {
+  uint64 lobbyId = 1;
+  uint32 memberId = 2;
+  uint32 flagFilter = 3;
+  uint32 flagAttr = 4;
+  repeated JoinedSessionInfo joinedSessionInfo = 5;
+  repeated BinAttr lobbyMemberBinAttrInternal = 6;
+}
+
+message GetLobbyMemberDataInternalListRequest {
+  uint64 lobbyId = 1;
+  repeated uint32 memberId = 2;
+  repeated uint32 attrId = 3;
+  bool extendedData = 4;
+}
+
+message GetLobbyMemberDataInternalListResponse {
+  repeated LobbyMemberDataInternal members = 1;
+}
+
+message SendLobbyMessageRequest {
+  uint64 lobbyId = 1;
+  uint32 castType = 2;
+  repeated uint32 dst = 3;
+  bytes msg = 4;
+  uint32 option = 5;
+}
+
+message SendLobbyInvitationRequest {
+  uint64 lobbyId = 1;
+  uint32 castType = 2;
+  repeated uint32 dst = 3;
+  repeated JoinedSessionInfo targetSession = 4;
+  bytes optData = 5;
+  uint32 option = 6;
+}
+
+message LobbyMemberUpdateInfo {
+  LobbyMemberDataInternal lobbyMemberDataInternal = 1;
+  uint32 eventCause = 2;
+  PresenceOptionData optData = 3;
+}
+
+message NotificationLobbyMemberUpdate {
+  uint64 lobbyId = 1;
+  LobbyMemberUpdateInfo updateInfo = 2;
+}
+
+message NotificationLobbyMemberDataInternalUpdate {
+  uint64 lobbyId = 1;
+  uint32 memberId = 2;
+  string npId = 3;
+  uint32 flagFilter = 4;
+  uint32 newFlagAttr = 5;
+  repeated JoinedSessionInfo newJoinedSessionInfo = 6;
+  repeated RoomMemberBinAttrInternal newLobbyMemberBinAttrInternal = 7;
+}
+
+message NotificationLobbyMessage {
+  uint64 lobbyId = 1;
+  uint32 srcMemberId = 2;
+  bool filtered = 3;
+  uint32 castType = 4;
+  repeated uint32 dst = 5;
+  UserInfo srcMember = 6;
+  bytes msg = 7;
+}
+
+message NotificationLobbyInvitation {
+  uint64 lobbyId = 1;
+  uint32 srcMemberId = 2;
+  uint32 castType = 3;
+  repeated uint32 dst = 4;
+  UserInfo srcMember = 5;
+  repeated JoinedSessionInfo targetSession = 6;
+  bytes optData = 7;
+}

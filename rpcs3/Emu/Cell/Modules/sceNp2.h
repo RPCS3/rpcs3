@@ -687,7 +687,7 @@ struct SceNpMatching2LobbyMemberDataInternal
 // Lobby member ID list
 struct SceNpMatching2LobbyMemberIdList
 {
-	be_t<SceNpMatching2LobbyMemberId> memberId;
+	vm::bptr<SceNpMatching2LobbyMemberId> memberId;
 	be_t<u32> memberIdNum;
 	be_t<SceNpMatching2LobbyMemberId> me;
 	u8 padding[6];
@@ -746,7 +746,7 @@ union SceNpMatching2LobbyMessageDestination
 	{
 		vm::bptr<SceNpMatching2LobbyMemberId> memberId;
 		be_t<u32> memberIdNum;
-	};
+	} multicastTarget;
 };
 
 // Group label
@@ -1487,7 +1487,7 @@ struct SceNpMatching2LobbyMemberDataInternalUpdateInfo
 	SceNpId npId;
 	be_t<SceNpMatching2FlagAttr> flagFilter;
 	be_t<SceNpMatching2FlagAttr> newFlagAttr;
-	SceNpMatching2JoinedSessionInfo newJoinedSessionInfo;
+	vm::bptr<SceNpMatching2JoinedSessionInfo> newJoinedSessionInfo;
 	be_t<u32> newJoinedSessionInfoNum;
 	vm::bptr<SceNpMatching2LobbyMemberBinAttrInternal> newLobbyMemberBinAttrInternal;
 	be_t<u32> newLobbyMemberBinAttrInternalNum;

@@ -165,6 +165,13 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::SyncTrophies: return "SyncTrophies";
 			case rpcn::CommandType::DeleteTrophies: return "DeleteTrophies";
 			case rpcn::CommandType::GetTss: return "GetTss";
+			case rpcn::CommandType::GetLobbyInfoList: return "GetLobbyInfoList";
+			case rpcn::CommandType::JoinLobby: return "JoinLobby";
+			case rpcn::CommandType::LeaveLobby: return "LeaveLobby";
+			case rpcn::CommandType::SetLobbyMemberDataInternal: return "SetLobbyMemberDataInternal";
+			case rpcn::CommandType::GetLobbyMemberDataInternalList: return "GetLobbyMemberDataInternalList";
+			case rpcn::CommandType::SendLobbyChatMessage: return "SendLobbyChatMessage";
+			case rpcn::CommandType::SendLobbyInvitation: return "SendLobbyInvitation";
 			}
 
 			return unknown;
@@ -197,6 +204,11 @@ void fmt_class_string<rpcn::NotificationType>::format(std::string& out, u64 arg)
 			case rpcn::NotificationType::RoomOwnerChangedGUI: return "RoomOwnerChangedGUI";
 			case rpcn::NotificationType::UserKickedGUI: return "UserKickedGUI";
 			case rpcn::NotificationType::QuickMatchCompleteGUI: return "QuickMatchCompleteGUI";
+			case rpcn::NotificationType::MemberJoinedLobby: return "MemberJoinedLobby";
+			case rpcn::NotificationType::MemberLeftLobby: return "MemberLeftLobby";
+			case rpcn::NotificationType::UpdatedLobbyMemberDataInternal: return "UpdatedLobbyMemberDataInternal";
+			case rpcn::NotificationType::LobbyMessageReceived: return "LobbyMessageReceived";
+			case rpcn::NotificationType::LobbyInvitationReceived: return "LobbyInvitationReceived";
 			}
 
 			return unknown;
@@ -261,7 +273,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 34;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 36;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -2970,6 +2982,172 @@ namespace rpcn
 		const std::string com_id_str = np::communication_id_to_string(com_id);
 		ensure(com_id_str.size() == 12, "rpcn_client::write_communication_id: Error formatting SceNpCommunicationId");
 		memcpy(data.data(), com_id_str.data(), COMMUNICATION_ID_SIZE);
+	}
+
+	static void add_joined_sessions(google::protobuf::RepeatedPtrField<np2_structs::JoinedSessionInfo>* dst, vm::bcptr<SceNpMatching2JoinedSessionInfo> sessions, u32 num)
+	{
+		for (u32 i = 0; sessions && i < num; i++)
+		{
+			auto* session = dst->Add();
+			session->set_sessiontype(sessions[i].sessionType);
+			session->set_serverid(sessions[i].serverId);
+			session->set_worldid(sessions[i].worldId);
+			session->set_lobbyid(sessions[i].lobbyId);
+			session->set_roomid(sessions[i].roomId);
+			session->set_joindate(sessions[i].joinDate.tick);
+		}
+	}
+
+	static void add_lobby_member_bin_attrs(google::protobuf::RepeatedPtrField<np2_structs::BinAttr>* dst, vm::bcptr<SceNpMatching2BinAttr> attrs, u32 num)
+	{
+		for (u32 i = 0; attrs && i < num; i++)
+		{
+			auto* attr = dst->Add();
+			attr->mutable_id()->set_value(attrs[i].id);
+			attr->set_data(attrs[i].ptr.get_ptr(), attrs[i].size);
+		}
+	}
+
+	template <typename T>
+	static void add_lobby_destination(T& pb_req, SceNpMatching2CastType cast_type, const SceNpMatching2LobbyMessageDestination& dst)
+	{
+		switch (cast_type)
+		{
+		case SCE_NP_MATCHING2_CASTTYPE_UNICAST:
+			pb_req.add_dst(dst.unicastTarget);
+			break;
+		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
+			for (u32 i = 0; i < dst.multicastTarget.memberIdNum && dst.multicastTarget.memberId; i++)
+			{
+				pb_req.add_dst(dst.multicastTarget.memberId[i]);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+
+	bool rpcn_client::get_lobby_info_list(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetLobbyInfoListRequest* req)
+	{
+		np2_structs::GetLobbyInfoListRequest pb_req;
+		pb_req.set_worldid(req->worldId);
+		pb_req.set_rangefilter_startindex(req->rangeFilter.startIndex);
+		pb_req.set_rangefilter_max(req->rangeFilter.max);
+
+		for (u32 i = 0; req->attrId && i < req->attrIdNum; i++)
+		{
+			pb_req.add_attrid(req->attrId[i]);
+		}
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetLobbyInfoList, req_id);
+	}
+
+	bool rpcn_client::join_lobby(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2JoinLobbyRequest* req)
+	{
+		np2_structs::JoinLobbyRequest pb_req;
+		pb_req.set_lobbyid(req->lobbyId);
+		add_joined_sessions(pb_req.mutable_joinedsessioninfo(), req->joinedSessionInfo, req->joinedSessionInfoNum);
+		add_lobby_member_bin_attrs(pb_req.mutable_lobbymemberbinattrinternal(), req->lobbyMemberBinAttrInternal, req->lobbyMemberBinAttrInternalNum);
+
+		auto* optdata = pb_req.mutable_optdata();
+		optdata->set_data(req->optData.data, 16);
+		optdata->set_len(req->optData.length);
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::JoinLobby, req_id);
+	}
+
+	bool rpcn_client::leave_lobby(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveLobbyRequest* req)
+	{
+		np2_structs::LeaveLobbyRequest pb_req;
+		pb_req.set_lobbyid(req->lobbyId);
+
+		auto* optdata = pb_req.mutable_optdata();
+		optdata->set_data(req->optData.data, 16);
+		optdata->set_len(req->optData.length);
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::LeaveLobby, req_id);
+	}
+
+	bool rpcn_client::set_lobby_member_data_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetLobbyMemberDataInternalRequest* req)
+	{
+		np2_structs::SetLobbyMemberDataInternalRequest pb_req;
+		pb_req.set_lobbyid(req->lobbyId);
+		pb_req.set_memberid(req->memberId);
+		pb_req.set_flagfilter(req->flagFilter);
+		pb_req.set_flagattr(req->flagAttr);
+		add_joined_sessions(pb_req.mutable_joinedsessioninfo(), req->joinedSessionInfo, req->joinedSessionInfoNum);
+		add_lobby_member_bin_attrs(pb_req.mutable_lobbymemberbinattrinternal(), req->lobbyMemberBinAttrInternal, req->lobbyMemberBinAttrInternalNum);
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SetLobbyMemberDataInternal, req_id);
+	}
+
+	bool rpcn_client::get_lobby_member_data_internal_list(u32 req_id, const SceNpCommunicationId& communication_id, u64 lobby_id, const std::vector<u16>& member_ids, const std::vector<u16>& attr_ids, bool extended_data)
+	{
+		np2_structs::GetLobbyMemberDataInternalListRequest pb_req;
+		pb_req.set_lobbyid(lobby_id);
+		pb_req.set_extendeddata(extended_data);
+
+		for (u16 member_id : member_ids)
+		{
+			pb_req.add_memberid(member_id);
+		}
+
+		for (u16 attr_id : attr_ids)
+		{
+			pb_req.add_attrid(attr_id);
+		}
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::GetLobbyMemberDataInternalList, req_id);
+	}
+
+	bool rpcn_client::send_lobby_chat_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendLobbyChatMessageRequest* req)
+	{
+		np2_structs::SendLobbyMessageRequest pb_req;
+		pb_req.set_lobbyid(req->lobbyId);
+		pb_req.set_casttype(req->castType);
+		pb_req.set_option(req->option);
+		add_lobby_destination(pb_req, req->castType, req->dst);
+		pb_req.set_msg(req->msg.get_ptr(), req->msgLen);
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SendLobbyChatMessage, req_id);
+	}
+
+	bool rpcn_client::send_lobby_invitation(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendLobbyInvitationRequest* req)
+	{
+		np2_structs::SendLobbyInvitationRequest pb_req;
+		pb_req.set_lobbyid(req->lobbyId);
+		pb_req.set_casttype(req->castType);
+		pb_req.set_option(req->option);
+		add_lobby_destination(pb_req, req->castType, req->dst);
+		add_joined_sessions(pb_req.mutable_targetsession(), req->invitationData.targetSession, req->invitationData.targetSessionNum);
+
+		if (req->invitationData.optData && req->invitationData.optDataLen)
+		{
+			pb_req.set_optdata(req->invitationData.optData.get_ptr(), req->invitationData.optDataLen);
+		}
+
+		std::string serialized;
+		pb_req.SerializeToString(&serialized);
+
+		return forge_request_with_com_id(serialized, communication_id, CommandType::SendLobbyInvitation, req_id);
 	}
 
 	bool rpcn_client::forge_request_with_com_id(std::string_view serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
