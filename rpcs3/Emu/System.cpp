@@ -1127,7 +1127,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	m_db_config = db_config;
 
 	// Handle files and special paths inside Load unmodified
-	if (direct || !fs::is_dir(path) || fs::get_optical_raw_device(path))
+	if (direct || !fs::is_dir(path) || is_iso_file(path))
 	{
 		m_path = path;
 
@@ -4575,7 +4575,7 @@ game_boot_result Emulator::AddGame(std::string path, bool is_iso)
 	fmt::trim_back(path, fs::delim);
 
 	// Handle files directly
-	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
+	if (!fs::is_dir(path) || is_iso_file(path))
 	{
 		return AddGameToYml(path, is_iso);
 	}
