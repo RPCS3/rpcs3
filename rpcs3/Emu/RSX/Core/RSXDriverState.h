@@ -18,7 +18,6 @@ namespace rsx
 		fragment_texture_state_dirty = (1 << 9),   // Fragment texture parameters changed
 		vertex_texture_state_dirty   = (1 << 10),  // Fragment texture parameters changed
 		scissor_config_state_dirty   = (1 << 11),  // Scissor region changed
-		zclip_config_state_dirty     = (1 << 12),  // Viewport Z clip changed
 
 		scissor_setup_invalid        = (1 << 13),  // Scissor configuration is broken
 		scissor_setup_clipped        = (1 << 14),  // Scissor region is cropped by viewport constraint
@@ -51,11 +50,7 @@ namespace rsx
 		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
 		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty | xform_instancing_state_dirty,
-		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
-
-		// Vulkan-specific signals
-		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty,
 
 		all_dirty = ~0u
 	};

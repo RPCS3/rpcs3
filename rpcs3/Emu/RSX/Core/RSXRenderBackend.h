@@ -47,7 +47,8 @@ namespace rsx
 		// Draw
 		virtual void begin_draw() {}
 		virtual bool end_draw(rsx::flags32_t /*pre_begin_pipeline_state*/) { return false; }
-		virtual void clear_surface(u32 /*arg*/) {}
+		// Clear the bound surfaces. The core has decoded the clear into draw_state.clear.
+		virtual void clear() {}
 		virtual void emit_geometry(u32 /*sub_index*/) {}
 
 		// Present. Returns true if a frame was presented, in which case post_present() runs after the core's flip bookkeeping.

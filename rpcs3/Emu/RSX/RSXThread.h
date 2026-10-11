@@ -301,6 +301,9 @@ namespace rsx
 		void end();
 		void discard_draw();
 
+		// NV4097_CLEAR_SURFACE, forwarded to the renderer core
+		void clear_surface(u32 arg);
+
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		void flip(const display_flip_info_t& info);

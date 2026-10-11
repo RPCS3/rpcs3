@@ -122,7 +122,7 @@ void GLGSRender::update_draw_state()
 
 		if (gl::get_driver_caps().NV_depth_buffer_float_supported)
 		{
-			gl_state.depth_range(REGS(m_ctx)->clip_min(), REGS(m_ctx)->clip_max());
+			gl_state.depth_range(m_ctx->draw_state.viewport.z_clip_min, m_ctx->draw_state.viewport.z_clip_max);
 		}
 
 		if (gl_state.enable(depth_stencil.stencil_test_enabled, GL_STENCIL_TEST))
@@ -305,9 +305,6 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_EDGE_FLAG
 	//NV4097_SET_COLOR_KEY_COLOR
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
-
-	// For OGL Z range is updated every draw as it is separate from viewport config
-	m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 
 	m_ctx->stats.setup_time += m_profiler.duration();
 }

@@ -557,7 +557,7 @@ namespace rsx
 
 		void clear(context* ctx, u32 /*reg*/, u32 arg)
 		{
-			RSX(ctx)->renderer()->clear_surface(arg);
+			RSX(ctx)->clear_surface(arg);
 
 			RSX_CAPTURE_EVENT("clear");
 		}

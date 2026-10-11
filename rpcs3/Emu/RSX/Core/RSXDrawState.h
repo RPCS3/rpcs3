@@ -3,6 +3,7 @@
 #include <util/types.hpp>
 #include <array>
 #include "Emu/RSX/Common/bitfield.hpp"
+#include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/gcm_enums.h"
 
 namespace rsx
@@ -117,6 +118,50 @@ namespace rsx
 		bool operator==(const multisample_state&) const = default;
 	};
 
+	struct viewport_state
+	{
+		// Size of the surface clip region, before resolution scaling.
+		// The viewport transform itself is part of the vertex program's scale/offset, so the host viewport covers this region.
+		u16 clip_width = 0;
+		u16 clip_height = 0;
+
+		// Depth range
+		f32 z_clip_min = 0.f;
+		f32 z_clip_max = 0.f;
+
+		bool operator==(const viewport_state&) const = default;
+	};
+
+	// Decoded for every clear command right before the backend's clear() hook. It is not change-tracked.
+	struct clear_state
+	{
+		// RSX_GCM_CLEAR_* bits. The stencil bit has already been dropped if the stencil write mask is zero.
+		rsx::flags32_t mask = 0;
+
+		surface_depth_format2 depth_format{};
+		u8 stencil_write_mask = 0;
+
+		// The scissor covers the whole surface clip region
+		bool scissor_covers_surface = false;
+
+		// Only decoded when the depth bit is set. Host-specific depth encodings are not applied.
+		f32 depth_value = 0.f;
+
+		// Only decoded when the stencil bit is set and the depth format has a stencil aspect
+		u8 stencil_value = 0;
+
+		// Color mask and value, remapped to the channel layout the surface format is stored in.
+		// The mask is zero when no color bit is set or the format cannot be cleared. The other color fields are only decoded when it is non-zero.
+		rsx::flags32_t color_mask = 0;
+		u8 color_r = 0;
+		u8 color_g = 0;
+		u8 color_b = 0;
+		u8 color_a = 0;
+
+		// The mask writes every channel of that layout
+		bool color_mask_full = false;
+	};
+
 	// Decoded pipeline state shared by every backend.
 	// Written only by the core renderer. Backends read it and translate it into host API state.
 	struct draw_state_t
@@ -130,10 +175,9 @@ namespace rsx
 			multisample    = (1 << 3),
 			viewport       = (1 << 4),
 			input_assembly = (1 << 5),
-			clear          = (1 << 6),
-			program_env    = (1 << 7),
+			program_env    = (1 << 6),
 
-			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | clear | program_env
+			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | program_env
 		};
 
 		bitmask_t<group> dirty;
@@ -145,5 +189,9 @@ namespace rsx
 		depth_stencil_state depth_stencil;
 		blend_state blend;
 		multisample_state multisample;
+		viewport_state viewport;
+
+		// Not a group: decoded per clear command
+		clear_state clear;
 	};
 }

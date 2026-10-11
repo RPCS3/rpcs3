@@ -169,6 +169,112 @@ namespace rsx
 		state.alpha_to_one_enabled = regs.msaa_alpha_to_one_enabled();
 	}
 
+	static void decode_viewport_state(const rsx_state& regs, viewport_state& state)
+	{
+		state.clip_width = regs.surface_clip_width();
+		state.clip_height = regs.surface_clip_height();
+		state.z_clip_min = regs.clip_min();
+		state.z_clip_max = regs.clip_max();
+	}
+
+	static void decode_clear_state(const rsx_state& regs, rsx::flags32_t mask, clear_state& state)
+	{
+		state.mask = mask;
+		state.depth_format = regs.surface_depth_fmt();
+		state.stencil_write_mask = regs.stencil_mask();
+
+		state.scissor_covers_surface =
+			regs.scissor_origin_x() == 0 &&
+			regs.scissor_origin_y() == 0 &&
+			regs.scissor_width() >= regs.surface_clip_width() &&
+			regs.scissor_height() >= regs.surface_clip_height();
+
+		const bool has_stencil = is_depth_stencil_format(state.depth_format);
+
+		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
+		{
+			const u32 clear_depth_bits = regs.z_clear_value(has_stencil);
+			state.depth_value = rsx::get_depth_clear_value(state.depth_format, clear_depth_bits);
+		}
+
+		if ((mask & RSX_GCM_CLEAR_STENCIL_BIT) && has_stencil)
+		{
+			state.stencil_value = regs.stencil_clear_value();
+		}
+
+		state.color_mask = mask & RSX_GCM_CLEAR_COLOR_RGBA_MASK;
+		if (!state.color_mask)
+		{
+			return;
+		}
+
+		u8 clear_a = regs.clear_color_a();
+		u8 clear_r = regs.clear_color_r();
+		u8 clear_g = regs.clear_color_g();
+		u8 clear_b = regs.clear_color_b();
+		bool full_mask = (state.color_mask == RSX_GCM_CLEAR_COLOR_RGBA_MASK);
+
+		switch (regs.surface_color())
+		{
+		case rsx::surface_color_format::x32:
+		case rsx::surface_color_format::w16z16y16x16:
+		case rsx::surface_color_format::w32z32y32x32:
+		{
+			// Nop
+			state.color_mask = 0;
+			return;
+		}
+		case rsx::surface_color_format::b8:
+		{
+			rsx::get_b8_clear_color(clear_r, clear_g, clear_b, clear_a);
+			state.color_mask = rsx::get_b8_clearmask(state.color_mask);
+			full_mask = !!(state.color_mask & RSX_GCM_CLEAR_RED_BIT);
+			break;
+		}
+		case rsx::surface_color_format::g8b8:
+		{
+			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
+			state.color_mask = rsx::get_g8b8_r8g8_clearmask(state.color_mask);
+			full_mask = ((state.color_mask & RSX_GCM_CLEAR_COLOR_RG_MASK) == RSX_GCM_CLEAR_COLOR_RG_MASK);
+			break;
+		}
+		case rsx::surface_color_format::r5g6b5:
+		{
+			rsx::get_rgb565_clear_color(clear_r, clear_g, clear_b, clear_a);
+			full_mask = ((state.color_mask & RSX_GCM_CLEAR_COLOR_RGB_MASK) == RSX_GCM_CLEAR_COLOR_RGB_MASK);
+			break;
+		}
+		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+		{
+			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 255);
+			break;
+		}
+		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		{
+			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 0);
+			break;
+		}
+		case rsx::surface_color_format::a8b8g8r8:
+		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+		{
+			rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
+			state.color_mask = rsx::get_abgr8_clearmask(state.color_mask);
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+
+		state.color_r = clear_r;
+		state.color_g = clear_g;
+		state.color_b = clear_b;
+		state.color_a = clear_a;
+		state.color_mask_full = full_mask;
+	}
+
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
 	// Full decode on top of the current state. Fields the decoders skip keep their current value, so only relevant fields are compared.
 	// A mismatch means a register feeding the group is missing from draw_state_signals.
@@ -189,6 +295,10 @@ namespace rsx
 		multisample_state multisample = state.multisample;
 		decode_multisample_state(regs, multisample);
 		ensure(multisample == state.multisample, "Stale multisample state");
+
+		viewport_state viewport = state.viewport;
+		decode_viewport_state(regs, viewport);
+		ensure(viewport == state.viewport, "Stale viewport state");
 	}
 #endif
 
@@ -245,6 +355,9 @@ namespace rsx
 		{
 			return;
 		}
+
+		// The backend binds the framebuffer here, which reads the viewport
+		decode_draw_state();
 
 		RSX(m_ctx)->renderer()->begin_draw();
 	}
@@ -307,9 +420,45 @@ namespace rsx
 			state.dirty.set(draw_state_t::group::multisample);
 		}
 
+		if (state.pending.test(draw_state_t::group::viewport))
+		{
+			decode_viewport_state(regs, state.viewport);
+			state.pending.clear(draw_state_t::group::viewport);
+			state.dirty.set(draw_state_t::group::viewport);
+		}
+
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
 		verify_draw_state(regs, state);
 #endif
+	}
+
+	void core_renderer::clear(rsx::flags32_t arg)
+	{
+		if (m_ctx->frame_skip.skip_current_frame)
+		{
+			return;
+		}
+
+		const auto& regs = *REGS(m_ctx);
+
+		// If stencil write mask is disabled, remove clear_stencil bit
+		if (!regs.stencil_mask())
+		{
+			arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
+		}
+
+		// Ignore invalid clear flags
+		if (!(arg & RSX_GCM_CLEAR_ANY_MASK))
+		{
+			return;
+		}
+
+		// The backend binds the framebuffer for the clear, which reads the viewport.
+		// Groups decoded here stay dirty until the next executed draw.
+		decode_draw_state();
+		decode_clear_state(regs, arg, m_ctx->draw_state.clear);
+
+		RSX(m_ctx)->renderer()->clear();
 	}
 
 	void core_renderer::discard_draw()

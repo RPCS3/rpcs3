@@ -253,8 +253,8 @@ void VKGSRender::update_draw_state()
 		else
 		{
 			// Avoid special case where min=max and depth bounds (incorrectly) fails
-			bounds_min = std::min(0.f, REGS(m_ctx)->clip_min());
-			bounds_max = std::max(1.f, REGS(m_ctx)->clip_max());
+			bounds_min = std::min(0.f, m_ctx->draw_state.viewport.z_clip_min);
+			bounds_max = std::max(1.f, m_ctx->draw_state.viewport.z_clip_max);
 		}
 
 		if (!m_config.supports_extended_depth_range)
@@ -1380,9 +1380,10 @@ bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
 
-	if ((m_ctx->graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state) ||
-		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::raster) ||
-		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::depth_stencil))
+	// Scissor changes request the reload themselves when the framebuffer is bound (set_scissor)
+	if (m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::raster) ||
+		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::depth_stencil) ||
+		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::viewport))
 	{
 		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	}
