@@ -97,6 +97,17 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 		return false;
 	}
 
+	// Recognizing a container fully means reading its whole index: what it holds is checked once it is opened
+	if (is_iso_container(path))
+	{
+		if (size)
+		{
+			*size = fs::file(path).size();
+		}
+
+		return true;
+	}
+
 	std::string new_path = path;
 
 	// "new_path" is updated with the raw device path in case "path" points to a BD drive
@@ -241,7 +252,7 @@ static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_m
 
 	// One handle serves every block: it is pointed at each of the files in turn, which costs nothing but the
 	// metadata of the node, while building a file object per node would open the image again for each of them
-	iso_file iso_file(archive.path());
+	iso_file iso_file = archive.open_image();
 
 	if (!iso_file)
 	{
@@ -305,8 +316,11 @@ static bool decrypts_all_blocks(aes_context& aes_ctx, std::vector<iso_magic_bloc
 
 iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_context* aes_ctx)
 {
-	fs::file key_file(key_path);
+	return get_key(fs::file(key_path), key_path, aes_ctx);
+}
 
+iso_type_status iso_file_decryption::get_key(const fs::file& key_file, std::string_view key_name, aes_context* aes_ctx)
+{
 	// If no ".dkey" and ".key" file exists
 	if (!key_file)
 	{
@@ -333,7 +347,7 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 
 			if (!error.empty())
 			{
-				iso_log.error("get_key(%s): %s", key_path, error);
+				iso_log.error("get_key(%s): %s", key_name, error);
 				return iso_type_status::ERROR_PROCESSING_KEY;
 			}
 		}
@@ -462,6 +476,11 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 		return iso_type_status::NOT_ISO;
 	}
 
+	return find_key(path, key_path, aes_ctx);
+}
+
+iso_type_status iso_file_decryption::find_key(const std::string& path, std::string* key_path, aes_context* aes_ctx)
+{
 	// Remove file extension from file path
 	const usz ext_pos = path.rfind('.');
 	const std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
@@ -503,7 +522,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
-	iso_file iso_file(path);
+	iso_file iso_file = archive ? archive->open_image() : ::iso_file(path);
 
 	if (!is_iso_file(iso_file))
 	{
@@ -567,14 +586,22 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// (if present) the first key that allows decrypting a sector of the ISO file
 	const bool scan_keys_folder = fs::is_optical_raw_device(path) && archive;
 
+	// A key stored in the container of the image comes first, then the key files found the same way as for an image
+	const fs::file container_key = archive && archive->container() ? archive->container()->open_key() : fs::file();
+
 	if (scan_keys_folder)
 	{
 		status = retrieve_key(*archive, key_path, m_aes_dec, content_encrypted);
 	}
+	else if (container_key)
+	{
+		key_path = path + " (stored key)";
+		status = get_key(container_key, key_path, &m_aes_dec);
+	}
 	else
 	{
 		// Try to detect the Redump type. If so, the decryption context is set into "m_aes_dec"
-		status = check_type(path, &key_path, &m_aes_dec);
+		status = find_key(path, &key_path, &m_aes_dec);
 	}
 
 	switch (status)
@@ -821,6 +848,11 @@ bool iso_file_decryption::decrypt(u64 offset, const std::span<u8> buffer, const 
 
 iso_file_encrypted::iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec)
 	: iso_file(path, mode, node), m_dec(dec)
+{
+}
+
+iso_file_encrypted::iso_file_encrypted(fs::file&& file, const std::string& name, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec)
+	: iso_file(std::move(file), name, node), m_dec(std::move(dec))
 {
 }
 
@@ -1328,14 +1360,32 @@ bool iso_archive::iso_parse_file_system(fs::file& file, iso_fs_node& root, const
 iso_archive::iso_archive(const std::string& path)
 {
 	m_path = path;
+	m_container = open_iso_container(path);
 
-	// "m_path" is updated with the raw device path in case "path" points to a BD drive
-	fs::get_optical_raw_device(path, &m_path);
+	if (m_container && !m_container->is_image())
+	{
+		if (!m_container->form_hierarchy(m_root))
+		{
+			iso_log.error("iso_archive: Corrupt container '%s': Failed to form hierarchy", path);
+			invalidate();
+			return;
+		}
+
+		// The files of a disc folder layout are never encrypted
+		m_dec = std::make_shared<iso_file_decryption>();
+		return;
+	}
+
+	if (!m_container)
+	{
+		// "m_path" is updated with the raw device path in case "path" points to a BD drive
+		fs::get_optical_raw_device(path, &m_path);
+	}
 
 	// NOTE: the file is opened once here and then handed over to the parsing below. Recognizing the ISO through its
 	//       path (i.e. "is_iso_file(m_path)") would open it and read its volume descriptor a second time, which is a
 	//       physical read when the path points to an optical drive
-	auto file = std::make_unique<iso_file>(m_path);
+	auto file = std::make_unique<iso_file>(open_image());
 
 	if (!is_iso_file(*file))
 	{
@@ -1404,7 +1454,8 @@ iso_fs_node* iso_archive::retrieve(const std::string& path)
 
 		bool found = false;
 
-		if (path_component == ".")
+		// An empty component comes out of repeated delimiters (e.g. "PS3_GAME//PIC1.PNG"), which name the same node
+		if (path_component.empty() || path_component == ".")
 		{
 			found = true;
 		}
@@ -1446,6 +1497,11 @@ iso_fs_node* iso_archive::retrieve(const std::string& path)
 	return search_stack.top();
 }
 
+iso_file iso_archive::open_image() const
+{
+	return m_container ? iso_file(m_container->open_image(), m_path) : iso_file(m_path);
+}
+
 void iso_archive::invalidate()
 {
 	m_root = {};
@@ -1479,6 +1535,27 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 	if (!is_valid())
 	{
 		return nullptr;
+	}
+
+	if (m_container)
+	{
+		if (mode & (fs::write + fs::append + fs::create + fs::trunc))
+		{
+			fs::g_tls_error = fs::error::readonly;
+			return nullptr;
+		}
+
+		if (!m_container->is_image())
+		{
+			return m_container->open_file(node).release();
+		}
+
+		if (m_dec->get_enc_type() == iso_encryption_type::NONE)
+		{
+			return std::make_unique<iso_file>(m_container->open_image(), path, node);
+		}
+
+		return std::make_unique<iso_file_encrypted>(m_container->open_image(), path, node, m_dec);
 	}
 
 	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
@@ -1517,39 +1594,44 @@ psf::registry iso_archive::open_psf(const std::string& path)
 }
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
+	: iso_file(fs::file(path, mode), path)
 {
-	m_file = fs::file(path, mode);
-
-	if (!m_file)
-	{
-		// Should never happen... TODO: throw something?
-		iso_log.error("iso_file: Failed to open file: '%s'", path);
-		return;
-	}
-
-	m_meta.name = path;
-	m_meta.extents.push_back({0, m_file.size()});
-
-	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
-
-	m_raw_device = fs::is_optical_raw_device(path);
+	m_raw_device = m_file && fs::is_optical_raw_device(path);
 }
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
-	: m_meta(node.metadata)
+	: iso_file(fs::file(path, mode), path, node)
 {
-	m_file = fs::file(path, mode);
+	m_raw_device = m_file && fs::is_optical_raw_device(path);
+}
 
+iso_file::iso_file(fs::file&& file, const std::string& name)
+	: m_file(std::move(file))
+{
 	if (!m_file)
 	{
 		// Should never happen... TODO: throw something?
-		iso_log.error("iso_file: Failed to open file: '%s'", path);
+		iso_log.error("iso_file: Failed to open file: '%s'", name);
+		return;
+	}
+
+	m_meta.name = name;
+	m_meta.extents.push_back({0, m_file.size()});
+
+	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
+}
+
+iso_file::iso_file(fs::file&& file, const std::string& name, const iso_fs_node& node)
+	: m_file(std::move(file)), m_meta(node.metadata)
+{
+	if (!m_file)
+	{
+		// Should never happen... TODO: throw something?
+		iso_log.error("iso_file: Failed to open file: '%s'", name);
 		return;
 	}
 
 	m_file.seek(::at32(m_meta.extents, 0).start * ISO_SECTOR_SIZE);
-
-	m_raw_device = fs::is_optical_raw_device(path);
 }
 
 void iso_file::rebind(const iso_fs_node& node)

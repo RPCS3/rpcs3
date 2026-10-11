@@ -622,8 +622,8 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
-	// Check disc game integrity
-	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
+	// Check disc game integrity. A container is not the dump itself, so it cannot be checked against the integrity DB
+	if (QString::fromStdString(current_game.category) == cat::cat_disc_game && !is_iso_container(current_game.path))
 	{
 		// A disc held by a drive is what a Redump image is dumped from, and its hash is taken over encrypted content,
 		// so no key file is needed for it
