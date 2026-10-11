@@ -704,6 +704,7 @@ namespace rsx
 		const auto depth_stencil = static_cast<u8>(draw_state_t::group::depth_stencil);
 		const auto blend = static_cast<u8>(draw_state_t::group::blend);
 		const auto multisample = static_cast<u8>(draw_state_t::group::multisample);
+		const auto viewport = static_cast<u8>(draw_state_t::group::viewport);
 
 		for (const u32 reg :
 		{
@@ -749,6 +750,11 @@ namespace rsx
 		{
 			draw_state_signals[reg] |= multisample;
 		}
+
+		for (const u32 reg : { NV4097_SET_SURFACE_CLIP_HORIZONTAL, NV4097_SET_SURFACE_CLIP_VERTICAL, NV4097_SET_CLIP_MIN, NV4097_SET_CLIP_MAX })
+		{
+			draw_state_signals[reg] |= viewport;
+		}
 	}
 
 	static void init_state_signals()
@@ -769,8 +775,8 @@ namespace rsx
 		state_signals[NV4097_SET_POINT_SPRITE_CONTROL] = rsx::fragment_program_state_dirty;
 		state_signals[NV4097_SET_USER_CLIP_PLANE_CONTROL] = rsx::vertex_state_dirty;
 		state_signals[NV4097_SET_TRANSFORM_BRANCH_BITS] = rsx::vertex_state_dirty;
-		state_signals[NV4097_SET_CLIP_MIN] = rsx::invalidate_zclip_bits;
-		state_signals[NV4097_SET_CLIP_MAX] = rsx::invalidate_zclip_bits;
+		state_signals[NV4097_SET_CLIP_MIN] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_CLIP_MAX] = rsx::vertex_state_dirty;
 		state_signals[NV4097_SET_POINT_SIZE] = rsx::vertex_state_dirty;
 		state_signals[NV4097_SET_ALPHA_FUNC] = rsx::fragment_state_dirty;
 		state_signals[NV4097_SET_ALPHA_REF] = rsx::fragment_state_dirty;

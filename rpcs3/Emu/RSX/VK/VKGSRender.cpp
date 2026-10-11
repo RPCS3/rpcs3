@@ -1188,12 +1188,13 @@ void VKGSRender::check_present_status()
 
 void VKGSRender::set_viewport()
 {
+	const auto& viewport = m_ctx->draw_state.viewport;
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
 		resolution_scaling_config,
-		REGS(m_ctx)->surface_clip_width(), REGS(m_ctx)->surface_clip_height());
+		viewport.clip_width, viewport.clip_height);
 
-	const auto zclip_near = REGS(m_ctx)->clip_min();
-	const auto zclip_far = REGS(m_ctx)->clip_max();
+	const auto zclip_near = viewport.z_clip_min;
+	const auto zclip_far = viewport.z_clip_max;
 
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	m_viewport.x = 0;
@@ -1213,7 +1214,6 @@ void VKGSRender::set_viewport()
 	}
 
 	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
-	m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 }
 
 void VKGSRender::set_scissor(bool clip_viewport)
@@ -1232,15 +1232,11 @@ void VKGSRender::set_scissor(bool clip_viewport)
 
 void VKGSRender::bind_viewport()
 {
-	if (m_ctx->graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
+	if (m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::viewport) &&
+		m_device->get_unrestricted_depth_range_support())
 	{
-		if (m_device->get_unrestricted_depth_range_support())
-		{
-			m_viewport.minDepth = REGS(m_ctx)->clip_min();
-			m_viewport.maxDepth = REGS(m_ctx)->clip_max();
-		}
-
-		m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
+		m_viewport.minDepth = m_ctx->draw_state.viewport.z_clip_min;
+		m_viewport.maxDepth = m_ctx->draw_state.viewport.z_clip_max;
 	}
 
 	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
@@ -1298,15 +1294,11 @@ void VKGSRender::on_exit()
 	zcull_ctrl.release();
 }
 
-void VKGSRender::clear_surface(u32 mask)
+void VKGSRender::clear()
 {
-	if (m_ctx->frame_skip.skip_current_frame) return;
-
-	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!REGS(m_ctx)->stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
-
-	// Ignore invalid clear flags
-	if (!(mask & RSX_GCM_CLEAR_ANY_MASK)) return;
+	// Frameskip, a disabled stencil write mask and invalid flags have been handled by the core
+	const auto& info = m_ctx->draw_state.clear;
+	const auto mask = info.mask;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
 	if (mask & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
@@ -1339,14 +1331,13 @@ void VKGSRender::clear_surface(u32 mask)
 
 	const bool full_frame = (scissor_w == fb_width && scissor_h == fb_height);
 	bool update_color = false, update_z = false;
-	auto surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
+	const auto surface_depth_format = info.depth_format;
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
-			f32 depth_clear = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+			f32 depth_clear = info.depth_value;
 			if (vk::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
 			{
 				depth_clear = rsx::encode_emulated_depth(depth_clear);
@@ -1362,7 +1353,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			if (mask & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				u8 clear_stencil = REGS(m_ctx)->stencil_clear_value();
+				const u8 clear_stencil = info.stencil_value;
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -1406,116 +1397,54 @@ void VKGSRender::clear_surface(u32 mask)
 		}
 	}
 
-	if (auto colormask = (mask & RSX_GCM_CLEAR_COLOR_RGBA_MASK))
+	// The color mask and value are already remapped to the surface format, and the mask is zero if the format cannot be cleared
+	if (const auto colormask = info.color_mask; colormask && !m_draw_buffers.empty())
 	{
-		if (!m_draw_buffers.empty())
+		// A fast clear needs the mask to cover every channel of the format
+		const bool use_fast_clear = info.color_mask_full;
+
+		if (!use_fast_clear || !full_frame)
 		{
-			bool use_fast_clear = (colormask == RSX_GCM_CLEAR_COLOR_RGBA_MASK);;
-			u8 clear_a = REGS(m_ctx)->clear_color_a();
-			u8 clear_r = REGS(m_ctx)->clear_color_r();
-			u8 clear_g = REGS(m_ctx)->clear_color_g();
-			u8 clear_b = REGS(m_ctx)->clear_color_b();
-
-			switch (REGS(m_ctx)->surface_color())
+			// If we're not clobber all the memory, a barrier is required
+			for (const auto& index : m_rtts.m_bound_render_target_ids)
 			{
-			case rsx::surface_color_format::x32:
-			case rsx::surface_color_format::w16z16y16x16:
-			case rsx::surface_color_format::w32z32y32x32:
-			{
-				//NOP
-				colormask = 0;
-				break;
-			}
-			case rsx::surface_color_format::b8:
-			{
-				rsx::get_b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-				colormask = rsx::get_b8_clearmask(colormask);
-				use_fast_clear = (colormask & RSX_GCM_CLEAR_RED_BIT);
-				break;
-			}
-			case rsx::surface_color_format::g8b8:
-			{
-				rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-				colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
-				use_fast_clear = ((colormask & RSX_GCM_CLEAR_COLOR_RG_MASK) == RSX_GCM_CLEAR_COLOR_RG_MASK);
-				break;
-			}
-			case rsx::surface_color_format::r5g6b5:
-			{
-				rsx::get_rgb565_clear_color(clear_r, clear_g, clear_b, clear_a);
-				use_fast_clear = ((colormask & RSX_GCM_CLEAR_COLOR_RGB_MASK) == RSX_GCM_CLEAR_COLOR_RGB_MASK);
-				break;
-			}
-			case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-			{
-				rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 255);
-				break;
-			}
-			case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			{
-				rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 0);
-				break;
-			}
-			case rsx::surface_color_format::a8b8g8r8:
-			case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-			case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-			{
-				rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
-				colormask = rsx::get_abgr8_clearmask(colormask);
-				break;
-			}
-			default:
-			{
-				break;
-			}
-			}
-
-			if (colormask)
-			{
-				if (!use_fast_clear || !full_frame)
-				{
-					// If we're not clobber all the memory, a barrier is required
-					for (const auto& index : m_rtts.m_bound_render_target_ids)
-					{
-						m_rtts.m_bound_render_targets[index].second->write_barrier(*m_current_command_buffer);
-					}
-				}
-
-				color_clear_values.color.float32[0] = static_cast<float>(clear_r) / 255;
-				color_clear_values.color.float32[1] = static_cast<float>(clear_g) / 255;
-				color_clear_values.color.float32[2] = static_cast<float>(clear_b) / 255;
-				color_clear_values.color.float32[3] = static_cast<float>(clear_a) / 255;
-
-				if (use_fast_clear)
-				{
-					for (u32 index = 0; index < m_draw_buffers.size(); ++index)
-					{
-						clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, color_clear_values });
-					}
-				}
-				else
-				{
-					color4f clear_color =
-					{
-						color_clear_values.color.float32[0],
-						color_clear_values.color.float32[1],
-						color_clear_values.color.float32[2],
-						color_clear_values.color.float32[3]
-					};
-
-					auto attachment_clear_pass = vk::get_overlay_pass<vk::attachment_clear_pass>();
-					attachment_clear_pass->run(*m_current_command_buffer, m_draw_fbo, region.rect, colormask, clear_color, get_render_pass());
-				}
-
-				update_color = true;
+				m_rtts.m_bound_render_targets[index].second->write_barrier(*m_current_command_buffer);
 			}
 		}
+
+		color_clear_values.color.float32[0] = static_cast<float>(info.color_r) / 255;
+		color_clear_values.color.float32[1] = static_cast<float>(info.color_g) / 255;
+		color_clear_values.color.float32[2] = static_cast<float>(info.color_b) / 255;
+		color_clear_values.color.float32[3] = static_cast<float>(info.color_a) / 255;
+
+		if (use_fast_clear)
+		{
+			for (u32 index = 0; index < m_draw_buffers.size(); ++index)
+			{
+				clear_descriptors.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, color_clear_values });
+			}
+		}
+		else
+		{
+			color4f clear_color =
+			{
+				color_clear_values.color.float32[0],
+				color_clear_values.color.float32[1],
+				color_clear_values.color.float32[2],
+				color_clear_values.color.float32[3]
+			};
+
+			auto attachment_clear_pass = vk::get_overlay_pass<vk::attachment_clear_pass>();
+			attachment_clear_pass->run(*m_current_command_buffer, m_draw_fbo, region.rect, colormask, clear_color, get_render_pass());
+		}
+
+		update_color = true;
 	}
 
 	if (depth_stencil_mask)
 	{
 		if ((depth_stencil_mask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-			REGS(m_ctx)->stencil_mask() != 0xff)
+			info.stencil_write_mask != 0xff)
 		{
 			// Partial stencil clear. Disables fast stencil clear
 			auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -1525,7 +1454,7 @@ void VKGSRender::clear_surface(u32 mask)
 			vk::get_overlay_pass<vk::stencil_clear_pass>()->run(
 				*m_current_command_buffer, ds, region.rect,
 				depth_stencil_clear_values.depthStencil.stencil,
-				REGS(m_ctx)->stencil_mask(), renderpass);
+				info.stencil_write_mask, renderpass);
 
 			depth_stencil_mask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
