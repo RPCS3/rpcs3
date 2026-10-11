@@ -927,7 +927,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// When tile is going to be unbound, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
 		if (tile.bound && !bound)
-			render->notify_tile_unbound(static_cast<u32>(a3));
+			render->renderer()->notify_tile_unbound(static_cast<u32>(a3));
 
 		if (location == CELL_GCM_LOCATION_MAIN && bound)
 		{

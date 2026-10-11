@@ -70,7 +70,7 @@ namespace rsx
 
 			if (!notify || !notify(ctx, first_constant, constant_count))
 			{
-				RSX(ctx)->patch_transform_constants(ctx, first_constant, constant_count);
+				RSX(ctx)->renderer()->patch_transform_constants(ctx, first_constant, constant_count);
 			}
 		}
 
@@ -558,7 +558,7 @@ namespace rsx
 
 		void clear(context* ctx, u32 /*reg*/, u32 arg)
 		{
-			RSX(ctx)->clear_surface(arg);
+			RSX(ctx)->renderer()->clear_surface(arg);
 
 			RSX_CAPTURE_EVENT("clear");
 		}

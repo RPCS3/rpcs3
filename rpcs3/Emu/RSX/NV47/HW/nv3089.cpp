@@ -591,7 +591,7 @@ namespace rsx
 
 			if (!g_cfg.video.force_cpu_blit_processing &&
 				(dst.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) &&
-				RSX(ctx)->scaled_image_from_memory(src, dst, in_inter == blit_engine::transfer_interpolator::foh))
+				RSX(ctx)->renderer()->scaled_image_from_memory(src, dst, in_inter == blit_engine::transfer_interpolator::foh))
 			{
 				// HW-accelerated blit
 				return;
