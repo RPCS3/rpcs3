@@ -33,7 +33,12 @@ namespace rsx
 	{
 		state.depth_test_enabled = regs.depth_test_enabled();
 		state.depth_write_enabled = regs.depth_write_enabled();
-		state.depth_func = regs.depth_func();
+
+		if (state.depth_test_enabled)
+		{
+			state.depth_func = regs.depth_func();
+		}
+
 		state.depth_clamp_enabled = regs.depth_clamp_enabled();
 		state.depth_clip_enabled = regs.depth_clip_enabled();
 
@@ -49,6 +54,11 @@ namespace rsx
 		state.stencil_test_enabled = regs.stencil_test_enabled();
 		state.two_sided_stencil_test_enabled = regs.two_sided_stencil_test_enabled();
 
+		if (!state.stencil_test_enabled)
+		{
+			return;
+		}
+
 		state.front.func = regs.stencil_func();
 		state.front.func_ref = regs.stencil_func_ref();
 		state.front.func_mask = regs.stencil_func_mask();
@@ -56,6 +66,11 @@ namespace rsx
 		state.front.op_fail = regs.stencil_op_fail();
 		state.front.op_zfail = regs.stencil_op_zfail();
 		state.front.op_zpass = regs.stencil_op_zpass();
+
+		if (!state.two_sided_stencil_test_enabled)
+		{
+			return;
+		}
 
 		state.back.func = regs.back_stencil_func();
 		state.back.func_ref = regs.back_stencil_func_ref();
@@ -65,6 +80,21 @@ namespace rsx
 		state.back.op_zfail = regs.back_stencil_op_zfail();
 		state.back.op_zpass = regs.back_stencil_op_zpass();
 	}
+
+#if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
+	// Full decode on top of the current state. Fields the decoders skip keep their current value, so only relevant fields are compared.
+	// A mismatch means a register feeding the group is missing from draw_state_signals.
+	static void verify_draw_state(const rsx_state& regs, const draw_state_t& state)
+	{
+		raster_state raster = state.raster;
+		decode_raster_state(regs, raster);
+		ensure(raster == state.raster, "Stale raster state");
+
+		depth_stencil_state depth_stencil = state.depth_stencil;
+		decode_depth_stencil_state(regs, depth_stencil);
+		ensure(depth_stencil == state.depth_stencil, "Stale depth/stencil state");
+	}
+#endif
 
 	void core_renderer::begin()
 	{
@@ -150,21 +180,26 @@ namespace rsx
 	void core_renderer::decode_draw_state()
 	{
 		auto& state = m_ctx->draw_state;
+		const auto& regs = *REGS(m_ctx);
 
-		if (m_ctx->graphics_state & rsx::pipeline_state::polygon_offset_state_dirty)
+		// Only groups whose source registers changed are decoded again
+		if (state.pending.test(draw_state_t::group::raster))
 		{
+			decode_raster_state(regs, state.raster);
+			state.pending.clear(draw_state_t::group::raster);
 			state.dirty.set(draw_state_t::group::raster);
 		}
 
-		if (m_ctx->graphics_state & rsx::pipeline_state::depth_bounds_state_dirty)
+		if (state.pending.test(draw_state_t::group::depth_stencil))
 		{
+			decode_depth_stencil_state(regs, state.depth_stencil);
+			state.pending.clear(draw_state_t::group::depth_stencil);
 			state.dirty.set(draw_state_t::group::depth_stencil);
 		}
 
-		m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
-
-		decode_raster_state(*REGS(m_ctx), state.raster);
-		decode_depth_stencil_state(*REGS(m_ctx), state.depth_stencil);
+#if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
+		verify_draw_state(regs, state);
+#endif
 	}
 
 	void core_renderer::discard_draw()

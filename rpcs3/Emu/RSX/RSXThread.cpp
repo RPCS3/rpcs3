@@ -2661,6 +2661,7 @@ namespace rsx
 		check_zcull_status(false);
 		nv4097::set_render_mode(m_ctx, 0, REGS(m_ctx)->registers[NV4097_SET_RENDER_ENABLE]);
 		m_ctx->graphics_state |= pipeline_state::all_dirty;
+		m_ctx->draw_state.pending.set(draw_state_t::group::all);
 	}
 
 	void thread::init(u32 ctrlAddress)
