@@ -17,7 +17,7 @@ enum wm_event
 	window_visibility_changed
 };
 
-class GSRender : public rsx::thread
+class GSRender : public rsx::thread, public rsx::render_backend
 {
 protected:
 	GSFrameBase* m_frame;

@@ -20,7 +20,7 @@ namespace rsx
 			if (!is_flip_sema)
 			{
 				// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
-				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->release_GCM_label(type, address, data);
+				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->renderer()->release_GCM_label(type, address, data);
 
 				if (vm::_ref<RsxSemaphore>(address) == data)
 				{
