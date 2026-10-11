@@ -8,8 +8,6 @@
 
 namespace rsx
 {
-	struct context;
-
 	// Import address_range32 utilities
 	using utils::address_range32;
 	using utils::address_range_vector32;
@@ -238,8 +236,6 @@ namespace rsx
 			CELL_GCM_LOCATION_LOCAL :
 			CELL_GCM_LOCATION_MAIN;
 	}
-
-	std::array<float, 4> get_constant_blend_colors(context* ctx);
 
 	/**
 	 * Shuffle texel layout from xyzw to wzyx

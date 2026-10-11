@@ -258,6 +258,8 @@ namespace vk
 
 		const auto& raster = ctx->draw_state.raster;
 		const auto& depth_stencil = ctx->draw_state.depth_stencil;
+		const auto& blend = ctx->draw_state.blend;
+		const auto& multisample = ctx->draw_state.multisample;
 
 		// Input assembly
 		properties.state.set_primitive_type(vertex_input.primitive);
@@ -290,52 +292,30 @@ namespace vk
 			properties.state.enable_cull_face(vk::get_cull_face(raster.cull_face_mode));
 		}
 
-		const auto host_write_mask = rsx::get_write_output_mask(REGS(ctx)->surface_color());
 		for (uint index = 0; index < num_draw_buffers; ++index)
 		{
-			bool color_mask_b = REGS(ctx)->color_mask_b(index);
-			bool color_mask_g = REGS(ctx)->color_mask_g(index);
-			bool color_mask_r = REGS(ctx)->color_mask_r(index);
-			bool color_mask_a = REGS(ctx)->color_mask_a(index);
-
-			switch (REGS(ctx)->surface_color())
-			{
-			case rsx::surface_color_format::b8:
-				rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-				break;
-			case rsx::surface_color_format::g8b8:
-				rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-				break;
-			default:
-				break;
-			}
-
-			properties.state.set_color_mask(
-				index,
-				color_mask_r && host_write_mask[0],
-				color_mask_g && host_write_mask[1],
-				color_mask_b && host_write_mask[2],
-				color_mask_a && host_write_mask[3]);
+			const auto& color_mask = blend.color_mask[index];
+			properties.state.set_color_mask(index, color_mask.r, color_mask.g, color_mask.b, color_mask.a);
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
-		if (REGS(ctx)->logic_op_enabled())
+		if (blend.logic_op_enabled)
 		{
-			properties.state.enable_logic_op(vk::get_logic_op(REGS(ctx)->logic_operation()));
+			properties.state.enable_logic_op(vk::get_logic_op(blend.logic_operation));
 		}
 		else if (!force_disable_blending)
 		{
 			VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 			VkBlendOp equation_rgb, equation_a;
 
-			if (const auto blend_enabled = REGS(ctx)->blend_enabled_mask())
+			if (const auto blend_enabled = blend.enable_mask)
 			{
-				sfactor_rgb = vk::get_blend_factor(REGS(ctx)->blend_func_sfactor_rgb());
-				sfactor_a = vk::get_blend_factor(REGS(ctx)->blend_func_sfactor_a());
-				dfactor_rgb = vk::get_blend_factor(REGS(ctx)->blend_func_dfactor_rgb());
-				dfactor_a = vk::get_blend_factor(REGS(ctx)->blend_func_dfactor_a());
-				equation_rgb = vk::get_blend_op(REGS(ctx)->blend_equation_rgb());
-				equation_a = vk::get_blend_op(REGS(ctx)->blend_equation_a());
+				sfactor_rgb = vk::get_blend_factor(blend.sfactor_rgb);
+				sfactor_a = vk::get_blend_factor(blend.sfactor_a);
+				dfactor_rgb = vk::get_blend_factor(blend.dfactor_rgb);
+				dfactor_a = vk::get_blend_factor(blend.dfactor_a);
+				equation_rgb = vk::get_blend_op(blend.equation_rgb);
+				equation_a = vk::get_blend_op(blend.equation_a);
 
 				for (u8 idx = 0; idx < num_draw_buffers; ++idx)
 				{
@@ -392,13 +372,13 @@ namespace vk
 
 		if (m_config.supports_hw_a2c || num_rasterization_samples > 1)
 		{
-			const bool alpha_to_one_enable = REGS(ctx)->msaa_alpha_to_one_enabled() && m_config.supports_hw_a2one;
+			const bool alpha_to_one_enable = multisample.alpha_to_one_enabled && m_config.supports_hw_a2one;
 
 			properties.state.set_multisample_state(
 				num_rasterization_samples,
-				REGS(ctx)->msaa_sample_mask(),
-				REGS(ctx)->msaa_enabled(),
-				REGS(ctx)->msaa_alpha_to_coverage_enabled(),
+				multisample.sample_mask,
+				multisample.msaa_enabled,
+				multisample.alpha_to_coverage_enabled,
 				alpha_to_one_enable);
 
 			// A problem observed on multiple GPUs is that interior geometry edges can resolve 0 samples unless we force shading rate of 1.
@@ -2322,16 +2302,22 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
 		// TODO: This should be cached aggressively.
-		u32 blend_config[7];
-		blend_config[0] = REGS(m_ctx)->registers[NV4097_SET_BLEND_EQUATION];
-		blend_config[1] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_SFACTOR];
-		blend_config[2] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_DFACTOR];
+		// The shader decodes the register layout: the RGB value in the low 16 bits, alpha in the high 16 bits.
+		const auto pack_rgb_a = [](auto rgb, auto a)
+		{
+			return static_cast<u32>(rgb) | (static_cast<u32>(a) << 16);
+		};
 
-		const auto blend_colors = rsx::get_constant_blend_colors(m_ctx);
-		blend_config[3] = std::bit_cast<u32>(blend_colors[0]);
-		blend_config[4] = std::bit_cast<u32>(blend_colors[1]);
-		blend_config[5] = std::bit_cast<u32>(blend_colors[2]);
-		blend_config[6] = std::bit_cast<u32>(blend_colors[3]);
+		const auto& blend = m_ctx->draw_state.blend;
+
+		u32 blend_config[7];
+		blend_config[0] = pack_rgb_a(blend.equation_rgb, blend.equation_a);
+		blend_config[1] = pack_rgb_a(blend.sfactor_rgb, blend.sfactor_a);
+		blend_config[2] = pack_rgb_a(blend.dfactor_rgb, blend.dfactor_a);
+		blend_config[3] = std::bit_cast<u32>(blend.constant_color[0]);
+		blend_config[4] = std::bit_cast<u32>(blend.constant_color[1]);
+		blend_config[5] = std::bit_cast<u32>(blend.constant_color[2]);
+		blend_config[6] = std::bit_cast<u32>(blend.constant_color[3]);
 
 		vkCmdPushConstants(
 			*m_current_command_buffer,

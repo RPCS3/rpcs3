@@ -1,6 +1,7 @@
 #pragma once
 
 #include <util/types.hpp>
+#include <array>
 #include "Emu/RSX/Common/bitfield.hpp"
 #include "Emu/RSX/gcm_enums.h"
 
@@ -66,6 +67,56 @@ namespace rsx
 		bool operator==(const depth_stencil_state&) const = default;
 	};
 
+	struct color_write_mask
+	{
+		bool r = false;
+		bool g = false;
+		bool b = false;
+		bool a = false;
+
+		bool operator==(const color_write_mask&) const = default;
+	};
+
+	struct blend_state
+	{
+		// Effective write mask per color target. The RSX mask is remapped to the channel layout the surface format is stored in
+		// and masked to the channels that layout has.
+		std::array<color_write_mask, 4> color_mask{};
+
+		bool dither_enabled = false;
+
+		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
+		bool logic_op_enabled = false;
+
+		// Only decoded while the logic op is enabled
+		logic_op logic_operation{};
+
+		// One bit per color target
+		u8 enable_mask = 0;
+
+		// Only decoded while blending is enabled on at least one target
+		blend_factor sfactor_rgb{};
+		blend_factor sfactor_a{};
+		blend_factor dfactor_rgb{};
+		blend_factor dfactor_a{};
+		blend_equation equation_rgb{};
+		blend_equation equation_a{};
+		std::array<f32, 4> constant_color{};
+
+		bool operator==(const blend_state&) const = default;
+	};
+
+	struct multisample_state
+	{
+		surface_antialiasing antialias{};
+		bool msaa_enabled = false;
+		u16 sample_mask = 0;
+		bool alpha_to_coverage_enabled = false;
+		bool alpha_to_one_enabled = false;
+
+		bool operator==(const multisample_state&) const = default;
+	};
+
 	// Decoded pipeline state shared by every backend.
 	// Written only by the core renderer. Backends read it and translate it into host API state.
 	struct draw_state_t
@@ -92,5 +143,7 @@ namespace rsx
 
 		raster_state raster;
 		depth_stencil_state depth_stencil;
+		blend_state blend;
+		multisample_state multisample;
 	};
 }
