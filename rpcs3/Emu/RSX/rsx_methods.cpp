@@ -705,6 +705,7 @@ namespace rsx
 		const auto blend = static_cast<u8>(draw_state_t::group::blend);
 		const auto multisample = static_cast<u8>(draw_state_t::group::multisample);
 		const auto viewport = static_cast<u8>(draw_state_t::group::viewport);
+		const auto input_assembly = static_cast<u8>(draw_state_t::group::input_assembly);
 
 		for (const u32 reg :
 		{
@@ -754,6 +755,12 @@ namespace rsx
 		for (const u32 reg : { NV4097_SET_SURFACE_CLIP_HORIZONTAL, NV4097_SET_SURFACE_CLIP_VERTICAL, NV4097_SET_CLIP_MIN, NV4097_SET_CLIP_MAX })
 		{
 			draw_state_signals[reg] |= viewport;
+		}
+
+		// The restart index is only usable if it fits in the index type
+		for (const u32 reg : { NV4097_SET_RESTART_INDEX_ENABLE, NV4097_SET_RESTART_INDEX, NV4097_SET_INDEX_ARRAY_DMA })
+		{
+			draw_state_signals[reg] |= input_assembly;
 		}
 	}
 
