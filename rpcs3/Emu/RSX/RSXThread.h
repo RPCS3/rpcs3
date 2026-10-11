@@ -287,7 +287,7 @@ namespace rsx
 		/**
 		 * Execute a backend local task queue
 		 */
-		virtual void do_local_task(FIFO::state state);
+		void do_local_task(FIFO::state state);
 
 		void run_FIFO();
 
@@ -303,11 +303,11 @@ namespace rsx
 
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);
-		virtual void flip(const display_flip_info_t& info) = 0;
+		void flip(const display_flip_info_t& info);
 		virtual u64 timestamp();
 
 		// control
-		virtual void renderctl(u32 request_code, void* args);
+		void renderctl(u32 request_code, void* args);
 
 		// zcull
 		void notify_zcull_info_changed();
@@ -318,13 +318,13 @@ namespace rsx
 
 		void enable_conditional_rendering(vm::addr_t ref);
 		void disable_conditional_rendering();
-		virtual void begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& sources);
-		virtual void end_conditional_rendering();
+		void begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& sources);
+		void end_conditional_rendering();
 
 		// sync
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
-		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
+		void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 
 	protected:
 

@@ -259,7 +259,7 @@ public:
 
 	// Sync
 	void write_barrier(u32 address, u32 range) override;
-	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
+	void on_sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -278,8 +278,7 @@ public:
 	void on_descriptor_pool_fragmentation(bool is_fatal);
 
 	// Conditional rendering
-	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
-	void end_conditional_rendering() override;
+	void on_begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 
 	// Host sync object
 	std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() const;
@@ -299,11 +298,12 @@ protected:
 
 	void on_init_thread() override;
 	void on_exit() override;
-	void flip(const rsx::display_flip_info_t& info) override;
+	bool present_frame(const rsx::display_flip_info_t& info) override;
+	void post_present() override;
 
-	void renderctl(u32 request_code, void* args) override;
+	bool on_renderctl(u32 request_code, void* args) override;
 
-	void do_local_task(rsx::FIFO::state state) override;
+	bool on_local_task(rsx::FIFO::state state) override;
 	bool scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 

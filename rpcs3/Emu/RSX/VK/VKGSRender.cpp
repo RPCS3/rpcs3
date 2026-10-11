@@ -1691,10 +1691,8 @@ void VKGSRender::write_barrier(u32 address, u32 range)
 	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
 }
 
-void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
+void VKGSRender::on_sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload)
 {
-	rsx::thread::sync_hint(hint, payload);
-
 	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
 	{
 		// Occlusion queries not enabled, do nothing
@@ -1761,7 +1759,7 @@ void VKGSRender::sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hi
 	}
 }
 
-void VKGSRender::do_local_task(rsx::FIFO::state state)
+bool VKGSRender::on_local_task(rsx::FIFO::state state)
 {
 	if (m_queue_status & flush_queue_state::deadlock)
 	{
@@ -1776,7 +1774,7 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 	{
 		// Abort recursive CB submit requests.
 		// When flushing flag is already set, only deadlock events may be processed.
-		return;
+		return false;
 	}
 	else if (m_flush_requests.pending())
 	{
@@ -1802,33 +1800,7 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 		}
 	}
 
-	rsx::thread::do_local_task(state);
-
-	switch (state)
-	{
-	case rsx::FIFO::state::lock_wait:
-		// Critical check finished
-		return;
-	//case rsx::FIFO::state::spinning:
-	//case rsx::FIFO::state::empty:
-		// We have some time, check the present queue
-		//check_present_status();
-		//break;
-	default:
-		break;
-	}
-
-	if (m_overlay_manager)
-	{
-		const auto should_ignore = m_ctx->in_begin_end && state != rsx::FIFO::state::empty;
-		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
-		{
-			flush_command_queue(true);
-			rsx::display_flip_info_t info{};
-			info.buffer = current_display_buffer;
-			flip(info);
-		}
-	}
+	return true;
 }
 
 bool VKGSRender::load_program()
@@ -2761,7 +2733,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	check_zcull_status(true);
 }
 
-void VKGSRender::renderctl(u32 request_code, void* args)
+bool VKGSRender::on_renderctl(u32 request_code, void* args)
 {
 	switch (request_code)
 	{
@@ -2770,10 +2742,10 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 		const auto packet = reinterpret_cast<vk::queue_submit_t*>(args);
 		vk::queue_submit(packet);
 		free(packet);
-		break;
+		return true;
 	}
 	default:
-		rsx::thread::renderctl(request_code, args);
+		return false;
 	}
 }
 
@@ -2918,7 +2890,7 @@ void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 	}
 }
 
-void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources)
+void VKGSRender::on_begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources)
 {
 	ensure(!sources.empty());
 
@@ -2932,7 +2904,6 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		// Already synched, check subdraw which is possible if last sync happened while query was active
 		if (!m_active_query_info || m_active_query_info != sources.front())
 		{
-			rsx::thread::begin_conditional_rendering(sources);
 			return;
 		}
 
@@ -3011,7 +2982,6 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 					VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
 					VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
 
-				rsx::thread::begin_conditional_rendering(sources);
 				return;
 			}
 		}
@@ -3111,11 +3081,4 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		// This can sometimes happen when shaders are compiling, only log if there is a program hit
 		rsx_log.warning("Dubious query data pushed to cond render! Please report to developers(q.pending=%d)", sources.front()->pending);
 	}
-
-	rsx::thread::begin_conditional_rendering(sources);
-}
-
-void VKGSRender::end_conditional_rendering()
-{
-	thread::end_conditional_rendering();
 }
