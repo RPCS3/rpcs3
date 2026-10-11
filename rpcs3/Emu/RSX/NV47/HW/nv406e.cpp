@@ -94,7 +94,7 @@ namespace rsx
 					continue;
 				}
 
-				RSX(ctx)->on_semaphore_acquire_wait();
+				RSX(ctx)->renderer()->on_semaphore_acquire_wait();
 
 				// Wait until the value changes or until 100us pass.
 				utils::spin_on_cacheline_once(atomic_sema, sema, 100);
