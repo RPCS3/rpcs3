@@ -77,17 +77,20 @@ void GLGSRender::update_draw_state()
 {
 	m_profiler.start();
 
+	const auto& raster = m_ctx->draw_state.raster;
+	const auto& depth_stencil = m_ctx->draw_state.depth_stencil;
+
 	gl_state.enable(GL_SCISSOR_TEST);
 	gl_state.enable(REGS(m_ctx)->dither_enabled(), GL_DITHER);
 
 	if (m_rtts.m_bound_depth_stencil.first)
 	{
 		// Z-buffer is active.
-		gl_state.depth_mask(REGS(m_ctx)->depth_write_enabled());
+		gl_state.depth_mask(depth_stencil.depth_write_enabled);
 		const bool emulate_depth_range = requires_depth_range_emulation();
 		if (!emulate_depth_range) [[ likely ]]
 		{
-			gl_state.enable(REGS(m_ctx)->depth_clamp_enabled() || !REGS(m_ctx)->depth_clip_enabled(), GL_DEPTH_CLAMP);
+			gl_state.enable(depth_stencil.depth_clamp_enabled || !depth_stencil.depth_clip_enabled, GL_DEPTH_CLAMP);
 		}
 		else
 		{
@@ -95,17 +98,16 @@ void GLGSRender::update_draw_state()
 			gl_state.enable(GL_DEPTH_CLAMP);
 		}
 
-		if (gl_state.enable(REGS(m_ctx)->depth_test_enabled(), GL_DEPTH_TEST))
+		if (gl_state.enable(depth_stencil.depth_test_enabled, GL_DEPTH_TEST))
 		{
-			gl_state.depth_func(gl::comparison_op(REGS(m_ctx)->depth_func()));
+			gl_state.depth_func(gl::comparison_op(depth_stencil.depth_func));
 		}
 
 		if (gl::get_driver_caps().EXT_depth_bounds_test_supported &&
-			(gl_state.enable(REGS(m_ctx)->depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
+			(gl_state.enable(depth_stencil.depth_bounds_test_enabled, GL_DEPTH_BOUNDS_TEST_EXT)))
 		{
-			const auto depth_format = REGS(m_ctx)->surface_depth_fmt();
-			f32 bounds_min = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_min());
-			f32 bounds_max = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_max());
+			f32 bounds_min = depth_stencil.depth_bounds_min;
+			f32 bounds_max = depth_stencil.depth_bounds_max;
 
 			if (emulate_depth_range) [[ unlikely ]]
 			{
@@ -121,44 +123,44 @@ void GLGSRender::update_draw_state()
 			gl_state.depth_range(REGS(m_ctx)->clip_min(), REGS(m_ctx)->clip_max());
 		}
 
-		if (gl_state.enable(REGS(m_ctx)->stencil_test_enabled(), GL_STENCIL_TEST))
+		if (gl_state.enable(depth_stencil.stencil_test_enabled, GL_STENCIL_TEST))
 		{
-			gl_state.stencil_front_mask(REGS(m_ctx)->stencil_mask());
+			gl_state.stencil_front_mask(depth_stencil.front.write_mask);
 
 			gl_state.stencil_front_func(
-				gl::comparison_op(REGS(m_ctx)->stencil_func()),
-				REGS(m_ctx)->stencil_func_ref(),
-				REGS(m_ctx)->stencil_func_mask());
+				gl::comparison_op(depth_stencil.front.func),
+				depth_stencil.front.func_ref,
+				depth_stencil.front.func_mask);
 
 			gl_state.stencil_front_op(
-				gl::stencil_op(REGS(m_ctx)->stencil_op_fail()),
-				gl::stencil_op(REGS(m_ctx)->stencil_op_zfail()),
-				gl::stencil_op(REGS(m_ctx)->stencil_op_zpass()));
+				gl::stencil_op(depth_stencil.front.op_fail),
+				gl::stencil_op(depth_stencil.front.op_zfail),
+				gl::stencil_op(depth_stencil.front.op_zpass));
 
-			if (REGS(m_ctx)->two_sided_stencil_test_enabled()) [[ unlikely ]]
+			if (depth_stencil.two_sided_stencil_test_enabled) [[ unlikely ]]
 			{
-				gl_state.stencil_back_mask(REGS(m_ctx)->back_stencil_mask());
+				gl_state.stencil_back_mask(depth_stencil.back.write_mask);
 
-				gl_state.stencil_back_func(gl::comparison_op(REGS(m_ctx)->back_stencil_func()),
-					REGS(m_ctx)->back_stencil_func_ref(), REGS(m_ctx)->back_stencil_func_mask());
+				gl_state.stencil_back_func(gl::comparison_op(depth_stencil.back.func),
+					depth_stencil.back.func_ref, depth_stencil.back.func_mask);
 
-				gl_state.stencil_back_op(gl::stencil_op(REGS(m_ctx)->back_stencil_op_fail()),
-					gl::stencil_op(REGS(m_ctx)->back_stencil_op_zfail()), gl::stencil_op(REGS(m_ctx)->back_stencil_op_zpass()));
+				gl_state.stencil_back_op(gl::stencil_op(depth_stencil.back.op_fail),
+					gl::stencil_op(depth_stencil.back.op_zfail), gl::stencil_op(depth_stencil.back.op_zpass));
 			}
 			else
 			{
 				// Reuse front values
-				gl_state.stencil_back_mask(REGS(m_ctx)->stencil_mask());
+				gl_state.stencil_back_mask(depth_stencil.front.write_mask);
 
 				gl_state.stencil_back_func(
-					gl::comparison_op(REGS(m_ctx)->stencil_func()),
-					REGS(m_ctx)->stencil_func_ref(),
-					REGS(m_ctx)->stencil_func_mask());
+					gl::comparison_op(depth_stencil.front.func),
+					depth_stencil.front.func_ref,
+					depth_stencil.front.func_mask);
 
 				gl_state.stencil_back_op(
-					gl::stencil_op(REGS(m_ctx)->stencil_op_fail()),
-					gl::stencil_op(REGS(m_ctx)->stencil_op_zfail()),
-					gl::stencil_op(REGS(m_ctx)->stencil_op_zpass()));
+					gl::stencil_op(depth_stencil.front.op_fail),
+					gl::stencil_op(depth_stencil.front.op_zfail),
+					gl::stencil_op(depth_stencil.front.op_zpass));
 			}
 		}
 	}
@@ -267,18 +269,18 @@ void GLGSRender::update_draw_state()
 	case rsx::primitive_type::lines:
 	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::line_strip:
-		gl_state.line_width(REGS(m_ctx)->line_width() * resolution_scaling_config.scale_factor());
-		gl_state.enable(REGS(m_ctx)->line_smooth_enabled(), GL_LINE_SMOOTH);
+		gl_state.line_width(raster.line_width * resolution_scaling_config.scale_factor());
+		gl_state.enable(raster.line_smooth_enabled, GL_LINE_SMOOTH);
 		break;
 	default:
-		gl_state.enable(REGS(m_ctx)->poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
-		gl_state.enable(REGS(m_ctx)->poly_offset_line_enabled(), GL_POLYGON_OFFSET_LINE);
-		gl_state.enable(REGS(m_ctx)->poly_offset_fill_enabled(), GL_POLYGON_OFFSET_FILL);
+		gl_state.enable(raster.poly_offset_point_enabled, GL_POLYGON_OFFSET_POINT);
+		gl_state.enable(raster.poly_offset_line_enabled, GL_POLYGON_OFFSET_LINE);
+		gl_state.enable(raster.poly_offset_fill_enabled, GL_POLYGON_OFFSET_FILL);
 
 		// offset_bias is the constant factor, multiplied by the implementation factor R
 		// offset_scale is the slope factor, multiplied by the triangle slope factor M
-		const auto poly_offset_scale = REGS(m_ctx)->poly_offset_scale();
-		auto poly_offset_bias = REGS(m_ctx)->poly_offset_bias();
+		const auto poly_offset_scale = raster.poly_offset_scale;
+		auto poly_offset_bias = raster.poly_offset_bias;
 
 		if (auto ds = m_rtts.m_bound_depth_stencil.second;
 			ds && ds->get_internal_format() == gl::texture::internal_format::depth24_stencil8)
@@ -299,12 +301,12 @@ void GLGSRender::update_draw_state()
 		}
 		gl_state.polygon_offset(poly_offset_scale, poly_offset_bias);
 
-		if (gl_state.enable(REGS(m_ctx)->cull_face_enabled(), GL_CULL_FACE))
+		if (gl_state.enable(raster.cull_face_enabled, GL_CULL_FACE))
 		{
-			gl_state.cull_face(gl::cull_face(REGS(m_ctx)->cull_face_mode()));
+			gl_state.cull_face(gl::cull_face(raster.cull_face_mode));
 		}
 
-		gl_state.front_face(gl::front_face(REGS(m_ctx)->front_face_mode()));
+		gl_state.front_face(gl::front_face(raster.front_face_mode));
 		break;
 	}
 
@@ -312,8 +314,8 @@ void GLGSRender::update_draw_state()
 	gl_state.clip_planes((m_ctx->program.vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
 
 	// Polygon mode. We can only have one polygon mode active at one time, so we need to determine if any face is currently culled.
-	const bool show_back = REGS(m_ctx)->cull_face_enabled() && REGS(m_ctx)->cull_face_mode() == rsx::cull_face::front;
-	gl_state.polygon_mode(gl::polygon_mode(show_back ? REGS(m_ctx)->polygon_mode_back() : REGS(m_ctx)->polygon_mode_front()));
+	const bool show_back = raster.cull_face_enabled && raster.cull_face_mode == rsx::cull_face::front;
+	gl_state.polygon_mode(gl::polygon_mode(show_back ? raster.polygon_mode_back : raster.polygon_mode_front));
 
 	//TODO
 	//NV4097_SET_ANISO_SPREAD

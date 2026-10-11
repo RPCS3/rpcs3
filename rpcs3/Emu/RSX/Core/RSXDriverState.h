@@ -57,7 +57,8 @@ namespace rsx
 		memory_barrier_bits = framebuffer_reads_dirty,
 
 		// Vulkan-specific signals
-		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty | polygon_offset_state_dirty | depth_bounds_state_dirty,
+		// Polygon offset and depth bounds changes reach the backend as draw state groups instead
+		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty,
 
 		all_dirty = ~0u
 	};

@@ -2,6 +2,7 @@
 #include "RSXCoreRenderer.h"
 
 #include "Emu/RSX/Capture/rsx_capture.h"
+#include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/system_config.h"
@@ -10,6 +11,61 @@
 
 namespace rsx
 {
+	static void decode_raster_state(const rsx_state& regs, raster_state& state)
+	{
+		state.cull_face_enabled = regs.cull_face_enabled();
+		state.cull_face_mode = regs.cull_face_mode();
+		state.front_face_mode = regs.front_face_mode();
+		state.polygon_mode_front = regs.polygon_mode_front();
+		state.polygon_mode_back = regs.polygon_mode_back();
+
+		state.line_width = regs.line_width();
+		state.line_smooth_enabled = regs.line_smooth_enabled();
+
+		state.poly_offset_point_enabled = regs.poly_offset_point_enabled();
+		state.poly_offset_line_enabled = regs.poly_offset_line_enabled();
+		state.poly_offset_fill_enabled = regs.poly_offset_fill_enabled();
+		state.poly_offset_scale = regs.poly_offset_scale();
+		state.poly_offset_bias = regs.poly_offset_bias();
+	}
+
+	static void decode_depth_stencil_state(const rsx_state& regs, depth_stencil_state& state)
+	{
+		state.depth_test_enabled = regs.depth_test_enabled();
+		state.depth_write_enabled = regs.depth_write_enabled();
+		state.depth_func = regs.depth_func();
+		state.depth_clamp_enabled = regs.depth_clamp_enabled();
+		state.depth_clip_enabled = regs.depth_clip_enabled();
+
+		state.depth_bounds_test_enabled = regs.depth_bounds_test_enabled();
+		if (state.depth_bounds_test_enabled)
+		{
+			// Saturate the bounds into the RSX depth format's range as hardware does
+			const auto depth_format = regs.surface_depth_fmt();
+			state.depth_bounds_min = rsx::clamp_depth_bounds_value(depth_format, regs.depth_bounds_min());
+			state.depth_bounds_max = rsx::clamp_depth_bounds_value(depth_format, regs.depth_bounds_max());
+		}
+
+		state.stencil_test_enabled = regs.stencil_test_enabled();
+		state.two_sided_stencil_test_enabled = regs.two_sided_stencil_test_enabled();
+
+		state.front.func = regs.stencil_func();
+		state.front.func_ref = regs.stencil_func_ref();
+		state.front.func_mask = regs.stencil_func_mask();
+		state.front.write_mask = regs.stencil_mask();
+		state.front.op_fail = regs.stencil_op_fail();
+		state.front.op_zfail = regs.stencil_op_zfail();
+		state.front.op_zpass = regs.stencil_op_zpass();
+
+		state.back.func = regs.back_stencil_func();
+		state.back.func_ref = regs.back_stencil_func_ref();
+		state.back.func_mask = regs.back_stencil_func_mask();
+		state.back.write_mask = regs.back_stencil_mask();
+		state.back.op_fail = regs.back_stencil_op_fail();
+		state.back.op_zfail = regs.back_stencil_op_zfail();
+		state.back.op_zpass = regs.back_stencil_op_zpass();
+	}
+
 	void core_renderer::begin()
 	{
 		// Save shader state now before prefetch and loading happens
@@ -69,12 +125,46 @@ namespace rsx
 
 	void core_renderer::end()
 	{
-		if (should_skip_draw() || !RSX(m_ctx)->renderer()->end_draw(m_pre_begin_pipeline_state))
+		if (should_skip_draw())
 		{
 			execute_nop_draw();
 		}
+		else
+		{
+			decode_draw_state();
+
+			if (RSX(m_ctx)->renderer()->end_draw(m_pre_begin_pipeline_state))
+			{
+				// The backend has seen this draw's change set. If the draw was not executed, changes keep accumulating.
+				m_ctx->draw_state.dirty.clear();
+			}
+			else
+			{
+				execute_nop_draw();
+			}
+		}
 
 		post_draw_hook();
+	}
+
+	void core_renderer::decode_draw_state()
+	{
+		auto& state = m_ctx->draw_state;
+
+		if (m_ctx->graphics_state & rsx::pipeline_state::polygon_offset_state_dirty)
+		{
+			state.dirty.set(draw_state_t::group::raster);
+		}
+
+		if (m_ctx->graphics_state & rsx::pipeline_state::depth_bounds_state_dirty)
+		{
+			state.dirty.set(draw_state_t::group::depth_stencil);
+		}
+
+		m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
+
+		decode_raster_state(*REGS(m_ctx), state.raster);
+		decode_depth_stencil_state(*REGS(m_ctx), state.depth_stencil);
 	}
 
 	void core_renderer::discard_draw()
