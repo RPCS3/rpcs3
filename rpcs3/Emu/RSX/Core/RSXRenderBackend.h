@@ -3,8 +3,12 @@
 #include <util/types.hpp>
 #include <string>
 #include <utility>
+#include <vector>
 #include "Emu/RSX/Common/texture_cache_types.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
+#include "Emu/RSX/Core/RSXDisplay.h"
+#include "Emu/RSX/RSXFIFO.h"
+#include "Emu/RSX/RSXZCULL.h"
 
 namespace rsx
 {
@@ -46,6 +50,14 @@ namespace rsx
 		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void emit_geometry(u32 /*sub_index*/) {}
 
+		// Present. Returns true if a frame was presented, in which case post_present() runs after the core's flip bookkeeping.
+		virtual bool present_frame(const display_flip_info_t& info) = 0;
+		virtual void post_present() {}
+
+		// Host part of conditional rendering. The core updates the context's conditional render state after these.
+		virtual void on_begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& /*sources*/) {}
+		virtual void on_end_conditional_rendering() {}
+
 		// Memory
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_invalidate_memory_range(const utils::address_range32& /*range*/, invalidation_cause /*cause*/) {}
@@ -59,6 +71,15 @@ namespace rsx
 		// Sync
 		virtual bool release_GCM_label(u32 /*type*/, u32 /*address*/, u32 /*value*/) { return false; }
 		virtual void on_semaphore_acquire_wait() {}
+
+		// Host part of a sync hint. The core forwards the hint to ZCULL first.
+		virtual void on_sync_hint(FIFO::interrupt_hint /*hint*/, reports::sync_hint_payload_t /*payload*/) {}
+
+		// Backend housekeeping at the start of a local task invocation. Returns false to skip the rest of the task, e.g. when re-entered while the backend is flushing.
+		virtual bool on_local_task(FIFO::state /*state*/) { return true; }
+
+		// Backend-specific control requests. Returns false if the request code is not handled.
+		virtual bool on_renderctl(u32 /*request_code*/, void* /*args*/) { return false; }
 
 		// GRAPH. Patch transform constants. Units are in 32x4 units
 		virtual void patch_transform_constants(context* /*ctx*/, u32 /*index*/, u32 /*count*/) {}

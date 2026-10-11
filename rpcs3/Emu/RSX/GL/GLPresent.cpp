@@ -159,13 +159,12 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 	return image;
 }
 
-void GLGSRender::flip(const rsx::display_flip_info_t& info)
+bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 {
 	if (info.skip_frame)
 	{
 		m_frame->flip(m_context, true);
-		rsx::thread::flip(info);
-		return;
+		return false;
 	}
 
 	gl::command_context cmd{ gl_state };
@@ -525,7 +524,12 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(info);
+	return true;
+}
+
+void GLGSRender::post_present()
+{
+	gl::command_context cmd{ gl_state };
 
 	// Data sync
 	const rsx::surface_scaling_config_t active_res_scaling_config =
