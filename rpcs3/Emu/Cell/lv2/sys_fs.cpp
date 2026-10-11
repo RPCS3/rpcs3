@@ -933,15 +933,13 @@ void lv2_file::save(utils::serial& ar)
 
 		ar(stats);
 
-		const usz old_end = ar.pad_from_end(stats.size);
-
-		if (usz read_size = file.read_at(0, &ar.data[old_end], stats.size); read_size != stats.size)
+		if (usz read_size = file.read_at(0, ar.pad_from_end(stats.size), stats.size); read_size != stats.size)
 		{
 			ensure(read_size < stats.size);
 			sys_fs.error("Read less than expected! (new-size=0x%x)", read_size);
+			ar.trunc(stats.size - read_size);
 			stats.size = read_size;
-			ar.data.resize(old_end + stats.size);
-			write_to_ptr<fs::stat_t>(ar.data, patch_stats_pos, stats);
+			ar.patch_raw_data(patch_stats_pos, &stats, sizeof(stats));
 		}
 	}
 

@@ -550,12 +550,13 @@ public:
 			return old_pos;
 		}
 
-		usz pad_from_end(usz forwards)
+		u8* pad_from_end(usz forwards)
 		{
 			ensure(is_writing());
-			pos = data.size() + data_offset;
-			data.resize(data.size() + forwards);
-			return pos;
+			const usz old_size = data.size();
+			data.resize(old_size + forwards);
+			seek_end();
+			return data.data() + old_size;
 		}
 
 		// Allow for memory saving operations: if writing, flush to file if too large. If reading, discard memory (not implemented).
