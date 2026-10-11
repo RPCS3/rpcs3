@@ -1,4 +1,5 @@
 #include "util/sysinfo.hpp"
+#include "util/logs.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
 #include "Emu/vfs_config.h"
@@ -36,6 +37,8 @@ DYNAMIC_IMPORT("ntdll.dll", RtlGetVersion, NTSTATUS(OSVERSIONINFOW* lpVersionInf
 
 #include "util/asm.hpp"
 #include "util/fence.hpp"
+
+LOG_CHANNEL(sys_log, "SYS");
 
 #if defined(_M_X64) && defined(_MSC_VER)
 extern "C" u64 _xgetbv(u32);
@@ -991,7 +994,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		if (!fs::is_file(clocksource_file))
 		{
 			// OS doesn't support sysfs?
-			printf("[TSC calibration] Could not determine available clock sources. Disabling TSC.\n");
+			sys_log.warning("Could not determine available clock sources. Disabling TSC.");
 			return 0;
 		}
 
@@ -1001,11 +1004,11 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 
 		if (file.fail())
 		{
-			printf("[TSC calibration] Could not read the available clock sources on this system. Disabling TSC.\n");
+			sys_log.warning("Could not read the available clock sources on this system. Disabling TSC.");
 			return 0;
 		}
 
-		printf("[TSC calibration] Available clock sources: '%s'\n", clock_sources.c_str());
+		sys_log.trace("Available clock sources: '%s'", clock_sources);
 
 		// Check if the Kernel has blacklisted the TSC
 		const auto available_clocks = fmt::split_sv(clock_sources, { " " });
@@ -1013,11 +1016,11 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 
 		if (!tsc_reliable)
 		{
-			printf("[TSC calibration] TSC is not a supported clock source on this system.\n");
+			sys_log.notice("TSC is not a supported clock source on this system.");
 			return 0;
 		}
 
-		printf("[TSC calibration] Kernel reports the TSC is reliable.\n");
+		sys_log.trace("Kernel reports the TSC is reliable.");
 #else
 		if (utils::get_cpu_brand().find("Ryzen") != umax)
 		{
