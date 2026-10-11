@@ -21,6 +21,9 @@ namespace rsx
 		// Retire the current draw clause without drawing it
 		void discard_draw();
 
+		// NV4097_CLEAR_SURFACE
+		void clear(rsx::flags32_t arg);
+
 	private:
 		context* m_ctx = nullptr;
 

@@ -82,9 +82,10 @@ extern CellGcmContextData current_context;
 void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
+	const auto& viewport = m_ctx->draw_state.viewport;
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
 		resolution_scaling_config,
-		REGS(m_ctx)->surface_clip_width(), REGS(m_ctx)->surface_clip_height());
+		viewport.clip_width, viewport.clip_height);
 
 	glViewport(0, 0, clip_width, clip_height);
 }
@@ -646,15 +647,11 @@ void GLGSRender::update_swap_interval()
 	m_vsync_mode = current_mode;
 }
 
-void GLGSRender::clear_surface(u32 arg)
+void GLGSRender::clear()
 {
-	if (m_ctx->frame_skip.skip_current_frame) return;
-
-	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!REGS(m_ctx)->stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
-
-	// Ignore invalid clear flags
-	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
+	// Frameskip, a disabled stencil write mask and invalid flags have been handled by the core
+	const auto& info = m_ctx->draw_state.clear;
+	const auto arg = info.mask;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
 	if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
@@ -667,21 +664,16 @@ void GLGSRender::clear_surface(u32 arg)
 	gl::clear_cmd_info clear_cmd{};
 
 	gl::command_context cmd{ gl_state };
-	const bool full_frame =
-		REGS(m_ctx)->scissor_origin_x() == 0 &&
-		REGS(m_ctx)->scissor_origin_y() == 0 &&
-		REGS(m_ctx)->scissor_width() >= REGS(m_ctx)->surface_clip_width() &&
-		REGS(m_ctx)->scissor_height() >= REGS(m_ctx)->surface_clip_height();
+	const bool full_frame = info.scissor_covers_surface;
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format2 surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
+	const rsx::surface_depth_format2 surface_depth_format = info.depth_format;
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
-			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+			clear_cmd.clear_depth.value = info.depth_value;
       clear_cmd.aspect_mask |= gl::image_aspect::depth;
 
 			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
@@ -694,8 +686,8 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				clear_cmd.clear_stencil.mask = REGS(m_ctx)->stencil_mask();
-				clear_cmd.clear_stencil.value = REGS(m_ctx)->stencil_clear_value();
+				clear_cmd.clear_stencil.mask = info.stencil_write_mask;
+				clear_cmd.clear_stencil.value = info.stencil_value;
 				clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 			}
 		}
@@ -735,84 +727,26 @@ void GLGSRender::clear_surface(u32 arg)
 		}
 	}
 
-	if (auto colormask = (arg & 0xf0))
+	// The color mask and value are already remapped to the surface format, and the mask is zero if the format cannot be cleared
+	if (const auto colormask = info.color_mask)
 	{
-		u8 clear_a = REGS(m_ctx)->clear_color_a();
-		u8 clear_r = REGS(m_ctx)->clear_color_r();
-		u8 clear_g = REGS(m_ctx)->clear_color_g();
-		u8 clear_b = REGS(m_ctx)->clear_color_b();
+		clear_cmd.clear_color.mask = colormask;
+		clear_cmd.clear_color.attachment_count = static_cast<u8>(m_rtts.m_bound_render_target_ids.size());
+		clear_cmd.clear_color.r = info.color_r;
+		clear_cmd.clear_color.g = info.color_g;
+		clear_cmd.clear_color.b = info.color_b;
+		clear_cmd.clear_color.a = info.color_a;
+		clear_cmd.aspect_mask |= gl::image_aspect::color;
 
-		switch (REGS(m_ctx)->surface_color())
+		if (!full_frame)
 		{
-		case rsx::surface_color_format::x32:
-		case rsx::surface_color_format::w16z16y16x16:
-		case rsx::surface_color_format::w32z32y32x32:
-		{
-			// Nop
-			colormask = 0;
-			break;
-		}
-		case rsx::surface_color_format::b8:
-		{
-			rsx::get_b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_b8_clearmask(colormask);
-			break;
-		}
-		case rsx::surface_color_format::g8b8:
-		{
-			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
-			break;
-		}
-		case rsx::surface_color_format::r5g6b5:
-		{
-			rsx::get_rgb565_clear_color(clear_r, clear_g, clear_b, clear_a);
-			break;
-		}
-		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		{
-			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 255);
-			break;
-		}
-		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		{
-			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 0);
-			break;
-		}
-		case rsx::surface_color_format::a8b8g8r8:
-		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-		{
-			rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_abgr8_clearmask(colormask);
-			break;
-		}
-		default:
-		{
-			break;
-		}
-		}
-
-		if (colormask)
-		{
-			clear_cmd.clear_color.mask = colormask;
-			clear_cmd.clear_color.attachment_count = static_cast<u8>(m_rtts.m_bound_render_target_ids.size());
-			clear_cmd.clear_color.r = clear_r;
-			clear_cmd.clear_color.g = clear_g;
-			clear_cmd.clear_color.b = clear_b;
-			clear_cmd.clear_color.a = clear_a;
-			clear_cmd.aspect_mask |= gl::image_aspect::color;
-
-			if (!full_frame)
+			for (const auto& index : m_rtts.m_bound_render_target_ids)
 			{
-				for (const auto& index : m_rtts.m_bound_render_target_ids)
-				{
-					m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
-				}
+				m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
 			}
-
-			update_color = true;
 		}
+
+		update_color = true;
 	}
 
 	if (update_color || update_z)
