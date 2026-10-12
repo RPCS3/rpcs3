@@ -280,7 +280,7 @@ jobs:
           key: ${{ steps.restore-qt-cache.outputs.cache-primary-key }}
 
       - name: Save MacPorts Cache
-        if: github.ref == 'refs/heads/master'
+        # if: github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: /opt/local
