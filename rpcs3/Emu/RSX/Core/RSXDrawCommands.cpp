@@ -585,6 +585,35 @@ namespace rsx
 		utils::stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
 	}
 
+	void draw_command_processor::fill_vertex_env(void* buffer, f32 point_scale) const
+	{
+		const auto buf = static_cast<u8*>(buffer);
+		fill_scale_offset_data(buf, false);
+		fill_user_clip_data(buf + 64);
+		*(reinterpret_cast<u32*>(buf + 68)) = REGS(m_ctx)->transform_branch_bits();
+		*(reinterpret_cast<f32*>(buf + 72)) = REGS(m_ctx)->point_size() * point_scale;
+		*(reinterpret_cast<f32*>(buf + 76)) = REGS(m_ctx)->clip_min();
+		*(reinterpret_cast<f32*>(buf + 80)) = REGS(m_ctx)->clip_max();
+	}
+
+	void draw_command_processor::fill_interpreter_vertex_header(void* buffer) const
+	{
+		const auto& vertex_program = m_ctx->program.vertex_program;
+		const auto header = static_cast<u32*>(buffer);
+		header[0] = vertex_program.base_address;
+		header[1] = vertex_program.entry;
+		header[2] = vertex_program.output_mask;
+		header[3] = REGS(m_ctx)->two_side_light_en() ? 1u : 0u;
+	}
+
+	void draw_command_processor::fill_interpreter_fragment_header(void* buffer) const
+	{
+		const auto header = static_cast<u32*>(buffer);
+		header[0] = REGS(m_ctx)->shader_control();
+		header[1] = m_ctx->program.fragment_program.texture_state.texture_dimensions;
+		header[2] = m_ctx->program.fp_metadata.referenced_textures_mask;
+	}
+
 	void draw_command_processor::fill_user_clip_data(void* buffer) const
 	{
 		if (REGS(m_ctx)->clip_planes_mask() == 0) [[ likely ]]
