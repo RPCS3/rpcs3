@@ -13,6 +13,7 @@
 namespace rsx
 {
 	struct context;
+	struct framebuffer_layout;
 
 	struct backend_configuration
 	{
@@ -43,6 +44,10 @@ namespace rsx
 
 		// Host capabilities. Filled in by the backend during initialization; zero until then.
 		const backend_configuration& config() const { return m_config; }
+
+		// Framebuffer.
+		virtual void on_framebuffer_bound(const framebuffer_layout& /*layout*/) {}
+		virtual bool is_framebuffer_bound() const { return false; }
 
 		// Draw
 		virtual void begin_draw() {}

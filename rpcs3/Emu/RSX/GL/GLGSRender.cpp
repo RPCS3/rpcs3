@@ -90,16 +90,23 @@ void GLGSRender::set_viewport()
 	glViewport(0, 0, clip_width, clip_height);
 }
 
-void GLGSRender::set_scissor(bool clip_viewport)
+void GLGSRender::set_scissor(bool force)
 {
-	areau scissor;
-	if (get_scissor(scissor, clip_viewport))
+	if (!force && !m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::scissor))
 	{
-		// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
-		// See LIMBO [NPUB-30373] which uses shader window origin = top
-		glScissor(scissor.x1, scissor.y1, scissor.width(), scissor.height());
-		gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
+		return;
 	}
+
+	const auto& region = m_ctx->draw_state.scissor;
+
+	areau scissor;
+	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+
+	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+	// See LIMBO [NPUB-30373] which uses shader window origin = top
+	glScissor(scissor.x1, scissor.y1, scissor.width(), scissor.height());
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
 void GLGSRender::on_init_thread()
@@ -653,13 +660,7 @@ void GLGSRender::clear()
 	const auto& info = m_ctx->draw_state.clear;
 	const auto arg = info.mask;
 
-	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
-
-	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
-
-	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid)) return;
+	set_scissor();
 
 	gl::clear_cmd_info clear_cmd{};
 

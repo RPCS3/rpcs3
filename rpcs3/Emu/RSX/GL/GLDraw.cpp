@@ -884,7 +884,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 void GLGSRender::begin_draw()
 {
-	init_buffers(rsx::framebuffer_creation_context::context_draw);
+	set_scissor();
 
 	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{

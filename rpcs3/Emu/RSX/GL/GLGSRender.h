@@ -175,8 +175,6 @@ private:
 	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
-	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
-
 	bool load_program();
 	void load_program_env();
 	void update_vertex_env(const gl::vertex_upload_info& upload_info);
@@ -193,7 +191,7 @@ private:
 
 public:
 	void set_viewport();
-	void set_scissor(bool clip_viewport);
+	void set_scissor(bool force = false);
 
 	gl::work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
@@ -227,6 +225,9 @@ protected:
 	bool resolve_sampler_state() override;
 	bool end_draw(rsx::flags32_t pre_begin_pipeline_state) override;
 	void emit_geometry(u32 sub_index) override;
+
+	void on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
+	bool is_framebuffer_bound() const override;
 
 	void on_init_thread() override;
 	void on_exit() override;
