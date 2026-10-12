@@ -462,6 +462,15 @@ namespace rsx
 		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}
 
+	void core_renderer::refresh_program_state()
+	{
+		// Do not trust fragment/vertex texture state after a texture state reset
+		m_ctx->graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
+		m_graph.get_current_fragment_program(m_ctx->textures.fs_sampler_state);
+		m_graph.get_current_vertex_program(m_ctx->textures.vs_sampler_state);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
+	}
+
 	void core_renderer::update_program_state(rsx::flags32_t program_bits)
 	{
 		if (program_bits & (rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::xform_instancing_state_dirty))

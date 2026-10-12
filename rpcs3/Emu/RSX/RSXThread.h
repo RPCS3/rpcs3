@@ -36,7 +36,6 @@ extern rsx::frame_capture_data frame_capture;
 namespace rsx
 {
 	class RSXDMAWriter;
-	class sampled_image_descriptor_base;
 
 	struct context;
 
@@ -188,6 +187,7 @@ namespace rsx
 		context* get_context() const { return m_ctx; }
 
 		render_backend* renderer() const { return m_renderer; }
+		core_renderer& core() { return m_core; }
 
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;
@@ -212,10 +212,6 @@ namespace rsx
 	protected:
 		// Forwarded to the GRAPH engine
 		bool requires_depth_range_emulation() const;
-
-		// Program resolution, forwarded to the GRAPH engine. Only the VK out-of-memory retry uses these.
-		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
-		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 
 	public:
 		bool invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size);
