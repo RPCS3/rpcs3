@@ -1281,11 +1281,6 @@ namespace rsx
 		return m_core.graph().requires_depth_range_emulation();
 	}
 
-	void thread::analyse_current_rsx_pipeline()
-	{
-		m_core.graph().analyse_current_rsx_pipeline();
-	}
-
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
 	{
 		m_core.graph().get_current_vertex_program(sampler_descriptors);

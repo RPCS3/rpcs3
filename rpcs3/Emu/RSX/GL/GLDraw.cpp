@@ -894,20 +894,16 @@ void GLGSRender::begin_draw()
 	}
 }
 
+bool GLGSRender::resolve_sampler_state()
+{
+	load_texture_env();
+	return true;
+}
+
 bool GLGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 {
 	// Shader state as it was before prefetch and loading happened
 	m_interpreter_state = pre_begin_pipeline_state;
-
-	m_profiler.start();
-
-	analyse_current_rsx_pipeline();
-
-	m_ctx->stats.setup_time += m_profiler.duration();
-
-	// Active texture environment is used to decode shaders
-	load_texture_env();
-	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
 	// TODO: Implement shaders cache prediction to avoid uploading vertex data if draw is going to skip

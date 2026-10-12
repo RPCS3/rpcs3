@@ -382,6 +382,7 @@ namespace rsx
 		else
 		{
 			decode_draw_state();
+			resolve_programs();
 
 			if (RSX(m_ctx)->renderer()->end_draw(m_pre_begin_pipeline_state))
 			{
@@ -395,6 +396,42 @@ namespace rsx
 		}
 
 		post_draw_hook();
+	}
+
+	void core_renderer::resolve_programs()
+	{
+		auto& profiler = RSX(m_ctx)->m_profiler;
+		profiler.start();
+
+		m_graph.analyse_current_rsx_pipeline();
+		m_ctx->stats.setup_time += profiler.duration();
+
+		// Active texture environment is used to decode shaders
+		const bool has_sampler_state = RSX(m_ctx)->renderer()->resolve_sampler_state();
+		m_ctx->stats.textures_upload_time += profiler.duration();
+
+		// Recheck the bits after the texture environment is loaded, since that can invalidate the programs as well
+		const rsx::flags32_t program_bits = m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits;
+		if (!has_sampler_state || !program_bits)
+		{
+			return;
+		}
+
+		m_graph.get_current_fragment_program(m_ctx->textures.fs_sampler_state);
+		ensure(m_ctx->program.fragment_program.valid);
+
+		m_graph.get_current_vertex_program(m_ctx->textures.vs_sampler_state);
+
+		// Resolution consumes some of the bits. The backend looks up its pipeline from these instead.
+		if (program_bits & (rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::xform_instancing_state_dirty))
+		{
+			m_ctx->draw_state.dirty.set(draw_state_t::group::vertex_program);
+		}
+
+		if (program_bits & rsx::pipeline_state::fragment_program_dirty)
+		{
+			m_ctx->draw_state.dirty.set(draw_state_t::group::fragment_program);
+		}
 	}
 
 	void core_renderer::decode_draw_state()
