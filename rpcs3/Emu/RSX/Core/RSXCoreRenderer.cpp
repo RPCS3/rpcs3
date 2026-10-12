@@ -184,6 +184,17 @@ namespace rsx
 		state.index_type = regs.index_type();
 	}
 
+	static void decode_stipple_state(const rsx_state& regs, stipple_state& state)
+	{
+		state.enabled = regs.polygon_stipple_enabled();
+		if (!state.enabled)
+		{
+			return;
+		}
+
+		std::memcpy(state.pattern.data(), regs.polygon_stipple_pattern(), sizeof(state.pattern));
+	}
+
 	static void decode_clear_state(const rsx_state& regs, rsx::flags32_t mask, clear_state& state)
 	{
 		state.mask = mask;
@@ -310,6 +321,10 @@ namespace rsx
 		input_assembly_state input_assembly = state.input_assembly;
 		decode_input_assembly_state(regs, input_assembly);
 		ensure(input_assembly == state.input_assembly, "Stale input assembly state");
+
+		stipple_state stipple = state.stipple;
+		decode_stipple_state(regs, stipple);
+		ensure(stipple == state.stipple, "Stale stipple state");
 	}
 #endif
 
@@ -519,6 +534,13 @@ namespace rsx
 			decode_input_assembly_state(regs, state.input_assembly);
 			state.pending.clear(draw_state_t::group::input_assembly);
 			state.dirty.set(draw_state_t::group::input_assembly);
+		}
+
+		if (state.pending.test(draw_state_t::group::stipple))
+		{
+			decode_stipple_state(regs, state.stipple);
+			state.pending.clear(draw_state_t::group::stipple);
+			state.dirty.set(draw_state_t::group::stipple);
 		}
 
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
