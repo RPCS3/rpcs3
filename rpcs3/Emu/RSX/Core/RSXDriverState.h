@@ -22,7 +22,6 @@ namespace rsx
 		scissor_setup_invalid        = (1 << 13),  // Scissor configuration is broken
 		scissor_setup_clipped        = (1 << 14),  // Scissor region is cropped by viewport constraint
 
-		polygon_stipple_pattern_dirty = (1 << 15),  // Rasterizer stippling pattern changed
 		line_stipple_pattern_dirty    = (1 << 16),  // Line stippling pattern changed
 
 		push_buffer_arrays_dirty      = (1 << 17),   // Push buffers have data written to them (immediate mode vertex buffers)
