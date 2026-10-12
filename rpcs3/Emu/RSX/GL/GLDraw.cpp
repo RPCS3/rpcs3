@@ -309,9 +309,10 @@ void GLGSRender::update_draw_state()
 	m_ctx->stats.setup_time += m_profiler.duration();
 }
 
-void GLGSRender::load_texture_env()
+rsx::flags32_t GLGSRender::load_texture_env()
 {
 	// Load textures
+	rsx::flags32_t invalidated_programs = 0;
 	gl::command_context cmd{ gl_state };
 	std::lock_guard lock(m_sampler_mutex);
 
@@ -332,14 +333,13 @@ void GLGSRender::load_texture_env()
 		const auto previous_format_class = sampler_state->format_class;
 
 		if (!m_samplers_dirty &&
-			!m_ctx->textures.fragment_textures_dirty[i] &&
+			!(m_ctx->textures.fragment_textures_dirty & (1u << i)) &&
 			!m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			continue;
 		}
 
-		const bool is_sampler_dirty = m_ctx->textures.fragment_textures_dirty[i];
-		m_ctx->textures.fragment_textures_dirty[i] = false;
+		const bool is_sampler_dirty = !!(m_ctx->textures.fragment_textures_dirty & (1u << i));
 
 		if (!tex.enabled())
 		{
@@ -358,7 +358,7 @@ void GLGSRender::load_texture_env()
 			if (sampler_state->format_class != previous_format_class)
 			{
 				// Host details changed but RSX is not aware
-				m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
+				invalidated_programs |= rsx::fragment_program_state_dirty;
 			}
 
 			if (sampler_state->format_ex)
@@ -466,14 +466,13 @@ void GLGSRender::load_texture_env()
 		const auto previous_format_class = sampler_state->format_class;
 
 		if (!m_samplers_dirty &&
-			!m_ctx->textures.vertex_textures_dirty[i] &&
+			!(m_ctx->textures.vertex_textures_dirty & (1u << i)) &&
 			!m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			continue;
 		}
 
-		const bool is_sampler_dirty = m_ctx->textures.vertex_textures_dirty[i];
-		m_ctx->textures.vertex_textures_dirty[i] = false;
+		const bool is_sampler_dirty = !!(m_ctx->textures.vertex_textures_dirty & (1u << i));
 
 		if (!tex.enabled())
 		{
@@ -494,11 +493,12 @@ void GLGSRender::load_texture_env()
 		}
 		else if (sampler_state->format_class != previous_format_class)
 		{
-			m_ctx->graphics_state |= rsx::vertex_program_state_dirty;
+			invalidated_programs |= rsx::vertex_program_state_dirty;
 		}
 	}
 
 	m_samplers_dirty.store(false);
+	return invalidated_programs;
 }
 
 void GLGSRender::bind_texture_env()
@@ -894,9 +894,9 @@ void GLGSRender::begin_draw()
 	}
 }
 
-bool GLGSRender::resolve_sampler_state()
+bool GLGSRender::resolve_sampler_state(rsx::flags32_t& invalidated_programs)
 {
-	load_texture_env();
+	invalidated_programs = load_texture_env();
 	return true;
 }
 

@@ -240,12 +240,15 @@ namespace rsx
 			transform_constants          = (1 << 13),
 			fragment_constants           = (1 << 14),
 
+			// Signal that the texture parameters block (coordinate scale/bias/clamp of the referenced textures) changed. Not used for state decode.
+			fragment_texture_env         = (1 << 15),
+
 			// Meta groups
 			decoded                      = raster | depth_stencil | blend | multisample | viewport | input_assembly | stipple | fragment_env,
 			programs                     = vertex_program | fragment_program,
 			constants                    = transform_constants | fragment_constants,
 			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly | programs,
-			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier | transform_constants | fragment_constants,
+			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier | constants | fragment_texture_env,
 		};
 
 		bitmask_t<group> dirty;

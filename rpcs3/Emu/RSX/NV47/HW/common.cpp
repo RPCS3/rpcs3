@@ -68,7 +68,7 @@ namespace rsx
 				return;
 			}
 
-			ctx->textures.fragment_textures_dirty[index] = true;
+			ctx->textures.fragment_textures_dirty |= (1u << index);
 
 			if (ctx->program.fp_metadata.referenced_textures_mask & (1 << index))
 			{
@@ -78,7 +78,7 @@ namespace rsx
 
 		void set_vertex_texture_dirty_bit(rsx::context* ctx, u32 index)
 		{
-			ctx->textures.vertex_textures_dirty[index] = true;
+			ctx->textures.vertex_textures_dirty |= (1u << index);
 
 			if (ctx->program.vp_metadata.referenced_textures_mask & (1 << index))
 			{

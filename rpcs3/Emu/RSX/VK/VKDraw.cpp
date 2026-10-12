@@ -278,9 +278,10 @@ void VKGSRender::update_draw_state()
 	m_ctx->stats.setup_time += m_profiler.duration();
 }
 
-void VKGSRender::load_texture_env()
+rsx::flags32_t VKGSRender::load_texture_env()
 {
 	// Load textures
+	rsx::flags32_t invalidated_programs = 0;
 	bool check_for_cyclic_refs = false;
 	auto check_surface_cache_sampler_valid = [&](auto descriptor, const auto& tex)
 	{
@@ -319,14 +320,13 @@ void VKGSRender::load_texture_env()
 		const auto previous_format_class = m_ctx->textures.fs_sampler_state[i]->format_class;
 
 		if (!m_samplers_dirty &&
-			!m_ctx->textures.fragment_textures_dirty[i] &&
+			!(m_ctx->textures.fragment_textures_dirty & (1u << i)) &&
 			check_surface_cache_sampler_valid(sampler_state, tex))
 		{
 			continue;
 		}
 
-		const bool is_sampler_dirty = m_ctx->textures.fragment_textures_dirty[i];
-		m_ctx->textures.fragment_textures_dirty[i] = false;
+		const bool is_sampler_dirty = !!(m_ctx->textures.fragment_textures_dirty & (1u << i));
 
 		if (!tex.enabled())
 		{
@@ -350,7 +350,7 @@ void VKGSRender::load_texture_env()
 			if (sampler_state->format_class != previous_format_class)
 			{
 				// Host details changed but RSX is not aware
-				m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
+				invalidated_programs |= rsx::fragment_program_state_dirty;
 			}
 
 			if (sampler_state->format_ex)
@@ -552,14 +552,13 @@ void VKGSRender::load_texture_env()
 		const auto previous_format_class = sampler_state->format_class;
 
 		if (!m_samplers_dirty &&
-			!m_ctx->textures.vertex_textures_dirty[i] &&
+			!(m_ctx->textures.vertex_textures_dirty & (1u << i)) &&
 			check_surface_cache_sampler_valid(sampler_state, tex))
 		{
 			continue;
 		}
 
-		const bool is_sampler_dirty = m_ctx->textures.vertex_textures_dirty[i];
-		m_ctx->textures.vertex_textures_dirty[i] = false;
+		const bool is_sampler_dirty = !!(m_ctx->textures.vertex_textures_dirty & (1u << i));
 
 		if (!REGS(m_ctx)->vertex_textures[i].enabled())
 		{
@@ -583,7 +582,7 @@ void VKGSRender::load_texture_env()
 			if (sampler_state->format_class != previous_format_class)
 			{
 				// Host details changed but RSX is not aware
-				m_ctx->graphics_state |= rsx::vertex_program_state_dirty;
+				invalidated_programs |= rsx::vertex_program_state_dirty;
 			}
 
 			if (vs_sampler_handles[i])
@@ -654,6 +653,8 @@ void VKGSRender::load_texture_env()
 			}
 		}
 	}
+
+	return invalidated_programs;
 }
 
 bool VKGSRender::bind_texture_env()
@@ -1268,7 +1269,7 @@ void VKGSRender::begin_draw()
 	}
 }
 
-bool VKGSRender::resolve_sampler_state()
+bool VKGSRender::resolve_sampler_state(rsx::flags32_t& invalidated_programs)
 {
 	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
 	// This runs before any texture upload of the current draw is recorded
@@ -1288,7 +1289,7 @@ bool VKGSRender::resolve_sampler_state()
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	load_texture_env();
+	invalidated_programs = load_texture_env();
 	return true;
 }
 

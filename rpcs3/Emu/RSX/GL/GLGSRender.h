@@ -183,7 +183,7 @@ private:
 
 	void update_draw_state();
 
-	void load_texture_env();
+	rsx::flags32_t load_texture_env();
 	void bind_texture_env();
 
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
@@ -223,7 +223,7 @@ public:
 protected:
 	void clear() override;
 	void begin_draw() override;
-	bool resolve_sampler_state() override;
+	bool resolve_sampler_state(rsx::flags32_t& invalidated_programs) override;
 	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 
