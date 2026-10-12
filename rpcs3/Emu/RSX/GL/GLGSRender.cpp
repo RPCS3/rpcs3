@@ -766,14 +766,8 @@ bool GLGSRender::load_program()
 {
 	const auto shadermode = g_cfg.video.shadermode.get();
 
-	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
-	{
-		get_current_fragment_program(m_ctx->textures.fs_sampler_state);
-		ensure(m_ctx->program.fragment_program.valid);
-
-		get_current_vertex_program(m_ctx->textures.vs_sampler_state);
-	}
-	else if (m_program)
+	// The core has resolved the programs for this draw if any of them changed
+	if (!m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs) && m_program)
 	{
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 		{

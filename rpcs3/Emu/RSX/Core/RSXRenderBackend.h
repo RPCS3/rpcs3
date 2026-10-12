@@ -51,6 +51,10 @@ namespace rsx
 		virtual void clear() {}
 		virtual void emit_geometry(u32 /*sub_index*/) {}
 
+		// Fill the context's sampler descriptors for the current draw. Runs before the core resolves the programs.
+		// Returns false if the backend has no sampler state, in which case the programs are not resolved.
+		virtual bool resolve_sampler_state() { return false; }
+
 		// Present. Returns true if a frame was presented, in which case post_present() runs after the core's flip bookkeeping.
 		virtual bool present_frame(const display_flip_info_t& info) = 0;
 		virtual void post_present() {}

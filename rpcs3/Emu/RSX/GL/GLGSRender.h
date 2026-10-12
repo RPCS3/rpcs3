@@ -224,6 +224,7 @@ public:
 protected:
 	void clear() override;
 	void begin_draw() override;
+	bool resolve_sampler_state() override;
 	bool end_draw(rsx::flags32_t pre_begin_pipeline_state) override;
 	void emit_geometry(u32 sub_index) override;
 
