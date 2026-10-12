@@ -217,8 +217,7 @@ namespace rsx
 		bool get_scissor(areau& region, bool clip_viewport);
 		bool requires_depth_range_emulation() const;
 
-		// Notify framebuffer layout has been committed.
-		// FIXME: This should not be here
+		// Framebuffer resolution, forwarded to the GRAPH engine
 		void on_framebuffer_layout_updated();
 
 		// Runs shader prefetch and resolves pipeline status flags

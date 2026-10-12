@@ -503,6 +503,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Core/RSXCoreRenderer.cpp
     RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
+    RSX/Core/RSXGraphEngine.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
     RSX/GSRender.cpp

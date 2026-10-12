@@ -2,6 +2,7 @@
 
 #include <util/types.hpp>
 #include "Emu/RSX/Utils/rsx_utils.h"
+#include "RSXGraphEngine.h"
 
 namespace rsx
 {
@@ -12,7 +13,14 @@ namespace rsx
 	class core_renderer
 	{
 	public:
-		void init(context* ctx) { m_ctx = ctx; }
+		void init(context* ctx)
+		{
+			m_ctx = ctx;
+			m_graph.init(ctx);
+		}
+
+		graph_engine& graph() { return m_graph; }
+		const graph_engine& graph() const { return m_graph; }
 
 		// NV4097_SET_BEGIN_END
 		void begin();
@@ -26,6 +34,9 @@ namespace rsx
 
 	private:
 		context* m_ctx = nullptr;
+
+		// GRAPH unit: framebuffer resolution
+		graph_engine m_graph;
 
 		// invalidate_pipeline_bits as they were before the current draw began
 		rsx::flags32_t m_pre_begin_pipeline_state = 0;
