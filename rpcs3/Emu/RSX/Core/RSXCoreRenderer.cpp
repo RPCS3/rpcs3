@@ -367,8 +367,9 @@ namespace rsx
 			return;
 		}
 
-		// The backend binds the framebuffer here, which reads the viewport
+		// Binding the framebuffer reads the viewport
 		decode_draw_state();
+		m_graph.bind_framebuffer(rsx::framebuffer_creation_context::context_draw);
 
 		RSX(m_ctx)->renderer()->begin_draw();
 	}
@@ -510,10 +511,20 @@ namespace rsx
 			return;
 		}
 
-		// The backend binds the framebuffer for the clear, which reads the viewport.
+		// Binding the framebuffer for the clear reads the viewport.
 		// Groups decoded here stay dirty until the next executed draw.
 		decode_draw_state();
 		decode_clear_state(regs, arg, m_ctx->draw_state.clear);
+
+		u8 fb_context = rsx::framebuffer_creation_context::context_draw;
+		if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) fb_context |= rsx::framebuffer_creation_context::context_clear_color;
+		if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) fb_context |= rsx::framebuffer_creation_context::context_clear_depth;
+
+		m_graph.bind_framebuffer(static_cast<rsx::framebuffer_creation_context>(fb_context));
+		if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
+		{
+			return;
+		}
 
 		RSX(m_ctx)->renderer()->clear();
 	}

@@ -800,14 +800,60 @@ namespace rsx
 		m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
 	}
 
-	bool graph_engine::get_scissor(areau& region, bool clip_viewport, const surface_scaling_config_t& resolution_scaling_config)
+	void graph_engine::bind_framebuffer(rsx::framebuffer_creation_context context)
+	{
+		render_backend* backend = RSX(m_ctx)->renderer();
+		const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
+
+		if (m_ctx->fb.current_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && backend->is_framebuffer_bound())
+		{
+			// Fast path. Framebuffer usage has not changed, framebuffer exists and config regs have not changed
+			resolve_scissor(clipped_scissor);
+			return;
+		}
+
+		m_ctx->graphics_state.clear(
+			rsx::rtt_config_dirty |
+			rsx::rtt_config_contested |
+			rsx::rtt_config_valid |
+			rsx::rtt_cache_state_dirty);
+
+		get_framebuffer_layout(context, m_ctx->fb.layout);
+		if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
+		{
+			return;
+		}
+
+		if (m_ctx->fb.layout.ignore_change && backend->is_framebuffer_bound())
+		{
+			// Nothing has changed, we're still using the same framebuffer
+			backend->on_framebuffer_bound(m_ctx->fb.layout);
+			resolve_scissor(clipped_scissor);
+			return;
+		}
+
+		backend->on_framebuffer_bound(m_ctx->fb.layout);
+		if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
+		{
+			// The host could not build the framebuffer
+			return;
+		}
+
+		resolve_scissor(clipped_scissor);
+		on_framebuffer_layout_updated();
+
+		// The backend has recorded the bound depth surface
+		RSX(m_ctx)->check_zcull_status(true);
+	}
+
+	void graph_engine::resolve_scissor(bool clip_viewport)
 	{
 		if (!m_ctx->graphics_state.test(rsx::pipeline_state::scissor_config_state_dirty))
 		{
 			if (clip_viewport == m_ctx->graphics_state.test(rsx::pipeline_state::scissor_setup_clipped))
 			{
 				// Nothing to do
-				return false;
+				return;
 			}
 		}
 
@@ -850,7 +896,7 @@ namespace rsx
 		{
 			m_ctx->graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
 			m_ctx->graphics_state.clear(rsx::rtt_config_valid);
-			return false;
+			return;
 		}
 
 		if (m_ctx->graphics_state & rsx::pipeline_state::scissor_setup_invalid)
@@ -859,10 +905,9 @@ namespace rsx
 			m_ctx->graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, x1, y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
-		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, x2, y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
-
-		return true;
+		// The backend applies resolution scaling
+		m_ctx->draw_state.scissor = { .x1 = x1, .y1 = y1, .x2 = x2, .y2 = y2 };
+		m_ctx->draw_state.dirty.set(draw_state_t::group::scissor);
 	}
 
 	rsx::flags32_t graph_engine::get_fragment_program_export_config()

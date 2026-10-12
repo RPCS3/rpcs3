@@ -146,6 +146,15 @@ namespace rsx
 		bool operator==(const input_assembly_state&) const = default;
 	};
 
+	// Scissor region before resolution scaling. Draws are clipped by the viewport, clears are not.
+	struct scissor_state
+	{
+		u16 x1 = 0;
+		u16 y1 = 0;
+		u16 x2 = 0;
+		u16 y2 = 0;
+	};
+
 	// Decoded for every clear command right before the backend's clear() hook. It is not change-tracked.
 	struct clear_state
 	{
@@ -196,7 +205,10 @@ namespace rsx
 			fragment_program = (1 << 8),
 			programs = vertex_program | fragment_program,
 
-			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | program_env | programs
+			// Signal that the scissor region was resolved again. Not used for state decode.
+			scissor          = (1 << 9),
+
+			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | program_env | programs | scissor
 		};
 
 		bitmask_t<group> dirty;
@@ -210,6 +222,9 @@ namespace rsx
 		multisample_state multisample;
 		viewport_state viewport;
 		input_assembly_state input_assembly;
+
+		// Resolved by the GRAPH engine when the framebuffer is bound, not decoded
+		scissor_state scissor;
 
 		// Not a group: decoded per clear command
 		clear_state clear;

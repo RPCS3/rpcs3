@@ -8,10 +8,6 @@
 #include "RSXZCULL.h"
 #include "Common/bitfield.hpp"
 #include "Common/profiling_timer.hpp"
-#include "Common/texture_cache_types.h"
-#include "Common/TextureUtils.h"
-#include "Program/RSXVertexProgram.h"
-#include "Program/RSXFragmentProgram.h"
 #include "Utils/rsx_utils.h"
 
 #include "Utilities/Thread.h"
@@ -40,6 +36,7 @@ extern rsx::frame_capture_data frame_capture;
 namespace rsx
 {
 	class RSXDMAWriter;
+	class sampled_image_descriptor_base;
 
 	struct context;
 
@@ -213,12 +210,8 @@ namespace rsx
 		u32 get_zeta_surface_address() const;
 
 	protected:
-		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
-		bool get_scissor(areau& region, bool clip_viewport);
+		// Forwarded to the GRAPH engine
 		bool requires_depth_range_emulation() const;
-
-		// Framebuffer resolution, forwarded to the GRAPH engine
-		void on_framebuffer_layout_updated();
 
 		// Program resolution, forwarded to the GRAPH engine. Only the VK out-of-memory retry uses these.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);

@@ -1256,24 +1256,9 @@ namespace rsx
 		return m_core.graph().get_zeta_surface_address();
 	}
 
-	void thread::get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout)
-	{
-		m_core.graph().get_framebuffer_layout(context, layout);
-	}
-
 	void thread::on_framebuffer_options_changed(u32 opt)
 	{
 		m_core.graph().on_framebuffer_options_changed(opt);
-	}
-
-	void thread::on_framebuffer_layout_updated()
-	{
-		m_core.graph().on_framebuffer_layout_updated();
-	}
-
-	bool thread::get_scissor(areau& region, bool clip_viewport)
-	{
-		return m_core.graph().get_scissor(region, clip_viewport, resolution_scaling_config);
 	}
 
 	bool thread::requires_depth_range_emulation() const

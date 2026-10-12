@@ -214,8 +214,6 @@ public:
 	VKGSRender() noexcept : VKGSRender(nullptr) {}
 
 private:
-	void prepare_rtts(rsx::framebuffer_creation_context context);
-
 	void close_and_submit_command_buffer(
 		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
@@ -252,9 +250,8 @@ private:
 	bool bind_interpreter_texture_env();
 
 public:
-	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void set_viewport();
-	void set_scissor(bool clip_viewport);
+	void set_scissor();
 	void bind_viewport();
 
 	// Sync
@@ -296,6 +293,9 @@ protected:
 	bool resolve_sampler_state() override;
 	bool end_draw(rsx::flags32_t pre_begin_pipeline_state) override;
 	void emit_geometry(u32 sub_index) override;
+
+	void on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
+	bool is_framebuffer_bound() const override;
 
 	void on_init_thread() override;
 	void on_exit() override;

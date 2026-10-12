@@ -103,38 +103,19 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	}
 }
 
-void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)
+bool GLGSRender::is_framebuffer_bound() const
 {
-	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_ctx->fb.current_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
-	{
-		// Fast path
-		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
-		set_scissor(clipped_scissor);
-		return;
-	}
+	return !!m_draw_fbo;
+}
 
-	m_ctx->graphics_state.clear(
-		rsx::rtt_config_dirty |
-		rsx::rtt_config_contested |
-		rsx::rtt_config_valid |
-		rsx::rtt_cache_state_dirty |
-		rsx::pipeline_config_dirty);
-
-	get_framebuffer_layout(context, m_ctx->fb.layout);
-	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
-	{
-		return;
-	}
-
-	if (m_draw_fbo && m_ctx->fb.layout.ignore_change)
+void GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
+{
+	if (m_draw_fbo && layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor(clipped_scissor);
-
 		return;
 	}
 
@@ -214,7 +195,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_ctx->fb.depth_surface_info = {};
 	}
 
-	m_ctx->graphics_state.clear(rsx::rtt_config_valid);
+	bool found_fbo = false;
 
 	if (m_draw_fbo)
 	{
@@ -232,12 +213,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			m_draw_fbo->bind();
 			m_draw_fbo->set_extents({ m_ctx->fb.layout.width, m_ctx->fb.layout.height });
 
-			m_ctx->graphics_state.set(rsx::rtt_config_valid);
+			found_fbo = true;
 			break;
 		}
 	}
 
-	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
+	if (!found_fbo)
 	{
 		m_framebuffer_cache.emplace_back();
 		m_framebuffer_cache.back().add_ref();
@@ -281,7 +262,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_draw_fbo->set_default_samples(raster_samples);
 	}
 
-	switch (REGS(m_ctx)->surface_color_target())
+	switch (layout.target)
 	{
 	case rsx::surface_target::none: break;
 
@@ -313,16 +294,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	if (!m_draw_fbo->check())
 	{
+		// Tell the GRAPH engine the framebuffer cannot be used
 		m_ctx->graphics_state.clear(rsx::rtt_config_valid);
 		return;
 	}
 
-	m_ctx->graphics_state.set(rsx::rtt_config_valid);
-	on_framebuffer_layout_updated();
-
-	check_zcull_status(true);
 	set_viewport();
-	set_scissor(clipped_scissor);
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
