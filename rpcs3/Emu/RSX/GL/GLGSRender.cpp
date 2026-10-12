@@ -911,12 +911,7 @@ void GLGSRender::load_program_env()
 		// Vertex state
 		auto mapping = m_vertex_env_buffer->alloc_from_heap(96, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		m_draw_processor.fill_scale_offset_data(buf, false);
-		m_draw_processor.fill_user_clip_data(buf + 64);
-		*(reinterpret_cast<u32*>(buf + 68)) = REGS(m_ctx)->transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = REGS(m_ctx)->point_size() * resolution_scaling_config.scale_factor();
-		*(reinterpret_cast<f32*>(buf + 76)) = REGS(m_ctx)->clip_min();
-		*(reinterpret_cast<f32*>(buf + 80)) = REGS(m_ctx)->clip_max();
+		m_draw_processor.fill_vertex_env(buf, resolution_scaling_config.scale_factor());
 
 		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 96);
 	}
@@ -1016,11 +1011,7 @@ void GLGSRender::load_program_env()
 			auto vp_mapping = m_vertex_instructions_buffer->alloc_from_heap(vp_block_length, 16);
 			auto vp_buf = static_cast<u8*>(vp_mapping.first);
 
-			auto vp_config = reinterpret_cast<u32*>(vp_buf);
-			vp_config[0] = m_ctx->program.vertex_program.base_address;
-			vp_config[1] = m_ctx->program.vertex_program.entry;
-			vp_config[2] = m_ctx->program.vertex_program.output_mask;
-			vp_config[3] = REGS(m_ctx)->two_side_light_en() ? 1u : 0u;
+			m_draw_processor.fill_interpreter_vertex_header(vp_buf);
 
 			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 
@@ -1035,11 +1026,7 @@ void GLGSRender::load_program_env()
 			auto fp_mapping = m_fragment_instructions_buffer->alloc_from_heap(fp_block_length, 16);
 			auto fp_buf = static_cast<u8*>(fp_mapping.first);
 
-			// Control mask
-			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
-			control_masks[0] = REGS(m_ctx)->shader_control();
-			control_masks[1] = m_ctx->program.fragment_program.texture_state.texture_dimensions;
-			control_masks[2] = m_ctx->program.fp_metadata.referenced_textures_mask;
+			m_draw_processor.fill_interpreter_fragment_header(fp_buf);
 
 			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 

@@ -1898,7 +1898,6 @@ void VKGSRender::load_program_env()
 		fmt::throw_exception("Unreachable right now");
 	}
 
-	const auto& ctx = REGS(m_ctx);
 	const auto& gpu_limits = m_device->gpu().get_limits();
 
 	const u32 fragment_constants_size = m_ctx->program.fp_metadata.program_constants_buffer_length;
@@ -1914,7 +1913,7 @@ void VKGSRender::load_program_env()
 	const bool update_fragment_texture_env = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (m_interpreter_state.test(rsx::draw_state_t::group::programs) && is_interpreter);
 	const bool update_raster_env = (m_ctx->draw_state.stipple.enabled && m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::stipple));
-	const bool update_instancing_data = ctx->current_draw_clause.is_trivial_instanced_draw;
+	const bool update_instancing_data = REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
 	if (update_vertex_env)
 	{
@@ -1923,12 +1922,7 @@ void VKGSRender::load_program_env()
 		const auto mem = m_vertex_env_allocator->alloc();
 		auto buf = m_vertex_env_ring_info.map<char>(mem, 96);
 
-		m_draw_processor.fill_scale_offset_data(buf, false);
-		m_draw_processor.fill_user_clip_data(buf + 64);
-		*(reinterpret_cast<u32*>(buf + 68)) = ctx->transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = ctx->point_size() * resolution_scaling_config.scale_factor();
-		*(reinterpret_cast<f32*>(buf + 76)) = ctx->clip_min();
-		*(reinterpret_cast<f32*>(buf + 80)) = ctx->clip_max();
+		m_draw_processor.fill_vertex_env(buf, resolution_scaling_config.scale_factor());
 
 		m_vertex_env_ring_info.unmap();
 		m_vertex_env_dynamic_offset = mem;
@@ -2046,11 +2040,7 @@ void VKGSRender::load_program_env()
 			auto vp_mapping = m_vertex_instructions_buffer.alloc<256>(vp_block_length);
 			auto vp_buf = static_cast<u8*>(m_vertex_instructions_buffer.map(vp_mapping, vp_block_length));
 
-			auto vp_config = reinterpret_cast<u32*>(vp_buf);
-			vp_config[0] = m_ctx->program.vertex_program.base_address;
-			vp_config[1] = m_ctx->program.vertex_program.entry;
-			vp_config[2] = m_ctx->program.vertex_program.output_mask;
-			vp_config[3] = ctx->two_side_light_en()? 1u: 0u;
+			m_draw_processor.fill_interpreter_vertex_header(vp_buf);
 
 			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 			m_vertex_instructions_buffer.unmap();
@@ -2065,10 +2055,7 @@ void VKGSRender::load_program_env()
 			auto fp_mapping = m_fragment_instructions_buffer.alloc<256>(fp_block_length);
 			auto fp_buf = static_cast<u8*>(m_fragment_instructions_buffer.map(fp_mapping, fp_block_length));
 
-			// Control mask
-			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
-			control_masks[0] = ctx->shader_control();
-			control_masks[1] = m_ctx->program.fragment_program.texture_state.texture_dimensions;
+			m_draw_processor.fill_interpreter_fragment_header(fp_buf);
 
 			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
