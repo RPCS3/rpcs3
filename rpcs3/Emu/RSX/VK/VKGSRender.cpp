@@ -1910,7 +1910,7 @@ void VKGSRender::load_program_env()
 	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
 	const bool update_fragment_texture_env = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (m_interpreter_state.test(rsx::draw_state_t::group::programs) && is_interpreter);
-	const bool update_raster_env = (ctx->polygon_stipple_enabled() && !!(m_ctx->graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
+	const bool update_raster_env = (m_ctx->draw_state.stipple.enabled && m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::stipple));
 	const bool update_instancing_data = ctx->current_draw_clause.is_trivial_instanced_draw;
 
 	if (update_vertex_env)
@@ -2030,10 +2030,8 @@ void VKGSRender::load_program_env()
 		m_stipple_array_dynamic_offset = m_raster_env_ring_info.static_alloc<128>();
 		auto buf = m_raster_env_ring_info.map(m_stipple_array_dynamic_offset, 128);
 
-		std::memcpy(buf, ctx->polygon_stipple_pattern(), 128);
+		std::memcpy(buf, m_ctx->draw_state.stipple.pattern.data(), 128);
 		m_raster_env_ring_info.unmap();
-
-		m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)
