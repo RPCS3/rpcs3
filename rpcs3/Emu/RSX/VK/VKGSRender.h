@@ -196,8 +196,11 @@ private:
 
 	std::unique_ptr<vk::image> m_overlay_recording_img;
 
-	//Vertex layout
+	// Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
+
+	// Constant buffers whose host copy is out of date.
+	rsx::bitmask_t<rsx::draw_state_t::group> m_stale_constants;
 
 	vk::shader_interpreter m_shader_interpreter;
 	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;

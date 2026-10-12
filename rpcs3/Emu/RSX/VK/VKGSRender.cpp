@@ -1868,12 +1868,12 @@ bool VKGSRender::load_program()
 		if (is_interpreter != was_interpreter)
 		{
 			// Always reupload transform constants when going between interpreter and recompiler
-			m_ctx->graphics_state |= rsx::transform_constants_dirty;
+			m_stale_constants.set(rsx::draw_state_t::group::transform_constants);
 
 			// Always reload fragment constansts when moving from interpreter back to recompiler.
 			if (was_interpreter)
 			{
-				m_ctx->graphics_state |= rsx::fragment_constants_dirty;
+				m_stale_constants.set(rsx::draw_state_t::group::fragment_constants);
 			}
 		}
 	}
@@ -1904,8 +1904,11 @@ void VKGSRender::load_program_env()
 	const u32 fragment_constants_size = m_ctx->program.fp_metadata.program_constants_buffer_length;
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
-	const bool update_transform_constants = !!(m_ctx->graphics_state & rsx::pipeline_state::transform_constants_dirty);
-	const bool update_fragment_constants = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_constants_dirty);
+	// Constants changed since the last executed draw join the ones whose upload was deferred
+	m_stale_constants |= (m_ctx->draw_state.dirty.load() & static_cast<u32>(rsx::draw_state_t::group::constants));
+
+	const bool update_transform_constants = m_stale_constants.test(rsx::draw_state_t::group::transform_constants);
+	const bool update_fragment_constants = m_stale_constants.test(rsx::draw_state_t::group::fragment_constants);
 	const bool update_vertex_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::vertex_env);
 	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
 	const bool update_fragment_texture_env = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
@@ -2108,17 +2111,16 @@ void VKGSRender::load_program_env()
 		m_program->bind_uniform(m_instancing_constants_array_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->instanced_cbuf_location);
 	}
 
-	// Clear flags
-	rsx::flags32_t handled_flags = rsx::pipeline_state::fragment_texture_state_dirty;
-
+	// Instanced draws carry their constants in the instancing buffer, so the regular upload stays pending
 	if (!update_instancing_data)
 	{
-		handled_flags |= rsx::pipeline_state::transform_constants_dirty;
+		m_stale_constants.clear(rsx::draw_state_t::group::transform_constants);
 	}
 
-	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
+	// The interpreter embeds the fragment constants in its instruction block
+	if (!m_shader_interpreter.is_interpreter(m_program))
 	{
-		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
+		m_stale_constants.clear(rsx::draw_state_t::group::fragment_constants);
 	}
 
 	if (m_shader_interpreter.is_interpreter(m_program))
@@ -2126,7 +2128,7 @@ void VKGSRender::load_program_env()
 		ensure(m_vertex_constants_buffer_info.range >= 468 * 16);
 	}
 
-	m_ctx->graphics_state.clear(handled_flags);
+	m_ctx->graphics_state.clear(rsx::pipeline_state::fragment_texture_state_dirty);
 }
 
 std::pair<const vs_binding_table_t*, const fs_binding_table_t*> VKGSRender::get_binding_table() const
@@ -2265,7 +2267,7 @@ void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32
 	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
-		m_ctx->graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		m_stale_constants.set(rsx::draw_state_t::group::transform_constants);
 		return;
 	}
 
