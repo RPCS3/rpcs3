@@ -51,9 +51,11 @@ namespace vk
 		// setting's (0 Fast, 1 Balanced, 2 Quality), `step` the Step aside
 		// setting's (0 never, 1 quick moves, 2 most moves). Returns how many
 		// frames it made: none for the first frame, a new size or quality, or
-		// none asked for
+		// none asked for. With `guide`, the `count` frames Lossless Scaling made
+		// between the same two (VKFrameGenLSFG.h): those, with the HUD that
+		// stands still and quick camera moves as this one has them (pass_guard)
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-			vk::viewable_image* (&out)[max_frames]);
+			vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide = nullptr);
 
 		// Forgets the last frame: the next one is a first one
 		void reset();

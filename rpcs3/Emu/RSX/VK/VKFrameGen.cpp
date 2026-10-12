@@ -108,9 +108,10 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_hud_strong,     // where the HUD stands still and the world under it moves
 			pass_blur,           // a frame at half size, softened, for judging matches; the HUD's band
 			pass_between,        // the frame between
+			pass_guard,          // a frame Lossless Scaling made between, with this one's HUD and quick moves
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "r32f", "rgba8", "rgba8" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "r32f", "rgba8", "rgba8", "rgba8" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -1024,6 +1025,34 @@ void main()
 	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(between, nearer, still), 1.0));
 }
 )",
+			// pass_guard: tex0 the last frame (its own size) with its HUD
+			// (pass_hud), tex1 this one, tex2 a frame Lossless Scaling made
+			// between them (VKFrameGenLSFG.h, the output's size), tex3 the
+			// camera's field (pass_camera), tex4 and tex5 the last frame and this
+			// one at half size (pass_blur: their alpha the HUD's band); p0 = (this
+			// frame's used part as a share of its texture, the output size), p2.x
+			// the frame's time t. Lossless Scaling's frame, but the frame nearer in
+			// time as it is where the HUD stands still and in its band, as
+			// pass_between has it: its optical flow carried the radar, the health
+			// and text along with the street under them, smeared, on my console
+			// (build 134); and everywhere while the camera moves too quickly, with
+			// the Step aside setting
+			R"(
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const float t = p2.x;
+	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
+	const vec4 hud = texture(tex0, uv);
+	const vec3 here = texture(tex1, uv * p0.xy).rgb;
+	const vec3 made = texelFetch(tex2, p, 0).rgb;
+	const vec3 nearer = t < 0.5 ? hud.rgb : here;
+	const float still = max(hud.a, max(texture(tex4, uv).a, texture(tex5, uv).a));
+	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
+	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(made, nearer, still), 1.0));
+}
+)",
 		};
 
 		template <int Kind>
@@ -1474,7 +1503,7 @@ void main()
 	}
 
 	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-		vk::viewable_image* (&out)[max_frames])
+		vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide)
 	{
 		take_capture();
 
@@ -1615,8 +1644,16 @@ void main()
 			for (u32 k = 0; k < count; k++)
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
-				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get(), m_camera.get(), m_blur[0].get(), m_blur[1].get() }, m_output[k].get(), width, height,
-					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
+				if (guide)
+				{
+					vk::get_compute_task<frame_generation_pass<pass_guard>>()->run(cmd, { m_prev_hud.get(), cur, guide[k], m_camera.get(), m_blur[0].get(), m_blur[1].get() }, m_output[k].get(), width, height,
+						{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), 0.f, 0.f, 0.f, 0.f, t });
+				}
+				else
+				{
+					vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get(), m_camera.get(), m_blur[0].get(), m_blur[1].get() }, m_output[k].get(), width, height,
+						{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
+				}
 				out[k] = m_output[k].get();
 			}
 			made = count;

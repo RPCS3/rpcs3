@@ -20,6 +20,7 @@ extern atomic_t<u64> g_ps5_frame_gen_us;
 extern atomic_t<u64> g_ps5_frames_dropped;
 extern atomic_t<u64> g_ps5_image_wait_us[2];
 extern atomic_t<u64> g_ps5_frame_gen_gpu_wait_us;
+extern atomic_t<u64> g_ps5_frames_generated;
 #endif
 
 namespace
@@ -1073,8 +1074,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 
 			// Lossless Scaling's frame generation when the setting asks for it
-			// and it runs (VKFrameGenLSFG.h), else the built-in one. The one
-			// not fed this frame forgets its last, to start again when used
+			// and it runs (VKFrameGenLSFG.h), else the built-in one; Lossless
+			// Scaling not fed this frame forgets its last, to start again when
+			// used
 			const bool lossless = g_cfg.video.frame_generation_method == 1 && !(m_lsfg_generator && m_lsfg_generator->failed());
 			if (lossless && !m_lsfg_generator)
 			{
@@ -1085,8 +1087,23 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			u32 made = 0;
 			if (lossless)
 			{
-				m_frame_generator->reset();
-				made = m_lsfg_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, between);
+				// Its frames, then the built-in one's look at the same two: the
+				// HUD that stands still, and quick camera moves with the Step aside
+				// setting, kept from the game's frames (pass_guard). Before the
+				// built-in one has a last frame, Lossless Scaling's as they are
+				vk::viewable_image* lossless_frames[vk::lsfg_frame_generator::max_frames]{};
+				const u32 lossless_made = m_lsfg_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, lossless_frames);
+				if (!m_lsfg_generator->failed())
+				{
+					made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, lossless_made,
+						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, lossless_frames);
+					if (made != lossless_made)
+					{
+						std::copy_n(lossless_frames, lossless_made, between);
+						made = lossless_made;
+						g_ps5_frames_generated += made;
+					}
+				}
 			}
 			else
 			{

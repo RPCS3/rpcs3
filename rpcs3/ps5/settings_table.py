@@ -80,11 +80,12 @@ PS5_EXTRA = [
      "turn), where frames made between break apart. Most moves: from about 3%, fewer odd frames while "
      "moving but less smoothing. Never: frames are always made."),
     ("FrameGenerationStepAside", "GPU", "FrameGenerationMethod", "Frame generation method",
-     "Which frame generation makes the frames between. Built-in: the title's own, with the quality and "
-     "steps-aside settings above. Lossless Scaling: the Lossless Scaling app's, from your own copy of its "
-     "Lossless.dll (Steam), put in the title's rpcs3/lossless folder: "
-     "/data/homebrew/PPSA99200/rpcs3/lossless/Lossless.dll. Frames made between applies to both. "
-     "Without the file, or if it cannot run, the built-in one carries on."),
+     "Which frame generation makes the frames between. Built-in: the title's own. Lossless Scaling: the "
+     "Lossless Scaling app's, from your own copy of its Lossless.dll (Steam), put in the title's rpcs3 "
+     "folder: /data/homebrew/PPSA99200/rpcs3/Lossless.dll. With it, the built-in one still keeps the HUD "
+     "that stands still sharp and steps aside in quick camera moves, so the quality and steps-aside "
+     "settings apply to both, as does Frames made between. Without the file, or if it cannot run, the "
+     "built-in one carries on."),
     ("TimeStretchingThreshold", "Audio", "DisableSamplingSkip", "Disable sampling skip",
      "When a game is late with its sound, the emulator waits for it a little (about 11 ms) before skipping "
      "that bit of the sound. On, it never waits: the sound keeps strict time, and every late moment is "
