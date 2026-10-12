@@ -1723,7 +1723,7 @@ bool VKGSRender::load_program()
 
 	const bool pipeline_state_dirty =
 		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::pipelines_dirty_vk) ||
-		m_pipeline_properties.renderpass_key != m_current_renderpass_key ||
+		vk::get_renderpass_format_key(m_pipeline_properties.renderpass_key) != vk::get_renderpass_format_key(m_current_renderpass_key) || // We only care about RP format mismatch
 		m_pipeline_properties.state.cs.attachmentCount != m_draw_buffers.size();
 
 	if (!pipeline_state_dirty &&
