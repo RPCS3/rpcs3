@@ -1910,7 +1910,7 @@ void VKGSRender::load_program_env()
 	const bool update_fragment_constants = m_stale_constants.test(rsx::draw_state_t::group::fragment_constants);
 	const bool update_vertex_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::vertex_env);
 	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
-	const bool update_fragment_texture_env = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
+	const bool update_fragment_texture_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_texture_env);
 	const bool update_instruction_buffers = (m_interpreter_state.test(rsx::draw_state_t::group::programs) && is_interpreter);
 	const bool update_raster_env = (m_ctx->draw_state.stipple.enabled && m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::stipple));
 	const bool update_instancing_data = REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
@@ -2114,8 +2114,6 @@ void VKGSRender::load_program_env()
 	{
 		ensure(m_vertex_constants_buffer_info.range >= 468 * 16);
 	}
-
-	m_ctx->graphics_state.clear(rsx::pipeline_state::fragment_texture_state_dirty);
 }
 
 std::pair<const vs_binding_table_t*, const fs_binding_table_t*> VKGSRender::get_binding_table() const
@@ -2567,7 +2565,7 @@ void VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 
 	std::vector<u8> input_attachments{};
 	if ((m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
-		!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
+		!m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_program))
 	{
 		input_attachments.resize(m_draw_buffers.size());
 		std::iota(input_attachments.begin(), input_attachments.end(), 0);

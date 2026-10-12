@@ -433,8 +433,17 @@ namespace rsx
 		m_ctx->stats.setup_time += profiler.duration();
 
 		// Active texture environment is used to decode shaders
-		const bool has_sampler_state = RSX(m_ctx)->renderer()->resolve_sampler_state();
+		rsx::flags32_t invalidated_programs = 0;
+		const bool has_sampler_state = RSX(m_ctx)->renderer()->resolve_sampler_state(invalidated_programs);
 		m_ctx->stats.textures_upload_time += profiler.duration();
+
+		if (has_sampler_state)
+		{
+			// The backend has resolved every texture unit the programs reference
+			m_ctx->textures.fragment_textures_dirty &= ~m_ctx->program.fp_metadata.referenced_textures_mask;
+			m_ctx->textures.vertex_textures_dirty &= ~m_ctx->program.vp_metadata.referenced_textures_mask;
+			m_ctx->graphics_state |= invalidated_programs;
+		}
 
 		// Recheck the bits after the texture environment is loaded, since that can invalidate the programs as well
 		const rsx::flags32_t program_bits = m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits;
@@ -498,6 +507,11 @@ namespace rsx
 			dirty.set(draw_state_t::group::fragment_constants);
 		}
 
+		if (bits & rsx::pipeline_state::fragment_texture_state_dirty)
+		{
+			dirty.set(draw_state_t::group::fragment_texture_env);
+		}
+
 		// NOTE: pipeline_config_dirty has no group.
 		// The GRAPH engine has already re-evaluated the programs for it and backends rebuild their pipelines from the decoded groups that changed.
 		m_ctx->graphics_state.clear(
@@ -506,6 +520,7 @@ namespace rsx
 			rsx::pipeline_state::zeta_address_cyclic_barrier |
 			rsx::pipeline_state::transform_constants_dirty |
 			rsx::pipeline_state::fragment_constants_dirty |
+			rsx::pipeline_state::fragment_texture_state_dirty |
 			rsx::pipeline_state::pipeline_config_dirty);
 	}
 
@@ -605,6 +620,9 @@ namespace rsx
 		u8 fb_context = rsx::framebuffer_creation_context::context_draw;
 		if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) fb_context |= rsx::framebuffer_creation_context::context_clear_color;
 		if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) fb_context |= rsx::framebuffer_creation_context::context_clear_depth;
+
+		// The backend picks the render pass from the bound program unless it will be resolved again
+		update_program_state(m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
 
 		m_graph.bind_framebuffer(static_cast<rsx::framebuffer_creation_context>(fb_context));
 		if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
