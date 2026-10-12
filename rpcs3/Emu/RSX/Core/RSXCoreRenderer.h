@@ -38,12 +38,11 @@ namespace rsx
 		// GRAPH unit: framebuffer and program resolution
 		graph_engine m_graph;
 
-		// invalidate_pipeline_bits as they were before the current draw began
-		rsx::flags32_t m_pre_begin_pipeline_state = 0;
-
 		bool should_skip_draw() const;
 		void decode_draw_state();
+		void update_program_state(rsx::flags32_t program_bits);
 		void resolve_programs();
+		void resolve_pipeline_state();
 		void execute_nop_draw();
 		void post_draw_hook();
 	};

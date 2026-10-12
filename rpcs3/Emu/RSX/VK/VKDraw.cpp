@@ -1260,7 +1260,7 @@ void VKGSRender::begin_draw()
 {
 	set_scissor();
 
-	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs))
 	{
 		// Shaders need to be reloaded.
 		m_prev_program = m_program;
@@ -1292,10 +1292,10 @@ bool VKGSRender::resolve_sampler_state()
 	return true;
 }
 
-bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
+bool VKGSRender::end_draw()
 {
-	// Shader state as it was before prefetch and loading happened
-	m_interpreter_state = pre_begin_pipeline_state;
+	// Groups changed since the last executed draw. Loading an interpreter program adds both programs.
+	m_interpreter_state = m_ctx->draw_state.dirty;
 
 	if (!load_program())
 	{
@@ -1314,7 +1314,7 @@ bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 	{
 		ds->write_barrier(*m_current_command_buffer);
 
-		if (m_ctx->graphics_state.test(rsx::zeta_address_cyclic_barrier) &&
+		if (m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::depth_cyclic_barrier) &&
 			ds->current_layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 		{
 			// We actually need to end the subpass as a minimum. Without this, early-Z optimiazations in following draws will clobber reads from previous draws and cause flickering.
@@ -1334,8 +1334,6 @@ bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 			surface->write_barrier(*m_current_command_buffer);
 		}
 	}
-
-	m_ctx->graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	m_ctx->stats.setup_time += m_profiler.duration();
 

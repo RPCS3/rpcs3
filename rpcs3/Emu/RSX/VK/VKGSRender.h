@@ -200,7 +200,7 @@ private:
 	rsx::vertex_input_layout m_vertex_layout;
 
 	vk::shader_interpreter m_shader_interpreter;
-	rsx::flags32_t m_interpreter_state;
+	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 
 #if defined(HAVE_X11) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
@@ -291,7 +291,7 @@ protected:
 	void clear() override;
 	void begin_draw() override;
 	bool resolve_sampler_state() override;
-	bool end_draw(rsx::flags32_t pre_begin_pipeline_state) override;
+	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 
 	void on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
