@@ -1722,12 +1722,9 @@ bool VKGSRender::load_program()
 	// TODO: EXT_dynamic_state should get rid of this sillyness soon (kd)
 	const auto vertex_state = vk::decode_vertex_input_assembly_state(m_ctx);
 
-	if (m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs))
-	{
-		// The core has resolved the programs for this draw
-		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
-	}
-	else if (!(m_ctx->graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
+	// The core has resolved the programs for this draw if any of them changed
+	if (!m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs) &&
+		!m_ctx->graphics_state.test(rsx::pipeline_state::pipeline_config_dirty) &&
 		m_program &&
 		m_pipeline_properties.state.ia.topology == vertex_state.primitive &&
 		m_pipeline_properties.state.ia.primitiveRestartEnable == vertex_state.restart_index_enabled)
