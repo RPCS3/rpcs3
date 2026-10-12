@@ -7,9 +7,9 @@
 // Play now / Game settings / Patches, over a row of the games' ICON0.PNG tiles.
 // Library: Big Picture Mode's game grid. Trophies: the user's trophy sets in
 // a row, each opening into a box of its trophies. Gallery: the screenshots the
-// pause menu saved, each opening at its full size. Settings: RPCS3's settings
-// pages. Install: PS3 packages put in the title's folder over FTP. L1 / R1
-// change tabs.
+// pause menu saved, each opening at its full size. Saves: the games' saves, to
+// back up, restore and delete. Settings: RPCS3's settings pages. Install: PS3
+// packages put in the title's folder over FTP. L1 / R1 change tabs.
 
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/BigPicture/overlay_big_picture_game_info.h"
@@ -18,6 +18,7 @@
 #include "ps5_packages.h"
 #include "ps5_trophies.h"
 #include "ps5_screenshots.h"
+#include "ps5_saves.h"
 
 #include <map>
 #include <memory>
@@ -97,6 +98,7 @@ namespace rsx::overlays
 			library,
 			trophies,
 			gallery,
+			saves,
 			settings,
 			install
 		};
@@ -431,6 +433,45 @@ namespace rsx::overlays
 		void handle_gallery(pad_button button_press);
 		void compile_gallery(compiled_resource& result);
 		std::string game_name(const std::string& serial) const;
+
+		// The Saves tab: the games' saves and their backups (ps5_saves.h), by
+		// game, read on a thread of their own each time the tab opens, with
+		// their icons (into images kept and filled again, as the trophies'
+		// icons); backing up, restoring and deleting run on a thread too, the
+		// list read again after each
+		struct saves_result
+		{
+			u32 generation = 0;
+			std::vector<ps5_saves::save> saves;
+			std::vector<std::vector<u8>> icons; // empty where there is no icon
+		};
+		enum class save_ask : u8
+		{
+			none,
+			restore,
+			remove,
+			remove_backups
+		};
+		std::vector<ps5_saves::save> m_sv_saves;
+		std::vector<std::unique_ptr<trophy_icon>> m_sv_icons;
+		bool m_sv_loading = false;
+		s32 m_sv_selected = 0; // in m_sv_saves
+		s32 m_sv_scroll = 0;   // the first line in view
+		save_ask m_sv_ask = save_ask::none;
+		atomic_t<bool> m_sv_busy = false;
+		std::string m_sv_busy_text; // what the job does, while it runs
+		std::unique_ptr<named_thread<std::function<void()>>> m_sv_thread;
+		std::unique_ptr<named_thread<std::function<void()>>> m_sv_job;
+		std::mutex m_sv_result_mutex;
+		std::unique_ptr<saves_result> m_sv_result;
+		std::unique_ptr<std::string> m_sv_job_result; // what the job reports, empty when it went well
+		std::string m_sv_job_done; // what to say when it went well
+		u32 m_sv_generation = 0;
+		void open_saves_tab();
+		void run_save_job(std::string doing, std::string done, std::function<std::string()> job);
+		void take_saves();
+		void handle_saves(pad_button button_press);
+		void compile_saves(compiled_resource& result);
 
 		animation_color_interpolate m_fade_animation{};
 

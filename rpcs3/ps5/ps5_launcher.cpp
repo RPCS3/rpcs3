@@ -598,6 +598,8 @@ namespace rsx::overlays
 		m_tr_thread.reset();
 		m_ga_thread.reset();
 		m_ga_image_thread.reset();
+		m_sv_thread.reset();
+		m_sv_job.reset(); // a backup, restore or deletion running is let finish
 		m_installer.reset();
 
 		if (m_enumeration_thread)
@@ -708,7 +710,7 @@ namespace rsx::overlays
 		m_bar_divider.set_size(1, 24);
 		m_bar_divider.back_color = color4f(1.f, 1.f, 1.f, 0.28f);
 
-		for (const char* name : {"Home", "Library", "Trophies", "Gallery", "Settings", "Install"})
+		for (const char* name : {"Home", "Library", "Trophies", "Gallery", "Saves", "Settings", "Install"})
 		{
 			m_tab_labels.push_back(make_label(name, 13, f_medium, c_text_dim));
 		}
@@ -947,6 +949,27 @@ namespace rsx::overlays
 			if (!m_ga_shots.empty())
 			{
 				hints.emplace_back(resource_config::confirm_button_resource(), "View");
+			}
+			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
+		}
+		else if (m_tab == tab::saves && (m_sv_ask != save_ask::none || m_sv_busy))
+		{
+			// The question carries its own buttons; a job, none
+		}
+		else if (m_tab == tab::saves)
+		{
+			const ps5_saves::save* save = static_cast<usz>(m_sv_selected) < m_sv_saves.size() ? &m_sv_saves[m_sv_selected] : nullptr;
+			if (save && !m_sv_loading)
+			{
+				if (!save->path.empty())
+				{
+					hints.emplace_back(resource_config::confirm_button_resource(), "Back up");
+				}
+				if (!save->backups.empty())
+				{
+					hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::square), "Restore");
+				}
+				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::triangle), save->path.empty() ? "Delete backups" : "Delete");
 			}
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
@@ -1515,6 +1538,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::gallery)
 		{
 			open_gallery_tab();
+		}
+		else if (m_tab == tab::saves)
+		{
+			open_saves_tab();
 		}
 		else if (m_tab == tab::install)
 		{
@@ -4277,6 +4304,7 @@ namespace rsx::overlays
 			// The trophies, or the open set's icons, once read; and the Gallery's
 			take_trophies();
 			take_gallery();
+			take_saves();
 
 			if (patches && m_pt_open)
 			{
@@ -4431,6 +4459,12 @@ namespace rsx::overlays
 			handle_gallery(button_press);
 			return;
 		}
+		if (m_tab == tab::saves && (m_sv_ask != save_ask::none || m_sv_busy))
+		{
+			// And a save's question, or its job while it runs
+			handle_saves(button_press);
+			return;
+		}
 
 		// Tabs change from anywhere at the top level, except while packages install
 		if ((button_press == pad_button::L1 || button_press == pad_button::R1) && !installing())
@@ -4455,6 +4489,12 @@ namespace rsx::overlays
 		if (m_tab == tab::gallery)
 		{
 			handle_gallery(button_press);
+			return;
+		}
+
+		if (m_tab == tab::saves)
+		{
+			handle_saves(button_press);
 			return;
 		}
 
@@ -4649,6 +4689,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::gallery)
 		{
 			compile_gallery(result);
+		}
+		else if (m_tab == tab::saves)
+		{
+			compile_saves(result);
 		}
 		else
 		{

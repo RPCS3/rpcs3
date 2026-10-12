@@ -497,6 +497,9 @@ namespace rsx::overlays::ps5ui
 			{"Shader Mode", {"Async Recompiler (multi-threaded)", "Legacy Recompiler (single-threaded)"}},
 			{"Anisotropic Filter Override", {"0", "2", "4", "8", "16"}},
 			{"Resolution Scale", {"50", "75", "100", "125", "150", "200", "250", "300"}},
+			// The sizes RPCS3's guides give, 512x512 for Army of Two: The 40th Day
+			// among them; steps of 50 offered neither (build 136)
+			{"Minimum Scalable Dimension", {"1", "16", "32", "64", "128", "256", "512", "1024"}},
 			// Adjusted 20 to 40 µs at a time, as RPCS3's tooltip says
 			{"Driver Wake-Up Delay", {"0", "20", "40", "60", "80", "100", "150", "200", "300", "400", "500", "750", "1000", "1500", "2000", "3000", "5000"}},
 			{"Vblank Rate", {"30", "50", "60", "75", "90", "100", "120", "144", "165", "180", "240", "300", "360", "480", "600"}},
@@ -633,6 +636,7 @@ namespace rsx::overlays::ps5ui
 		if (value == "0" && (key == "Preferred SPU Threads" || key == "Anisotropic Filter Override" || key == "Max LLVM Compile Threads" ||
 			key == "Shader Compiler Threads")) return "Auto";
 		if (key == "Resolution Scale" || key == "Master Volume" || key == "Clocks scale" || key == "Time Stretching Threshold") return value + "%";
+		if (key == "Minimum Scalable Dimension") return value + "x" + value;
 		if (key == "Anisotropic Filter Override") return value + "x";
 		if (key == "Desired Audio Buffer Duration" || key == "Metrics update interval (ms)") return value + " ms";
 		if (key == "Driver Wake-Up Delay") return value + " µs";
