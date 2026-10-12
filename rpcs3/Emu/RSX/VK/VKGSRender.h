@@ -248,7 +248,7 @@ private:
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 	void upload_transform_constants(const rsx::io_buffer& buffer);
 
-	void load_texture_env();
+	rsx::flags32_t load_texture_env();
 	bool bind_texture_env();
 	bool bind_interpreter_texture_env();
 
@@ -293,7 +293,7 @@ public:
 protected:
 	void clear() override;
 	void begin_draw() override;
-	bool resolve_sampler_state() override;
+	bool resolve_sampler_state(rsx::flags32_t& invalidated_programs) override;
 	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 

@@ -16,7 +16,6 @@ namespace rsx
 		fragment_constants_dirty     = (1 << 7),   // Fragment constants changed
 		framebuffer_reads_dirty      = (1 << 8),   // Framebuffer contents changed
 		fragment_texture_state_dirty = (1 << 9),   // Fragment texture parameters changed
-		vertex_texture_state_dirty   = (1 << 10),  // Fragment texture parameters changed
 		scissor_config_state_dirty   = (1 << 11),  // Scissor region changed
 
 		scissor_setup_invalid        = (1 << 13),  // Scissor configuration is broken

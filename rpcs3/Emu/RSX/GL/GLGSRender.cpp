@@ -884,7 +884,7 @@ void GLGSRender::load_program_env()
 	const bool update_fragment_constants = m_stale_constants.test(rsx::draw_state_t::group::fragment_constants) && fragment_constants_size;
 	const bool update_vertex_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::vertex_env);
 	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
-	const bool update_fragment_texture_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
+	const bool update_fragment_texture_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_texture_env);
 	const bool update_instruction_buffers = m_interpreter_state.test(rsx::draw_state_t::group::programs) && m_shader_interpreter.is_interpreter(m_program);
 	const bool update_raster_env = m_ctx->draw_state.stipple.enabled && m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::stipple);
 	const bool update_instancing_data = m_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
@@ -1064,8 +1064,6 @@ void GLGSRender::load_program_env()
 	{
 		ensure(m_transform_constants_buffer->bound_range().second >= 468 * 16);
 	}
-
-	m_ctx->graphics_state.clear(rsx::pipeline_state::fragment_texture_state_dirty);
 }
 
 bool GLGSRender::is_current_program_interpreted() const

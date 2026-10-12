@@ -1003,19 +1003,10 @@ namespace rsx
 		m_ctx->program.fragment_program.texture_state.import(m_ctx->program.fp_texture_state, m_ctx->program.fp_metadata.referenced_textures_mask);
 		m_ctx->program.fragment_program.valid = true;
 
-		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
+		// Verify current texture state is valid
+		if (m_ctx->textures.fragment_textures_dirty & m_ctx->program.fp_metadata.referenced_textures_mask)
 		{
-			// Verify current texture state is valid
-			for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
-			{
-				if (!(textures_ref & 1)) continue;
-
-				if (m_ctx->textures.fragment_textures_dirty[i])
-				{
-					m_ctx->graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
-					break;
-				}
-			}
+			m_ctx->graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 		}
 
 		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty) &&
@@ -1052,19 +1043,10 @@ namespace rsx
 
 		m_ctx->program.vertex_program.texture_state.import(m_ctx->program.vp_texture_state, m_ctx->program.vp_metadata.referenced_textures_mask);
 
-		if (!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_state_dirty))
+		// Verify current texture state is valid
+		if (m_ctx->textures.vertex_textures_dirty & m_ctx->program.vp_metadata.referenced_textures_mask)
 		{
-			// Verify current texture state is valid
-			for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
-			{
-				if (!(textures_ref & 1)) continue;
-
-				if (m_ctx->textures.vertex_textures_dirty[i])
-				{
-					m_ctx->graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
-					break;
-				}
-			}
+			m_ctx->graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 		}
 	}
 
