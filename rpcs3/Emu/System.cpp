@@ -99,6 +99,11 @@ fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
 extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path);
 
+#ifdef __PROSPERO__
+// PS5: the system cache is kept in memory (ps5/ps5_memory_cache.h)
+extern const std::string& ps5_syscache_root();
+#endif
+
 extern atomic_t<bool> g_big_picture_mode_active;
 
 fs::file g_tty;
@@ -1433,7 +1438,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			if (!hdd1.empty())
 			{
+#ifdef __PROSPERO__
+				// PS5: back where cellSysCache keeps it and the state took it
+				// from (/dev_hdd1 is mounted there), not to dev_hdd1 on disk,
+				// where the game would have found its cache empty
+				hdd1 = ps5_syscache_root() + hdd1 + "/";
+#else
 				hdd1 = rpcs3::utils::get_hdd1_dir() + "caches/" + hdd1 + "/";
+#endif
 				load_tar(hdd1, get_syscache_state_corruption_indicator_file_path(hdd1));
 			}
 

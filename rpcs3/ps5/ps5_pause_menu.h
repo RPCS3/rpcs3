@@ -5,8 +5,11 @@
 // draws: a card of deep blue glass with the game's icon and name, its tabs
 // along the top (L1 / R1), and a tab's rows in cyan-lit pills.
 //
-// Game: resume, the settings reached for while playing, restart, back to the
-// library. Performance: the game's frames a second, the busiest threads and
+// Game: resume, the settings reached for while playing, save and load a state,
+// restart, back to the library. States: the game's save states (RPCS3's
+// savestates: the whole emulated PS3 at one moment, a file each in
+// rpcs3/savestates/<serial>/), the newest first, to load or delete, and a new
+// one to save. Performance: the game's frames a second, the busiest threads and
 // more, as measured over the five seconds before the menu opened (and now,
 // under it), to say what was happening when something looked wrong. Controls:
 // which of the controller's buttons presses each of the PS3's, in this game
@@ -50,9 +53,22 @@ namespace rsx::overlays
 			restart,
 			quit,
 			capture,
-			screenshot,    // saves, and the menu stays
-			reset_controls // the controller's own, and the menu stays
+			screenshot,     // saves, and the menu stays
+			reset_controls, // the controller's own, and the menu stays
+			save_state,     // a state saved, and the game carries on from it
+			load_state,     // the state of its row (m_load_path)
+			open_states     // the States tab
 		};
+
+		// A save state of this game: one file, the newest first
+		struct saved_state
+		{
+			std::string path;
+			s64 time = 0;
+			u64 size = 0;
+		};
+		static std::vector<saved_state> read_states(const std::string& serial);
+		std::string state_note(const saved_state& state) const;
 
 		// A row of a tab: an action, or a setting (an index into m_settings), or
 		// a measurement (perf_metric)
@@ -66,6 +82,7 @@ namespace rsx::overlays
 			bool rule_before = false;
 			s32 perf = -1;
 			s32 remap = -1; // one of the PS3's buttons, on the Controls tab
+			s32 state = -1; // one of m_states, on the States tab
 		};
 
 		// The Performance tab's measurements
@@ -107,6 +124,11 @@ namespace rsx::overlays
 		s32 m_row = 0;
 		s32 m_scroll = 0;
 		bool m_changed = false;
+
+		std::vector<saved_state> m_states;
+		s32 m_states_tab = -1;   // its index in m_tabs
+		s32 m_delete_armed = -1; // the States tab's row Triangle was pressed on once
+		std::string m_load_path; // the state the menu closes to load
 
 		ps5_perf m_perf_before; // the five seconds before the menu opened
 		ps5_pad_remap::map m_remap = ps5_pad_remap::identity(); // this game's controls

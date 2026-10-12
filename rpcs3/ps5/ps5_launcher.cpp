@@ -1,8 +1,9 @@
 // PS5: the title's game launcher (ps5_launcher.h).
 //
 // The layout is in RSX's virtual 1280x720 space; the art is the games' own,
-// read from their folders (PS3_GAME/ICON0.PNG, PS3_GAME/PIC1.PNG), and the
-// game list is Big Picture Mode's (game_enumeration over the games folder and
+// read from their folders (PS3_GAME/ICON0.PNG, PS3_GAME/PIC1.PNG) or from
+// inside their disc images (.iso), and the game list is Big Picture Mode's
+// (game_enumeration over the games folder, its disc images too, and
 // dev_hdd0/game). A game boots as Big Picture Mode boots one: its shell stops
 // and the game boots in one main-thread call, and the game's stop returns here.
 
@@ -18,6 +19,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
+#include "Loader/ISO.h"
 #include "Utilities/Config.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
@@ -35,12 +37,66 @@ void ps5_play_sound_file(const std::string& path); // ps5_sound.cpp
 void ps5_stop_sounds();
 const std::string& ps5_title_build(); // ps5_frontend.cpp
 
+namespace
+{
+	// What went wrong out of the launcher's sight (a game that would not
+	// start, a state that would not load), shown when it next opens
+	std::mutex g_message_mutex;
+	std::pair<std::string, std::string> g_message;
+}
+
+void ps5_launcher_message(std::string title, std::string body)
+{
+	std::lock_guard lock(g_message_mutex);
+	g_message = {std::move(title), std::move(body)};
+}
+
 namespace rsx::overlays
 {
 	using namespace ps5ui;
 
 	namespace
 	{
+		// A boot's failure, in words for the player
+		std::string boot_failure_text(const std::string& path, game_boot_result result)
+		{
+			const std::string name = path.substr(path.find_last_of('/') + 1);
+			switch (result)
+			{
+			case game_boot_result::disc_key_missing:
+				return fmt::format("%s is encrypted and needs its disc key: put the key file made with the dump, named %s.dkey, beside it in the games folder.", name, name.substr(0, name.find_last_of('.')));
+			case game_boot_result::disc_key_invalid:
+				return fmt::format("The key file beside %s (.dkey or .key) is not this disc's. Put the right one there.", name);
+			default:
+				return fmt::format("%s (%s).", result, name);
+			}
+		}
+
+		// An image inside a disc image (PS3_GAME/ICON0.PNG), as load_image reads one from a folder
+		std::unique_ptr<image_info> load_from_iso(iso_archive& archive, const std::string& path)
+		{
+			if (path.empty() || !archive.is_valid() || !archive.is_file(path))
+			{
+				return nullptr;
+			}
+			const std::unique_ptr<fs::file_base> file = archive.open(path);
+			if (!file)
+			{
+				return nullptr;
+			}
+			std::vector<u8> bytes(file->size());
+			if (bytes.empty() || file->read(bytes.data(), bytes.size()) != bytes.size())
+			{
+				return nullptr;
+			}
+			auto image = std::make_unique<image_info>(std::span<const u8>(bytes));
+			if (!image->get_data())
+			{
+				return nullptr;
+			}
+			image->dirty = true;
+			return image;
+		}
 		// The overlays' 1280x720 space: margins, the top bar's middle line, the hero's left edge
 		constexpr s16 c_margin = 40;
 		constexpr s16 c_right = 1240;
@@ -81,6 +137,7 @@ namespace rsx::overlays
 				if (const game_boot_result result = Emu.BootGame(path, title_id); is_error(result))
 				{
 					launcher_log.error("Booting '%s' failed: %s", path, result);
+					ps5_launcher_message("Couldn't start the game", boot_failure_text(path, result));
 					g_big_picture_mode_active = false;
 					// Back to the launcher rather than an empty screen
 					Emu.BootBigPictureMode();
@@ -589,6 +646,22 @@ namespace rsx::overlays
 
 
 		start_reload();
+
+		// What went wrong while the launcher was away, until dismissed
+		{
+			std::lock_guard lock(g_message_mutex);
+			if (!g_message.second.empty())
+			{
+				m_confirm_title.set_text(g_message.first);
+				m_confirm_body.set_text(g_message.second);
+				m_confirm_yes.text.set_text("OK");
+				m_confirm_no.icon.set_visible(false);
+				m_confirm_no.text.set_visible(false);
+				layout_confirm();
+				m_delete_result = std::move(g_message.second);
+				g_message = {};
+			}
+		}
 	}
 
 	ps5_launcher_dialog::~ps5_launcher_dialog()
@@ -1088,7 +1161,8 @@ namespace rsx::overlays
 		if (game)
 		{
 			std::vector<std::string> chips;
-			if (game->info.category == "DG") chips.push_back("Disc");
+			if (game->info.is_iso_file) chips.push_back("Disc image");
+			else if (game->info.category == "DG") chips.push_back("Disc");
 			else if (game->info.category == "HG") chips.push_back("Digital");
 			if (!game->info.serial.empty()) chips.push_back(game->info.serial);
 			if (!game->info.app_ver.empty() && game->info.app_ver != "Unknown") chips.push_back("Version " + game->info.app_ver);
@@ -1321,8 +1395,24 @@ namespace rsx::overlays
 				launcher_log.error("Deleting %s failed: %s", root, fs::g_tls_error);
 				result = fmt::format("Some of the files couldn't be deleted (%s). Delete the folder over FTP instead:\n%s", fs::g_tls_error, root.substr(root.find("/rpcs3/") == umax ? 0 : root.find("/rpcs3/") + 1));
 			}
+			else if (fs::is_file(root) && !fs::remove_file(root))
+			{
+				launcher_log.error("Deleting %s failed: %s", root, fs::g_tls_error);
+				result = fmt::format("The disc image couldn't be deleted (%s). Delete it over FTP instead:\n%s", fs::g_tls_error, root.substr(root.find("/rpcs3/") == umax ? 0 : root.find("/rpcs3/") + 1));
+			}
 			else
 			{
+				// A disc image's key file goes with it (Redump's .dkey, or .key)
+				if (root.ends_with(".iso") || root.ends_with(".ISO"))
+				{
+					for (const char* key : {".dkey", ".key"})
+					{
+						if (fs::remove_file(root.substr(0, root.size() - 4) + key))
+						{
+							launcher_log.notice("Deleted %s", root.substr(0, root.size() - 4) + key);
+						}
+					}
+				}
 				launcher_log.notice("Deleted %s", root);
 			}
 
@@ -1393,16 +1483,27 @@ namespace rsx::overlays
 				}
 
 				ps5_launcher_game game;
-				game.icon = info.load_icon();
-				if (game.icon)
+				if (info.is_iso_file && info.icon_in_archive)
 				{
-					game.icon->dirty = true;
+					// A disc image: its icon and art read from inside it, the
+					// disc's folders walked once for both
+					iso_archive archive(info.path);
+					game.icon = load_from_iso(archive, info.icon_path);
+					game.background = load_from_iso(archive, fs::get_parent_dir(info.icon_path) + "/PIC1.PNG");
 				}
-
-				// PIC1.PNG sits beside ICON0.PNG in the game's PS3_GAME folder
-				if (!info.icon_in_archive && !info.icon_path.empty())
+				else
 				{
-					game.background = load_image(fs::get_parent_dir(info.icon_path) + "/PIC1.PNG");
+					game.icon = info.load_icon();
+					if (game.icon)
+					{
+						game.icon->dirty = true;
+					}
+
+					// PIC1.PNG sits beside ICON0.PNG in the game's PS3_GAME folder
+					if (!info.icon_in_archive && !info.icon_path.empty())
+					{
+						game.background = load_image(fs::get_parent_dir(info.icon_path) + "/PIC1.PNG");
+					}
 				}
 
 				game.info = std::move(info);

@@ -9,15 +9,19 @@
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "ps5_screenshots.h"
 #include "Emu/System.h"
+#include "Emu/savestate_utils.hpp"
 #include "Emu/system_config.h"
 #include "Utilities/Config.h"
 
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 
 LOG_CHANNEL(pause_log, "PauseMenu");
 
 extern atomic_t<u32> g_ps5_frame_gen_capture; // VKFrameGen.cpp: the capture's sets wanted
+extern atomic_t<bool> g_big_picture_mode_active; // System.cpp: a stop goes back to the launcher
+void ps5_launcher_message(std::string title, std::string body); // ps5_launcher.cpp: shown when it next opens
 std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state (empty without collision code)
 namespace vk { std::string lsfg_status(); std::string lsfg_dll_path(); } // VKFrameGenLSFG.h: Lossless Scaling's frame generation
 
@@ -82,6 +86,54 @@ namespace rsx::overlays
 			}
 			return text;
 		}
+
+		// "Mon 12 Oct, 21:50", in the console's local time
+		std::string state_time_text(s64 seconds)
+		{
+			const std::time_t when = static_cast<std::time_t>(seconds);
+			std::tm parts{};
+			if (!localtime_r(&when, &parts))
+			{
+				gmtime_r(&when, &parts);
+			}
+			static constexpr const char* days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+			static constexpr const char* months[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+			return fmt::format("%s %d %s, %02d:%02d", days[parts.tm_wday % 7], parts.tm_mday, months[parts.tm_mon % 12], parts.tm_hour, parts.tm_min);
+		}
+
+		std::string size_text(u64 bytes)
+		{
+			return bytes >= 1000ull << 20 ? fmt::format("%.1f GB", bytes / 1073741824.) : fmt::format("%u MB", std::max<u64>(1, (bytes + (1u << 19)) >> 20));
+		}
+	}
+
+	std::vector<ps5_pause_menu::saved_state> ps5_pause_menu::read_states(const std::string& serial)
+	{
+		// As RPCS3 names and finds them (get_savestate_file): <serial>_<n>_<id>.SAVESTAT.zst
+		std::vector<saved_state> states;
+		const std::string dir = get_savestate_file(serial, "", -1);
+		for (const fs::dir_entry& entry : fs::dir(dir))
+		{
+			if (entry.is_directory || entry.size <= 1024 || !entry.name.starts_with(serial + "_"))
+			{
+				continue;
+			}
+			if (!entry.name.ends_with(".SAVESTAT.zst") && !entry.name.ends_with(".SAVESTAT.gz") && !entry.name.ends_with(".SAVESTAT"))
+			{
+				continue;
+			}
+			states.push_back({dir + entry.name, entry.mtime, entry.size});
+		}
+		std::sort(states.begin(), states.end(), [](const saved_state& a, const saved_state& b)
+		{
+			return a.time != b.time ? a.time > b.time : a.path > b.path;
+		});
+		return states;
+	}
+
+	std::string ps5_pause_menu::state_note(const saved_state& state) const
+	{
+		return fmt::format("Goes back to this moment: the game stops where it is now and starts again from the state, which takes a little while. %s. Triangle deletes it", size_text(state.size));
 	}
 
 	ps5_pause_menu::ps5_pause_menu()
@@ -137,11 +189,51 @@ namespace rsx::overlays
 				}
 			}
 		}
-		game.rows.push_back({action::screenshot, -1, "Save screenshot", fmt::format("The game as it was when this menu opened, without the menu, to rpcs3/screenshots/%s. The launcher's Gallery shows them", m_serial.empty() ? std::string("unknown") : m_serial), "home/32/screenshot.png", true});
+		// Save states are kept by the game's serial (get_savestate_file)
+		const std::string save_note = fmt::format("Saves the whole game as it is now, to come back to this moment later. The game then starts again from it, which takes a little while. The newest %u are kept", g_cfg.savestate.max_files.get());
+		if (!m_serial.empty())
+		{
+			game.rows.push_back({action::save_state, -1, "Save state", save_note, "home/32/floppy-disk-solid.png", true});
+			game.rows.push_back({action::open_states, -1, "Load state", "The game's save states, the newest first", "home/32/floppy-disk-solid.png", false});
+		}
+		game.rows.push_back({action::screenshot, -1, "Save screenshot", fmt::format("The game as it was when this menu opened, without the menu, to rpcs3/screenshots/%s. The launcher's Gallery shows them", m_serial.empty() ? std::string("unknown") : m_serial), "home/32/screenshot.png", m_serial.empty()});
 		game.rows.push_back({action::capture, -1, "Save frame generation's frames", "For a report: from 2 seconds after the game resumes, 4 moments half a second apart, the game's frames and those made between, to rpcs3/captures", "home/32/video-camera.png", false});
 		game.rows.push_back({action::restart, -1, "Restart game", "Starts it again, with the settings changed here", "home/32/rotate-left-solid.png", false});
 		game.rows.push_back({action::quit, -1, "Quit to library", "Ends the game and goes back to your games", "home/32/circle-left-solid.png", false});
 		m_tabs.push_back(std::move(game));
+
+		// States: a new one, the setting saving can need, and those kept
+		if (!m_serial.empty())
+		{
+			m_states = read_states(m_serial);
+
+			tab states;
+			states.name = "States";
+			states.rows.push_back({action::save_state, -1, "Save state now", save_note, "home/32/floppy-disk-solid.png", false});
+			for (usz i = 0; i < m_settings.size(); i++)
+			{
+				if (!m_settings[i].heading && m_settings[i].key == "Compatible Savestate Mode")
+				{
+					states.rows.push_back({action::none, static_cast<s32>(i), "SPU compatible savestates", "", nullptr, false});
+					break;
+				}
+			}
+			if (m_states.empty())
+			{
+				states.rows.push_back({action::none, -1, "No save states yet", "Save state saves the game as it is, to come back to that moment from here.", nullptr, true});
+			}
+			for (usz i = 0; i < m_states.size(); i++)
+			{
+				row r;
+				r.act = action::load_state;
+				r.state = static_cast<s32>(i);
+				r.label = "Saved " + state_time_text(m_states[i].time);
+				r.note = state_note(m_states[i]);
+				r.rule_before = i == 0;
+				states.rows.push_back(std::move(r));
+			}
+			m_tabs.push_back(std::move(states));
+		}
 
 		// Performance: what the five seconds before the menu measured
 		m_perf_before = ps5_perf_latest();
@@ -216,6 +308,13 @@ namespace rsx::overlays
 			}
 		}
 		std::erase_if(m_tabs, [](const tab& each) { return each.rows.empty(); });
+		for (usz t = 0; t < m_tabs.size(); t++)
+		{
+			if (m_tabs[t].name == "States")
+			{
+				m_states_tab = static_cast<s32>(t);
+			}
+		}
 	}
 
 	std::string ps5_pause_menu::perf_value(const ps5_perf& perf, s32 metric) const
@@ -349,6 +448,12 @@ namespace rsx::overlays
 		const bool right = button_press == pad_button::dpad_right || button_press == pad_button::ls_right;
 		m_auto_repeat_ms_interval = (left || right) ? 150 : m_auto_repeat_ms_interval_default;
 
+		// A state's deletion waits for a second Triangle, and any other button keeps it
+		if (button_press != pad_button::triangle)
+		{
+			m_delete_armed = -1;
+		}
+
 		switch (button_press)
 		{
 		case pad_button::L1:
@@ -404,6 +509,47 @@ namespace rsx::overlays
 					play_sound(sound_effect::dialog_error);
 				}
 			}
+			else if (current.act == action::open_states)
+			{
+				// To the States tab, on its newest state
+				if (m_states_tab >= 0)
+				{
+					const tab& states = m_tabs[m_states_tab];
+					m_tab = m_states_tab;
+					m_row = 0;
+					m_scroll = 0;
+					for (usz r = 0; r < states.rows.size(); r++)
+					{
+						if (states.rows[r].state >= 0)
+						{
+							m_row = static_cast<s32>(r);
+							break;
+						}
+					}
+					play_sound(sound_effect::cursor);
+				}
+			}
+			else if (current.act == action::load_state)
+			{
+				// The game is stopped to load it, so a state that can't load is found out first
+				const saved_state& state = m_states[current.state];
+				if (!fs::is_file(state.path))
+				{
+					current.note = "This state is not there any more.";
+					play_sound(sound_effect::dialog_error);
+				}
+				else if (!is_savestate_compatible(state.path))
+				{
+					current.note = "This state was saved by a different version of the emulator, and this one can't load it.";
+					play_sound(sound_effect::dialog_error);
+				}
+				else
+				{
+					m_load_path = state.path;
+					play_sound(sound_effect::accept);
+					begin_close(action::load_state);
+				}
+			}
 			else if (current.act != action::none)
 			{
 				play_sound(current.act == action::resume ? sound_effect::cancel : sound_effect::accept);
@@ -435,6 +581,47 @@ namespace rsx::overlays
 					play_sound(sound_effect::cancel);
 				}
 			}
+			return;
+		}
+		case pad_button::triangle:
+		{
+			if (is_auto_repeat)
+			{
+				return;
+			}
+			tab& current_tab = m_tabs[m_tab];
+			const row& current = current_tab.rows[m_row];
+			if (current.state < 0)
+			{
+				return;
+			}
+			if (m_delete_armed != m_row)
+			{
+				m_delete_armed = m_row;
+				play_sound(sound_effect::dialog_ok);
+				return;
+			}
+			m_delete_armed = -1;
+			const saved_state& state = m_states[current.state];
+			if (!fs::remove_file(state.path) && fs::is_file(state.path))
+			{
+				current_tab.rows[m_row].note = fmt::format("This state could not be deleted (%s).", fs::g_tls_error);
+				play_sound(sound_effect::dialog_error);
+				return;
+			}
+			pause_log.notice("Deleted the state %s", state.path);
+			current_tab.rows.erase(current_tab.rows.begin() + m_row);
+			if (std::none_of(current_tab.rows.begin(), current_tab.rows.end(), [](const row& each) { return each.state >= 0; }))
+			{
+				current_tab.rows.push_back({action::none, -1, "No save states yet", "Save state saves the game as it is, to come back to that moment from here.", nullptr, true});
+			}
+			else if (m_row < static_cast<s32>(current_tab.rows.size()) && current_tab.rows[m_row].state >= 0 && (m_row == 0 || current_tab.rows[m_row - 1].state < 0))
+			{
+				// The first state left keeps the rule above the states
+				current_tab.rows[m_row].rule_before = true;
+			}
+			m_row = std::clamp(m_row, 0, static_cast<s32>(current_tab.rows.size()) - 1);
+			play_sound(sound_effect::cancel);
 			return;
 		}
 		case pad_button::circle:
@@ -531,6 +718,56 @@ namespace rsx::overlays
 			{
 				pause_log.notice("Back to the game; frame generation is off, so no frames to save");
 			}
+			break;
+		case action::save_state:
+			pause_log.notice("Saving a state");
+			Emu.CallFromMainThread([]()
+			{
+				// As the desktop's Save state key (gs_frame.cpp): the state is
+				// saved as the emulation stops, and the game boots again from it
+				// in the same window. The launcher stays the place a quit goes
+				// back to (Kill leaves g_big_picture_mode_active alone while
+				// after_kill_callback is set). Should saving fail (an SPU busy, a
+				// save or a cutscene under way), Kill clears the callback, says
+				// why, and the game runs on. Kill does nothing for a game still
+				// starting or already stopping, and the callback would then
+				// restart the game at its next stop: so only a running one
+				if (!Emu.IsRunning() && !Emu.IsPaused())
+				{
+					pause_log.error("Not saving a state: the game is starting or stopping");
+					return;
+				}
+				if (!g_cfg.savestate.suspend_emu)
+				{
+					Emu.after_kill_callback = []()
+					{
+						Emu.Restart(true, false);
+					};
+					Emu.SetContinuousMode(true);
+				}
+				Emu.Kill(false, true);
+			});
+			break;
+		case action::load_state:
+			pause_log.notice("Loading the state %s", m_load_path);
+			Emu.CallFromMainThread([path = m_load_path]()
+			{
+				// The game stops where it is, nothing of it kept, and the state
+				// boots in its place, as the desktop's Reload does
+				// (boot_current_game_savestate)
+				Emu.SetContinuousMode(true);
+				Emu.after_kill_callback = [path]()
+				{
+					if (const game_boot_result result = Emu.BootGame(path, "", true); result != game_boot_result::no_errors)
+					{
+						pause_log.error("Loading the state %s failed: %s", path, result);
+						ps5_launcher_message("Couldn't load the state", fmt::format("%s", result));
+						g_big_picture_mode_active = false;
+						Emu.BootBigPictureMode();
+					}
+				};
+				Emu.Kill(false);
+			});
 			break;
 		case action::quit:
 			pause_log.notice("Quitting to the library");
@@ -793,6 +1030,16 @@ namespace rsx::overlays
 				card.add(value->get_compiled());
 				name_room = static_cast<s16>(value->x - 16 - name_x);
 			}
+			else if (entry.state >= 0)
+			{
+				// A save state: its size, or what a second Triangle does
+				const bool armed = m_delete_armed == r;
+				auto value = make_label(armed ? std::string("Triangle again deletes it") : size_text(m_states[entry.state].size), 13, f_semibold, selected ? c_button_text : (armed ? c_accent : c_text_dim));
+				const s16 right = static_cast<s16>(c_inner_right - (selected ? 10 : 0));
+				place(*value, static_cast<s16>(right - value->w), mid);
+				card.add(value->get_compiled());
+				name_room = static_cast<s16>(value->x - 16 - name_x);
+			}
 			else if (setting)
 			{
 				auto value = make_label("", 13, f_semibold, selected ? c_button_text : (changed ? c_accent : c_text_dim));
@@ -877,6 +1124,10 @@ namespace rsx::overlays
 					when = "Now, under this menu: " + perf_value(now, entry.perf);
 				}
 			}
+			else if (entry.state >= 0 && m_delete_armed == std::clamp(m_row, 0, count - 1))
+			{
+				help = "Press Triangle again to delete this state for good. Any other button keeps it.";
+			}
 			else
 			{
 				help = entry.note;
@@ -909,8 +1160,12 @@ namespace rsx::overlays
 				x += 26.f + l->w + 26.f;
 			};
 			const row& entry = current_tab.rows[std::clamp(m_row, 0, count - 1)];
-			prompt(resource_config::confirm_button_resource(), (entry.setting >= 0 || entry.remap >= 0) ? "Change" : "Select");
+			prompt(resource_config::confirm_button_resource(), (entry.setting >= 0 || entry.remap >= 0) ? "Change" : entry.state >= 0 ? "Load" : "Select");
 			prompt(resource_config::cancel_button_resource(), "Resume");
+			if (entry.state >= 0)
+			{
+				prompt(static_cast<u8>(resource_config::standard_image_resource::triangle), "Delete");
+			}
 			if (entry.setting >= 0 && m_settings[entry.setting].value != m_settings[entry.setting].global)
 			{
 				prompt(static_cast<u8>(resource_config::standard_image_resource::square), "Global value");

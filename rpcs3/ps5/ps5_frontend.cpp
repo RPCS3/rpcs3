@@ -943,6 +943,19 @@ namespace
 		// prompts had no words (on my console)
 		g_emu_callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
 		{
+			// A failed save state names the setting as the pause menu has it
+			// (the desktop's would send the player to its Advanced tab, or to
+			// the ASMJIT recompiler)
+			switch (id)
+			{
+			case localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING:
+				return "Save state failed: an SPU was busy. Try again, or turn on SPU compatible savestates (pause menu, States) and restart the game.";
+			case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU:
+				return "Save state failed: an SPU was busy. Try again in a moment.";
+			default:
+				break;
+			}
+
 			const char* text = ps5_localized_string(id);
 			std::string result = text ? text : "";
 			if (const usz at = result.find("%0"); at != umax && args)

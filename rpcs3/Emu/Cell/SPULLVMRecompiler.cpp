@@ -752,6 +752,12 @@ namespace
 
 		std::string key = g_cfg.core.to_string();
 		fmt::append(key, "|recompiler %s|tsc %u|cpu %s", c_recompiler_built, utils::get_tsc_freq(), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+
+		// And the one setting outside Core the code depends on: SPU Compatible
+		// Savestates Mode stores the registers and checks for a pause where the
+		// code otherwise would not (RCHCNT, and RDCH of SPU_RdEventStat), so
+		// code built without it can't be saved where code built with it can
+		fmt::append(key, "|savestate-compatible %s", g_cfg.savestate.compatible_mode.get());
 		u8 sha[20];
 		sha1(reinterpret_cast<const u8*>(key.data()), key.size(), sha);
 		const std::string name = fmt::format("spu-code-%s.pack", fmt::base57(reinterpret_cast<const uchar*>(sha), 8));
