@@ -82,6 +82,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	gl::glsl::program* m_prev_program = nullptr;
 	const GLFragmentProgram *m_fragment_prog = nullptr;
 	const GLVertexProgram *m_vertex_prog = nullptr;
+	rsx::bitmask_t<rsx::draw_state_t::group> m_stale_constants;                           // Constant buffers whose host copy is out of date.
 
 	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 	gl::shader_interpreter m_shader_interpreter;

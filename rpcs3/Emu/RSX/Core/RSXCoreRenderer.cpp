@@ -479,12 +479,24 @@ namespace rsx
 			dirty.set(draw_state_t::group::depth_cyclic_barrier);
 		}
 
+		if (bits & rsx::pipeline_state::transform_constants_dirty)
+		{
+			dirty.set(draw_state_t::group::transform_constants);
+		}
+
+		if (bits & rsx::pipeline_state::fragment_constants_dirty)
+		{
+			dirty.set(draw_state_t::group::fragment_constants);
+		}
+
 		// NOTE: pipeline_config_dirty has no group.
 		// The GRAPH engine has already re-evaluated the programs for it and backends rebuild their pipelines from the decoded groups that changed.
 		m_ctx->graphics_state.clear(
 			rsx::pipeline_state::vertex_state_dirty |
 			rsx::pipeline_state::fragment_state_dirty |
 			rsx::pipeline_state::zeta_address_cyclic_barrier |
+			rsx::pipeline_state::transform_constants_dirty |
+			rsx::pipeline_state::fragment_constants_dirty |
 			rsx::pipeline_state::pipeline_config_dirty);
 	}
 
