@@ -12,8 +12,8 @@ namespace rsx
 		register_state = m_owned_register_state.get();
 		register_state->init();
 
-		textures.fragment_textures_dirty.fill(true);
-		textures.vertex_textures_dirty.fill(true);
+		textures.fragment_textures_dirty = (1u << limits::fragment_textures_count) - 1;
+		textures.vertex_textures_dirty = (1u << limits::vertex_textures_count) - 1;
 
 		graphics_state.set(pipeline_state::all_dirty);
 		draw_state.dirty.set(draw_state_t::group::all);
