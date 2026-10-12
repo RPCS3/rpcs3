@@ -11,8 +11,6 @@
 #include "Emu/localized_string.h"
 #include "Emu/RSX/Core/RSXContext.h"
 
-#include "Emu/RSX/NV47/HW/context_accessors.define.h"
-
 namespace gl
 {
 	using glsl::shader;
@@ -121,7 +119,7 @@ namespace gl
 		u64 opt = 0;
 		if (fp_ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) [[unlikely]]
 		{
-			switch (REGS(m_ctx)->alpha_func())
+			switch (m_ctx->draw_state.fragment_env.alpha_func)
 			{
 			case rsx::comparison_function::always:
 				break;

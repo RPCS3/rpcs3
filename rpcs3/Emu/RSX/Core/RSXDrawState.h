@@ -157,6 +157,14 @@ namespace rsx
 		bool operator==(const stipple_state&) const = default;
 	};
 
+	// Fragment environment fields that select host shader variants. The rest of the environment block is packed by the core.
+	struct fragment_env_state
+	{
+		comparison_function alpha_func{};
+
+		bool operator==(const fragment_env_state&) const = default;
+	};
+
 	// Scissor region before resolution scaling. Draws are clipped by the viewport, clears are not.
 	struct scissor_state
 	{
@@ -212,8 +220,10 @@ namespace rsx
 			input_assembly               = (1 << 5),
 			stipple                      = (1 << 6),
 
-			// Signal that the inputs of the vertex/fragment environment blocks changed. Not used for state decode.
+			// The fragment environment block inputs changed. Only alpha_func is decoded.
 			fragment_env                 = (1 << 7),
+
+			// Signal that the inputs of the vertex environment block changed. Not used for state decode.
 			vertex_env                   = (1 << 8),
 
 			// Signal that the program was resolved again for this draw. Not used for state decode.
@@ -231,7 +241,7 @@ namespace rsx
 			fragment_constants           = (1 << 14),
 
 			// Meta groups
-			decoded                      = raster | depth_stencil | blend | multisample | viewport | input_assembly | stipple,
+			decoded                      = raster | depth_stencil | blend | multisample | viewport | input_assembly | stipple | fragment_env,
 			programs                     = vertex_program | fragment_program,
 			constants                    = transform_constants | fragment_constants,
 			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly | programs,
@@ -250,6 +260,7 @@ namespace rsx
 		viewport_state viewport;
 		input_assembly_state input_assembly;
 		stipple_state stipple;
+		fragment_env_state fragment_env;
 
 		// Resolved by the GRAPH engine when the framebuffer is bound, not decoded
 		scissor_state scissor;
