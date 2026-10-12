@@ -1411,7 +1411,7 @@ void main()
 		order += ", the game's frame after";
 		m_capture_info = fmt::format("%s | %ux%u, %s (motion at %ux%u) | build %s | steps aside: %s\n%s",
 			Emu.GetTitleID(), width, height, c_quality[quality].name, m_work_w, m_work_h,
-			ps5_title_build().empty() ? "unknown" : ps5_title_build(), step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves", order);
+			ps5_title_build().empty() ? "unknown" : ps5_title_build(), step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", order);
 	}
 
 	void frame_generator::take_capture()
@@ -1592,7 +1592,10 @@ void main()
 			barrier(cmd);
 			// Stepping aside beyond 6% of the frame's width a game frame (Quick
 			// moves), 3% (Most moves), or never
-			const f32 step_aside = step == 0 ? 1e9f : step == 2 ? 0.03f : 0.06f;
+			// (Some moves, 4.5%, between them: in GTA IV with Lossless Scaling's
+			// frames, Quick moves stepped aside in almost no frames while driving
+			// and Most moves in 30 to 80 of every 100, build 135 on my console)
+			const f32 step_aside = step == 0 ? 1e9f : step == 2 ? 0.03f : step == 3 ? 0.045f : 0.06f;
 			vk::get_compute_task<frame_generation_pass<pass_motion>>()->run(cmd, { m_vectors_rough.get() }, m_motion.get(), 1, 1,
 				{ step_aside * work_w / 16.f });
 			barrier(cmd);

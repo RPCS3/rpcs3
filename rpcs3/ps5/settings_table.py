@@ -77,8 +77,8 @@ PS5_EXTRA = [
     ("FrameGenerationQuality", "GPU", "FrameGenerationStepAside", "Frame generation steps aside",
      "When frame generation shows the game's own frames instead of making frames between them. Quick moves: "
      "when the camera moves more than about 6% of the screen between two of the game's frames (a quick "
-     "turn), where frames made between break apart. Most moves: from about 3%, fewer odd frames while "
-     "moving but less smoothing. Never: frames are always made."),
+     "turn), where frames made between break apart. Some moves: from about 4.5%. Most moves: from about "
+     "3%, fewer odd frames while moving but less smoothing. Never: frames are always made."),
     ("FrameGenerationStepAside", "GPU", "FrameGenerationMethod", "Frame generation method",
      "Which frame generation makes the frames between. Built-in: the title's own. Lossless Scaling: the "
      "Lossless Scaling app's, from your own copy of its Lossless.dll (Steam), put in the title's rpcs3 "

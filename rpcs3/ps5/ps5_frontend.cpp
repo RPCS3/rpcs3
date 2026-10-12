@@ -1553,7 +1553,9 @@ int run(const char* boot_path)
 					{
 						// Lossless Scaling's (VKFrameGenLSFG.h): what became of it
 						const u32 most = static_cast<u32>(g_cfg.video.frame_generation_frames);
-						frame_gen = fmt::format(", up to %s a frame, Lossless Scaling: %s", most ? std::to_string(most) : std::string("Auto"), vk::lsfg_status());
+						const u32 step = static_cast<u32>(g_cfg.video.frame_generation_step_aside);
+						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, Lossless Scaling: %s", most ? std::to_string(most) : std::string("Auto"),
+							step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", vk::lsfg_status());
 					}
 					else if (g_cfg.video.frame_generation)
 					{
@@ -1561,7 +1563,7 @@ int run(const char* boot_path)
 						const u32 quality = static_cast<u32>(g_cfg.video.frame_generation_quality);
 						const u32 step = static_cast<u32>(g_cfg.video.frame_generation_step_aside);
 						frame_gen = fmt::format(", up to %s a frame, %s, stepping aside %s", most ? std::to_string(most) : std::string("Auto"),
-							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced", step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves");
+							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced", step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves");
 					}
 					trace_logged("status %ds: state %d, RSX flips %d (%.1f a second; %u made between, %u dropped, %u game frames moving too quickly for them, %u with the camera's field, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
 						static_cast<u32>(Emu.GetStatus()), flips, game_fps, static_cast<u32>(g_ps5_frames_generated.load()), static_cast<u32>(g_ps5_frames_dropped.load()),
