@@ -848,7 +848,7 @@ bool GLGSRender::load_program()
 				m_ctx->program.fragment_program.ctrl);
 
 			// Program has changed, reupload
-			m_interpreter_state = rsx::invalidate_pipeline_bits;
+			m_interpreter_state.set(rsx::draw_state_t::group::programs);
 		}
 
 		// If swapping between interpreter and recompiler, we need to adjust some flags to reupload data as needed.
@@ -879,10 +879,10 @@ void GLGSRender::load_program_env()
 
 	const bool update_transform_constants = m_ctx->graphics_state & rsx::pipeline_state::transform_constants_dirty;
 	const bool update_fragment_constants = (m_ctx->graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
-	const bool update_vertex_env = m_ctx->graphics_state & rsx::pipeline_state::vertex_state_dirty;
-	const bool update_fragment_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_state_dirty;
+	const bool update_vertex_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::vertex_env);
+	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
 	const bool update_fragment_texture_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
-	const bool update_instruction_buffers = !!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program);
+	const bool update_instruction_buffers = m_interpreter_state.test(rsx::draw_state_t::group::programs) && m_shader_interpreter.is_interpreter(m_program);
 	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_ctx->graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	const bool update_instancing_data = m_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
@@ -1008,7 +1008,7 @@ void GLGSRender::load_program_env()
 
 	if (update_instruction_buffers)
 	{
-		if (m_interpreter_state & rsx::vertex_program_dirty)
+		if (m_interpreter_state.test(rsx::draw_state_t::group::vertex_program))
 		{
 			// Attach vertex buffer data
 			const auto vp_block_length = m_ctx->program.vp_metadata.ucode_length + 16;
@@ -1027,7 +1027,7 @@ void GLGSRender::load_program_env()
 			m_vertex_instructions_buffer->notify();
 		}
 
-		if (m_interpreter_state & rsx::fragment_program_dirty)
+		if (m_interpreter_state.test(rsx::draw_state_t::group::fragment_program))
 		{
 			// Attach fragment buffer data
 			const auto fp_block_length = m_ctx->program.fp_metadata.program_ucode_length + 16;
@@ -1065,8 +1065,6 @@ void GLGSRender::load_program_env()
 	}
 
 	rsx::flags32_t handled_flags =
-		rsx::pipeline_state::fragment_state_dirty |
-		rsx::pipeline_state::vertex_state_dirty |
 		rsx::pipeline_state::transform_constants_dirty |
 		rsx::pipeline_state::fragment_texture_state_dirty;
 

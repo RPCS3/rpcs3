@@ -192,23 +192,31 @@ namespace rsx
 		// Drawing state groups. A group's bit in 'dirty' is set when its contents changed since the backend last consumed them.
 		enum class group : u32
 		{
-			raster           = (1 << 0),
-			depth_stencil    = (1 << 1),
-			blend            = (1 << 2),
-			multisample      = (1 << 3),
-			viewport         = (1 << 4),
-			input_assembly   = (1 << 5),
-			program_env      = (1 << 6),
+			raster                       = (1 << 0),
+			depth_stencil                = (1 << 1),
+			blend                        = (1 << 2),
+			multisample                  = (1 << 3),
+			viewport                     = (1 << 4),
+			input_assembly               = (1 << 5),
+
+			// Signal that the inputs of the vertex/fragment environment blocks changed. Not used for state decode.
+			vertex_env                   = (1 << 6),
+			fragment_env                 = (1 << 10),
 
 			// Signal that the program was resolved again for this draw. Not used for state decode.
-			vertex_program   = (1 << 7),
-			fragment_program = (1 << 8),
-			programs = vertex_program | fragment_program,
+			vertex_program               = (1 << 7),
+			fragment_program             = (1 << 8),
 
 			// Signal that the scissor region was resolved again. Not used for state decode.
-			scissor          = (1 << 9),
+			scissor                      = (1 << 9),
 
-			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | program_env | programs | scissor
+			// Signal that the depth surface left cyclic (read/write) use. Its writes must be made visible before the next draw.
+			depth_cyclic_barrier         = (1 << 11),
+
+			// Meta groups
+			programs                     = vertex_program | fragment_program,
+			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly | programs,
+			all                          = raster | depth_stencil | blend | multisample | viewport | input_assembly | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier,
 		};
 
 		bitmask_t<group> dirty;
