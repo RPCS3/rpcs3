@@ -35,7 +35,7 @@ namespace rsx
 	private:
 		context* m_ctx = nullptr;
 
-		// GRAPH unit: framebuffer resolution
+		// GRAPH unit: framebuffer and program resolution
 		graph_engine m_graph;
 
 		// invalidate_pipeline_bits as they were before the current draw began
