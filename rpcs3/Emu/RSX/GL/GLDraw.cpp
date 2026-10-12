@@ -886,7 +886,7 @@ void GLGSRender::begin_draw()
 {
 	set_scissor();
 
-	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs))
 	{
 		// Shaders need to be reloaded.
 		m_prev_program = m_program;
@@ -900,10 +900,10 @@ bool GLGSRender::resolve_sampler_state()
 	return true;
 }
 
-bool GLGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
+bool GLGSRender::end_draw()
 {
-	// Shader state as it was before prefetch and loading happened
-	m_interpreter_state = pre_begin_pipeline_state;
+	// Groups changed since the last executed draw. Loading an interpreter program adds both programs.
+	m_interpreter_state = m_ctx->draw_state.dirty;
 
 	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
 	// TODO: Implement shaders cache prediction to avoid uploading vertex data if draw is going to skip
@@ -936,8 +936,6 @@ bool GLGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 			surface->write_barrier(cmd);
 		}
 	}
-
-	m_ctx->graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	update_draw_state();
 
