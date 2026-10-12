@@ -32,6 +32,10 @@ namespace rsx
 		// NV4097_CLEAR_SURFACE
 		void clear(rsx::flags32_t arg);
 
+		// The backend reloaded its sampler state in the middle of a draw (out-of-memory recovery).
+		// Resolves the program state again from the new descriptors. The backend keeps the programs it has bound.
+		void refresh_program_state();
+
 	private:
 		context* m_ctx = nullptr;
 

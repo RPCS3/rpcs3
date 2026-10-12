@@ -1266,16 +1266,6 @@ namespace rsx
 		return m_core.graph().requires_depth_range_emulation();
 	}
 
-	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
-	{
-		m_core.graph().get_current_vertex_program(sampler_descriptors);
-	}
-
-	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
-	{
-		m_core.graph().get_current_fragment_program(sampler_descriptors);
-	}
-
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
 		return m_core.graph().invalidate_fragment_program(dst_dma, dst_offset, size);

@@ -1346,12 +1346,8 @@ bool VKGSRender::end_draw()
 			// Reload texture env if referenced objects were invalidated during OOM handling.
 			load_texture_env();
 
-			// Do not trust fragment/vertex texture state after a texture state reset.
 			// NOTE: We don't want to change the program - it's too late for that now. We just need to harmonize the state.
-			m_ctx->graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
-			get_current_fragment_program(m_ctx->textures.fs_sampler_state);
-			get_current_vertex_program(m_ctx->textures.vs_sampler_state);
-			m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
+			RSX(m_ctx)->core().refresh_program_state();
 		}
 
 		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)
