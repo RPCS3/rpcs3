@@ -883,7 +883,7 @@ void GLGSRender::load_program_env()
 	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
 	const bool update_fragment_texture_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
 	const bool update_instruction_buffers = m_interpreter_state.test(rsx::draw_state_t::group::programs) && m_shader_interpreter.is_interpreter(m_program);
-	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_ctx->graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
+	const bool update_raster_env = m_ctx->draw_state.stipple.enabled && m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::stipple);
 	const bool update_instancing_data = m_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
 	if (manually_flush_ring_buffers)
@@ -1000,10 +1000,8 @@ void GLGSRender::load_program_env()
 	{
 		auto mapping = m_raster_env_ring_buffer->alloc_from_heap(128, m_uniform_buffer_offset_align);
 
-		std::memcpy(mapping.first, REGS(m_ctx)->polygon_stipple_pattern(), 128);
+		std::memcpy(mapping.first, m_ctx->draw_state.stipple.pattern.data(), 128);
 		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
-
-		m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)

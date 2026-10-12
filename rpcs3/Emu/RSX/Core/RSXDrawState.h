@@ -146,6 +146,17 @@ namespace rsx
 		bool operator==(const input_assembly_state&) const = default;
 	};
 
+	// Kept apart from the raster group so that pattern writes do not reload the rasterizer state
+	struct stipple_state
+	{
+		bool enabled = false;
+
+		// The 32 pattern registers as written. Only decoded while stipple is enabled.
+		std::array<u32, 32> pattern{};
+
+		bool operator==(const stipple_state&) const = default;
+	};
+
 	// Scissor region before resolution scaling. Draws are clipped by the viewport, clears are not.
 	struct scissor_state
 	{
@@ -190,6 +201,7 @@ namespace rsx
 	struct draw_state_t
 	{
 		// Drawing state groups. A group's bit in 'dirty' is set when its contents changed since the backend last consumed them.
+		// Groups raised through draw_state_signals must fit in its u8 entries, so they use bits 0-7. Signal-only groups use the bits above.
 		enum class group : u32
 		{
 			raster                       = (1 << 0),
@@ -198,25 +210,27 @@ namespace rsx
 			multisample                  = (1 << 3),
 			viewport                     = (1 << 4),
 			input_assembly               = (1 << 5),
+			stipple                      = (1 << 6),
 
 			// Signal that the inputs of the vertex/fragment environment blocks changed. Not used for state decode.
-			vertex_env                   = (1 << 6),
-			fragment_env                 = (1 << 10),
+			fragment_env                 = (1 << 7),
+			vertex_env                   = (1 << 8),
 
 			// Signal that the program was resolved again for this draw. Not used for state decode.
-			vertex_program               = (1 << 7),
-			fragment_program             = (1 << 8),
+			vertex_program               = (1 << 9),
+			fragment_program             = (1 << 10),
 
 			// Signal that the scissor region was resolved again. Not used for state decode.
-			scissor                      = (1 << 9),
+			scissor                      = (1 << 11),
 
 			// Signal that the depth surface left cyclic (read/write) use. Its writes must be made visible before the next draw.
-			depth_cyclic_barrier         = (1 << 11),
+			depth_cyclic_barrier         = (1 << 12),
 
 			// Meta groups
+			decoded                      = raster | depth_stencil | blend | multisample | viewport | input_assembly | stipple,
 			programs                     = vertex_program | fragment_program,
 			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly | programs,
-			all                          = raster | depth_stencil | blend | multisample | viewport | input_assembly | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier,
+			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier,
 		};
 
 		bitmask_t<group> dirty;
@@ -230,6 +244,7 @@ namespace rsx
 		multisample_state multisample;
 		viewport_state viewport;
 		input_assembly_state input_assembly;
+		stipple_state stipple;
 
 		// Resolved by the GRAPH engine when the framebuffer is bound, not decoded
 		scissor_state scissor;

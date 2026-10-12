@@ -706,6 +706,9 @@ namespace rsx
 		const auto multisample = static_cast<u8>(draw_state_t::group::multisample);
 		const auto viewport = static_cast<u8>(draw_state_t::group::viewport);
 		const auto input_assembly = static_cast<u8>(draw_state_t::group::input_assembly);
+		const auto stipple = static_cast<u8>(draw_state_t::group::stipple);
+
+		static_assert(static_cast<u32>(draw_state_t::group::decoded) <= 0xFF, "Signalled draw state groups must fit in draw_state_signals entries");
 
 		for (const u32 reg :
 		{
@@ -762,6 +765,13 @@ namespace rsx
 		{
 			draw_state_signals[reg] |= input_assembly;
 		}
+
+		// The pattern is only decoded while stipple is enabled. Enabling it decodes the current pattern.
+		draw_state_signals[NV4097_SET_POLYGON_STIPPLE] |= stipple;
+		for (u32 reg = NV4097_SET_POLYGON_STIPPLE_PATTERN; reg < NV4097_SET_POLYGON_STIPPLE_PATTERN + 32; ++reg)
+		{
+			draw_state_signals[reg] |= stipple;
+		}
 	}
 
 	static void init_state_signals()
@@ -804,38 +814,6 @@ namespace rsx
 		state_signals[NV4097_SET_VIEWPORT_OFFSET + 1] = rsx::vertex_state_dirty;
 		state_signals[NV4097_SET_VIEWPORT_OFFSET + 2] = rsx::vertex_state_dirty;
 		state_signals[NV4097_SET_POLYGON_STIPPLE] = rsx::fragment_program_state_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 0] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 1] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 2] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 3] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 4] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 5] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 6] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 7] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 8] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 9] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 10] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 11] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 12] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 13] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 14] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 15] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 16] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 17] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 18] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 19] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 20] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 21] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 22] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 23] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 24] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 25] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 26] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 27] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 28] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 29] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 30] = rsx::polygon_stipple_pattern_dirty;
-		state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 31] = rsx::polygon_stipple_pattern_dirty;
 		state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
 		state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 		state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
