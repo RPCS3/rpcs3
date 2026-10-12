@@ -226,11 +226,16 @@ namespace rsx
 			// Signal that the depth surface left cyclic (read/write) use. Its writes must be made visible before the next draw.
 			depth_cyclic_barrier         = (1 << 12),
 
+			// Signal that the guest constants changed. Backends that skip an upload on purpose keep their own record of it.
+			transform_constants          = (1 << 13),
+			fragment_constants           = (1 << 14),
+
 			// Meta groups
 			decoded                      = raster | depth_stencil | blend | multisample | viewport | input_assembly | stipple,
 			programs                     = vertex_program | fragment_program,
+			constants                    = transform_constants | fragment_constants,
 			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly | programs,
-			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier,
+			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier | transform_constants | fragment_constants,
 		};
 
 		bitmask_t<group> dirty;
