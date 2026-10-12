@@ -1268,14 +1268,10 @@ void VKGSRender::begin_draw()
 	}
 }
 
-bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
+bool VKGSRender::resolve_sampler_state()
 {
-	// Shader state as it was before prefetch and loading happened
-	m_interpreter_state = pre_begin_pipeline_state;
-
-	m_profiler.start();
-
 	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
+	// This runs before any texture upload of the current draw is recorded
 	if (m_current_frame->flags & frame_context_state::dirty) [[unlikely]]
 	{
 		check_present_status();
@@ -1292,12 +1288,14 @@ bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	analyse_current_rsx_pipeline();
-
-	m_ctx->stats.setup_time += m_profiler.duration();
-
 	load_texture_env();
-	m_ctx->stats.textures_upload_time += m_profiler.duration();
+	return true;
+}
+
+bool VKGSRender::end_draw(rsx::flags32_t pre_begin_pipeline_state)
+{
+	// Shader state as it was before prefetch and loading happened
+	m_interpreter_state = pre_begin_pipeline_state;
 
 	if (!load_program())
 	{
