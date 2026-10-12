@@ -1216,18 +1216,25 @@ void VKGSRender::set_viewport()
 	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 }
 
-void VKGSRender::set_scissor(bool clip_viewport)
+void VKGSRender::set_scissor()
 {
-	areau scissor;
-	if (get_scissor(scissor, clip_viewport))
+	if (!m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::scissor))
 	{
-		m_scissor.extent.height = scissor.height();
-		m_scissor.extent.width = scissor.width();
-		m_scissor.offset.x = scissor.x1;
-		m_scissor.offset.y = scissor.y1;
-
-		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
+		return;
 	}
+
+	const auto& region = m_ctx->draw_state.scissor;
+
+	areau scissor;
+	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+
+	m_scissor.extent.height = scissor.height();
+	m_scissor.extent.width = scissor.width();
+	m_scissor.offset.x = scissor.x1;
+	m_scissor.offset.y = scissor.y1;
+
+	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 }
 
 void VKGSRender::bind_viewport()
@@ -1300,15 +1307,7 @@ void VKGSRender::clear()
 	const auto& info = m_ctx->draw_state.clear;
 	const auto mask = info.mask;
 
-	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (mask & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
-	init_buffers(rsx::framebuffer_creation_context{ctx});
-
-	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
-	{
-		return;
-	}
+	set_scissor();
 
 	//float depth_clear = 1.f;
 	u32   stencil_clear = 0;
@@ -2295,11 +2294,6 @@ void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32
 	}
 }
 
-void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
-{
-	prepare_rtts(context);
-}
-
 void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
 	ensure(!m_queue_status.test_and_set(flush_queue_state::flushing));
@@ -2406,34 +2400,16 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	m_queue_status.clear(flush_queue_state::flushing);
 }
 
-void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
+bool VKGSRender::is_framebuffer_bound() const
 {
-	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_ctx->fb.current_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
-	{
-		// Fast path
-		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
-		set_scissor(clipped_scissor);
-		return;
-	}
+	return !!m_draw_fbo;
+}
 
-	m_ctx->graphics_state.clear(
-		rsx::rtt_config_dirty |
-		rsx::rtt_config_contested |
-		rsx::rtt_config_valid |
-		rsx::rtt_cache_state_dirty);
-
-	get_framebuffer_layout(context, m_ctx->fb.layout);
-	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
-	{
-		return;
-	}
-
-	if (m_draw_fbo && m_ctx->fb.layout.ignore_change)
+void VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
+{
+	if (m_draw_fbo && layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
-		// Update flags to match current
-		set_scissor(clipped_scissor);
 		return;
 	}
 
@@ -2638,10 +2614,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_draw_fbo->add_ref();
 
 	set_viewport();
-	set_scissor(clipped_scissor);
-	on_framebuffer_layout_updated();
-
-	check_zcull_status(true);
 }
 
 bool VKGSRender::on_renderctl(u32 request_code, void* args)
