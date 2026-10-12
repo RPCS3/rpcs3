@@ -130,6 +130,7 @@
     <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXGraphEngine.cpp" />
     <ClCompile Include="Emu\RSX\GSFrameBase.cpp" />
     <ClCompile Include="Emu\RSX\Host\MM.cpp" />
     <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp" />
@@ -716,6 +717,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDrawState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXProgramState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXRenderBackend.h" />
