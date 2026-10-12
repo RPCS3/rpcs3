@@ -422,7 +422,7 @@ namespace rsx
 
 		m_graph.get_current_vertex_program(m_ctx->textures.vs_sampler_state);
 
-		// Resolution consumes some of the bits. The backend looks up its pipeline from these instead.
+		// The bits are consumed here. The backend looks up its pipeline from the draw state groups instead.
 		if (program_bits & (rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::xform_instancing_state_dirty))
 		{
 			m_ctx->draw_state.dirty.set(draw_state_t::group::vertex_program);
@@ -432,6 +432,8 @@ namespace rsx
 		{
 			m_ctx->draw_state.dirty.set(draw_state_t::group::fragment_program);
 		}
+
+		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}
 
 	void core_renderer::decode_draw_state()
