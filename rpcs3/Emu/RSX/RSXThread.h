@@ -220,22 +220,9 @@ namespace rsx
 		// Framebuffer resolution, forwarded to the GRAPH engine
 		void on_framebuffer_layout_updated();
 
-		// Runs shader prefetch and resolves pipeline status flags
+		// Program resolution, forwarded to the GRAPH engine
 		void analyse_current_rsx_pipeline();
-
-		// Prefetch and analyze the currently active fragment program ucode
-		void prefetch_fragment_program();
-
-		// Prefetch and analyze the currently active vertex program ucode
-		void prefetch_vertex_program();
-
-		// Update fragment program export configuration. Can invalidate the current program.
-		rsx::flags32_t get_fragment_program_export_config();
-
-		// Gets the current vertex program and associated state. Can invalidate the bound progam.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
-
-		// Gets current fragment program and associated fragment state. Can invalidate the bound program.
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 
 	public:
