@@ -104,6 +104,19 @@ namespace rsx
 		void fill_user_clip_data(void* buffer) const;
 
 		/**
+		 * Fill the 96-byte vertex environment block: scale/offset matrix, user clip planes, transform branch bits,
+		 * point size and depth clip range. point_scale is the host's resolution scale for the point size.
+		 */
+		void fill_vertex_env(void* buffer, f32 point_scale) const;
+
+		/**
+		 * Fill the 16-byte headers in front of the shader interpreter's instruction blocks.
+		 * Vertex: base address, entry, output mask, two-sided lighting. Fragment: shader control, texture dimensions, referenced textures.
+		 */
+		void fill_interpreter_vertex_header(void* buffer) const;
+		void fill_interpreter_fragment_header(void* buffer) const;
+
+		/**
 		* Fill buffer with vertex program constants.
 		* Relocation table allows to do a partial fill with only selected registers.
 		*/

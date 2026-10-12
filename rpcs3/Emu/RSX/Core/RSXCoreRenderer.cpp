@@ -195,6 +195,11 @@ namespace rsx
 		std::memcpy(state.pattern.data(), regs.polygon_stipple_pattern(), sizeof(state.pattern));
 	}
 
+	static void decode_fragment_env_state(const rsx_state& regs, fragment_env_state& state)
+	{
+		state.alpha_func = regs.alpha_func();
+	}
+
 	static void decode_clear_state(const rsx_state& regs, rsx::flags32_t mask, clear_state& state)
 	{
 		state.mask = mask;
@@ -325,6 +330,10 @@ namespace rsx
 		stipple_state stipple = state.stipple;
 		decode_stipple_state(regs, stipple);
 		ensure(stipple == state.stipple, "Stale stipple state");
+
+		fragment_env_state fragment_env = state.fragment_env;
+		decode_fragment_env_state(regs, fragment_env);
+		ensure(fragment_env == state.fragment_env, "Stale fragment environment state");
 	}
 #endif
 
@@ -553,6 +562,13 @@ namespace rsx
 			decode_stipple_state(regs, state.stipple);
 			state.pending.clear(draw_state_t::group::stipple);
 			state.dirty.set(draw_state_t::group::stipple);
+		}
+
+		if (state.pending.test(draw_state_t::group::fragment_env))
+		{
+			decode_fragment_env_state(regs, state.fragment_env);
+			state.pending.clear(draw_state_t::group::fragment_env);
+			state.dirty.set(draw_state_t::group::fragment_env);
 		}
 
 #if defined(DRAW_STATE_DEBUG) && DRAW_STATE_DEBUG
