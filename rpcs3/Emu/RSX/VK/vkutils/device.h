@@ -106,6 +106,17 @@ namespace vk
 			bool provoking_vertex_last = false;
 		} optional_features_support;
 
+#ifdef __PROSPERO__
+		// PS5: what Lossless Scaling's frame generation needs beyond the rest
+		// (VKFrameGenLSFG.h), as the GPU supports it
+		struct
+		{
+			bool memory_model = false;
+			bool memory_model_device_scope = false;
+			bool null_descriptor = false; // VK_EXT_robustness2
+		} ps5_lsfg_support;
+#endif
+
 		friend class render_device;
 	private:
 		void get_physical_device_features(bool allow_extensions);

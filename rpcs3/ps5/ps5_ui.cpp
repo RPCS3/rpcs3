@@ -505,6 +505,7 @@ namespace rsx::overlays::ps5ui
 			{"Frame Generation Frames", {"0", "1", "2", "3"}},
 			{"Frame Generation Quality", {"0", "1", "2"}},
 			{"Frame Generation Step Aside", {"0", "1", "2"}},
+			{"Frame Generation Method", {"0", "1"}},
 			{"SPU Collision Accuracy", {"1", "0", "2"}},
 			{"Max LLVM Compile Threads", {"0", "1", "2", "3", "4", "6", "8", "10", "12", "16"}},
 		};
@@ -641,6 +642,7 @@ namespace rsx::overlays::ps5ui
 		if (key == "Frame Generation Frames") return value == "0" ? std::string("Auto") : value;
 		if (key == "Frame Generation Quality") return value == "0" ? std::string("Fast") : value == "2" ? std::string("Quality") : std::string("Balanced");
 		if (key == "Frame Generation Step Aside") return value == "0" ? std::string("Never") : value == "2" ? std::string("Most moves") : std::string("Quick moves");
+		if (key == "Frame Generation Method") return value == "1" ? std::string("Lossless Scaling") : std::string("Built-in");
 		if (key == "SPU Collision Accuracy") return value == "0" ? std::string("Accurate") : value == "2" ? std::string("Fast (test)") : std::string("Learnt");
 		if (key == "Opacity (%)") return value + "%";
 		return value;

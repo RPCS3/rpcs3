@@ -847,6 +847,7 @@ VKGSRender::~VKGSRender()
 	m_upscaler.reset();
 #ifdef __PROSPERO__
 	m_frame_generator.reset();
+	m_lsfg_generator.reset();
 #endif
 
 	// Heaps

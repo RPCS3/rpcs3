@@ -88,6 +88,7 @@ bool VKGSRender::reinitialize_swapchain()
 	m_upscaler.reset();
 #ifdef __PROSPERO__
 	m_frame_generator.reset();
+	m_lsfg_generator.reset();
 #endif
 
 	// Drain all the queues
@@ -1071,9 +1072,31 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				count = fit >= 2. ? std::min(static_cast<u32>(fit) - 1, most) : 0;
 			}
 
+			// Lossless Scaling's frame generation when the setting asks for it
+			// and it runs (VKFrameGenLSFG.h), else the built-in one. The one
+			// not fed this frame forgets its last, to start again when used
+			const bool lossless = g_cfg.video.frame_generation_method == 1 && !(m_lsfg_generator && m_lsfg_generator->failed());
+			if (lossless && !m_lsfg_generator)
+			{
+				m_lsfg_generator = std::make_unique<vk::lsfg_frame_generator>();
+			}
+
 			vk::viewable_image* between[vk::frame_generator::max_frames]{};
-			const u32 made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count,
-				g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between);
+			u32 made = 0;
+			if (lossless)
+			{
+				m_frame_generator->reset();
+				made = m_lsfg_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, between);
+			}
+			else
+			{
+				if (m_lsfg_generator)
+				{
+					m_lsfg_generator->reset();
+				}
+				made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count,
+					g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between);
+			}
 
 			for (u32 k = 0; k < made; k++)
 			{
@@ -1094,9 +1117,16 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			}
 			g_ps5_frame_gen_us += get_system_time() - now;
 		}
-		else if (m_frame_generator)
+		else
 		{
-			m_frame_generator->reset();
+			if (m_frame_generator)
+			{
+				m_frame_generator->reset();
+			}
+			if (m_lsfg_generator)
+			{
+				m_lsfg_generator->reset();
+			}
 		}
 	}
 #endif

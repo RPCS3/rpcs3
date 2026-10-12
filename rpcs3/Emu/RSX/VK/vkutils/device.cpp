@@ -2,6 +2,9 @@
 #include "instance.h"
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
+#ifdef __PROSPERO__
+#include "../VKFrameGenLSFG.h"
+#endif
 #include <vulkan/vulkan_core.h>
 #ifdef __APPLE__
 #include <vulkan/vulkan_beta.h>
@@ -36,6 +39,10 @@ namespace vk
 		VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
 		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
 		VkPhysicalDeviceProvokingVertexFeaturesEXT provoking_vertex_info{};
+#ifdef __PROSPERO__
+		VkPhysicalDeviceVulkanMemoryModelFeatures memory_model_info{};
+		VkPhysicalDeviceRobustness2FeaturesEXT robustness2_info{};
+#endif
 
 		// Core features
 		shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
@@ -96,7 +103,27 @@ namespace vk
 			features2.pNext             = &provoking_vertex_info;
 		}
 
+#ifdef __PROSPERO__
+		// PS5: for Lossless Scaling's frame generation (VKFrameGenLSFG.h)
+		memory_model_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
+		memory_model_info.pNext = features2.pNext;
+		features2.pNext         = &memory_model_info;
+
+		if (device_extensions.is_supported(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME))
+		{
+			robustness2_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+			robustness2_info.pNext = features2.pNext;
+			features2.pNext        = &robustness2_info;
+		}
+#endif
+
 		vkGetPhysicalDeviceFeatures2(dev, &features2);
+
+#ifdef __PROSPERO__
+		ps5_lsfg_support.memory_model = !!memory_model_info.vulkanMemoryModel;
+		ps5_lsfg_support.memory_model_device_scope = !!memory_model_info.vulkanMemoryModelDeviceScope;
+		ps5_lsfg_support.null_descriptor = !!robustness2_info.nullDescriptor;
+#endif
 
 		shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 		shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
@@ -719,6 +746,23 @@ namespace vk
 			enabled_features.logicOp = VK_FALSE;
 		}
 
+#ifdef __PROSPERO__
+		// PS5: what Lossless Scaling's frame generation needs, where the GPU has
+		// it (VKFrameGenLSFG.h): storage images read and written without a
+		// declared format, in the extended formats, the Vulkan memory model
+		// (below) and null descriptors (VK_EXT_robustness2). None changes how
+		// the emulator's own shaders run
+		enabled_features.shaderStorageImageReadWithoutFormat = pgpu->features.shaderStorageImageReadWithoutFormat;
+		enabled_features.shaderStorageImageWriteWithoutFormat |= pgpu->features.shaderStorageImageWriteWithoutFormat;
+		enabled_features.shaderStorageImageExtendedFormats = pgpu->features.shaderStorageImageExtendedFormats;
+
+		VkPhysicalDeviceRobustness2FeaturesEXT robustness2_features{};
+		if (pgpu->ps5_lsfg_support.null_descriptor)
+		{
+			requested_extensions.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
+		}
+#endif
+
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
@@ -735,6 +779,18 @@ namespace vk
 		vulkan12_features.uniformBufferStandardLayout = VK_TRUE;
 		vulkan12_features.pNext = const_cast<void*>(device.pNext);
 		device.pNext = &vulkan12_features;
+
+#ifdef __PROSPERO__
+		vulkan12_features.vulkanMemoryModel = pgpu->ps5_lsfg_support.memory_model;
+		vulkan12_features.vulkanMemoryModelDeviceScope = pgpu->ps5_lsfg_support.memory_model && pgpu->ps5_lsfg_support.memory_model_device_scope;
+		if (pgpu->ps5_lsfg_support.null_descriptor)
+		{
+			robustness2_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+			robustness2_features.nullDescriptor = VK_TRUE;
+			robustness2_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &robustness2_features;
+		}
+#endif
 
 		if (pgpu->descriptor_indexing_support)
 		{
@@ -846,6 +902,24 @@ namespace vk
 			dump_debug_info(requested_extensions, enabled_features);
 			vk::die_with_error(error);
 		}
+
+#ifdef __PROSPERO__
+		// PS5: what the device has, of what Lossless Scaling's frame generation
+		// checks before it starts (the instance asks for Vulkan 1.2)
+		g_ps5_lsfg_device_features = {
+			.api_version = std::min<u32>(pgpu->props.apiVersion, VK_API_VERSION_1_2),
+			.memory_model = !!vulkan12_features.vulkanMemoryModel,
+			.memory_model_device_scope = !!vulkan12_features.vulkanMemoryModelDeviceScope,
+			.null_descriptor = !!robustness2_features.nullDescriptor,
+			.float16 = !!vulkan12_features.shaderFloat16,
+			.storage_extended_formats = !!enabled_features.shaderStorageImageExtendedFormats,
+			.storage_read_without_format = !!enabled_features.shaderStorageImageReadWithoutFormat,
+			.storage_write_without_format = !!enabled_features.shaderStorageImageWriteWithoutFormat,
+		};
+		rsx_log.notice("Lossless Scaling frame generation's needs: memory model %d, null descriptors %d, storage without format %d/%d",
+			g_ps5_lsfg_device_features.memory_model, g_ps5_lsfg_device_features.null_descriptor,
+			g_ps5_lsfg_device_features.storage_read_without_format, g_ps5_lsfg_device_features.storage_write_without_format);
+#endif
 
 		// Dump some diagnostics to the log
 		rsx_log.notice("%u extensions loaded:", ::size32(requested_extensions));

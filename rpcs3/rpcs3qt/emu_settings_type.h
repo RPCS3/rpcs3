@@ -112,6 +112,7 @@ enum class emu_settings_type
 	FrameGenerationFrames, // PS5: the most frames made between two of the game's
 	FrameGenerationQuality, // PS5: frame generation's motion search
 	FrameGenerationStepAside, // PS5: when frame generation shows the real frames instead
+	FrameGenerationMethod, // PS5: the built-in frame generation or Lossless Scaling's
 	DisableSamplingSkip, // PS5: offered in the launcher's Audio tab
 	LateAudioWait, // PS5: cellAudio's wait for a late game's sound
 	MenuSoundVolume, // PS5: the menus' sounds

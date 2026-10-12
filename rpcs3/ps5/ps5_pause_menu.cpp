@@ -19,6 +19,7 @@ LOG_CHANNEL(pause_log, "PauseMenu");
 
 extern atomic_t<u32> g_ps5_frame_gen_capture; // VKFrameGen.cpp: the capture's sets wanted
 std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state (empty without collision code)
+namespace vk { std::string lsfg_status(); std::string lsfg_dll_path(); } // VKFrameGenLSFG.h: Lossless Scaling's frame generation
 
 namespace rsx::overlays
 {
@@ -64,6 +65,7 @@ namespace rsx::overlays
 			{"Video", "Frame Generation Frames", "Frames made between"},
 			{"Video", "Frame Generation Quality", "Frame generation quality"},
 			{"Video", "Frame Generation Step Aside", "Frame generation steps aside"},
+			{"Video", "Frame Generation Method", "Frame generation method"},
 			{"Audio", "Master Volume", "Volume"},
 			// Only for a game with collision code it applies to (GTA IV)
 			{"Core", "SPU Collision Accuracy", "Collision accuracy"},
@@ -843,8 +845,14 @@ namespace rsx::overlays
 			if (entry.setting >= 0)
 			{
 				const setting_row& setting = m_settings[entry.setting];
-				// The collision setting's: what it does now, then its tooltip
-				const std::string status = setting.key == "SPU Collision Accuracy" ? spu_collision_status() : std::string();
+				// The collision setting's and frame generation method's: what they do
+				// now, then the tooltip
+				std::string status = setting.key == "SPU Collision Accuracy" ? spu_collision_status() : std::string();
+				if (setting.key == "Frame Generation Method")
+				{
+					const std::string lsfg = vk::lsfg_status();
+					status = lsfg != "not started" ? "Lossless Scaling: " + lsfg + "." : vk::lsfg_dll_path().empty() ? std::string("Lossless.dll: not found.") : std::string("Lossless.dll: found.");
+				}
 				help = short_help(status.empty() ? setting.help : status + " " + setting.help);
 				const cfg::_base* live = find_setting(g_cfg, setting.section, setting.key);
 				when = (live && live->get_is_dynamic()) ? "Takes effect now." : "Takes effect after a restart of the game.";

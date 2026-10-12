@@ -69,6 +69,32 @@ if(PS5)
     # and direct-memory objects (ps5platform/shm.h), not POSIX mmap
     set_source_files_properties(../util/vm_native.cpp PROPERTIES HEADER_FILE_ONLY ON)
     target_sources(rpcs3_emu PRIVATE ../util/vm_native_ps5.cpp)
+
+    # PS5: Lossless Scaling's frame generation (RSX/VK/VKFrameGenLSFG.h), the
+    # Eden/lsfg-vk compute chain as the Simpsons Game's PS5 port has it
+    # (GPL-3.0-or-later, RSX/VK/lsfg/README.md). It reports its errors with
+    # exceptions, caught in lsfg_frame_generator.cpp: built with them, without
+    # the precompiled header (built without them), and with its own style
+    set(ps5_lsfg_sources
+        RSX/VK/lsfg/lossless_dll.cpp
+        RSX/VK/lsfg/lsfg_alpha.cpp
+        RSX/VK/lsfg/lsfg_beta.cpp
+        RSX/VK/lsfg/lsfg_chain.cpp
+        RSX/VK/lsfg/lsfg_common.cpp
+        RSX/VK/lsfg/lsfg_delta.cpp
+        RSX/VK/lsfg/lsfg_frame_generator.cpp
+        RSX/VK/lsfg/lsfg_gamma.cpp
+        RSX/VK/lsfg/lsfg_generate.cpp
+        RSX/VK/lsfg/lsfg_mipmaps.cpp
+        RSX/VK/lsfg/lsfg_shaders.cpp
+        RSX/VK/lsfg/lsfg_translate.cpp
+        RSX/VK/lsfg/vulkan_adapter.cpp
+    )
+    target_sources(rpcs3_emu PRIVATE ${ps5_lsfg_sources})
+    set_source_files_properties(${ps5_lsfg_sources} PROPERTIES
+        COMPILE_OPTIONS "-fexceptions;-Wno-error;-Wno-old-style-cast;-Wno-sign-compare;-Wno-unused-parameter;-Wno-missing-noreturn"
+        SKIP_PRECOMPILE_HEADERS ON
+    )
 endif()
 
 # For stdafx.h
