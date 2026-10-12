@@ -21,15 +21,12 @@ namespace rsx
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
-		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout& layout);
-		bool get_scissor(areau& region, bool clip_viewport, const surface_scaling_config_t& resolution_scaling_config);
+		// Resolves the framebuffer for a draw or a clear and hands a changed layout to the backend.
+		// On return, rtt_config_valid tells whether the framebuffer can be rendered to.
+		void bind_framebuffer(rsx::framebuffer_creation_context context);
 
 		// Re-evaluates the framebuffer write state after a surface option register write
 		void on_framebuffer_options_changed(u32 opt);
-
-		// Notify framebuffer layout has been committed.
-		// FIXME: This should not be here
-		void on_framebuffer_layout_updated();
 
 		bool requires_depth_range_emulation() const;
 
@@ -47,6 +44,14 @@ namespace rsx
 
 	private:
 		context* m_ctx = nullptr;
+
+		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout& layout);
+
+		// Resolves the unscaled scissor region into draw_state.scissor. Can invalidate the framebuffer.
+		void resolve_scissor(bool clip_viewport);
+
+		// The committed layout can change the fragment program's MRT output count
+		void on_framebuffer_layout_updated();
 
 		// Prefetch and analyze the currently active fragment program ucode
 		void prefetch_fragment_program();
