@@ -51,7 +51,7 @@ namespace rsx
 
 		// Draw
 		virtual void begin_draw() {}
-		virtual bool end_draw(rsx::flags32_t /*pre_begin_pipeline_state*/) { return false; }
+		virtual bool end_draw() { return false; }
 		// Clear the bound surfaces. The core has decoded the clear into draw_state.clear.
 		virtual void clear() {}
 		virtual void emit_geometry(u32 /*sub_index*/) {}

@@ -83,7 +83,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	const GLFragmentProgram *m_fragment_prog = nullptr;
 	const GLVertexProgram *m_vertex_prog = nullptr;
 
-	rsx::flags32_t m_interpreter_state = 0;
+	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 	gl::shader_interpreter m_shader_interpreter;
 
 	gl_render_targets m_rtts;
@@ -223,7 +223,7 @@ protected:
 	void clear() override;
 	void begin_draw() override;
 	bool resolve_sampler_state() override;
-	bool end_draw(rsx::flags32_t pre_begin_pipeline_state) override;
+	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 
 	void on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
