@@ -183,15 +183,20 @@ namespace rsx
 		// Drawing state groups. A group's bit in 'dirty' is set when its contents changed since the backend last consumed them.
 		enum class group : u32
 		{
-			raster         = (1 << 0),
-			depth_stencil  = (1 << 1),
-			blend          = (1 << 2),
-			multisample    = (1 << 3),
-			viewport       = (1 << 4),
-			input_assembly = (1 << 5),
-			program_env    = (1 << 6),
+			raster           = (1 << 0),
+			depth_stencil    = (1 << 1),
+			blend            = (1 << 2),
+			multisample      = (1 << 3),
+			viewport         = (1 << 4),
+			input_assembly   = (1 << 5),
+			program_env      = (1 << 6),
 
-			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | program_env
+			// Signal that the program was resolved again for this draw. Not used for state decode.
+			vertex_program   = (1 << 7),
+			fragment_program = (1 << 8),
+			programs = vertex_program | fragment_program,
+
+			all = raster | depth_stencil | blend | multisample | viewport | input_assembly | program_env | programs
 		};
 
 		bitmask_t<group> dirty;

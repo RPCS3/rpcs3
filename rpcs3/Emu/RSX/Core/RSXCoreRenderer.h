@@ -43,6 +43,7 @@ namespace rsx
 
 		bool should_skip_draw() const;
 		void decode_draw_state();
+		void resolve_programs();
 		void execute_nop_draw();
 		void post_draw_hook();
 	};

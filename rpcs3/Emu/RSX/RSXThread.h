@@ -220,8 +220,7 @@ namespace rsx
 		// Framebuffer resolution, forwarded to the GRAPH engine
 		void on_framebuffer_layout_updated();
 
-		// Program resolution, forwarded to the GRAPH engine
-		void analyse_current_rsx_pipeline();
+		// Program resolution, forwarded to the GRAPH engine. Only the VK out-of-memory retry uses these.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 
