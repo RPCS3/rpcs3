@@ -321,6 +321,17 @@ extern u64 get_sysutil_cb_manager_read_count()
 	return 0;
 }
 
+#ifdef __PROSPERO__
+// PS5 fork: whether callbacks wait for the game's next cellSysutilCheckCallback.
+// A savestate can't hold them (sysutil_cb_manager::save), and the pause menu's
+// close queues three just before its Save state (ps5/ps5_pause_menu.cpp)
+extern bool sysutil_callbacks_pending()
+{
+	const auto cbm = g_fxo->try_get<sysutil_cb_manager>();
+	return cbm && !!cbm->registered;
+}
+#endif
+
 extern bool send_open_home_menu_cmds()
 {
 	auto status = g_fxo->try_get<SysutilMenuOpenStatus>();

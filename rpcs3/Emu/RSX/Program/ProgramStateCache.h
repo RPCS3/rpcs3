@@ -9,6 +9,7 @@
 #include "util/v128.hpp"
 #include <util/bless.hpp>
 
+#include <array>
 #include <span>
 #include <unordered_map>
 
@@ -346,6 +347,28 @@ public:
 	program_state_cache() = default;
 	~program_state_cache()
 	{}
+
+#ifdef __PROSPERO__
+	// PS5 fork: what it holds (vertex programs, fragment programs, pipelines),
+	// for the trace's memory line (VKPresent.cpp). A lock at a time
+	std::array<usz, 3> ps5_sizes()
+	{
+		std::array<usz, 3> sizes{};
+		{
+			reader_lock lock(m_vertex_mutex);
+			sizes[0] = m_vertex_shader_cache.size();
+		}
+		{
+			reader_lock lock(m_fragment_mutex);
+			sizes[1] = m_fragment_shader_cache.size();
+		}
+		{
+			reader_lock lock(m_pipeline_mutex);
+			sizes[2] = m_storage.size();
+		}
+		return sizes;
+	}
+#endif
 
 	template<typename... Args>
 	pipeline_data_type get_graphics_pipeline(

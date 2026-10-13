@@ -3,6 +3,99 @@
 
 #include "Emu/system_config.h"
 
+#ifdef __PROSPERO__
+#include <array>
+#include <cstdlib>
+#include <cstring>
+
+// PS5 fork: the Vulkan driver's own memory, counted by its scope (command,
+// object, cache, device, instance) for the trace's memory line
+// (ps5_frontend.cpp). GTA V ran the title out of memory after 20 minutes
+// (build 138): the heap grew to 8.7 GiB, and nothing said whose it was. Given
+// to the instance, it is the device's too (a device made without callbacks of
+// its own allocates with its instance's)
+namespace
+{
+	atomic_t<s64> g_vk_driver_bytes[5]{};
+
+	struct alignas(16) vk_block
+	{
+		u64 size;
+		u32 scope;
+		u32 offset; // from the block malloc returned to the caller's memory
+	};
+
+	void* VKAPI_CALL vk_count_alloc(void*, usz size, usz alignment, VkSystemAllocationScope scope)
+	{
+		const usz align = std::max<usz>(alignment, alignof(vk_block));
+		const usz offset = (sizeof(vk_block) + align - 1) / align * align;
+		void* base = nullptr;
+		if (!size || posix_memalign(&base, align, offset + size) != 0)
+		{
+			return nullptr;
+		}
+		u8* const memory = static_cast<u8*>(base) + offset;
+		vk_block& block = reinterpret_cast<vk_block*>(memory)[-1];
+		const u32 index = std::min<u32>(static_cast<u32>(scope), 4);
+		block = {size, index, static_cast<u32>(offset)};
+		g_vk_driver_bytes[index] += static_cast<s64>(size);
+		return memory;
+	}
+
+	void VKAPI_CALL vk_count_free(void*, void* memory)
+	{
+		if (!memory)
+		{
+			return;
+		}
+		const vk_block block = reinterpret_cast<vk_block*>(memory)[-1];
+		g_vk_driver_bytes[block.scope] -= static_cast<s64>(block.size);
+		std::free(static_cast<u8*>(memory) - block.offset);
+	}
+
+	void* VKAPI_CALL vk_count_realloc(void* user, void* original, usz size, usz alignment, VkSystemAllocationScope scope)
+	{
+		if (!original)
+		{
+			return vk_count_alloc(user, size, alignment, scope);
+		}
+		if (!size)
+		{
+			vk_count_free(user, original);
+			return nullptr;
+		}
+		void* const moved = vk_count_alloc(user, size, alignment, scope);
+		if (moved)
+		{
+			std::memcpy(moved, original, std::min<usz>(size, reinterpret_cast<vk_block*>(original)[-1].size));
+			vk_count_free(user, original);
+		}
+		return moved;
+	}
+
+	const VkAllocationCallbacks g_vk_counting_allocator
+	{
+		.pUserData = nullptr,
+		.pfnAllocation = vk_count_alloc,
+		.pfnReallocation = vk_count_realloc,
+		.pfnFree = vk_count_free,
+		.pfnInternalAllocation = nullptr,
+		.pfnInternalFree = nullptr,
+	};
+}
+
+// The bytes the driver holds now, by scope: command, object, cache, device, instance
+std::array<s64, 5> ps5_vk_driver_bytes()
+{
+	std::array<s64, 5> bytes{};
+	for (usz i = 0; i < bytes.size(); i++)
+	{
+		bytes[i] = g_vk_driver_bytes[i].load();
+	}
+	return bytes;
+}
+#endif
+
 namespace vk
 {
 	// Supported extensions
@@ -62,7 +155,11 @@ namespace vk
 			m_surface = VK_NULL_HANDLE;
 		}
 
+#ifdef __PROSPERO__
+		vkDestroyInstance(m_instance, &g_vk_counting_allocator);
+#else
 		vkDestroyInstance(m_instance, nullptr);
+#endif
 		m_instance = VK_NULL_HANDLE;
 	}
 
@@ -225,7 +322,11 @@ namespace vk
 		instance_info.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
+#ifdef __PROSPERO__
+		if (VkResult result = vkCreateInstance(&instance_info, &g_vk_counting_allocator, &m_instance); result != VK_SUCCESS)
+#else
 		if (VkResult result = vkCreateInstance(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
+#endif
 		{
 			if (result == VK_ERROR_LAYER_NOT_PRESENT)
 			{

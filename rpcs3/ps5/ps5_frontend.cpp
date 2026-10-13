@@ -7,6 +7,7 @@
 // runs a queue of the calls RPCS3 makes "from the main thread".
 
 #include "stdafx.h"
+#include <array>
 #include <map>
 #include <set>
 #include "ps5_frontend.h"
@@ -104,6 +105,8 @@ extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
 extern atomic_t<u32> g_ps5_rsx_cpus[16]; // RSXThread.cpp: the CPUs the RSX thread ended its frames on
+extern atomic_t<u64> g_ps5_vk_memory[9]; // VKPresent.cpp: what the renderer's caches hold
+std::array<s64, 5> ps5_vk_driver_bytes(); // vkutils/instance.cpp: the Vulkan driver's own memory, by scope
 const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them,
@@ -1528,6 +1531,30 @@ int run(const char* boot_path)
 							trace_logged("RSX thread: busy %.0f%% of the time (frames ended on CPU %u %.0f%%%s)", rsx_busy, cpus[0].second, 100.0 * cpus[0].first / frames,
 								cpus[1].first ? fmt::format(", %u %.0f%%", cpus[1].second, 100.0 * cpus[1].first / frames) : std::string());
 						}
+					}
+					// Whose the heap is: GTA V ran the title out of memory in 20
+					// minutes (build 138: 8.7 GiB, growing about 5 MiB a second as
+					// new parts of the city came in), and the status line said only
+					// how much. The Vulkan driver's own allocations (instance.cpp),
+					// and what the renderer's caches hold (VKPresent.cpp); the SPU
+					// code is on the busiest-threads line
+					if (g_ps5_vk_memory[8])
+					{
+						const auto driver = ps5_vk_driver_bytes();
+						s64 driver_total = 0;
+						for (const s64 bytes : driver)
+						{
+							driver_total += bytes;
+						}
+						struct ps5_heap_stats now{};
+						ps5_heap_stats(&now);
+						trace_logged("memory: heap %u MiB; Vulkan driver %d MiB (objects %d, caches %d, device %d, commands %d, instance %d); textures %u MiB (%u unreleased, %u MiB temporary), render targets %u MiB; %u vertex and %u fragment programs, %u pipelines; GPU allocator at %u%% of the %u MiB heap",
+							static_cast<u32>(now.mapped_bytes >> 20), static_cast<s32>(driver_total >> 20), static_cast<s32>(driver[1] >> 20),
+							static_cast<s32>(driver[2] >> 20), static_cast<s32>(driver[3] >> 20),
+							static_cast<s32>(driver[0] >> 20), static_cast<s32>(driver[4] >> 20),
+							static_cast<u32>(g_ps5_vk_memory[0] >> 20), static_cast<u32>(g_ps5_vk_memory[2].load()), static_cast<u32>(g_ps5_vk_memory[1] >> 20),
+							static_cast<u32>(g_ps5_vk_memory[3] >> 20), static_cast<u32>(g_ps5_vk_memory[4].load()), static_cast<u32>(g_ps5_vk_memory[5].load()),
+							static_cast<u32>(g_ps5_vk_memory[6].load()), static_cast<u32>(g_ps5_vk_memory[7].load()), static_cast<u32>(g_ps5_vk_memory[8].load()));
 					}
 					s_last_flips = flips;
 					s_last_flips_us = flips_us;

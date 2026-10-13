@@ -7,6 +7,7 @@
 #include "ps5_pause_menu.h"
 
 #include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/overlay_message.h"
 #include "ps5_screenshots.h"
 #include "Emu/System.h"
 #include "Emu/savestate_utils.hpp"
@@ -22,6 +23,7 @@ LOG_CHANNEL(pause_log, "PauseMenu");
 extern atomic_t<u32> g_ps5_frame_gen_capture; // VKFrameGen.cpp: the capture's sets wanted
 extern atomic_t<bool> g_big_picture_mode_active; // System.cpp: a stop goes back to the launcher
 void ps5_launcher_message(std::string title, std::string body); // ps5_launcher.cpp: shown when it next opens
+bool sysutil_callbacks_pending(); // cellSysutil.cpp: callbacks the game has yet to take
 std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state (empty without collision code)
 namespace vk { std::string lsfg_status(); std::string lsfg_dll_path(); } // VKFrameGenLSFG.h: Lossless Scaling's frame generation
 
@@ -104,6 +106,58 @@ namespace rsx::overlays
 		std::string size_text(u64 bytes)
 		{
 			return bytes >= 1000ull << 20 ? fmt::format("%.1f GB", bytes / 1073741824.) : fmt::format("%u MB", std::max<u64>(1, (bytes + (1u << 19)) >> 20));
+		}
+
+		// Save state, on the main thread once the game has taken its callbacks
+		void save_state_now()
+		{
+			if (sysutil_callbacks_pending())
+			{
+				// Saving now would stop the game and then fail
+				pause_log.error("Not saving a state: the game has not taken its sysutil callbacks in 3 seconds");
+				queue_message(std::string("Save state: the game didn't answer in time, so nothing was saved. Try again in a moment."));
+				return;
+			}
+
+			// As the desktop's Save state key (gs_frame.cpp): the state is saved
+			// as the emulation stops, and the game boots again from it in the
+			// same window. The launcher stays the place a quit goes back to
+			// (Kill leaves g_big_picture_mode_active alone while
+			// after_kill_callback is set). Should saving fail before the stop
+			// (an SPU busy, a save or a cutscene under way), Kill clears the
+			// callback, says why, and the game runs on. Kill does nothing for a
+			// game still starting or already stopping, and the callback would
+			// then restart the game at its next stop: so only a running one
+			if (!Emu.IsRunning() && !Emu.IsPaused())
+			{
+				pause_log.error("Not saving a state: the game is starting or stopping");
+				return;
+			}
+			if (!g_cfg.savestate.suspend_emu)
+			{
+				// Booted again from the state only if it was written (Kill
+				// points the boot path at it): a save that failed once the game
+				// had stopped (Emu State Capture Thread's fatal error) restarted
+				// the game from its start, which looked like Save state
+				// resetting the game. Back to the library, saying so, instead
+				const std::time_t started = std::time(nullptr);
+				Emu.after_kill_callback = [started]()
+				{
+					fs::stat_t written{};
+					const std::string boot = Emu.GetBoot();
+					if (boot.find(".SAVESTAT") != umax && fs::get_stat(boot, written) && written.mtime + 2 >= started)
+					{
+						Emu.Restart(true, false);
+						return;
+					}
+					pause_log.error("The state was not saved; back to the library");
+					ps5_launcher_message("The state wasn't saved", "Saving failed after the game had stopped, so it had to end. Your last save in the game is still there. The log says why (search for 'savestate').");
+					g_big_picture_mode_active = false;
+					Emu.BootBigPictureMode();
+				};
+				Emu.SetContinuousMode(true);
+			}
+			Emu.Kill(false, true);
 		}
 	}
 
@@ -720,34 +774,25 @@ namespace rsx::overlays
 			}
 			break;
 		case action::save_state:
-			pause_log.notice("Saving a state");
-			Emu.CallFromMainThread([]()
+		{
+			// The game was just told the menu closed (on_close, in close()
+			// above: three sysutil callbacks), and a state can't hold callbacks
+			// the game has yet to take: GTA V's first saves stopped on
+			// sysutil_cb_manager::save's check 3 ms after the menu closed,
+			// with the game already gone, and the restart booted it from the
+			// start (build 138). It takes them once a frame, so the save waits
+			// for that, and is given up (the game playing on) if it never does
+			pause_log.notice("Saving a state, once the game has heard the menu close");
+			std::thread([id = Emu.GetEmulationIdentifier()]()
 			{
-				// As the desktop's Save state key (gs_frame.cpp): the state is
-				// saved as the emulation stops, and the game boots again from it
-				// in the same window. The launcher stays the place a quit goes
-				// back to (Kill leaves g_big_picture_mode_active alone while
-				// after_kill_callback is set). Should saving fail (an SPU busy, a
-				// save or a cutscene under way), Kill clears the callback, says
-				// why, and the game runs on. Kill does nothing for a game still
-				// starting or already stopping, and the callback would then
-				// restart the game at its next stop: so only a running one
-				if (!Emu.IsRunning() && !Emu.IsPaused())
+				for (u32 waited = 0; sysutil_callbacks_pending() && waited < 300 && !Emu.IsStopped(); waited++)
 				{
-					pause_log.error("Not saving a state: the game is starting or stopping");
-					return;
+					std::this_thread::sleep_for(10ms);
 				}
-				if (!g_cfg.savestate.suspend_emu)
-				{
-					Emu.after_kill_callback = []()
-					{
-						Emu.Restart(true, false);
-					};
-					Emu.SetContinuousMode(true);
-				}
-				Emu.Kill(false, true);
-			});
+				Emu.CallFromMainThread(save_state_now, id);
+			}).detach();
 			break;
+		}
 		case action::load_state:
 			pause_log.notice("Loading the state %s", m_load_path);
 			Emu.CallFromMainThread([path = m_load_path]()

@@ -21,6 +21,13 @@ extern atomic_t<u64> g_ps5_frames_dropped;
 extern atomic_t<u64> g_ps5_image_wait_us[2];
 extern atomic_t<u64> g_ps5_frame_gen_gpu_wait_us;
 extern atomic_t<u64> g_ps5_frames_generated;
+
+// PS5: what the renderer's caches hold, for the trace's memory line
+// (ps5_frontend.cpp): texture cache bytes, its temporary bytes, unreleased
+// textures, render targets' bytes, vertex and fragment programs, pipelines,
+// the allocator's heap use (percent) and the device-local heap's size (MiB).
+// Read every 30 flips on the RSX thread, whose objects they are
+atomic_t<u64> g_ps5_vk_memory[9]{};
 #endif
 
 namespace
@@ -460,6 +467,20 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	if (m_frame_gen_swapchain != g_cfg.video.frame_generation.get())
 	{
 		should_reinitialize_swapchain = true;
+	}
+
+	if (static u32 s_flips = 0; s_flips++ % 30 == 0)
+	{
+		const auto sizes = m_prog_buffer->ps5_sizes();
+		g_ps5_vk_memory[0] = m_texture_cache.get_texture_memory_in_use();
+		g_ps5_vk_memory[1] = m_texture_cache.get_temporary_memory_in_use();
+		g_ps5_vk_memory[2] = m_texture_cache.get_unreleased_textures_count();
+		g_ps5_vk_memory[3] = m_rtts.m_active_memory_used;
+		g_ps5_vk_memory[4] = sizes[0];
+		g_ps5_vk_memory[5] = sizes[1];
+		g_ps5_vk_memory[6] = sizes[2];
+		g_ps5_vk_memory[7] = static_cast<u64>(vk::get_current_mem_allocator()->get_memory_usage());
+		g_ps5_vk_memory[8] = m_device->get_memory_mapping().device_local_total_bytes >> 20;
 	}
 #endif
 
