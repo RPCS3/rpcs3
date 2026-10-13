@@ -1,9 +1,12 @@
 #pragma once
 
 #include <util/types.hpp>
+#include <array>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
+#include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/Common/texture_cache_types.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/Core/RSXDisplay.h"
@@ -56,10 +59,13 @@ namespace rsx
 		virtual void clear() {}
 		virtual void emit_geometry(u32 /*sub_index*/) {}
 
-		// Fill the context's sampler descriptors for the current draw. Runs before the core resolves the programs.
-		// Returns false if the backend has no sampler state, in which case the programs are not resolved.
+		// Fill the sampler descriptors of the texture units the current programs reference. Runs before the core resolves the programs.
 		// The invalidated_programs field receives the program state bits that host-side changes invalidated (e.g. a texture's format class).
 		virtual bool resolve_sampler_state(rsx::flags32_t& /*invalidated_programs*/) { return false; }
+
+		// Filled by resolve_sampler_state. The descriptors are a cache of the texture units and are lost with the backend.
+		const std::array<std::unique_ptr<sampled_image_descriptor_base>, limits::fragment_textures_count>& fragment_sampler_descriptors() const { return m_fs_sampler_descriptors; }
+		const std::array<std::unique_ptr<sampled_image_descriptor_base>, limits::vertex_textures_count>& vertex_sampler_descriptors() const { return m_vs_sampler_descriptors; }
 
 		// Present. Returns true if a frame was presented, in which case post_present() runs after the core's flip bookkeeping.
 		virtual bool present_frame(const display_flip_info_t& info) = 0;
@@ -101,5 +107,8 @@ namespace rsx
 
 	protected:
 		backend_configuration m_config{};
+
+		std::array<std::unique_ptr<sampled_image_descriptor_base>, limits::fragment_textures_count> m_fs_sampler_descriptors = {};
+		std::array<std::unique_ptr<sampled_image_descriptor_base>, limits::vertex_textures_count> m_vs_sampler_descriptors = {};
 	};
 }
