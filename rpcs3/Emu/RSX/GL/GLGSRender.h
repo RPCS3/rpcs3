@@ -72,7 +72,7 @@ namespace gl
 	};
 }
 
-class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control, public ::rsx::reports::occlusion_query_provider
+class GLGSRender : public GSRender, public ::rsx::reports::occlusion_query_provider
 {
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
@@ -156,6 +156,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control, public
 
 	// Occlusion query type, can be SAMPLES_PASSED or ANY_SAMPLES_PASSED
 	GLenum m_occlusion_type = GL_ANY_SAMPLES_PASSED;
+	std::array<GLuint, rsx::reports::occlusion_query_count> m_occlusion_query_handles{}; // Host query per ZCULL query slot
 
 	// Host context for GPU-driven work
 	std::unique_ptr<gl::buffer> m_host_gpu_context_data;
