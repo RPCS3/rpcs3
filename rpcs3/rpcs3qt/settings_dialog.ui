@@ -2691,6 +2691,49 @@
                 </widget>
                </item>
                <item>
+                <widget class="QGroupBox" name="gb_ppuEventWakeupDelay">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="title">
+                  <string>PPU Event Wake-Up Delay</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="gb_ppuEventWakeupDelay_layout">
+                  <item>
+                   <widget class="QSlider" name="ppuEventWakeupDelay">
+                    <property name="orientation">
+                     <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <layout class="QHBoxLayout" name="ppuEventWakeupDelayLayout" stretch="1,0">
+                    <item>
+                     <widget class="QLabel" name="ppuEventWakeupText">
+                      <property name="text">
+                       <string>0 µs</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QPushButton" name="ppuEventWakeupReset">
+                      <property name="text">
+                       <string>Reset</string>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
                 <widget class="QGroupBox" name="gb_clockScale">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
