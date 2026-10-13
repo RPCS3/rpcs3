@@ -220,7 +220,7 @@ void GLGSRender::update_draw_state()
 		// Antialias control
 		if (m_config.supports_hw_msaa)
 		{
-			gl_state.enable(/*REGS(m_ctx)->msaa_enabled()*/GL_MULTISAMPLE);
+			gl_state.enable(GL_MULTISAMPLE); // We want this enabled globally for 1-sample A2C to work.
 
 			gl_state.enable(GL_SAMPLE_MASK);
 			gl_state.sample_mask(multisample.sample_mask);

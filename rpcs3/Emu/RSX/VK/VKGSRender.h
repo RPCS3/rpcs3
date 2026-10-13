@@ -297,7 +297,7 @@ protected:
 	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 
-	void on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
+	bool on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
 	bool is_framebuffer_bound() const override;
 
 	void on_init_thread() override;
