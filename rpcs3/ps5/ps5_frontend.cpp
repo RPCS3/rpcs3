@@ -107,6 +107,7 @@ u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
 extern atomic_t<u32> g_ps5_rsx_cpus[16]; // RSXThread.cpp: the CPUs the RSX thread ended its frames on
 extern atomic_t<u64> g_ps5_vk_memory[9]; // VKPresent.cpp: what the renderer's caches hold
 std::array<s64, 5> ps5_vk_driver_bytes(); // vkutils/instance.cpp: the Vulkan driver's own memory, by scope
+std::string ps5_alloc_report(u32 top, s64* total); // ps5_alloc_track.cpp: C++ memory by the thread that allocated it
 const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them,
@@ -1555,6 +1556,13 @@ int run(const char* boot_path)
 							static_cast<u32>(g_ps5_vk_memory[0] >> 20), static_cast<u32>(g_ps5_vk_memory[2].load()), static_cast<u32>(g_ps5_vk_memory[1] >> 20),
 							static_cast<u32>(g_ps5_vk_memory[3] >> 20), static_cast<u32>(g_ps5_vk_memory[4].load()), static_cast<u32>(g_ps5_vk_memory[5].load()),
 							static_cast<u32>(g_ps5_vk_memory[6].load()), static_cast<u32>(g_ps5_vk_memory[7].load()), static_cast<u32>(g_ps5_vk_memory[8].load()));
+					}
+					// And RPCS3's own C++ memory, by the thread that allocated it
+					// (ps5_alloc_track.cpp): what the line above did not find
+					{
+						s64 cpp_total = 0;
+						const std::string owners = ps5_alloc_report(8, &cpp_total);
+						trace_logged("memory by thread: C++ %d MiB in all: %s", static_cast<s32>(cpp_total >> 20), owners);
 					}
 					s_last_flips = flips;
 					s_last_flips_us = flips_us;
