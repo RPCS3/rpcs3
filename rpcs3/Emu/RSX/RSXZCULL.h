@@ -40,6 +40,7 @@ namespace rsx
 			bool pending;
 			bool active;
 			bool owned;
+			bool orphaned;                       // The provider that ran the host query is gone. Completes as "always visible".
 		};
 
 		struct queued_report_write
@@ -167,6 +168,16 @@ namespace rsx
 			// Retire operation
 			void retire(class ::rsx::thread* ptimer, queued_report_write* writer, u32 result);
 
+			// Host query calls. Orphaned queries never reach the provider and behave as with the null provider.
+			void begin_host_query(occlusion_query_info* query);
+			void end_host_query(occlusion_query_info* query);
+			bool check_host_query(occlusion_query_info* query);
+			void read_host_query(occlusion_query_info* query);
+			void discard_host_query(occlusion_query_info* query);
+
+			// Orphans every query in flight. Their host part lived in the provider that just went away.
+			void on_provider_lost();
+
 		public:
 
 			ZCULL_control();
@@ -176,6 +187,7 @@ namespace rsx
 			ZCULL_control& operator=(const ZCULL_control&) = delete;
 
 			// Attach the host query provider. nullptr attaches the null provider.
+			// Safe at any time, with queries in flight: the queries the old provider was running complete as "always visible".
 			void set_provider(occlusion_query_provider* provider);
 
 			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);

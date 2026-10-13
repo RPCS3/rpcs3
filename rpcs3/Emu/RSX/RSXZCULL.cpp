@@ -27,7 +27,74 @@ namespace rsx
 
 		void ZCULL_control::set_provider(occlusion_query_provider* provider)
 		{
-			m_provider = provider ? provider : &s_null_provider;
+			if (!provider)
+			{
+				provider = &s_null_provider;
+			}
+
+			if (provider == m_provider)
+			{
+				return;
+			}
+
+			on_provider_lost();
+			m_provider = provider;
+		}
+
+		void ZCULL_control::on_provider_lost()
+		{
+			if (m_current_task)
+			{
+				m_current_task->orphaned = true;
+			}
+
+			for (auto& writer : m_pending_writes)
+			{
+				if (writer.query)
+				{
+					writer.query->orphaned = true;
+				}
+			}
+		}
+
+		void ZCULL_control::begin_host_query(occlusion_query_info* query)
+		{
+			// New queries always start on the current provider
+			ensure(!query->orphaned);
+			m_provider->begin_occlusion_query(query);
+		}
+
+		void ZCULL_control::end_host_query(occlusion_query_info* query)
+		{
+			if (!query->orphaned)
+			{
+				m_provider->end_occlusion_query(query);
+			}
+		}
+
+		bool ZCULL_control::check_host_query(occlusion_query_info* query)
+		{
+			return query->orphaned || m_provider->check_occlusion_query_status(query);
+		}
+
+		void ZCULL_control::read_host_query(occlusion_query_info* query)
+		{
+			if (query->orphaned)
+			{
+				// Same result as the null provider
+				query->result = umax;
+				return;
+			}
+
+			m_provider->get_occlusion_query_result(query);
+		}
+
+		void ZCULL_control::discard_host_query(occlusion_query_info* query)
+		{
+			if (!query->orphaned)
+			{
+				m_provider->discard_occlusion_query(query);
+			}
 		}
 
 		ZCULL_control::~ZCULL_control()
@@ -58,14 +125,14 @@ namespace rsx
 				{
 					ensure(unit_enabled && m_current_task == nullptr);
 					allocate_new_query(ptimer);
-					m_provider->begin_occlusion_query(m_current_task);
+					begin_host_query(m_current_task);
 				}
 				else
 				{
 					ensure(m_current_task);
 					if (m_current_task->num_draws)
 					{
-						m_provider->end_occlusion_query(m_current_task);
+						end_host_query(m_current_task);
 						m_current_task->active = false;
 						m_current_task->pending = true;
 						m_current_task->sync_tag = m_timer++;
@@ -77,7 +144,7 @@ namespace rsx
 					}
 					else
 					{
-						m_provider->discard_occlusion_query(m_current_task);
+						discard_host_query(m_current_task);
 						free_query(m_current_task);
 						m_current_task->active = false;
 					}
@@ -146,7 +213,7 @@ namespace rsx
 			if (m_current_task && type == CELL_GCM_ZPASS_PIXEL_CNT)
 			{
 				m_current_task->owned = true;
-				m_provider->end_occlusion_query(m_current_task);
+				end_host_query(m_current_task);
 				m_pending_writes.push_back({});
 
 				m_current_task->active = false;
@@ -156,7 +223,7 @@ namespace rsx
 				m_pending_writes.back().query = m_current_task;
 
 				allocate_new_query(ptimer);
-				m_provider->begin_occlusion_query(m_current_task);
+				begin_host_query(m_current_task);
 			}
 			else
 			{
@@ -230,6 +297,7 @@ namespace rsx
 					m_current_task->result = 0;
 					m_current_task->active = true;
 					m_current_task->owned = false;
+					m_current_task->orphaned = false;
 					m_current_task->sync_tag = 0;
 					m_current_task->timestamp = 0;
 
@@ -277,12 +345,12 @@ namespace rsx
 			// Discard any running queries. The results will never be read anyway.
 			if (m_current_task && m_current_task->active)
 			{
-				m_provider->discard_occlusion_query(m_current_task);
+				discard_host_query(m_current_task);
 				free_query(m_current_task);
 				m_current_task->active = false;
 
 				allocate_new_query(ptimer);
-				m_provider->begin_occlusion_query(m_current_task);
+				begin_host_query(m_current_task);
 			}
 
 			if (!m_pending_writes.empty())
@@ -293,7 +361,7 @@ namespace rsx
 				{
 					if (!It->sink)
 					{
-						m_provider->discard_occlusion_query(It->query);
+						discard_host_query(It->query);
 						free_query(It->query);
 						valid_size--;
 						ptimer->async_tasks_pending--;
@@ -480,13 +548,13 @@ namespace rsx
 
 					if (implemented && !have_result && query->num_draws)
 					{
-						m_provider->get_occlusion_query_result(query);
+						read_host_query(query);
 						counter.result += query->result;
 					}
 					else
 					{
 						// Already have a hit, no need to retest
-						m_provider->discard_occlusion_query(query);
+						discard_host_query(query);
 					}
 
 					free_query(query);
@@ -620,11 +688,11 @@ namespace rsx
 
 					if (!implemented || !query->num_draws || have_result)
 					{
-						m_provider->discard_occlusion_query(query);
+						discard_host_query(query);
 					}
-					else if (force_read || m_provider->check_occlusion_query_status(query))
+					else if (force_read || check_host_query(query))
 					{
-						m_provider->get_occlusion_query_result(query);
+						read_host_query(query);
 						counter.result += query->result;
 					}
 					else
