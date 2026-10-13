@@ -33,6 +33,7 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "wiimote_settings_dialog.h"
 #include "ps_move_tracker_dialog.h"
 #include "ipc_settings_dialog.h"
 #include "sky_ipc_settings_dialog.h"
@@ -349,12 +350,6 @@ QString main_window::GetCurrentTitle()
 	return QString::fromStdString(title);
 }
 
-// returns appIcon
-QIcon main_window::GetAppIcon() const
-{
-	return m_app_icon;
-}
-
 void main_window::OnMissingFw()
 {
 	const QString title = tr("Missing Firmware Detected!");
@@ -503,8 +498,6 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	Emu.DeactivateBigPictureMode();
 
 	Emu.GracefulShutdown(false);
-
-	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
 	std::optional<std::string> db_config = std::nullopt;
 
@@ -3133,6 +3126,12 @@ void main_window::CreateConnects()
 	{
 		camera_settings_dialog* dlg = new camera_settings_dialog(this);
 		dlg->open();
+	});
+
+	connect(ui->confWiimoteAct, &QAction::triggered, this, [this]()
+	{
+		wiimote_settings_dialog* dlg = new wiimote_settings_dialog(this);
+		dlg->show();
 	});
 
 	const auto open_rpcn_settings = [this]

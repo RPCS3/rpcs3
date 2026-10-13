@@ -7544,7 +7544,7 @@ public:
 					{ 0x1011121314151617, 0x000102031c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 1 },
 					{ 0x1011121314151617, 0x18191a1b00010203, &cpu_translator::get_type<u32[4]>, 3, 0 },
 					{ 0x0001020304050607, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u64[2]>, 1, 1 },
-					{ 0x1011121303151617, 0x0001020304050607, &cpu_translator::get_type<u64[2]>, 1, 0 },
+					{ 0x1011121314151617, 0x0001020304050607, &cpu_translator::get_type<u64[2]>, 1, 0 },
 				};
 
 				// Check important constants from CWD-like constant generation instructions

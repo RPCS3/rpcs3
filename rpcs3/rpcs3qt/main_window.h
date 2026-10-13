@@ -49,7 +49,6 @@ class main_window : public QMainWindow
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
 
-	QIcon m_app_icon;
 	QIcon m_icon_play;
 	QIcon m_icon_pause;
 	QIcon m_icon_restart;
@@ -72,7 +71,6 @@ public:
 	~main_window();
 	void show();
 	void Init();
-	QIcon GetAppIcon() const;
 	void OnMissingFw();
 	static bool InstallPackages(main_window* mw, QStringList file_paths = {}, bool from_boot = false, bool from_optical_drive = false);
 	static void InstallPup(main_window* mw, QString file_path = "");
