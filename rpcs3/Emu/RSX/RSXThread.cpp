@@ -810,8 +810,20 @@ namespace rsx
 		m_core.clear(arg);
 	}
 
+	u64 thread::get_cycles()
+	{
+		if (thread_base* host_thread = m_host_thread.load())
+		{
+			return host_thread->get_cycles();
+		}
+
+		return 0;
+	}
+
 	void thread::cpu_task()
 	{
+		m_host_thread = thread_ctrl::get_current();
+
 		while (Emu.IsReady())
 		{
 			Emu.WaitReady();
@@ -2148,7 +2160,7 @@ namespace rsx
 		{
 			if (count % 512 == 0)
 			{
-				result = get_display_refresh_rate();
+				result = m_display_out.refresh_rate();
 				m_cached_display_rate.store(result);
 				m_display_rate_fetch_count += uses_per_query; // Notify users of the new value
 				break;

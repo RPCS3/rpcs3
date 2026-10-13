@@ -100,7 +100,6 @@ namespace rsx
 		atomic_t<u64> m_display_rate_fetch_count = 0;
 		atomic_t<f64> m_cached_display_rate = 60.;
 		f64 get_cached_display_refresh_rate();
-		virtual f64 get_display_refresh_rate() const = 0;
 
 		// Invalidated memory range
 		address_range32 m_invalidated_memory_range;
@@ -117,6 +116,9 @@ namespace rsx
 
 		// Host renderer bridge
 		render_backend* m_renderer = nullptr;
+
+		// Host thread running cpu_task, recorded when it starts
+		atomic_t<thread_base*> m_host_thread = nullptr;
 
 		// Host window
 		display_output m_display_out;
@@ -253,7 +255,7 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
-		virtual u64 get_cycles() = 0;
+		u64 get_cycles();
 		virtual ~thread();
 
 		static constexpr auto thread_name = "rsx::thread"sv;
@@ -288,7 +290,7 @@ namespace rsx
 
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		void flip(const display_flip_info_t& info);
-		virtual u64 timestamp();
+		u64 timestamp();
 
 		// control
 		void renderctl(u32 request_code, void* args);
