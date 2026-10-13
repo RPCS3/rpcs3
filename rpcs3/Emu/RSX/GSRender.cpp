@@ -45,7 +45,3 @@ bool GSRender::present_frame(const rsx::display_flip_info_t&)
 	return false;
 }
 
-f64 GSRender::get_display_refresh_rate() const
-{
-	return m_display_out.refresh_rate();
-}
