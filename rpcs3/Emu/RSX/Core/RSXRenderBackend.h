@@ -98,6 +98,9 @@ namespace rsx
 		// Backend-specific control requests. Returns false if the request code is not handled.
 		virtual bool on_renderctl(u32 /*request_code*/, void* /*args*/) { return false; }
 
+		// ZCULL. Host occlusion queries; nullptr reports everything as visible.
+		virtual reports::occlusion_query_provider* occlusion_queries() { return nullptr; }
+
 		// GRAPH. Patch transform constants. Units are in 32x4 units
 		virtual void patch_transform_constants(context* /*ctx*/, u32 /*index*/, u32 /*count*/) {}
 

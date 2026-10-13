@@ -911,6 +911,8 @@ namespace rsx
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
 
+		zcull_ctrl->set_provider(m_renderer->occlusion_queries());
+
 		check_zcull_status(false);
 		nv4097::set_render_mode(m_ctx, 0, REGS(m_ctx)->registers[NV4097_SET_RENDER_ENABLE]);
 
