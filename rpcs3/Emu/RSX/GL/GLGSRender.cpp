@@ -68,9 +68,6 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 GLGSRender::~GLGSRender()
 {
-	// Force-release ZCULL-ctrl since it is a pointer to self.
-	zcull_ctrl.release();
-
 	if (m_frame)
 	{
 		m_frame->reset();
@@ -151,7 +148,6 @@ void GLGSRender::on_init_thread()
 	m_frame->set_current(m_context);
 	gl::set_primary_context_thread();
 
-	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 	m_occlusion_type = g_cfg.video.precise_zpass_count ? GL_SAMPLES_PASSED : GL_ANY_SAMPLES_PASSED;
 
 	gl::init();
@@ -419,17 +415,7 @@ void GLGSRender::on_init_thread()
 	}
 
 	//Occlusion query
-	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
-	{
-		GLuint handle = 0;
-		auto &query = m_occlusion_query_data[i];
-		glGenQueries(1, &handle);
-
-		query.driver_handle = handle;
-		query.pending = false;
-		query.active = false;
-		query.result = 0;
-	}
+	glGenQueries(::size32(m_occlusion_query_handles), m_occlusion_query_handles.data());
 
 	m_ui_renderer.create();
 	m_video_output_pass.create();
@@ -611,18 +597,8 @@ void GLGSRender::on_exit()
 
 	m_shader_interpreter.destroy();
 
-	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
-	{
-		auto &query = m_occlusion_query_data[i];
-		query.active = false;
-		query.pending = false;
-
-		GLuint handle = query.driver_handle;
-		glDeleteQueries(1, &handle);
-		query.driver_handle = 0;
-	}
-
-	zcull_ctrl.release();
+	glDeleteQueries(::size32(m_occlusion_query_handles), m_occlusion_query_handles.data());
+	m_occlusion_query_handles.fill(0);
 
 	gl::set_primary_context_thread(false);
 }
@@ -1387,7 +1363,7 @@ void GLGSRender::write_barrier(u32 address, u32 range)
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
-	glBeginQuery(m_occlusion_type, query->driver_handle);
+	glBeginQuery(m_occlusion_type, m_occlusion_query_handles[query->slot_index]);
 }
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
@@ -1402,7 +1378,7 @@ bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return true;
 
 	GLint status = GL_TRUE;
-	glGetQueryObjectiv(query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
+	glGetQueryObjectiv(m_occlusion_query_handles[query->slot_index], GL_QUERY_RESULT_AVAILABLE, &status);
 
 	return status != GL_FALSE;
 }
@@ -1412,7 +1388,7 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 	if (query->num_draws)
 	{
 		GLint result = 0;
-		glGetQueryObjectiv(query->driver_handle, GL_QUERY_RESULT, &result);
+		glGetQueryObjectiv(m_occlusion_query_handles[query->slot_index], GL_QUERY_RESULT, &result);
 
 		query->result += result;
 	}

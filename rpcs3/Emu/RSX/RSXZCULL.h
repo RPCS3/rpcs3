@@ -31,7 +31,7 @@ namespace rsx
 	{
 		struct occlusion_query_info
 		{
-			u32 driver_handle;
+			u32 slot_index;                      // Position in the unit's query pool. Providers key their host query objects by it.
 			u32 result;
 			u32 num_draws;
 			u32 data_type;
@@ -131,7 +131,7 @@ namespace rsx
 			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
 			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
-			std::array<occlusion_query_info, 2048> m_occlusion_query_data = {};
+			std::array<occlusion_query_info, occlusion_query_count> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
 
 			occlusion_query_info* m_current_task = nullptr;
@@ -170,7 +170,7 @@ namespace rsx
 		public:
 
 			ZCULL_control();
-			virtual ~ZCULL_control();
+			~ZCULL_control();
 
 			ZCULL_control(const ZCULL_control&) = delete;
 			ZCULL_control& operator=(const ZCULL_control&) = delete;
