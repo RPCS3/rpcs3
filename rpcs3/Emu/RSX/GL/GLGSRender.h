@@ -232,8 +232,8 @@ protected:
 	bool on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
 	bool is_framebuffer_bound() const override;
 
-	void on_init_thread() override;
-	void on_exit() override;
+	void on_init() override;
+	void on_shutdown() override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 
