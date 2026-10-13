@@ -189,6 +189,9 @@ namespace rsx
 		render_backend* renderer() const { return m_renderer; }
 		core_renderer& core() { return m_core; }
 
+		// Callable from any thread. Asks the RSX thread to run the backend's part of the local task (render_backend::on_local_task) soon.
+		inline void raise_backend_interrupt() { m_ctx->eng_interrupt_mask |= rsx::backend_interrupt; }
+
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;
 

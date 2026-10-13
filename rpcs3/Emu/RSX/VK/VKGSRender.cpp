@@ -943,7 +943,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
-			m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
+			RSX(m_ctx)->raise_backend_interrupt();
 
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
@@ -966,7 +966,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			std::lock_guard lock(m_flush_queue_mutex);
 
 			m_flush_requests.post(false);
-			m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
+			RSX(m_ctx)->raise_backend_interrupt();
 			has_queue_ref = true;
 		}
 		else
@@ -2390,12 +2390,12 @@ bool VKGSRender::is_framebuffer_bound() const
 	return !!m_draw_fbo;
 }
 
-void VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
+bool VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 {
 	if (m_draw_fbo && layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
-		return;
+		return true;
 	}
 
 	m_rtts.prepare_render_target(*m_current_command_buffer,
@@ -2599,6 +2599,7 @@ void VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 	m_draw_fbo->add_ref();
 
 	set_viewport();
+	return true;
 }
 
 bool VKGSRender::on_renderctl(u32 request_code, void* args)
