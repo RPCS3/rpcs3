@@ -1509,6 +1509,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vblank->setValue(vblank_def);
 	});
 
+	EnhanceSlider(emu_settings_type::PPUEventWakeUpDelay, ui->ppuEventWakeupDelay, ui->ppuEventWakeupText, tr(reinterpret_cast<const char*>(u8"%0 µs"), "PPU event wake up delay"));
+	const int ppu_event_wakeup_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::PPUEventWakeUpDelay));
+	connect(ui->ppuEventWakeupReset, &QAbstractButton::clicked, [ppu_event_wakeup_def, this]()
+	{
+		ui->ppuEventWakeupDelay->setValue(ppu_event_wakeup_def);
+	});
+
 	EnhanceSlider(emu_settings_type::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %", "Clocks scale"));
 	SnapSlider(ui->clockScale, 10);
 	ui->clockScale->setPageStep(50);
@@ -1540,6 +1547,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_vblank->setDisabled(true);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.disabled_from_global);
+		ui->gb_ppuEventWakeupDelay->setDisabled(true);
+		SubscribeTooltip(ui->gb_ppuEventWakeupDelay, tooltips.settings.disabled_from_global);
 		ui->gb_clockScale->setDisabled(true);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.disabled_from_global);
 		ui->gb_wakeupDelay->setDisabled(true);
@@ -1548,6 +1557,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	else
 	{
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
+		SubscribeTooltip(ui->gb_ppuEventWakeupDelay, tooltips.settings.ppu_event_wake_up_delay);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
 	}
