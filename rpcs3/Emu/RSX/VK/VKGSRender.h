@@ -35,7 +35,7 @@ namespace vk
 	using host_data_t = rsx::host_gpu_context_t;
 }
 
-class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control, public ::rsx::reports::occlusion_query_provider
+class VKGSRender : public GSRender, public ::rsx::reports::occlusion_query_provider
 {
 private:
 	enum frame_context_state : u32

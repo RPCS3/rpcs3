@@ -13,9 +13,10 @@ namespace rsx
 		ZCULL_control::ZCULL_control()
 			: m_provider(&s_null_provider)
 		{
-			for (auto& query : m_occlusion_query_data)
+			for (u32 i = 0; i < occlusion_query_count; ++i)
 			{
-				m_free_occlusion_pool.push(&query);
+				m_occlusion_query_data[i].slot_index = i;
+				m_free_occlusion_pool.push(&m_occlusion_query_data[i]);
 			}
 
 			for (auto& stat : m_statistics_map)

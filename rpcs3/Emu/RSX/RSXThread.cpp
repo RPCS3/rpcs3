@@ -721,6 +721,9 @@ namespace rsx
 		m_draw_processor.init(m_ctx);
 		m_core.init(m_ctx);
 
+		// The ZCULL unit belongs to the thread. The renderer only provides the host queries.
+		zcull_ctrl = std::make_unique<reports::ZCULL_control>();
+
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
@@ -904,12 +907,6 @@ namespace rsx
 
 		is_initialized = true;
 		is_initialized.notify_all();
-
-		if (!zcull_ctrl)
-		{
-			// Backend did not provide an implementation, provide NULL object
-			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
-		}
 
 		zcull_ctrl->set_provider(m_renderer->occlusion_queries());
 
@@ -1116,10 +1113,9 @@ namespace rsx
 
 	void thread::on_exit()
 	{
-		if (zcull_ctrl)
-		{
-			zcull_ctrl->sync(this);
-		}
+		// Retire the queued reports, then stop calling into the renderer's host queries
+		zcull_ctrl->sync(this);
+		zcull_ctrl->set_provider(nullptr);
 
 		// Deregister violation handler
 		g_access_violation_handler = nullptr;
