@@ -33,11 +33,6 @@ namespace
 	}
 }
 
-u64 GLGSRender::get_cycles()
-{
-	return thread_ctrl::get_cycles(static_cast<named_thread<GLGSRender>&>(*this));
-}
-
 GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
 	m_rtts.set_context(m_ctx);
