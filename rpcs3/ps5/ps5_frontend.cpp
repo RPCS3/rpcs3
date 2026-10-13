@@ -107,7 +107,8 @@ u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
 extern atomic_t<u32> g_ps5_rsx_cpus[16]; // RSXThread.cpp: the CPUs the RSX thread ended its frames on
 extern atomic_t<u64> g_ps5_vk_memory[9]; // VKPresent.cpp: what the renderer's caches hold
 std::array<s64, 5> ps5_vk_driver_bytes(); // vkutils/instance.cpp: the Vulkan driver's own memory, by scope
-std::string ps5_alloc_report(u32 top, s64* total); // ps5_alloc_track.cpp: C++ memory by the thread that allocated it
+std::string ps5_alloc_report(u32 top, s64* total); // ps5_alloc_track.cpp: C++ memory, sampled, by the thread that allocated it
+void ps5_alloc_track_start(); // ps5_alloc_track.cpp: sampling starts
 const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them,
@@ -1562,7 +1563,7 @@ int run(const char* boot_path)
 					{
 						s64 cpp_total = 0;
 						const std::string owners = ps5_alloc_report(8, &cpp_total);
-						trace_logged("memory by thread: C++ %d MiB in all: %s", static_cast<s32>(cpp_total >> 20), owners);
+						trace_logged("memory by thread (sampled, one block in 256): C++ about %d MiB in all: %s", static_cast<s32>(cpp_total >> 20), owners);
 					}
 					s_last_flips = flips;
 					s_last_flips_us = flips_us;
@@ -1685,6 +1686,8 @@ int run(const char* boot_path)
 					trace("frontend: stopped, booting again (a reboot the game asked for, or back to Big Picture Mode)");
 				}
 			};
+			// The title is up: C++ allocations are sampled from now (ps5_alloc_track.cpp)
+			ps5_alloc_track_start();
 			g_main.run();
 		}
 	}

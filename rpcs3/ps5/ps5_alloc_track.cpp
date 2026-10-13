@@ -1,4 +1,4 @@
-// PS5: the title's C++ allocations, counted by the thread that made them.
+// PS5: the title's C++ allocations, sampled by the thread that made them.
 //
 // GTA V ran the title out of memory in 20 minutes (build 138): the heap grew
 // about 7 MiB a second while the game streamed the city in, and 2.6 GiB of it
@@ -7,13 +7,20 @@
 // the render targets, the shader programs and pipelines (flat once loaded),
 // the SPU code (about 50 functions added) and frame generation (off for the
 // half of the run the heap grew most in). What is left is RPCS3's own C++
-// memory, and this says whose: every operator new carries a 16-byte header
-// with its size and the allocating thread's bucket (its name, numbers made
-// '#', so the SPU kernels or the shader compiler's workers share one), and the
-// buckets' live bytes go to the trace's memory line (ps5_frontend.cpp).
-// libc++abi's operator new and delete are weak; these replace them. C's malloc
-// (the Vulkan driver, NIR, FFmpeg, zstd) is not counted: the heap's total
-// minus these is that.
+// memory, and this says whose.
+//
+// operator new and delete replace libc++abi's weak ones, and hand out exactly
+// what malloc does, as libc++abi's did: build 140 put a 16-byte header before
+// each block and gave out the address past it, and the title no longer
+// started (a black screen, on my console), most likely memory from new
+// reaching free() somewhere, which then freed the middle of a block. Instead,
+// an allocation whose address hashes to one in 256 is recorded in a table
+// beside the heap (its address, size and the allocating thread's bucket), and
+// its delete takes it out; the others cost one hash. Each bucket's sampled
+// bytes times 256 estimate its live bytes. Nothing is sampled until the
+// frontend says the title is up (ps5_alloc_track_start), so no thread-local
+// or thread name is touched while the title starts. C's malloc (the Vulkan
+// driver's C, NIR, FFmpeg, zstd) is not counted.
 
 #include "stdafx.h"
 #include "Utilities/Thread.h"
@@ -26,17 +33,10 @@
 
 namespace
 {
-	constexpr u16 c_magic = 0x5a35;
 	constexpr u32 c_buckets = 64;
-
-	struct alignas(16) block_header
-	{
-		u64 size;
-		u32 offset; // from what malloc returned to the caller's memory
-		u16 bucket;
-		u16 magic;
-	};
-	static_assert(sizeof(block_header) == 16);
+	constexpr u32 c_sample_bits = 8; // one address in 256
+	constexpr u64 c_table_size = u64{1} << 20; // 16 MiB of records
+	constexpr uptr c_tombstone = 1;
 
 	struct alignas(64) bucket
 	{
@@ -45,15 +45,38 @@ namespace
 		char name[48];
 	};
 
-	// [0]: allocations made while a thread looked its name up; the last: the
-	// threads past the others' count
+	struct record
+	{
+		std::atomic<uptr> address;
+		u32 size;
+		u16 bucket;
+		u16 unused;
+	};
+
+	// [0]: the threads looking their name up; the last: the threads past the others' count
 	bucket g_buckets[c_buckets]{};
 	std::atomic<u32> g_bucket_count{1};
 	std::atomic<bool> g_bucket_lock{false};
+	std::atomic<bool> g_started{false};
+	std::atomic<u64> g_table_full{0};
+	record g_table[c_table_size]{};
 
 	thread_local s32 t_bucket = -1;
-	thread_local u32 t_since = 0;
 	thread_local bool t_resolving = false;
+
+	u64 address_hash(uptr address)
+	{
+		u64 x = static_cast<u64>(address) >> 4;
+		x ^= x >> 33;
+		x *= 0xff51afd7ed558ccdull;
+		x ^= x >> 33;
+		return x;
+	}
+
+	bool sampled(u64 hash)
+	{
+		return (hash >> (64 - c_sample_bits)) == 0;
+	}
 
 	// "SPU[0x1000100] Thread (PrimaryCellSpursKernel1)" -> "SPU[#] Thread (PrimaryCellSpursKernel#)"
 	void normalise(const std::string& name, char (&out)[48])
@@ -118,63 +141,101 @@ namespace
 
 	u16 current_bucket()
 	{
-		// Looked up again now and then: a thread can be renamed
+		// Looked up once, at the thread's first sampled block: a thread's
+		// name is set before it runs (named_thread), and a later look could
+		// meet its thread_base already destroyed as the thread ends
+		// (thread_base::finalize leaves g_tls_this_thread set)
 		if (t_resolving)
 		{
 			return 0;
 		}
-		if (t_bucket < 0 || ++t_since >= 4096)
+		if (t_bucket < 0)
 		{
 			t_resolving = true;
 			t_bucket = resolve_bucket();
 			t_resolving = false;
-			t_since = 0;
 		}
 		return static_cast<u16>(t_bucket);
 	}
 
-	void* track(void* base, usz offset, usz size)
+	void note_allocated(void* memory, usz size)
 	{
-		u8* const memory = static_cast<u8*>(base) + offset;
+		if (!memory || !g_started.load(std::memory_order_relaxed))
+		{
+			return;
+		}
+		const u64 hash = address_hash(reinterpret_cast<uptr>(memory));
+		if (!sampled(hash))
+		{
+			return;
+		}
 		const u16 index = current_bucket();
-		reinterpret_cast<block_header*>(memory)[-1] = {size, static_cast<u32>(offset), index, c_magic};
-		g_buckets[index].bytes.fetch_add(static_cast<s64>(size), std::memory_order_relaxed);
-		g_buckets[index].blocks.fetch_add(1, std::memory_order_relaxed);
-		return memory;
+		for (u64 probe = 0; probe < 64; probe++)
+		{
+			record& slot = g_table[(hash + probe) & (c_table_size - 1)];
+			uptr seen = slot.address.load(std::memory_order_relaxed);
+			if ((seen == 0 || seen == c_tombstone) && slot.address.compare_exchange_strong(seen, reinterpret_cast<uptr>(memory), std::memory_order_acquire))
+			{
+				slot.size = static_cast<u32>(std::min<usz>(size, u32{umax}));
+				slot.bucket = index;
+				g_buckets[index].bytes.fetch_add(static_cast<s64>(slot.size), std::memory_order_relaxed);
+				g_buckets[index].blocks.fetch_add(1, std::memory_order_relaxed);
+				return;
+			}
+		}
+		g_table_full.fetch_add(1, std::memory_order_relaxed);
 	}
 
-	void* allocate(usz size, usz align) noexcept
-	{
-		if (align <= alignof(block_header))
-		{
-			void* const base = std::malloc(size + sizeof(block_header));
-			return base ? track(base, sizeof(block_header), size) : nullptr;
-		}
-		void* base = nullptr;
-		if (posix_memalign(&base, align, align + size) != 0)
-		{
-			return nullptr;
-		}
-		return track(base, align, size);
-	}
-
-	void release(void* memory) noexcept
+	void note_freed(void* memory)
 	{
 		if (!memory)
 		{
 			return;
 		}
-		const block_header header = reinterpret_cast<block_header*>(memory)[-1];
-		if (header.magic != c_magic || header.bucket >= c_buckets)
+		const u64 hash = address_hash(reinterpret_cast<uptr>(memory));
+		if (!sampled(hash))
 		{
-			// Not one of ours (malloc's, handed to delete): as libc++abi would
-			std::free(memory);
 			return;
 		}
-		reinterpret_cast<block_header*>(memory)[-1].magic = 0;
-		g_buckets[header.bucket].bytes.fetch_sub(static_cast<s64>(header.size), std::memory_order_relaxed);
-		g_buckets[header.bucket].blocks.fetch_sub(1, std::memory_order_relaxed);
-		std::free(static_cast<u8*>(memory) - header.offset);
+		for (u64 probe = 0; probe < 64; probe++)
+		{
+			record& slot = g_table[(hash + probe) & (c_table_size - 1)];
+			const uptr seen = slot.address.load(std::memory_order_acquire);
+			if (seen == 0)
+			{
+				return; // never recorded: allocated before sampling started
+			}
+			if (seen == reinterpret_cast<uptr>(memory))
+			{
+				const u32 size = slot.size;
+				const u16 index = slot.bucket;
+				slot.address.store(c_tombstone, std::memory_order_release);
+				g_buckets[index].bytes.fetch_sub(static_cast<s64>(size), std::memory_order_relaxed);
+				g_buckets[index].blocks.fetch_sub(1, std::memory_order_relaxed);
+				return;
+			}
+		}
+	}
+
+	void* allocate(usz size, usz align) noexcept
+	{
+		void* memory = nullptr;
+		if (align <= __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+		{
+			memory = std::malloc(size);
+		}
+		else if (posix_memalign(&memory, align, size) != 0)
+		{
+			memory = nullptr;
+		}
+		note_allocated(memory, size);
+		return memory;
+	}
+
+	void release(void* memory) noexcept
+	{
+		note_freed(memory);
+		std::free(memory);
 	}
 
 	void* allocate_or_throw(usz size, usz align)
@@ -196,13 +257,18 @@ namespace
 	}
 }
 
-// The buckets' live bytes, the most first: "rsx::thread 2104 MiB (812k blocks), ..."
+// Sampling starts: the title is up, its threads named (ps5_frontend.cpp)
+void ps5_alloc_track_start()
+{
+	g_started.store(true, std::memory_order_release);
+}
+
+// The buckets' estimated live bytes, the most first: "rsx::thread 2104 MiB, ..."
 std::string ps5_alloc_report(u32 top, s64* total)
 {
 	struct entry
 	{
 		s64 bytes;
-		s64 blocks;
 		u32 index;
 	};
 	std::vector<entry> entries;
@@ -214,11 +280,11 @@ std::string ps5_alloc_report(u32 top, s64* total)
 		{
 			continue;
 		}
-		const s64 bytes = g_buckets[i].bytes.load(std::memory_order_relaxed);
+		const s64 bytes = g_buckets[i].bytes.load(std::memory_order_relaxed) << c_sample_bits;
 		sum += bytes;
 		if (bytes > 0)
 		{
-			entries.push_back({bytes, g_buckets[i].blocks.load(std::memory_order_relaxed), i});
+			entries.push_back({bytes, i});
 		}
 	}
 	std::sort(entries.begin(), entries.end(), [](const entry& a, const entry& b) { return a.bytes > b.bytes; });
@@ -227,7 +293,11 @@ std::string ps5_alloc_report(u32 top, s64* total)
 	for (usz i = 0; i < entries.size() && i < top; i++)
 	{
 		const char* const name = entries[i].index == 0 ? "a thread naming itself" : g_buckets[entries[i].index].name;
-		fmt::append(result, "%s%s %d MiB (%dk blocks)", result.empty() ? "" : ", ", name, static_cast<s32>(entries[i].bytes >> 20), static_cast<s32>(entries[i].blocks / 1000));
+		fmt::append(result, "%s%s %d MiB", result.empty() ? "" : ", ", name, static_cast<s32>(entries[i].bytes >> 20));
+	}
+	if (const u64 full = g_table_full.load(std::memory_order_relaxed))
+	{
+		fmt::append(result, " (%u samples not kept: the table was full)", full);
 	}
 	if (total)
 	{
