@@ -1,20 +1,11 @@
 #include "stdafx.h"
 
-#include "Emu/emu_callbacks.h"
 #include "Emu/system_config.h"
 #include "GSRender.h"
 
 GSRender::GSRender(utils::serial* ar) noexcept : rsx::thread(ar)
 {
-	if (auto gs_frame = g_emu_callbacks.get_gs_frame())
-	{
-		m_frame = gs_frame.release();
-	}
-	else
-	{
-		m_frame = nullptr;
-	}
-
+	m_frame = m_display_out.frame();
 	m_vsync_mode = g_cfg.video.vsync;
 
 	// The renderer is its own host backend until the thread/renderer split (spec 03)
@@ -24,11 +15,6 @@ GSRender::GSRender(utils::serial* ar) noexcept : rsx::thread(ar)
 GSRender::~GSRender()
 {
 	m_context = nullptr;
-
-	if (m_frame && !m_continuous_mode)
-	{
-		m_frame->close();
-	}
 }
 
 void GSRender::on_init_thread()
@@ -42,14 +28,11 @@ void GSRender::on_init_thread()
 
 void GSRender::on_exit()
 {
+	// Hides the window unless it is kept open (continuous mode)
 	rsx::thread::on_exit();
 
 	if (m_frame)
 	{
-		if (!m_continuous_mode)
-		{
-			m_frame->hide();
-		}
 		m_frame->delete_context(m_context);
 		m_context = nullptr;
 	}
@@ -67,11 +50,5 @@ bool GSRender::present_frame(const rsx::display_flip_info_t&)
 
 f64 GSRender::get_display_refresh_rate() const
 {
-	if (m_frame)
-	{
-		return m_frame->client_display_rate();
-	}
-
-	// Minimum
-	return 20.;
+	return m_display_out.refresh_rate();
 }

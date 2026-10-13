@@ -1273,6 +1273,9 @@
     <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Core\RSXGraphEngine.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClCompile>
@@ -2642,6 +2645,9 @@
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h">

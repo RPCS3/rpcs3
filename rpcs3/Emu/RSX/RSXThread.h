@@ -19,6 +19,7 @@
 #include "Emu/IdManager.h"
 
 #include "Core/RSXDisplay.h"
+#include "Core/RSXDisplayOutput.h"
 #include "Core/RSXDrawCommands.h"
 #include "Core/RSXDriverState.h"
 #include "Core/RSXFrameBuffer.h"
@@ -117,6 +118,9 @@ namespace rsx
 		// Host renderer bridge
 		render_backend* m_renderer = nullptr;
 
+		// Host window
+		display_output m_display_out;
+
 		// Host DMA
 		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
 
@@ -188,6 +192,7 @@ namespace rsx
 
 		render_backend* renderer() const { return m_renderer; }
 		core_renderer& core() { return m_core; }
+		display_output& display() { return m_display_out; }
 
 		// Callable from any thread. Asks the RSX thread to run the backend's part of the local task (render_backend::on_local_task) soon.
 		inline void raise_backend_interrupt() { m_ctx->eng_interrupt_mask |= rsx::backend_interrupt; }
