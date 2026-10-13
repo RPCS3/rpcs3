@@ -433,8 +433,9 @@ namespace rsx
 		m_ctx->stats.setup_time += profiler.duration();
 
 		// Active texture environment is used to decode shaders
+		const auto renderer = RSX(m_ctx)->renderer();
 		rsx::flags32_t invalidated_programs = 0;
-		const bool has_sampler_state = RSX(m_ctx)->renderer()->resolve_sampler_state(invalidated_programs);
+		const bool has_sampler_state = renderer->resolve_sampler_state(invalidated_programs);
 		m_ctx->stats.textures_upload_time += profiler.duration();
 
 		if (has_sampler_state)
@@ -443,6 +444,7 @@ namespace rsx
 			m_ctx->textures.fragment_textures_dirty &= ~m_ctx->program.fp_metadata.referenced_textures_mask;
 			m_ctx->textures.vertex_textures_dirty &= ~m_ctx->program.vp_metadata.referenced_textures_mask;
 			m_ctx->graphics_state |= invalidated_programs;
+			update_volatile_texture_units();
 		}
 
 		// Recheck the bits after the texture environment is loaded, since that can invalidate the programs as well
@@ -452,10 +454,10 @@ namespace rsx
 			return;
 		}
 
-		m_graph.get_current_fragment_program(m_ctx->textures.fs_sampler_state);
+		m_graph.get_current_fragment_program(renderer->fragment_sampler_descriptors());
 		ensure(m_ctx->program.fragment_program.valid);
 
-		m_graph.get_current_vertex_program(m_ctx->textures.vs_sampler_state);
+		m_graph.get_current_vertex_program(renderer->vertex_sampler_descriptors());
 
 		// The bits are consumed here. The backend looks up its pipeline from the draw state groups instead.
 		update_program_state(program_bits);
@@ -464,11 +466,34 @@ namespace rsx
 
 	void core_renderer::refresh_program_state()
 	{
+		const auto renderer = RSX(m_ctx)->renderer();
+		update_volatile_texture_units();
+
 		// Do not trust fragment/vertex texture state after a texture state reset
 		m_ctx->graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
-		m_graph.get_current_fragment_program(m_ctx->textures.fs_sampler_state);
-		m_graph.get_current_vertex_program(m_ctx->textures.vs_sampler_state);
+		m_graph.get_current_fragment_program(renderer->fragment_sampler_descriptors());
+		m_graph.get_current_vertex_program(renderer->vertex_sampler_descriptors());
 		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
+	}
+
+	void core_renderer::update_volatile_texture_units()
+	{
+		// The backend only reloads the units the fragment program references. The other units keep their bits.
+		const auto& descriptors = RSX(m_ctx)->renderer()->fragment_sampler_descriptors();
+		const rsx::flags32_t referenced = m_ctx->program.fp_metadata.referenced_textures_mask;
+		rsx::flags32_t volatile_units = m_ctx->textures.fragment_textures_volatile & ~referenced;
+
+		for (u32 textures_ref = referenced, i = 0; textures_ref; textures_ref >>= 1, ++i)
+		{
+			if ((textures_ref & 1) &&
+				descriptors[i] &&
+				descriptors[i]->upload_context != rsx::texture_upload_context::shader_read)
+			{
+				volatile_units |= (1u << i);
+			}
+		}
+
+		m_ctx->textures.fragment_textures_volatile = volatile_units;
 	}
 
 	void core_renderer::update_program_state(rsx::flags32_t program_bits)

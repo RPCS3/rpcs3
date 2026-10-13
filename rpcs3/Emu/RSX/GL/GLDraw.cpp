@@ -323,12 +323,12 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			continue;
 		}
 
-		if (!m_ctx->textures.fs_sampler_state[i])
+		if (!m_fs_sampler_descriptors[i])
 		{
-			m_ctx->textures.fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
+			m_fs_sampler_descriptors[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 		}
 
-		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_fs_sampler_descriptors[i].get());
 		const auto& tex = REGS(m_ctx)->fragment_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
@@ -413,7 +413,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			actual_mipcount = sampler_state->external_subresource_desc.exact_mip_count();
 		}
 
-		m_fs_sampler_states[i].apply(tex, m_ctx->textures.fs_sampler_state[i].get(), actual_mipcount > 1);
+		m_fs_sampler_states[i].apply(tex, m_fs_sampler_descriptors[i].get(), actual_mipcount > 1);
 
 		const auto texture_format = sampler_state->format_ex.format();
 		// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
@@ -456,12 +456,12 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			continue;
 		}
 
-		if (!m_ctx->textures.vs_sampler_state[i])
+		if (!m_vs_sampler_descriptors[i])
 		{
-			m_ctx->textures.vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
+			m_vs_sampler_descriptors[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 		}
 
-		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_ctx->textures.vs_sampler_state[i].get());
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_vs_sampler_descriptors[i].get());
 		const auto& tex = REGS(m_ctx)->vertex_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
@@ -489,7 +489,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 
 		if (is_sampler_dirty)
 		{
-			m_vs_sampler_states[i].apply(tex, m_ctx->textures.vs_sampler_state[i].get());
+			m_vs_sampler_states[i].apply(tex, m_vs_sampler_descriptors[i].get());
 		}
 		else if (sampler_state->format_class != previous_format_class)
 		{
@@ -573,7 +573,7 @@ void GLGSRender::bind_texture_env()
 
 		gl::texture_view* primary_view = nullptr;
 		gl::texture_view* stencil_mirror = nullptr;
-		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_fs_sampler_descriptors[i].get());
 
 		auto& tex = REGS(m_ctx)->fragment_textures[i];
 		if (tex.enabled() && sampler_state->validate())
@@ -641,7 +641,7 @@ void GLGSRender::bind_texture_env()
 			continue;
 		}
 
-		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_ctx->textures.vs_sampler_state[i].get());
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(m_vs_sampler_descriptors[i].get());
 		gl::texture_view* view = nullptr;
 
 		if (REGS(m_ctx)->vertex_textures[i].enabled() &&

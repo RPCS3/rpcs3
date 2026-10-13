@@ -1128,8 +1128,8 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 			}
 		};
 
-		scan_array(REGS(m_ctx)->fragment_textures, m_ctx->textures.fs_sampler_state);
-		scan_array(REGS(m_ctx)->vertex_textures, m_ctx->textures.vs_sampler_state);
+		scan_array(REGS(m_ctx)->fragment_textures, m_fs_sampler_descriptors);
+		scan_array(REGS(m_ctx)->vertex_textures, m_vs_sampler_descriptors);
 
 		if (invalidate_samplers)
 		{
