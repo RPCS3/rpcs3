@@ -12,12 +12,7 @@ namespace rsx
 	{
 		bool is_volatile_TIU(rsx::context* ctx, u32 index)
 		{
-			if (!ctx->textures.fs_sampler_state[index])
-			{
-				return false;
-			}
-
-			return ctx->textures.fs_sampler_state[index]->upload_context != rsx::texture_upload_context::shader_read;
+			return !!(ctx->textures.fragment_textures_volatile & (1u << index));
 		}
 
 		void push_vertex_data(rsx::context* ctx, u32 attrib_index, u32 channel_select, int count, rsx::vertex_base_type vtype, u32 value)

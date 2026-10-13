@@ -310,14 +310,14 @@ rsx::flags32_t VKGSRender::load_texture_env()
 			continue;
 		}
 
-		if (!m_ctx->textures.fs_sampler_state[i])
+		if (!m_fs_sampler_descriptors[i])
 		{
-			m_ctx->textures.fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+			m_fs_sampler_descriptors[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 		}
 
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_fs_sampler_descriptors[i].get());
 		const auto& tex = REGS(m_ctx)->fragment_textures[i];
-		const auto previous_format_class = m_ctx->textures.fs_sampler_state[i]->format_class;
+		const auto previous_format_class = m_fs_sampler_descriptors[i]->format_class;
 
 		if (!m_samplers_dirty &&
 			!(m_ctx->textures.fragment_textures_dirty & (1u << i)) &&
@@ -542,12 +542,12 @@ rsx::flags32_t VKGSRender::load_texture_env()
 			continue;
 		}
 
-		if (!m_ctx->textures.vs_sampler_state[i])
+		if (!m_vs_sampler_descriptors[i])
 		{
-			m_ctx->textures.vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+			m_vs_sampler_descriptors[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 		}
 
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.vs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_vs_sampler_descriptors[i].get());
 		const auto& tex = REGS(m_ctx)->vertex_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
@@ -676,7 +676,7 @@ bool VKGSRender::bind_texture_env()
 		}
 
 		vk::image_view* view = nullptr;
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_fs_sampler_descriptors[i].get());
 
 		if (REGS(m_ctx)->fragment_textures[i].enabled() &&
 			sampler_state->validate())
@@ -764,7 +764,7 @@ bool VKGSRender::bind_texture_env()
 			continue;
 		}
 
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.vs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_vs_sampler_descriptors[i].get());
 		auto image_ptr = sampler_state->image_handle;
 
 		if (!image_ptr && sampler_state->validate())
@@ -929,7 +929,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 			continue;
 
 		vk::image_view* view = nullptr;
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_fs_sampler_descriptors[i].get());
 
 		auto& tex = REGS(m_ctx)->fragment_textures[i];
 		if (tex.enabled() && sampler_state->validate())
