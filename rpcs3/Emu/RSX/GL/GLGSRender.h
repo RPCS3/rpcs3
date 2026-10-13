@@ -72,7 +72,7 @@ namespace gl
 	};
 }
 
-class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
+class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control, public ::rsx::reports::occlusion_query_provider
 {
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
@@ -208,6 +208,7 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	rsx::reports::occlusion_query_provider* occlusion_queries() override { return this; }
 
 	// DMA
 	bool release_GCM_label(u32 type, u32 address, u32 data) override;

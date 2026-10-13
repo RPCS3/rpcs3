@@ -95,9 +95,25 @@ namespace rsx
 			max_stat_registers    = 8192   // Size of the statistics cache
 		};
 
+		// Host occlusion query provider. Implemented by the renderer.
+		// The defaults report everything as visible.
+		class occlusion_query_provider
+		{
+		public:
+			virtual ~occlusion_query_provider() = default;
+
+			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
+			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
+			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
+			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
+			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
+		};
+
 		class ZCULL_control
 		{
 		private:
+			occlusion_query_provider* m_provider;
+
 			std::unordered_map<u32, MMIO_page_data_t> m_locked_pages[2];
 			atomic_t<bool> m_pages_accessed[2] = { false, false };
 			atomic_t<s32> m_critical_reports_in_flight = { 0 };
@@ -159,6 +175,9 @@ namespace rsx
 			ZCULL_control(const ZCULL_control&) = delete;
 			ZCULL_control& operator=(const ZCULL_control&) = delete;
 
+			// Attach the host query provider. nullptr attaches the null provider.
+			void set_provider(occlusion_query_provider* provider);
+
 			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
 			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
 
@@ -207,13 +226,6 @@ namespace rsx
 
 			// Optimization check
 			bool is_query_result_urgent(u32 address) const { return m_pages_accessed[rsx::classify_location(address)]; }
-
-			// Backend methods (optional, will return everything as always visible by default)
-			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
-			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
-			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
 		};
 
 		// Helper class for conditional rendering

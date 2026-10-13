@@ -35,7 +35,7 @@ namespace vk
 	using host_data_t = rsx::host_gpu_context_t;
 }
 
-class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
+class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control, public ::rsx::reports::occlusion_query_provider
 {
 private:
 	enum frame_context_state : u32
@@ -267,6 +267,7 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	rsx::reports::occlusion_query_provider* occlusion_queries() override { return this; }
 
 	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
 	void emergency_query_cleanup(vk::command_buffer* commands);
