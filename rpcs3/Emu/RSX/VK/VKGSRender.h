@@ -210,7 +210,6 @@ private:
 #endif
 
 public:
-	u64 get_cycles() final;
 	~VKGSRender() override;
 
 	VKGSRender(utils::serial* ar) noexcept;

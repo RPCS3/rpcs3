@@ -34,5 +34,4 @@ public:
 	void on_shutdown() override;
 
 	bool present_frame(const rsx::display_flip_info_t& info) override;
-	f64 get_display_refresh_rate() const override;
 };

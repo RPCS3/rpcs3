@@ -391,11 +391,6 @@ namespace vk
 	}
 }
 
-u64 VKGSRender::get_cycles()
-{
-	return thread_ctrl::get_cycles(static_cast<named_thread<VKGSRender>&>(*this));
-}
-
 VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
 	m_rtts.set_context(m_ctx);

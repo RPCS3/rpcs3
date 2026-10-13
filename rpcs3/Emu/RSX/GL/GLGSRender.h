@@ -163,7 +163,6 @@ class GLGSRender : public GSRender, public ::rsx::reports::occlusion_query_provi
 	std::unique_ptr<gl::scratch_ring_buffer> m_enqueued_host_write_buffer;
 
 public:
-	u64 get_cycles() final;
 
 	GLGSRender(utils::serial* ar) noexcept;
 	GLGSRender() noexcept : GLGSRender(nullptr) {}

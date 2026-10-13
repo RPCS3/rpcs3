@@ -4,8 +4,6 @@
 class NullGSRender : public GSRender
 {
 public:
-	u64 get_cycles() final;
-
 	NullGSRender(utils::serial* ar) noexcept;
 	NullGSRender() noexcept : NullGSRender(nullptr) {}
 
