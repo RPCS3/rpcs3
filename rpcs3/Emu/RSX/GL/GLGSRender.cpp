@@ -106,7 +106,7 @@ void GLGSRender::set_scissor(bool force)
 	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
-void GLGSRender::on_init_thread()
+void GLGSRender::on_init()
 {
 	ensure(m_frame);
 
@@ -458,10 +458,9 @@ void GLGSRender::on_init_thread()
 	}
 }
 
-void GLGSRender::on_exit()
+void GLGSRender::on_shutdown()
 {
-	// Destroy internal RSX state, may call upon this->do_local_task
-	GSRender::on_exit();
+	GSRender::on_shutdown();
 
 	// Globals
 	// TODO: Move these

@@ -30,8 +30,8 @@ public:
 
 	GSRender(utils::serial* ar) noexcept;
 
-	void on_init_thread() override;
-	void on_exit() override;
+	void on_init() override;
+	void on_shutdown() override;
 
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	f64 get_display_refresh_rate() const override;
