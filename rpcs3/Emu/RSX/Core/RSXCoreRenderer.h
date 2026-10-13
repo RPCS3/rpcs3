@@ -45,6 +45,7 @@ namespace rsx
 		bool should_skip_draw() const;
 		void decode_draw_state();
 		void update_program_state(rsx::flags32_t program_bits);
+		void update_volatile_texture_units();
 		void resolve_programs();
 		void resolve_pipeline_state();
 		void execute_nop_draw();
