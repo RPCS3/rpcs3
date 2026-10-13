@@ -105,6 +105,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <ps5platform/libc.h>
 
 u64 ps5_cpu_kept_mask(); // rpcs3/ps5/ps5_cpus.cpp: the core kept for one busy SPU
+void ps5_alloc_track_name(const char* name); // rpcs3/ps5/ps5_alloc_track.cpp: the allocations' owner, by thread
 
 // PS5: a thread's end runs its C++ thread_local destructors before libkernel's
 // key destructors, while its thread-local storage (emulated) is whole. Plain
@@ -3091,6 +3092,11 @@ void thread_base::initialize(void (*error_cb)())
 
 void thread_base::set_name(std::string name)
 {
+#ifdef __PROSPERO__
+	// PS5: the thread's allocations are counted under its whole name from now (the trace's memory by thread)
+	ps5_alloc_track_name(name.c_str());
+#endif
+
 #ifdef _WIN32
 	if (SetThreadDescriptionImport)
 	{
@@ -3241,6 +3247,7 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 #else
 #ifdef __PROSPERO__
 	ps5_alt_stack(false);
+	ps5_alloc_track_name(nullptr);
 #endif
 	pthread_exit(nullptr);
 #endif

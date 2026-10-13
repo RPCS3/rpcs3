@@ -55,8 +55,6 @@ target_include_directories(rpcs3_ps5 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(rpcs3_ps5 PUBLIC rpcs3_emu 3rdparty::fusion 3rdparty::zlib 3rdparty::yaml-cpp) # Fusion: the pad thread's motion filter; zlib: the SCE decrypter (firmware); yaml-cpp: the patch engine's header (ps5_patches.h)
 target_compile_options(rpcs3_ps5 PRIVATE "SHELL:-include ${PS5_VOLK_DIR}/volk.h")
-# The units built with exceptions: std::terminate's report rethrows the
-# exception for its message (ps5_terminate.cpp), and operator new throws
-# std::bad_alloc, as libc++abi's did (ps5_alloc_track.cpp)
+# The unit built with exceptions: std::terminate's report rethrows the
+# exception for its message (ps5_terminate.cpp)
 set_source_files_properties(ps5_terminate.cpp PROPERTIES COMPILE_OPTIONS "-fexceptions")
-set_source_files_properties(ps5_alloc_track.cpp PROPERTIES COMPILE_OPTIONS "-fexceptions")
