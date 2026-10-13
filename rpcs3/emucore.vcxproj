@@ -128,6 +128,7 @@
     <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXGraphEngine.cpp" />
@@ -717,6 +718,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h" />
     <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDrawState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXProgramState.h" />

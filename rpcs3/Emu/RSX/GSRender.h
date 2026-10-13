@@ -20,10 +20,9 @@ enum wm_event
 class GSRender : public rsx::thread, public rsx::render_backend
 {
 protected:
-	GSFrameBase* m_frame;
+	// Renderer side of presentation. The window itself is the thread's (rsx::display_output); m_frame does not own it.
+	GSFrameBase* m_frame = nullptr;
 	draw_context_t m_context = nullptr;
-	bool m_continuous_mode = false;
-
 	vsync_mode m_vsync_mode{};
 
 public:
@@ -31,13 +30,9 @@ public:
 
 	GSRender(utils::serial* ar) noexcept;
 
-	void set_continuous_mode(bool continuous_mode) { m_continuous_mode = continuous_mode; }
-
 	void on_init_thread() override;
 	void on_exit() override;
 
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	f64 get_display_refresh_rate() const override;
-
-	GSFrameBase* get_frame() const { return m_frame; }
 };
