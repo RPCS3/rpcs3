@@ -17,7 +17,7 @@ GSRender::~GSRender()
 	m_context = nullptr;
 }
 
-void GSRender::on_init_thread()
+void GSRender::on_init()
 {
 	if (m_frame)
 	{
@@ -26,11 +26,8 @@ void GSRender::on_init_thread()
 	}
 }
 
-void GSRender::on_exit()
+void GSRender::on_shutdown()
 {
-	// Hides the window unless it is kept open (continuous mode)
-	rsx::thread::on_exit();
-
 	if (m_frame)
 	{
 		m_frame->delete_context(m_context);

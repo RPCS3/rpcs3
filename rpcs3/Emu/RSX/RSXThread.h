@@ -264,7 +264,7 @@ namespace rsx
 		thread() : thread(static_cast<utils::serial*>(nullptr)) {}
 
 		virtual void on_task();
-		virtual void on_exit();
+		void on_exit();
 
 		/**
 		 * Execute a backend local task queue
@@ -286,7 +286,6 @@ namespace rsx
 		// NV4097_CLEAR_SURFACE, forwarded to the renderer core
 		void clear_surface(u32 arg);
 
-		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		void flip(const display_flip_info_t& info);
 		virtual u64 timestamp();

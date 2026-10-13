@@ -894,11 +894,11 @@ namespace rsx
 		if (!is_initialized)
 		{
 			g_fxo->get<rsx::dma_manager>().init();
-			on_init_thread();
+			m_renderer->on_init();
 
 			if (m_ctx->in_begin_end)
 			{
-				// on_init_thread should have prepared the backend resources
+				// on_init should have prepared the backend resources
 				// Run draw call warmup again if the savestate happened mid-draw
 				ensure(serialized);
 				begin();
@@ -1128,7 +1128,9 @@ namespace rsx
 		g_fxo->get<vblank_thread>() = thread_state::finished;
 		state += cpu_flag::exit;
 
+		// Firmware first, then the window, then the renderer
 		m_display_out.on_exit();
+		m_renderer->on_shutdown();
 	}
 
 	u64 thread::timestamp()
