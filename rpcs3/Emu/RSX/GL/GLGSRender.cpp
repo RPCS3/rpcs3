@@ -1216,7 +1216,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	{
 		auto &task = post_flush_request(address, result);
 
-		m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
+		RSX(m_ctx)->raise_backend_interrupt();
 		vm::temporary_unlock();
 		task.producer_wait();
 	}

@@ -48,8 +48,8 @@ namespace rsx
 		// Host capabilities. Filled in by the backend during initialization; zero until then.
 		const backend_configuration& config() const { return m_config; }
 
-		// Framebuffer.
-		virtual void on_framebuffer_bound(const framebuffer_layout& /*layout*/) {}
+		// Framebuffer. Returns false if the host could not build the framebuffer; the core then treats the configuration as invalid.
+		virtual bool on_framebuffer_bound(const framebuffer_layout& /*layout*/) { return true; }
 		virtual bool is_framebuffer_bound() const { return false; }
 
 		// Draw

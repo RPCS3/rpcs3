@@ -108,7 +108,7 @@ bool GLGSRender::is_framebuffer_bound() const
 	return !!m_draw_fbo;
 }
 
-void GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
+bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 {
 	if (m_draw_fbo && layout.ignore_change)
 	{
@@ -116,7 +116,7 @@ void GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		// Update flags to match current
 		m_draw_fbo->bind();
 		set_viewport();
-		return;
+		return true;
 	}
 
 	gl::command_context cmd{ gl_state };
@@ -295,8 +295,7 @@ void GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 	if (!m_draw_fbo->check())
 	{
 		// Tell the GRAPH engine the framebuffer cannot be used
-		m_ctx->graphics_state.clear(rsx::rtt_config_valid);
-		return;
+		return false;
 	}
 
 	set_viewport();
@@ -389,6 +388,8 @@ void GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		// Invalidate cached sampler state
 		m_samplers_dirty.store(true);
 	}
+
+	return true;
 }
 
 // Render target helpers

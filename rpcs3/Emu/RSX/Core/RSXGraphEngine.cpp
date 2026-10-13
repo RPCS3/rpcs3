@@ -827,15 +827,19 @@ namespace rsx
 		if (m_ctx->fb.layout.ignore_change && backend->is_framebuffer_bound())
 		{
 			// Nothing has changed, we're still using the same framebuffer
-			backend->on_framebuffer_bound(m_ctx->fb.layout);
+			if (!backend->on_framebuffer_bound(m_ctx->fb.layout))
+			{
+				m_ctx->graphics_state.clear(rsx::rtt_config_valid);
+			}
+
 			resolve_scissor(clipped_scissor);
 			return;
 		}
 
-		backend->on_framebuffer_bound(m_ctx->fb.layout);
-		if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
+		if (!backend->on_framebuffer_bound(m_ctx->fb.layout))
 		{
 			// The host could not build the framebuffer
+			m_ctx->graphics_state.clear(rsx::rtt_config_valid);
 			return;
 		}
 
