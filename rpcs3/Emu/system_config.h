@@ -190,6 +190,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 2> frame_generation_quality{ this, "Frame Generation Quality", 1, true }; // PS5: 0 Fast, 1 Balanced, 2 Quality: the motion search's working size and reach
 		cfg::uint<0, 3> frame_generation_step_aside{ this, "Frame Generation Step Aside", 1, true }; // PS5: 0 never, 1 quick moves (6% of the width a game frame), 3 some moves (4.5%), 2 most moves (3%)
 		cfg::uint<0, 1> frame_generation_method{ this, "Frame Generation Method", 0, true }; // PS5: 0 built-in (VKFrameGen.h), 1 Lossless Scaling with the player's Lossless.dll (VKFrameGenLSFG.h)
+		cfg::uint<25, 100> frame_generation_flow_scale{ this, "Frame Generation Flow Scale", 100, true }; // PS5: Lossless Scaling's optical flow, at this percentage of the frame's size
 		cfg::_bool disable_blit_engine_upscaling{ this, "Disable Blit Engine Upscaling", false, true };
 
 		struct node_vk : cfg::node

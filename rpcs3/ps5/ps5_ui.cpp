@@ -509,6 +509,7 @@ namespace rsx::overlays::ps5ui
 			{"Frame Generation Quality", {"0", "1", "2"}},
 			{"Frame Generation Step Aside", {"0", "1", "3", "2"}},
 			{"Frame Generation Method", {"0", "1"}},
+			{"Frame Generation Flow Scale", {"100", "75", "50"}},
 			{"SPU Collision Accuracy", {"1", "0", "2"}},
 			{"Max LLVM Compile Threads", {"0", "1", "2", "3", "4", "6", "8", "10", "12", "16"}},
 		};
@@ -635,7 +636,7 @@ namespace rsx::overlays::ps5ui
 		if (value == "false") return "Off";
 		if (value == "0" && (key == "Preferred SPU Threads" || key == "Anisotropic Filter Override" || key == "Max LLVM Compile Threads" ||
 			key == "Shader Compiler Threads")) return "Auto";
-		if (key == "Resolution Scale" || key == "Master Volume" || key == "Clocks scale" || key == "Time Stretching Threshold") return value + "%";
+		if (key == "Resolution Scale" || key == "Frame Generation Flow Scale" || key == "Master Volume" || key == "Clocks scale" || key == "Time Stretching Threshold") return value + "%";
 		if (key == "Minimum Scalable Dimension") return value + "x" + value;
 		if (key == "Anisotropic Filter Override") return value + "x";
 		if (key == "Desired Audio Buffer Duration" || key == "Metrics update interval (ms)") return value + " ms";

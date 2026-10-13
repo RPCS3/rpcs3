@@ -114,6 +114,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::FrameGenerationQuality,     get_cfg_location(local_cfg.video.frame_generation_quality) }, // PS5
 	{ emu_settings_type::FrameGenerationStepAside,   get_cfg_location(local_cfg.video.frame_generation_step_aside) }, // PS5
 	{ emu_settings_type::FrameGenerationMethod,      get_cfg_location(local_cfg.video.frame_generation_method) }, // PS5
+	{ emu_settings_type::FrameGenerationFlowScale,   get_cfg_location(local_cfg.video.frame_generation_flow_scale) }, // PS5
 	{ emu_settings_type::DisableSamplingSkip,        get_cfg_location(local_cfg.audio.disable_sampling_skip) }, // PS5
 	{ emu_settings_type::LateAudioWait,              get_cfg_location(local_cfg.audio.late_audio_wait) }, // PS5
 	{ emu_settings_type::MenuSoundVolume,            get_cfg_location(local_cfg.audio.menu_sound_volume) }, // PS5

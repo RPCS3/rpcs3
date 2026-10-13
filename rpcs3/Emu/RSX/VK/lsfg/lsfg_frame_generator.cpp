@@ -14,6 +14,7 @@
 #include "../vkutils/device.h"
 #include "../vkutils/image.h"
 #include "Utilities/File.h"
+#include "Emu/system_config.h"
 
 #include "lsfg_chain.h"
 #include "lsfg_shaders.h"
@@ -74,18 +75,22 @@ namespace
 	struct sized_resources
 	{
 		VkExtent2D extent;
+		u32 flow_percent;
 		fg::MemoryAllocator allocator; // before the chain: its images' memory outlives them
 		std::unique_ptr<fg::LsfgChain> chain;
 		std::unique_ptr<vk::viewable_image> out[c_max_frames];
 		image_view_holder views[c_max_frames]; // after the images: destroyed before them
 		bool initialized = false;
 
-		sized_resources(const fg::Device& device, const fg::LsfgShaders& shaders, VkExtent2D size)
+		sized_resources(const fg::Device& device, const fg::LsfgShaders& shaders, VkExtent2D size, u32 flow)
 			: extent(size)
+			, flow_percent(flow)
 			, allocator(device, c_memory_budget)
 		{
-			// Optical flow at the frame's own size (flow scale 1), as the port runs it
-			chain = std::make_unique<fg::LsfgChain>(device, allocator, shaders, size, fg::LSFG_DEFAULT_FORMAT, 1.0f);
+			// Optical flow at the setting's share of the frame's size (Lossless
+			// Scaling's Flow scale; the port ran it at 1): smaller follows larger
+			// motion in the same search, at the cost of fine detail
+			chain = std::make_unique<fg::LsfgChain>(device, allocator, shaders, size, fg::LSFG_DEFAULT_FORMAT, static_cast<f32>(flow) / 100.f);
 
 			const auto pdev = vk::get_current_renderer();
 			for (u32 i = 0; i < c_max_frames; i++)
@@ -295,7 +300,13 @@ namespace vk
 			{
 				m.start(cur->format());
 			}
-			if (!m.sized || m.sized->extent.width != width || m.sized->extent.height != height)
+			// The setting's flow scale, never a flow smaller than 64 texels across
+			u32 flow = std::clamp<u32>(g_cfg.video.frame_generation_flow_scale, 25, 100);
+			while (flow < 100 && width * flow / 100 < 64)
+			{
+				flow = std::min<u32>(flow + 25, 100);
+			}
+			if (!m.sized || m.sized->extent.width != width || m.sized->extent.height != height || m.sized->flow_percent != flow)
 			{
 				if (width > 3840 || height > 2160)
 				{
@@ -305,10 +316,10 @@ namespace vk
 				{
 					m.retired.emplace_back(m.frames, std::move(m.sized));
 				}
-				m.sized = std::make_unique<sized_resources>(*m.device, *m.shaders, VkExtent2D{ width, height });
+				m.sized = std::make_unique<sized_resources>(*m.device, *m.shaders, VkExtent2D{ width, height }, flow);
 				m.input_count = 0;
 				m.warm = 0;
-				rsx_log.notice("Lossless Scaling frame generation: %ux%u, %u KiB of images in %u allocations", width, height,
+				rsx_log.notice("Lossless Scaling frame generation: %ux%u, flow scale %u%%, %u KiB of images in %u allocations", width, height, flow,
 					m.sized->allocator.Budget().used / 1024, m.sized->allocator.Budget().count);
 			}
 		}
