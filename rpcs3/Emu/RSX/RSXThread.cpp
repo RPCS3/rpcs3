@@ -1127,6 +1127,8 @@ namespace rsx
 		g_fxo->get<rsx::dma_manager>().join();
 		g_fxo->get<vblank_thread>() = thread_state::finished;
 		state += cpu_flag::exit;
+
+		m_display_out.on_exit();
 	}
 
 	u64 thread::timestamp()
