@@ -189,6 +189,14 @@ namespace rsx
 		const backend_configuration& get_backend_config() const { return m_renderer->config(); }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
+		draw_command_processor* draw_processor() { return &m_draw_processor; }
+		reports::ZCULL_control& zcull() { return *zcull_ctrl; }
+		overlays::display_manager* overlay_manager() const { return m_overlay_manager; }
+
+		/**
+		 * Execute a backend local task queue
+		 */
+		void do_local_task(FIFO::state state);
 
 		context* get_context() const { return m_ctx; }
 
@@ -268,11 +276,6 @@ namespace rsx
 		virtual void on_task();
 		void on_exit();
 
-		/**
-		 * Execute a backend local task queue
-		 */
-		void do_local_task(FIFO::state state);
-
 		void run_FIFO();
 
 	public:
@@ -312,7 +315,7 @@ namespace rsx
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 
-	protected:
+	public:
 
 		/**
 		 * Computes VRAM requirements needed to upload raw vertex streams
@@ -322,6 +325,8 @@ namespace rsx
 		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count);
 
 		void evaluate_cpu_usage_reduction_limits();
+
+	protected:
 
 	private:
 		shared_mutex m_mtx_task;

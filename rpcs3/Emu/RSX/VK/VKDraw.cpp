@@ -177,7 +177,7 @@ void VKGSRender::update_draw_state()
 		REGS(m_ctx)->current_draw_clause.primitive <= rsx::primitive_type::line_strip)
 	{
 		const float actual_line_width =
-			m_device->get_wide_lines_support() ? raster.line_width * resolution_scaling_config.scale_factor() : 1.f;
+			m_device->get_wide_lines_support() ? raster.line_width * RSX(m_ctx)->resolution_scaling_config.scale_factor() : 1.f;
 		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
@@ -259,7 +259,7 @@ void VKGSRender::update_draw_state()
 
 		if (!m_config.supports_extended_depth_range)
 		{
-			if (depth_stencil.depth_bounds_test_enabled && requires_depth_range_emulation()) [[ unlikely ]]
+			if (depth_stencil.depth_bounds_test_enabled && RSX(m_ctx)->core().graph().requires_depth_range_emulation()) [[ unlikely ]]
 			{
 				bounds_min = rsx::encode_emulated_depth(bounds_min);
 				bounds_max = rsx::encode_emulated_depth(bounds_max);
@@ -1001,7 +1001,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (state_flags & rsx::vertex_arrays_changed)
 	{
-		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, m_ctx->program.vp_metadata);
+		RSX(m_ctx)->draw_processor()->analyse_inputs_interleaved(m_vertex_layout, m_ctx->program.vp_metadata);
 	}
 	else if (state_flags & rsx::vertex_base_changed)
 	{
@@ -1055,13 +1055,13 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		{
 			// Force flush
 			rsx_log.warning("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
-			zcull_ctrl->sync(this);
+			RSX(m_ctx)->zcull().sync(RSX(m_ctx));
 
 			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
 			if (occlusion_id == umax)
 			{
 				//rsx_log.error("Occlusion pool overflow");
-				if (auto task = zcull_ctrl->get_current_query_task()) task->result = 1;
+				if (auto task = RSX(m_ctx)->zcull().get_current_query_task()) task->result = 1;
 			}
 		}
 

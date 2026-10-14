@@ -160,7 +160,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	m_profiler.start();
 
 	//Write index buffers and count verts
-	auto result = std::visit(draw_command_visitor(m_ctx, *m_index_ring_buffer, m_vertex_layout), m_draw_processor.get_draw_command(*REGS(m_ctx)));
+	auto result = std::visit(draw_command_visitor(m_ctx, *m_index_ring_buffer, m_vertex_layout), RSX(m_ctx)->draw_processor()->get_draw_command(*REGS(m_ctx)));
 
 	const u32 vertex_count = (result.max_index - result.min_index) + 1;
 	u32 vertex_base = result.min_index;
@@ -173,7 +173,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	}
 
 	//Do actual vertex upload
-	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
+	auto required = RSX(m_ctx)->calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
 	gl::vertex_upload_info upload_info =
@@ -257,7 +257,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	}
 
 	//Write all the data
-	m_draw_processor.write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping.first, volatile_mapping.first);
+	RSX(m_ctx)->draw_processor()->write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping.first, volatile_mapping.first);
 
 	m_ctx->stats.vertex_upload_time += m_profiler.duration();
 	return upload_info;

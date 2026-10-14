@@ -76,7 +76,7 @@ void GLGSRender::set_viewport()
 	// NOTE: scale offset matrix already contains the viewport transformation
 	const auto& viewport = m_ctx->draw_state.viewport;
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
-		resolution_scaling_config,
+		RSX(m_ctx)->resolution_scaling_config,
 		viewport.clip_width, viewport.clip_height);
 
 	glViewport(0, 0, clip_width, clip_height);
@@ -92,8 +92,8 @@ void GLGSRender::set_scissor(bool force)
 	const auto& region = m_ctx->draw_state.scissor;
 
 	areau scissor;
-	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
-	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(RSX(m_ctx)->resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
 
 	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 	// See LIMBO [NPUB-30373] which uses shader window origin = top
@@ -430,8 +430,8 @@ void GLGSRender::on_init()
 	if (shadermode == shader_mode::async_with_interpreter ||
 		shadermode == shader_mode::interpreter_only)
 	{
-		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
-			? std::make_unique<rsx::shader_loading_dialog_native>(this)
+		std::unique_ptr<rsx::shader_loading_dialog> dlg = RSX(m_ctx)->overlay_manager()
+			? std::make_unique<rsx::shader_loading_dialog_native>(RSX(m_ctx))
 			: std::make_unique<rsx::shader_loading_dialog>();
 		m_shader_interpreter.create(m_ctx, dlg.get());
 		dlg->close();
@@ -439,7 +439,7 @@ void GLGSRender::on_init()
 
 	if (shadermode != shader_mode::interpreter_only)
 	{
-		if (!m_overlay_manager)
+		if (!RSX(m_ctx)->overlay_manager())
 		{
 			m_frame->hide();
 			m_shaders_cache->load(nullptr);
@@ -447,7 +447,7 @@ void GLGSRender::on_init()
 		}
 		else
 		{
-			rsx::shader_loading_dialog_native dlg(this);
+			rsx::shader_loading_dialog_native dlg(RSX(m_ctx));
 			m_shaders_cache->load(&dlg);
 		}
 	}
@@ -881,7 +881,7 @@ void GLGSRender::load_program_env()
 		// Vertex state
 		auto mapping = m_vertex_env_buffer->alloc_from_heap(96, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		m_draw_processor.fill_vertex_env(buf, resolution_scaling_config.scale_factor());
+		RSX(m_ctx)->draw_processor()->fill_vertex_env(buf, RSX(m_ctx)->resolution_scaling_config.scale_factor());
 
 		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 96);
 	}
@@ -907,7 +907,7 @@ void GLGSRender::load_program_env()
 			return mapping;
 		});
 
-		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
+		RSX(m_ctx)->draw_processor()->fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
 
 		m_instancing_ring_buffer->bind_range(GL_INSTANCING_LUT_BIND_SLOT, indirection_table_offset, ::size32(indirection_table_buf));
 		m_instancing_ring_buffer->bind_range(GL_INSTANCING_XFORM_CONSTANTS_SLOT, constants_data_table_offset, ::size32(constants_array_buf));
@@ -950,7 +950,7 @@ void GLGSRender::load_program_env()
 		// Fragment state
 		auto mapping = m_fragment_env_buffer->alloc_from_heap(32, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		m_draw_processor.fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
+		RSX(m_ctx)->draw_processor()->fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
 
 		m_fragment_env_buffer->bind_range(GL_FRAGMENT_STATE_BIND_SLOT, mapping.second, 32);
 	}
@@ -981,7 +981,7 @@ void GLGSRender::load_program_env()
 			auto vp_mapping = m_vertex_instructions_buffer->alloc_from_heap(vp_block_length, 16);
 			auto vp_buf = static_cast<u8*>(vp_mapping.first);
 
-			m_draw_processor.fill_interpreter_vertex_header(vp_buf);
+			RSX(m_ctx)->draw_processor()->fill_interpreter_vertex_header(vp_buf);
 
 			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 
@@ -996,7 +996,7 @@ void GLGSRender::load_program_env()
 			auto fp_mapping = m_fragment_instructions_buffer->alloc_from_heap(fp_block_length, 16);
 			auto fp_buf = static_cast<u8*>(fp_mapping.first);
 
-			m_draw_processor.fill_interpreter_fragment_header(fp_buf);
+			RSX(m_ctx)->draw_processor()->fill_interpreter_fragment_header(fp_buf);
 
 			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 
@@ -1053,7 +1053,7 @@ void GLGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 			: std::span<const u16>(m_vertex_prog->constant_ids);
 
 		buffer.reserve(transform_constants_size);
-		m_draw_processor.fill_vertex_program_constants_data(buffer.data(), constant_ids);
+		RSX(m_ctx)->draw_processor()->fill_vertex_program_constants_data(buffer.data(), constant_ids);
 	}
 }
 
@@ -1072,7 +1072,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
 
-	m_draw_processor.fill_vertex_layout_state(
+	RSX(m_ctx)->draw_processor()->fill_vertex_layout_state(
 		m_vertex_layout,
 		m_ctx->program.vp_metadata,
 		upload_info.first_vertex,
@@ -1163,7 +1163,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
 	rsx::mm_flush(address);
 
-	const bool can_flush = is_current_thread();
+	const bool can_flush = RSX(m_ctx)->is_current_thread();
 	const rsx::invalidation_cause cause = is_writing
 		? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		: (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
@@ -1179,7 +1179,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return zcull_ctrl->on_access_violation(address);
+		return RSX(m_ctx)->zcull().on_access_violation(address);
 	}
 
 	if (result.num_flushable > 0)
@@ -1213,9 +1213,9 @@ void GLGSRender::on_invalidate_memory_range(const utils::address_range32 &range,
 void GLGSRender::on_semaphore_acquire_wait()
 {
 	if (!work_queue.empty() ||
-		(async_flip_requested & flip_request::emu_requested))
+		(RSX(m_ctx)->async_flip_requested & flip_request::emu_requested))
 	{
-		do_local_task(rsx::FIFO::state::lock_wait);
+		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
 	}
 }
 
@@ -1277,8 +1277,8 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	// TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_pre_memory_unmapped(addr, tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
+		u32 addr = rsx::get_address(RSX(m_ctx)->tiles[tile].offset, RSX(m_ctx)->tiles[tile].location);
+		RSX(m_ctx)->on_notify_pre_memory_unmapped(addr, RSX(m_ctx)->tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
 		m_rtts.invalidate_surface_address(addr, false);
 	}
 
@@ -1350,7 +1350,7 @@ void GLGSRender::on_guest_texture_read()
 
 void GLGSRender::write_barrier(u32 address, u32 range)
 {
-	ensure(is_current_thread());
+	ensure(RSX(m_ctx)->is_current_thread());
 	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
 }
 

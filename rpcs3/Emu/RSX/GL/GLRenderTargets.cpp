@@ -126,7 +126,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		m_ctx->fb.layout.target, m_ctx->fb.layout.aa_mode, m_ctx->fb.layout.raster_type,
 		m_ctx->fb.layout.color_addresses, m_ctx->fb.layout.zeta_address,
 		m_ctx->fb.layout.actual_color_pitch, m_ctx->fb.layout.actual_zeta_pitch,
-		resolution_scaling_config);
+		RSX(m_ctx)->resolution_scaling_config);
 
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
@@ -255,7 +255,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 	{
 		// Framebufferless rendering. Raster dimensions must be supplied explicitly and match what real surfaces would have used.
 		const auto [raster_width, raster_height] = rsx::apply_resolution_scale<true>(
-			resolution_scaling_config, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+			RSX(m_ctx)->resolution_scaling_config, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
 
 		const GLint raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
 		m_draw_fbo->set_default_extents({ raster_width, raster_height });
