@@ -1267,9 +1267,10 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 			if (func_name.starts_with("0x"sv))
 			{
 				// Raw hexadecimal-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
-				const auto result = std::from_chars(func_name.data() + 2, func_name.data() + func_name.size() - 2, id, 16);
-
-				if (result.ec != std::errc() || str.data() + sep_pos != result.ptr)
+				const std::string_view hex = func_name.substr(2);
+				const auto result = std::from_chars(hex.data(), hex.data() + hex.size(), id, 16);
+				
+				if (result.ec != std::errc() || result.ptr != hex.data() + hex.size())
 				{
 					continue;
 				}
