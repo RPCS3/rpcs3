@@ -1994,6 +1994,8 @@ s32 cellSpursGetInfo(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursInfo> info)
 	info->traceMode = trace_addr & 3;
 
 	const u8 name_size = spurs->prefixSize;
+	ensure(name_size <= sizeof(spurs->prefix));
+	ensure(name_size < sizeof(info->namePrefix));
 	std::memcpy(&info->namePrefix, spurs->prefix, name_size);
 	info->namePrefix[name_size] = '\0';
 	info->namePrefixLength = name_size;
