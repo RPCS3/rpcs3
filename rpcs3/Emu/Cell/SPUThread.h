@@ -275,7 +275,7 @@ public:
 			}
 
 			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs
-			return { (old & bit_count) == 0, 1, (old & bit_wait) != 0, true };
+			return { (old & bit_count) != 0, 1, (old & bit_wait) != 0, true };
 		}
 	}
 
