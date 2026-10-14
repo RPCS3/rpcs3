@@ -55,15 +55,10 @@
 
 #include <clocale>
 
-#include "Emu/RSX/Null/NullGSRender.h"
-
-#ifndef __APPLE__
-#include "Emu/RSX/GL/GLGSRender.h"
-#endif
-
-#if defined(HAVE_VULKAN)
-#include "Emu/RSX/VK/VKGSRender.h"
-#endif
+#include "Emu/RSX/Core/RSXRendererFactory.h"
+#include "Emu/IdManager.h"
+#include "Emu/system_config.h"
+#include "util/sysinfo.hpp"
 
 #ifdef _WIN32
 #include <Usbiodef.h>
@@ -791,28 +786,7 @@ void gui_application::create_callbacks()
 
 	g_emu_callbacks.init_gs_render = [](utils::serial* ar)
 	{
-		switch (g_cfg.video.renderer.get())
-		{
-		case video_renderer::null:
-		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
-			break;
-		}
-		case video_renderer::opengl:
-		{
-#if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
-#endif
-			break;
-		}
-		case video_renderer::vulkan:
-		{
-#if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
-#endif
-			break;
-		}
-		}
+		rsx::create_render_thread(g_cfg.video.renderer.get(), ar);
 	};
 
 	g_emu_callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
