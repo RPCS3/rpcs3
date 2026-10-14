@@ -500,7 +500,7 @@ namespace clan
 
 		const pugi::xml_attribute member_jid = member_info.attribute("jid"sv);
 		const std::string member_jid_str = member_jid.as_string();
-		const std::string member_username = fmt::split(member_jid_str, {"@"})[0];
+		const std::string member_username = ::at32(fmt::split(member_jid_str, {"@"}), 0);
 
 		SceNpId member_npid;
 		if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
@@ -568,7 +568,7 @@ namespace clan
 		for (pugi::xml_node member_info = list.child("info"sv); member_info; member_info = member_info.next_sibling("info"sv))
 		{
 			const std::string member_jid = member_info.attribute("jid"sv).as_string();
-			const std::string member_username = fmt::split(member_jid, {"@"})[0];
+			const std::string member_username = ::at32(fmt::split(member_jid, {"@"}), 0);
 
 			SceNpId member_npid;
 			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, SCE_NET_NP_ONLINEID_MAX_LENGTH) == 0)
@@ -637,7 +637,7 @@ namespace clan
 		{
 			const pugi::xml_node member_jid = member.child("jid"sv);
 			const std::string member_jid_str = member_jid.text().as_string();
-			const std::string member_username = fmt::split(member_jid_str, {"@"})[0];
+			const std::string member_username = ::at32(fmt::split(member_jid_str, {"@"}), 0);
 
 			SceNpId member_npid = {};
 			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, SCE_NET_NP_ONLINEID_MAX_LENGTH) == 0)
@@ -1083,7 +1083,7 @@ namespace clan
 			const std::string msg_date = node.child("msg-date"sv).text().as_string();
 
 			SceNpId author_npid;
-			const std::string author_username = fmt::split(author_jid, {"@"})[0];
+			const std::string author_username = ::at32(fmt::split(author_jid, {"@"}), 0);
 
 			if (strncmp(author_username.c_str(), nph.get_npid().handle.data, SCE_NET_NP_ONLINEID_MAX_LENGTH) == 0)
 			{
