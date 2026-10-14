@@ -54,6 +54,7 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #include <llvm/Transforms/Scalar/LICM.h>
 #include <llvm/Transforms/Scalar/LoopPassManager.h>
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -1172,7 +1173,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			spu_context_attr(m_ir->CreateStore(m_ir->getInt8(1), spu_ptr(&spu_thread::unsavable)))->setVolatile(true);
 		}
 
-		m_ir->CreateCall(m_test_state, {m_thread});
+		m_ir->CreateCall(m_test_state, {m_thread})->setCallingConv(m_test_state->getCallingConv());
 
 		if (may_be_unsafe_for_savestate)
 		{
@@ -3860,6 +3861,7 @@ public:
 		// Basic optimizations
 		fpm.addPass(EarlyCSEPass(true));
 		fpm.addPass(SimplifyCFGPass());
+		fpm.addPass(InstCombinePass());
 		fpm.addPass(DSEPass());
 		fpm.addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()), true));
 		fpm.addPass(ADCEPass());
@@ -7542,7 +7544,7 @@ public:
 					{ 0x1011121314151617, 0x000102031c1d1e1f, &cpu_translator::get_type<u32[4]>, 3, 1 },
 					{ 0x1011121314151617, 0x18191a1b00010203, &cpu_translator::get_type<u32[4]>, 3, 0 },
 					{ 0x0001020304050607, 0x18191a1b1c1d1e1f, &cpu_translator::get_type<u64[2]>, 1, 1 },
-					{ 0x1011121303151617, 0x0001020304050607, &cpu_translator::get_type<u64[2]>, 1, 0 },
+					{ 0x1011121314151617, 0x0001020304050607, &cpu_translator::get_type<u64[2]>, 1, 0 },
 				};
 
 				// Check important constants from CWD-like constant generation instructions
@@ -10110,7 +10112,7 @@ public:
 			{
 				// Can't afford external tail call in true functions
 				m_ir->CreateStore(m_ir->getInt32("BIJT"_u32), _ptr(m_memptr, 0xffdead20));
-				m_ir->CreateCall(m_test_state, {m_thread});
+				m_ir->CreateCall(m_test_state, {m_thread})->setCallingConv(m_test_state->getCallingConv());
 				m_ir->CreateBr(sw->getDefaultDest());
 			}
 			else

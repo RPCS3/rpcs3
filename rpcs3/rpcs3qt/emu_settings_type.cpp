@@ -60,6 +60,8 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::EnabledSPUEventsBusyLoop,   get_cfg_location(local_cfg.core.spu_reservation_busy_waiting_enabled) },
 	{ emu_settings_type::PPUReservationPriorityOverSPUs, get_cfg_location(local_cfg.core.ppu_reservation_priority_over_spu) },
 	{ emu_settings_type::AccurateSpuReservations,    get_cfg_location(local_cfg.core.spu_accurate_reservations) },
+	{ emu_settings_type::AccurateSpuReservations,    get_cfg_location(local_cfg.core.spu_accurate_reservations) },
+	{ emu_settings_type::SPUMmioDelay,               get_cfg_location(local_cfg.core.spu_mmio_delay_eanbled) },
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   get_cfg_location(local_cfg.video.renderer) },
@@ -107,6 +109,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VBlankRate,                 get_cfg_location(local_cfg.video.vblank_rate) },
 	{ emu_settings_type::VBlankNTSCFixup,            get_cfg_location(local_cfg.video.vblank_ntsc) },
 	{ emu_settings_type::DriverWakeUpDelay,          get_cfg_location(local_cfg.video.driver_wakeup_delay) },
+	{ emu_settings_type::PPUEventWakeUpDelay,        get_cfg_location(local_cfg.core.ppu_event_wakeup_delay) },
 	{ emu_settings_type::AllowHostGPULabels,         get_cfg_location(local_cfg.video.host_label_synchronization) },
 	{ emu_settings_type::DisableMSLFastMath,         get_cfg_location(local_cfg.video.disable_msl_fast_math) },
 	{ emu_settings_type::OutputScalingMode,          get_cfg_location(local_cfg.video.output_scaling) },

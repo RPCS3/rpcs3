@@ -2015,11 +2015,21 @@ void spu_thread::push_snr(u32 number, u32 value)
 	});
 
 	// Check corresponding SNR register settings
+	const u32 old_spu_pc = this->pc; 
 	auto push_state = channel->push(value, bitor_bit);
 
 	if (push_state.old_count < push_state.count)
 	{
 		set_events(event_bit);
+
+		// Wait until the thread wakes up (SPU wakes up immediately on realhW)
+		if (push_state.notify)
+		{
+			for (u64 time = get_system_time(), current = time; state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(this->pc) && current - time < 500; current = get_system_time())
+			{
+				std::this_thread::yield();
+			}
+		}
 	}
 	else if (!push_state.op_done)
 	{
@@ -2035,6 +2045,10 @@ void spu_thread::push_snr(u32 number, u32 value)
 	{
 		ev.locks--;
 	});
+
+	// Configueable SPU head start (compnesation)
+	// SPU wakes up immediately on realhW and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_eanbled ? +g_cfg.core.spu_mmio_delay : 3);
 }
 
 void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls)
@@ -2148,7 +2162,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 	rsx::reservation_lock<false, 1> rsx_lock(eal, args.size, !is_get && (g_cfg.video.strict_rendering_mode || (g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma && eal < rsx::constants::local_mem_base)));
 
-	if (!is_get || g_cfg.core.spu_accurate_dma)  [[unlikely]]
+	// Make 128-byte GET & PUT atomic by default (fast check)
+	if (!is_get || g_cfg.core.spu_accurate_dma || u64{eal & 127} + args.size - 128 == 0)  [[unlikely]]
 	{
 		perf_meter<"ADMA_GET"_u64> perf_get = perf_;
 		perf_meter<"ADMA_PUT"_u64> perf_put = perf_;
@@ -2299,13 +2314,15 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			}
 		}
 
-		if (g_cfg.core.spu_accurate_dma) [[unlikely]]
+		// Make 128 byte PUT atomic
+		// Plus MGS4 specific accuracy improvement: this is not a hack, it is selective accuracy improvement
+		if (g_cfg.core.spu_accurate_dma || ((eal & 127) == 0 && (args.size == 128 || args.lsa == 0xb100) && ~args.cmd & MFC_LIST_MASK)) [[unlikely]]
 		{
 			for (u32 size0, size = args.size;; size -= size0, dst += size0, src += size0, eal += size0)
 			{
 				size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
-				if (size0 == 128u && g_cfg.core.accurate_cache_line_stores)
+				if (size0 == 128u)
 				{
 					// As atomic as PUTLLUC
 					do_cell_atomic_128_store(eal, src);

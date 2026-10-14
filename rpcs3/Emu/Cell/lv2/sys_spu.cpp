@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
@@ -1950,8 +1951,10 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 	}
 
 	spu_channel_op_state state{};
+	u32 old_spu_pc = umax; 
 	{
 		std::lock_guard lock(group->mutex);
+		old_spu_pc = thread->pc;
 
 		state = thread->ch_in_mbox.push(value, true);
 	}
@@ -1965,7 +1968,16 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 	if (state.notify)
 	{
 		thread->ch_in_mbox.notify();
+
+		for (u64 time = get_system_time(), current = time; thread->state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(thread->pc) && current - time < 500; current = get_system_time())
+		{
+			std::this_thread::yield();
+		}
 	}
+
+	// Configuable SPU head start (compensation)
+	// SPU wakes up immediately on realhW and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_eanbled ? +g_cfg.core.spu_mmio_delay : 3);
 
 	return CELL_OK;
 }

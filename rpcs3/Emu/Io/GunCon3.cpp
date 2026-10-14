@@ -223,10 +223,10 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 	s64 my_wiimote_index = -1;
 	{
 		std::lock_guard lock(s_instances_mutex);
-		auto found = std::find(s_instances.begin(), s_instances.end(), this);
-		if (found != s_instances.end())
+		const auto found = std::find(s_instances.cbegin(), s_instances.cend(), this);
+		if (found != s_instances.cend())
 		{
-			my_wiimote_index = std::distance(s_instances.begin(), found);
+			my_wiimote_index = std::distance(s_instances.cbegin(), found);
 		}
 	}
 
@@ -272,7 +272,7 @@ bool usb_device_guncon3::handle_wiimote(GunCon3_data& gc)
 		{
 			const s16 ax = static_cast<s16>((gc.gun_x + SHRT_MAX + 1) * rsx::overlays::overlay::virtual_width / USHRT_MAX);
 			const s16 ay = static_cast<s16>((SHRT_MAX - gc.gun_y) * rsx::overlays::overlay::virtual_height / USHRT_MAX);
-			rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + my_wiimote_index, ax, ay, { 1.0f, 1.0f, 1.0f, 1.0f }, 100'000, false);
+			rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + static_cast<u32>(my_wiimote_index), ax, ay, { 1.0f, 1.0f, 1.0f, 1.0f }, 100'000, false);
 		}
 
 		if (ws.ir[1].x < 1023)

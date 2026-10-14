@@ -92,7 +92,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	});
 
 	ui->histoCombo->addItem(tr("Hues"), static_cast<int>(histo_mode::unfiltered_hues));
-	ui->histoCombo->setCurrentIndex(ui->viewCombo->findData(static_cast<int>(m_histo_mode)));
+	ui->histoCombo->setCurrentIndex(ui->histoCombo->findData(static_cast<int>(m_histo_mode)));
 
 	connect(ui->histoCombo, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
