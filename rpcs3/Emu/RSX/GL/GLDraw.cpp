@@ -89,7 +89,7 @@ void GLGSRender::update_draw_state()
 	{
 		// Z-buffer is active.
 		gl_state.depth_mask(depth_stencil.depth_write_enabled);
-		const bool emulate_depth_range = requires_depth_range_emulation();
+		const bool emulate_depth_range = RSX(m_ctx)->core().graph().requires_depth_range_emulation();
 		if (!emulate_depth_range) [[ likely ]]
 		{
 			gl_state.enable(depth_stencil.depth_clamp_enabled || !depth_stencil.depth_clip_enabled, GL_DEPTH_CLAMP);
@@ -249,7 +249,7 @@ void GLGSRender::update_draw_state()
 	case rsx::primitive_type::lines:
 	case rsx::primitive_type::line_loop:
 	case rsx::primitive_type::line_strip:
-		gl_state.line_width(raster.line_width * resolution_scaling_config.scale_factor());
+		gl_state.line_width(raster.line_width * RSX(m_ctx)->resolution_scaling_config.scale_factor());
 		gl_state.enable(raster.line_smooth_enabled, GL_LINE_SMOOTH);
 		break;
 	default:
@@ -710,7 +710,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (vertex_state & rsx::vertex_arrays_changed)
 	{
-		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, m_ctx->program.vp_metadata);
+		RSX(m_ctx)->draw_processor()->analyse_inputs_interleaved(m_vertex_layout, m_ctx->program.vp_metadata);
 	}
 	else if (vertex_state & rsx::vertex_base_changed)
 	{
