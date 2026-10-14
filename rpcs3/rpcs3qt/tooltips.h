@@ -98,6 +98,7 @@ public:
 		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 		const QString ppu_reservation_priority  = tr("Give PPUs an execution advantage when the SPUs are using reservations.\nThis setting is recommended only for a few game for improving performance.\nDO NOT use it without being advised to due to potential performance degradation.");
 		const QString accurate_spu_reservations = tr("Accurately emulates SPU reservations.\nDisabling it can greatly improve performance.\nStability may be compromised in some games but not in others, disable only if advised.");
+		const QString spu_mmio_delay            = tr("Compensate for hardware MMIO SPU performance not having thread delays by slowing down PPU instead.\nEnable only if advised.");
 
 		// debug
 

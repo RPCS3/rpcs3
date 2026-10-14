@@ -2567,6 +2567,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="spuMmioDelay">
+                    <property name="text">
+                     <string>SPU MMIO Delay</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="debugConsoleMode">
                     <property name="text">
                      <string>Debug Console Mode</string>
