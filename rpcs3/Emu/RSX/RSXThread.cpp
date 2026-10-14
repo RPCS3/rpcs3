@@ -1286,11 +1286,6 @@ namespace rsx
 		m_core.graph().on_framebuffer_options_changed(opt);
 	}
 
-	bool thread::requires_depth_range_emulation() const
-	{
-		return m_core.graph().requires_depth_range_emulation();
-	}
-
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
 		return m_core.graph().invalidate_fragment_program(dst_dma, dst_offset, size);
@@ -1316,38 +1311,6 @@ namespace rsx
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
 		rsx_thread_running = true;
-	}
-
-	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
-	{
-		u32 persistent_memory_size = 0;
-		u32 volatile_memory_size = 0;
-
-		volatile_memory_size += ::size32(layout.referenced_registers) * 16u;
-
-		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::inlined_array)
-		{
-			for (const auto &block : layout.interleaved_blocks)
-			{
-				volatile_memory_size += block->attribute_stride * vertex_count;
-			}
-		}
-		else
-		{
-			//NOTE: Immediate commands can be index array only or both index array and vertex data
-			//Check both - but only check volatile blocks if immediate_draw flag is set
-			if (REGS(m_ctx)->current_draw_clause.is_immediate_draw)
-			{
-				for (const auto &info : layout.volatile_blocks)
-				{
-					volatile_memory_size += info.second;
-				}
-			}
-
-			persistent_memory_size = layout.calculate_interleaved_memory_requirements(first_vertex, vertex_count);
-		}
-
-		return std::make_pair(persistent_memory_size, volatile_memory_size);
 	}
 
 	void thread::flip(const display_flip_info_t& info)

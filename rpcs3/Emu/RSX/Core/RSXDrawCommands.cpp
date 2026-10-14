@@ -190,6 +190,38 @@ namespace rsx
 		}
 	}
 
+	std::pair<u32, u32> draw_command_processor::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count) const
+	{
+		u32 persistent_memory_size = 0;
+		u32 volatile_memory_size = 0;
+
+		volatile_memory_size += ::size32(layout.referenced_registers) * 16u;
+
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			for (const auto &block : layout.interleaved_blocks)
+			{
+				volatile_memory_size += block->attribute_stride * vertex_count;
+			}
+		}
+		else
+		{
+			//NOTE: Immediate commands can be index array only or both index array and vertex data
+			//Check both - but only check volatile blocks if immediate_draw flag is set
+			if (REGS(m_ctx)->current_draw_clause.is_immediate_draw)
+			{
+				for (const auto &info : layout.volatile_blocks)
+				{
+					volatile_memory_size += info.second;
+				}
+			}
+
+			persistent_memory_size = layout.calculate_interleaved_memory_requirements(first_vertex, vertex_count);
+		}
+
+		return std::make_pair(persistent_memory_size, volatile_memory_size);
+	}
+
 	std::span<const std::byte> draw_command_processor::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
 		if (!m_element_push_buffer.empty()) [[ unlikely ]]

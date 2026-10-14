@@ -51,6 +51,13 @@ namespace rsx
 		// Analyze vertex inputs and group all interleaved blocks
 		void analyse_inputs_interleaved(vertex_input_layout& layout, const vertex_program_metadata_t& vp_metadata);
 
+		/**
+		 * Computes VRAM requirements needed to upload raw vertex streams
+		 * result.first contains persistent memory requirements
+		 * result.second contains volatile memory requirements
+		 */
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count) const;
+
 		// Retrieve raw bytes for the index array (untyped)
 		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
