@@ -114,8 +114,8 @@ namespace rsx
 		std::unique_ptr<context> m_primary_ctx;
 		context* m_ctx = nullptr;
 
-		// Host renderer bridge
-		render_backend* m_renderer = nullptr;
+		// Host renderer. Created with the thread and destroyed with it.
+		std::unique_ptr<render_backend> m_renderer;
 
 		// Host thread running cpu_task, recorded when it starts
 		atomic_t<thread_base*> m_host_thread = nullptr;
@@ -124,7 +124,6 @@ namespace rsx
 		display_output m_display_out;
 
 		// Host DMA
-		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
 
 		// Draw call management
 		draw_command_processor m_draw_processor;
@@ -193,6 +192,9 @@ namespace rsx
 		reports::ZCULL_control& zcull() { return *zcull_ctrl; }
 		overlays::display_manager* overlay_manager() const { return m_overlay_manager; }
 
+		// Shared with the renderer: the core and the backend chain their timing checkpoints on it within a draw
+		rsx::profiling_timer& profiler() { return m_profiler; }
+
 		/**
 		 * Execute a backend local task queue
 		 */
@@ -200,7 +202,7 @@ namespace rsx
 
 		context* get_context() const { return m_ctx; }
 
-		render_backend* renderer() const { return m_renderer; }
+		render_backend* renderer() const { return m_renderer.get(); }
 		core_renderer& core() { return m_core; }
 		display_output& display() { return m_display_out; }
 
@@ -268,11 +270,13 @@ namespace rsx
 
 		static constexpr auto thread_name = "rsx::thread"sv;
 
-	protected:
+		// Created as named_thread<rsx::thread> (rsx::create_render_thread)
 		thread(utils::serial* ar);
 
-		thread() : thread(static_cast<utils::serial*>(nullptr)) {}
+		// Must not be default-constructible, or g_fxo->init()'s bulk pass constructs a bare rsx::thread (and its backend) in this slot
+		thread() = delete;
 
+	protected:
 		virtual void on_task();
 		void on_exit();
 
@@ -385,5 +389,12 @@ namespace rsx
 	inline thread* get_current_renderer()
 	{
 		return g_fxo->try_get<rsx::thread>();
+	}
+
+	// The host renderer of the RSX thread, or nullptr if there is no RSX thread
+	inline render_backend* get_current_render_backend()
+	{
+		const auto rsxthr = get_current_renderer();
+		return rsxthr ? rsxthr->renderer() : nullptr;
 	}
 }

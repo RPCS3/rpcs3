@@ -33,7 +33,7 @@ namespace
 	}
 }
 
-GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
+GLGSRender::GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept : render_backend(ctx, output)
 {
 	m_rtts.set_context(m_ctx);
 	m_vertex_layout.set_context(m_ctx);
@@ -455,7 +455,7 @@ void GLGSRender::on_init()
 
 void GLGSRender::on_shutdown()
 {
-	GSRender::on_shutdown();
+	destroy_frame_context();
 
 	// Globals
 	// TODO: Move these
@@ -1213,7 +1213,7 @@ void GLGSRender::on_invalidate_memory_range(const utils::address_range32 &range,
 void GLGSRender::on_semaphore_acquire_wait()
 {
 	if (!work_queue.empty() ||
-		(RSX(m_ctx)->async_flip_requested & flip_request::emu_requested))
+		(RSX(m_ctx)->async_flip_requested & rsx::thread::flip_request::emu_requested))
 	{
 		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
 	}

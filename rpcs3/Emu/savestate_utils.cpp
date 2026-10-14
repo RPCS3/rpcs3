@@ -58,7 +58,7 @@ namespace vm
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/, 4/*FIFO Position*/)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/, 4/*FIFO Position*/, 5/*Renderer split from rsx::thread*/)
 }
 
 namespace np

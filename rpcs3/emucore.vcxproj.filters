@@ -1276,6 +1276,9 @@
     <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXRenderBackend.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Core\RSXRendererFactory.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClCompile>
@@ -1347,9 +1350,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
       <Filter>Emu\GPU\RSX\Decoders</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\GSRender.cpp">
-      <Filter>Emu\GPU\RSX\Game Window</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXOffload.cpp">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
@@ -2873,9 +2873,6 @@
       <Filter>Emu\GPU\RSX\Decoders</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSFrameBase.h">
-      <Filter>Emu\GPU\RSX\Game Window</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\GSRender.h">
       <Filter>Emu\GPU\RSX\Game Window</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXOffload.h">

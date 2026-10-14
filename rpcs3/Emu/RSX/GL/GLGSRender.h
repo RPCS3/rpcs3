@@ -1,5 +1,7 @@
 #pragma once
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Core/RSXRenderBackend.h"
+#include "Emu/RSX/GSFrameBase.h"
+#include "Emu/RSX/RSXThread.h"
 #include "GLTextureCache.h"
 #include "GLRenderTargets.h"
 #include "GLProgramBuffer.h"
@@ -72,7 +74,7 @@ namespace gl
 	};
 }
 
-class GLGSRender : public GSRender, public ::rsx::reports::occlusion_query_provider
+class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
@@ -164,8 +166,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::occlusion_query_provi
 
 public:
 
-	GLGSRender(utils::serial* ar) noexcept;
-	GLGSRender() noexcept : GLGSRender(nullptr) {}
+	GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept;
 	virtual ~GLGSRender();
 
 private:

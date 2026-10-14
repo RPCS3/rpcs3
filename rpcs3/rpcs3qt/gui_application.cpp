@@ -786,7 +786,7 @@ void gui_application::create_callbacks()
 
 	g_emu_callbacks.init_gs_render = [](utils::serial* ar)
 	{
-		rsx::create_render_thread(g_cfg.video.renderer.get(), ar);
+		rsx::create_render_thread(ar);
 	};
 
 	g_emu_callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>

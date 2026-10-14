@@ -5,6 +5,7 @@
 #include "Common/surface_store.h"
 #include "Core/RSXReservationLock.hpp"
 #include "Core/RSXEngLock.hpp"
+#include "Core/RSXRendererFactory.h"
 #include "Host/MM.h"
 #include "Host/RSXDMAWriter.h"
 #include "NV47/HW/context.h"
@@ -35,7 +36,6 @@
 #include <thread>
 #include <unordered_set>
 
-class GSRender;
 
 #define CMD_DEBUG 0
 
@@ -625,6 +625,8 @@ namespace rsx
 	thread::~thread()
 	{
 		g_access_violation_handler = nullptr;
+
+		m_renderer.reset();
 	}
 
 	void thread::save(utils::serial& ar)
@@ -737,9 +739,16 @@ namespace rsx
 			}
 		}
 
+		// The renderer is created last, after any savestate data is loaded
+		const auto create_renderer = [this]()
+		{
+			m_renderer = make_render_backend(g_cfg.video.renderer, m_ctx, &m_display_out);
+		};
+
 		if (!_ar)
 		{
 			add_remove_flags({}, cpu_flag::stop); // TODO: Remove workaround
+			create_renderer();
 			return;
 		}
 
@@ -759,6 +768,8 @@ namespace rsx
 			// Allow to render a whole frame within this emulation session so there won't be missing graphics
 			m_pause_after_x_flips = 2;
 		}
+
+		create_renderer();
 	}
 
 	avconf::avconf(utils::serial& ar)
@@ -1112,9 +1123,9 @@ namespace rsx
 				// Update other sub-units
 				zcull_ctrl->update(this);
 
-				if (m_host_dma_ctrl)
+				if (auto host_dma_ctrl = m_renderer->host_dma_writer())
 				{
-					m_host_dma_ctrl->update();
+					host_dma_ctrl->update();
 				}
 			}
 

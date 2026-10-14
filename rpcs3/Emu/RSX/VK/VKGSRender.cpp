@@ -391,7 +391,7 @@ namespace vk
 	}
 }
 
-VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
+VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept : render_backend(ctx, output)
 {
 	m_rtts.set_context(m_ctx);
 	m_vertex_layout.set_context(m_ctx);
@@ -803,12 +803,6 @@ VKGSRender::~VKGSRender()
 		return;
 	}
 
-	// Flush DMA queue
-	while (!g_fxo->get<rsx::dma_manager>().sync())
-	{
-		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
-	}
-
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
 
@@ -1018,7 +1012,7 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range32 &range,
 void VKGSRender::on_semaphore_acquire_wait()
 {
 	if (m_flush_requests.pending() ||
-		(RSX(m_ctx)->async_flip_requested & flip_request::emu_requested) ||
+		(RSX(m_ctx)->async_flip_requested & rsx::thread::flip_request::emu_requested) ||
 		(m_queue_status & flush_queue_state::deadlock))
 	{
 		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
@@ -1246,7 +1240,7 @@ void VKGSRender::on_init()
 		fmt::throw_exception("No Vulkan device was created");
 	}
 
-	GSRender::on_init();
+	create_frame_context();
 
 	if (g_cfg.video.shadermode == shader_mode::async_with_interpreter ||
 		g_cfg.video.shadermode == shader_mode::interpreter_only)
@@ -1284,7 +1278,13 @@ void VKGSRender::on_init()
 
 void VKGSRender::on_shutdown()
 {
-	GSRender::on_shutdown();
+	// Flush DMA queue
+	while (!g_fxo->get<rsx::dma_manager>().sync())
+	{
+		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
+	}
+
+	destroy_frame_context();
 	vk::destroy_pipe_compiler(); // Ensure no pending shaders being compiled
 }
 

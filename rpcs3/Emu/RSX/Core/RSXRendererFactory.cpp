@@ -2,6 +2,7 @@
 #include "RSXRendererFactory.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 
 #ifndef __APPLE__
@@ -14,23 +15,30 @@
 
 namespace rsx
 {
-	void create_render_thread(video_renderer renderer, utils::serial* ar)
+	void create_render_thread(utils::serial* ar)
+	{
+		g_fxo->init<rsx::thread, named_thread<rsx::thread>>(ar);
+	}
+
+	std::unique_ptr<render_backend> make_render_backend(video_renderer renderer, context* ctx, display_output* display)
 	{
 		switch (renderer)
 		{
 		case video_renderer::opengl:
-#if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
+#if !defined(__APPLE__)
+			return std::make_unique<GLGSRender>(ctx, display);
+#else
+			[[fallthrough]];
 #endif
-			[[ fallthrough ]];
 		case video_renderer::vulkan:
 #if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
+			return std::make_unique<VKGSRender>(ctx, display);
+#else
+			[[fallthrough]];
 #endif
-			[[ fallthrough ]];
 		default:
 		case video_renderer::null:
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
+			return std::make_unique<NullGSRender>(ctx, display);
 		}
 	}
 }

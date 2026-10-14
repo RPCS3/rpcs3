@@ -7,16 +7,24 @@
 #include <utility>
 #include <vector>
 #include "Emu/RSX/Common/TextureUtils.h"
+#include "Emu/RSX/Common/profiling_timer.hpp"
+#include "Emu/system_config_types.h"
 #include "Emu/RSX/Common/texture_cache_types.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/Core/RSXDisplay.h"
 #include "Emu/RSX/RSXFIFO.h"
 #include "Emu/RSX/RSXZCULL.h"
 
+// Forward-declared to keep display.h (and with it windows.h) out of RSXThread.h
+class GSFrameBase;
+using draw_context_t = void*;
+
 namespace rsx
 {
 	struct context;
 	struct framebuffer_layout;
+	class display_output;
+	class RSXDMAWriter;
 
 	struct backend_configuration
 	{
@@ -43,10 +51,18 @@ namespace rsx
 	class render_backend
 	{
 	public:
-		virtual ~render_backend() = default;
+		// The backend renders for the given context and presents to the given display output (the host window).
+		render_backend(context* ctx, display_output* display);
+		virtual ~render_backend();
+
+		render_backend(const render_backend&) = delete;
+		render_backend& operator=(const render_backend&) = delete;
 
 		// Host capabilities. Filled in by the backend during initialization; zero until then.
 		const backend_configuration& config() const { return m_config; }
+
+		// Host DMA writer used for host GPU labels, if the backend has one. The RSX thread updates it.
+		RSXDMAWriter* host_dma_writer() const { return m_host_dma_ctrl.get(); }
 
 		// Backend lifecycle management.
 		virtual void on_init() {}
@@ -113,7 +129,23 @@ namespace rsx
 		virtual bool is_current_program_interpreted() const { return false; }
 
 	protected:
+		// Generic draw context on the host window, made current on the calling thread. GL creates its own context instead.
+		void create_frame_context();
+		void destroy_frame_context();
+
 		backend_configuration m_config{};
+
+		// The context this backend renders for. Set by the core.
+		context* m_ctx = nullptr;
+
+		// Presentation. The window belongs to the RSX thread (display_output); the draw context and the swap interval are the backend's.
+		GSFrameBase* m_frame = nullptr;
+		draw_context_t m_context = nullptr;
+		vsync_mode m_vsync_mode{};
+
+		// The RSX thread's timer. The core starts it and the backend continues its intervals.
+		rsx::profiling_timer& m_profiler;
+		std::unique_ptr<RSXDMAWriter> m_host_dma_ctrl;
 
 		std::array<std::unique_ptr<sampled_image_descriptor_base>, limits::fragment_textures_count> m_fs_sampler_descriptors = {};
 		std::array<std::unique_ptr<sampled_image_descriptor_base>, limits::vertex_textures_count> m_vs_sampler_descriptors = {};

@@ -129,6 +129,7 @@
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXRenderBackend.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXRendererFactory.cpp">
       <AdditionalIncludeDirectories>
         $(SolutionDir)3rdparty\glslang\glslang\Public;$(SolutionDir)3rdparty\GPUOpen\VulkanMemoryAllocator\include;%(AdditionalIncludeDirectories)
@@ -573,7 +574,6 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\VFS.cpp" />
-    <ClCompile Include="Emu\RSX\GSRender.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
@@ -1097,7 +1097,6 @@
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h" />
     <ClInclude Include="Emu\RSX\Program\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
-    <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
     <ClInclude Include="Emu\RSX\Program\RSXFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
