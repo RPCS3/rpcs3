@@ -117,6 +117,7 @@ public:
 	llvm::Value* VecHandleNan(llvm::Value* val);
 	llvm::Value* VecHandleDenormal(llvm::Value* val);
 	llvm::Value* VecHandleResult(llvm::Value* val, bool flush_denormals_manually = false);
+	llvm::Value* VecEstimate(llvm::StringRef name, u32 vr);
 
 	template <typename T>
 	auto vec_handle_result(T&& expr, bool flush_denormals_manually = false)

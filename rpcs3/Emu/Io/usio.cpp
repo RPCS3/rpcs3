@@ -261,20 +261,24 @@ void usb_device_usio::translate_input_taiko()
 						digital_input |= 0x1000;
 					break;
 				case usio_btn::taiko_hit_side_left:
-					if (value.pressed)
+					if (value.pressed && !status.taiko_hit_already[0])
 						std::memcpy(response.data() + 32 + offset, &c_hit, sizeof(u16));
+					status.taiko_hit_already[0] = value.pressed;
 					break;
 				case usio_btn::taiko_hit_center_right:
-					if (value.pressed)
+					if (value.pressed && !status.taiko_hit_already[1])
 						std::memcpy(response.data() + 36 + offset, &c_hit, sizeof(u16));
+					status.taiko_hit_already[1] = value.pressed;
 					break;
 				case usio_btn::taiko_hit_side_right:
-					if (value.pressed)
+					if (value.pressed && !status.taiko_hit_already[2])
 						std::memcpy(response.data() + 38 + offset, &c_hit, sizeof(u16));
+					status.taiko_hit_already[2] = value.pressed;
 					break;
 				case usio_btn::taiko_hit_center_left:
-					if (value.pressed)
+					if (value.pressed && !status.taiko_hit_already[3])
 						std::memcpy(response.data() + 34 + offset, &c_hit, sizeof(u16));
+					status.taiko_hit_already[3] = value.pressed;
 					break;
 				case usio_btn::card_tapping:
 					if (value.pressed)
@@ -310,7 +314,7 @@ void usb_device_usio::translate_input_tekken()
 
 	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
 	std::lock_guard mouse_lock(mouse_handler.mutex);
-	mouse_handler.Init(g_cfg_usio.players.size());
+	mouse_handler.Init(static_cast<u32>(g_cfg_usio.players.size()));
 
 	const auto translate_input = [&](usz player)
 	{

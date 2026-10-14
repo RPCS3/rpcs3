@@ -8,6 +8,8 @@
 
 #if defined(ARCH_X64)
 #include "BufferUtils_avx512.h"
+#elif defined(ARCH_ARM64)
+#include "BufferUtils_neon.h"
 #endif
 
 #if !defined(_MSC_VER)
@@ -21,6 +23,9 @@
 #endif
 #undef FORCE_INLINE
 #include "Emu/CPU/sse2neon.h"
+#if defined(__GNUC__) || defined(__clang__)
+#include "BufferUtils_sve.h"
+#endif
 #endif
 
 #if defined(_MSC_VER) || !defined(__SSE2__)
@@ -67,6 +72,10 @@
 
 const v128 s_bswap_u32_mask = v128::from32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f);
 const v128 s_bswap_u16_mask = v128::from32(0x02030001, 0x06070405, 0x0a0b0809, 0x0e0f0c0d);
+
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+#include "BufferUtils_compact.h"
+#endif
 
 namespace utils
 {
@@ -183,6 +192,9 @@ namespace
 #if defined(ARCH_X64)
 DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
 DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+#elif defined(ARCH_ARM64)
+DECLARE(copy_data_swap_u32) = copy_data_swap_u32_neon<false>;
+DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_neon<true>;
 #else
 DECLARE(copy_data_swap_u32) = copy_data_swap_u32_naive<false>;
 DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_naive<true>;
@@ -299,6 +311,8 @@ namespace
 				r = upload_xi16(src.data(), dst.data(), count);
 			else
 				r = upload_xi32(src.data(), dst.data(), count);
+#elif defined(ARCH_ARM64)
+			r = upload_untouched_neon<T, false>(src.data(), dst.data(), count);
 #else
 			r = upload_untouched_naive(src.data(), dst.data(), count);
 #endif
@@ -405,6 +419,8 @@ namespace
 				r = upload_xi16(src.data(), dst.data(), count, restart_index);
 			else
 				r = upload_xi32(src.data(), dst.data(), count, restart_index);
+#elif defined(ARCH_ARM64)
+			r = upload_untouched_neon<T, true>(src.data(), dst.data(), count, restart_index);
 #else
 			r = upload_untouched_naive(src.data(), dst.data(), count, restart_index);
 #endif
@@ -445,7 +461,7 @@ namespace
 		return std::make_tuple(min_index, max_index, written);
 	}
 
-	const upload_untouched_skip_restart_dispatch s_generic_upload_untouched_skip_restart_dispatch =
+	[[maybe_unused]] const upload_untouched_skip_restart_dispatch s_generic_upload_untouched_skip_restart_dispatch =
 	{
 		upload_untouched_skip_restart<u16>,
 		upload_untouched_skip_restart<u32>,
@@ -454,7 +470,7 @@ namespace
 #if defined(ARCH_X64)
 	const upload_untouched_skip_restart_dispatch s_avx512_upload_untouched_skip_restart_dispatch =
 	{
-		upload_untouched_skip_restart<u16>,
+		upload_swapped_avx2_skip_restart<u16>,
 		upload_u32_swapped_avx3_skip_restart,
 	};
 
@@ -477,8 +493,41 @@ namespace
 		{
 			return s_avx512_upload_untouched_skip_restart_dispatch;
 		}
+
+		if (s_use_avx2)
+		{
+			static const upload_untouched_skip_restart_dispatch s_avx2 =
+			{
+				upload_swapped_avx2_skip_restart<u16>,
+				upload_swapped_avx2_skip_restart<u32>,
+			};
+			return s_avx2;
+		}
+#elif defined(ARCH_ARM64) && (defined(__GNUC__) || defined(__clang__))
+		if (utils::has_sve())
+		{
+			static const upload_untouched_skip_restart_dispatch s_sve =
+			{
+#ifdef BUFFERUTILS_HAS_SVE2P2
+				utils::has_sve2p2() ? upload_swapped_sve2p2_skip_restart : upload_swapped_neon_skip_restart<u16>,
+#else
+				upload_swapped_neon_skip_restart<u16>,
 #endif
+				upload_swapped_sve_skip_restart,
+			};
+			return s_sve;
+		}
+#endif
+#if defined(ARCH_ARM64)
+		static const upload_untouched_skip_restart_dispatch s_neon =
+		{
+			upload_swapped_neon_skip_restart<u16>,
+			upload_swapped_neon_skip_restart<u32>,
+		};
+		return s_neon;
+#else
 		return s_generic_upload_untouched_skip_restart_dispatch;
+#endif
 	}();
 
 	template<typename T, typename U = remove_be_t<T>>

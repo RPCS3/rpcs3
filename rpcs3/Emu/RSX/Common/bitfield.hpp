@@ -133,7 +133,7 @@ namespace rsx
 			m_data |= mask;
 		}
 
-		bool test(T mask)
+		bool test(T mask) const
 		{
 			return !!(m_data & static_cast<bitmask_type>(mask));
 		}

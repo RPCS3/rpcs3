@@ -21,73 +21,113 @@ namespace rsx
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
-		void set_transform_constant::decode_one([[maybe_unused]] context* ctx, u32 reg, u32 arg)
+		set_transform_constant::write_range set_transform_constant::compute_write_range([[maybe_unused]] context* ctx, u32 reg, u32 count)
 		{
-			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
-			const u32 constant_id = index / 4;
-			const u8 subreg = index % 4;
 			const u32 load = REGS(ctx)->transform_constant_load();
+			if (load >= max_transform_constants)
+			{
+				return {};
+			}
 
-			REGS(ctx)->transform_constants[load + constant_id][subreg] = arg;
+			const u32 first_word = load * 4 + (reg - NV4097_SET_TRANSFORM_CONSTANT);
+			const u32 max_words = max_transform_constants * 4;
+			if (first_word >= max_words)
+			{
+				return {};
+			}
+
+			return { first_word, std::min(count, max_words - first_word) };
+		}
+
+		u32* set_transform_constant::get_constants_ptr([[maybe_unused]] context* ctx, u32 word)
+		{
+			return &REGS(ctx)->transform_constants[word / 4][word % 4];
+		}
+
+		void set_transform_constant::decode_one(context* ctx, u32 reg, u32 arg)
+		{
+			const auto range = compute_write_range(ctx, reg, 1);
+			if (!range.word_count)
+			{
+				return;
+			}
+
+			*get_constants_ptr(ctx, range.first_word) = arg;
 		}
 
 		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args, const std::function<bool(context*, u32, u32)>& notify)
 		{
-			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
-			const u32 constant_id = index / 4;
-			const u8 subreg = index % 4;
-			const u32 load = REGS(ctx)->transform_constant_load();
-
-			auto dst = &REGS(ctx)->transform_constants[load + constant_id][subreg];
-			copy_data_swap_u32(dst, args.data(), ::size32(args));
-
-			// Notify
-			const u32 last_constant_id = ((reg + ::size32(args) + 3) - NV4097_SET_TRANSFORM_CONSTANT) / 4; // Aligned div
-			const u32 load_index = load + constant_id;
-			const u32 load_count = last_constant_id - constant_id;
-
-			if (!notify || !notify(ctx, load_index, load_count))
+			const auto range = compute_write_range(ctx, reg, ::size32(args));
+			if (!range.word_count)
 			{
-				RSX(ctx)->patch_transform_constants(ctx, load_index, load_count);
+				return;
+			}
+
+			copy_data_swap_u32(get_constants_ptr(ctx, range.first_word), args.data(), range.word_count);
+
+			// Notify using the range of vec4 constants touched by the write
+			const u32 first_constant = range.first_word / 4;
+			const u32 end_constant = (range.first_word + range.word_count + 3) / 4;
+			const u32 constant_count = end_constant - first_constant;
+
+			if (!notify || !notify(ctx, first_constant, constant_count))
+			{
+				RSX(ctx)->patch_transform_constants(ctx, first_constant, constant_count);
+			}
+		}
+
+		void set_transform_constant::write_constants(context* ctx, u32 first_word, const u32* src, u32 count)
+		{
+			const auto dst = get_constants_ptr(ctx, first_word);
+
+			if (RSX(ctx)->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
+			{
+				// Minor optimization: don't compare values if we already know we need invalidation
+				copy_data_swap_u32(dst, src, count);
+				return;
+			}
+
+			if (copy_data_swap_u32_cmp(dst, src, count))
+			{
+				// Transform constants invalidation is expensive (~8k bytes per update)
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 			}
 		}
 
 		void set_transform_constant::impl(context* ctx, u32 reg, [[maybe_unused]] u32 arg)
 		{
 			const u32 index = reg - NV4097_SET_TRANSFORM_CONSTANT;
-			const u32 constant_id = index / 4;
-			const u8 subreg = index % 4;
+			const bool non_increment = (RSX(ctx)->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD;
 
 			// FIFO args count including this one
 			const u32 fifo_args_cnt = RSX(ctx)->fifo_ctrl->get_remaining_args_count() + 1;
 
-			// The range of methods this function resposible to
-			const u32 method_range = 32 - index;
+			// The range of methods this function resposible to.
+			// Incrementing commands advance the register per arg, so args beyond the 32-register window target other methods.
+			// Non-incrementing commands send every arg to this same register.
+			const u32 method_range = non_increment ? fifo_args_cnt : 32 - index;
 
 			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
 			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
 
+			// Number of args owned by this method. Every one of these must be consumed, even if the write is trimmed or dropped entirely.
 			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
 
-			const u32 load = REGS(ctx)->transform_constant_load();
+			// Non-incrementing writes all land on the same word, so only the last arg sticks
+			const u32 src_offset = non_increment ? count - 1 : 0;
+			const u32 write_count = count - src_offset;
 
-			u32 rcount = count;
-			if (const u32 max = (load + constant_id) * 4 + count + subreg, limit = 468 * 4; max > limit)
+			const auto range = compute_write_range(ctx, reg, write_count);
+			if (range.word_count < write_count)
 			{
-				// Ignore addresses outside the usable [0, 467] range
-				rsx_log.warning("Invalid transform register index (load=%u, index=%u, count=%u)", load, index, count);
-
-				if ((max - count) < limit)
-					rcount -= max - limit;
-				else
-					rcount = 0;
+				rsx_log.warning("Invalid transform register index (load=%u, index=%u, count=%u)", REGS(ctx)->transform_constant_load(), index, write_count);
 			}
 
-			if (rcount == 0)
+			if (range.word_count == 0)
 			{
 				// Out-of-bounds write is a NOP
 				rsx_log.trace("Out of bounds write for transform constant block.");
-				RSX(ctx)->fifo_ctrl->skip_methods(fifo_args_cnt - 1);
+				RSX(ctx)->fifo_ctrl->skip_methods(count - 1);
 				return;
 			}
 
@@ -96,39 +136,36 @@ namespace rsx
 				// Updating constants mid-draw is messy. Defer the writes
 				REGS(ctx)->current_draw_clause.insert_command_barrier(
 					rsx::transform_constant_update_barrier,
-					RSX(ctx)->fifo_ctrl->get_pos(),
-					rcount,
-					reg - NV4097_SET_TRANSFORM_CONSTANT
+					RSX(ctx)->fifo_ctrl->get_pos() + src_offset * 4,
+					range.word_count,
+					index
 				);
 
-				RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
+				RSX(ctx)->fifo_ctrl->skip_methods(count - 1);
 				return;
 			}
 
-			const auto values = &REGS(ctx)->transform_constants[load + constant_id][subreg];
+			const u32 read_count = src_offset + range.word_count;
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(read_count);
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);
-
-			if (fifo_span.size() < rcount)
+			if (const u32 available = ::size32(fifo_span); available < read_count)
 			{
-				rcount = ::size32(fifo_span);
-			}
-
-			if (RSX(ctx)->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
-			{
-				// Minor optimization: don't compare values if we already know we need invalidation
-				copy_data_swap_u32(values, fifo_span.data(), rcount);
-			}
-			else
-			{
-				if (copy_data_swap_u32_cmp(values, fifo_span.data(), rcount))
+				// FIFO data is not contiguous. Consume what we can see, the remaining args are dispatched again.
+				if (non_increment)
 				{
-					// Transform constants invalidation is expensive (~8k bytes per update)
-					RSX(ctx)->m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+					write_constants(ctx, range.first_word, &fifo_span[available - 1], 1);
 				}
+				else
+				{
+					write_constants(ctx, range.first_word, fifo_span.data(), available);
+				}
+
+				RSX(ctx)->fifo_ctrl->skip_methods(available - 1);
+				return;
 			}
 
-			RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
+			write_constants(ctx, range.first_word, fifo_span.data() + src_offset, range.word_count);
+			RSX(ctx)->fifo_ctrl->skip_methods(count - 1);
 		}
 
 		void set_transform_program::impl(context* ctx, u32 reg, u32 /*arg*/)
@@ -144,35 +181,32 @@ namespace rsx
 			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
 			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
 
+			// Number of args owned by this method. Every one of these must be consumed, even if the write is trimmed or dropped entirely.
 			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
 
+			// Writes start at the current load position, which advances by one instruction per 4 words written
 			const u32 load_pos = REGS(ctx)->transform_program_load();
+			constexpr u32 max_words = max_vertex_program_instructions * 4;
+			const u32 first_word = load_pos < max_vertex_program_instructions ? load_pos * 4 + index % 4 : max_words;
+			const u32 write_count = std::min(count, max_words - first_word);
 
-			u32 rcount = count;
-
-			if (const u32 max = load_pos * 4 + rcount + (index % 4);
-				max > max_vertex_program_instructions * 4)
+			if (write_count < count)
 			{
-				rsx_log.warning("Program buffer overflow! Attempted to write %u VP instructions.", max / 4);
-				rcount -= max - (max_vertex_program_instructions * 4);
+				rsx_log.warning("Program buffer overflow! (load=%u, index=%u, count=%u)", load_pos, index, count);
 			}
 
-			if (!rcount)
+			if (write_count == 0 || first_word >= REGS(ctx)->transform_program.size())
 			{
 				// Out-of-bounds write is a NOP
 				rsx_log.trace("Out of bounds write for transform program block.");
-				RSX(ctx)->fifo_ctrl->skip_methods(fifo_args_cnt - 1);
+				RSX(ctx)->fifo_ctrl->skip_methods(count - 1);
 				return;
 			}
 
-			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(rcount);
+			const auto fifo_span = RSX(ctx)->fifo_ctrl->get_current_arg_ptr(write_count);
+			const u32 rcount = std::min(write_count, ::size32(fifo_span));
 
-			if (fifo_span.size() < rcount)
-			{
-				rcount = ::size32(fifo_span);
-			}
-
-			const auto out_ptr = &REGS(ctx)->transform_program[load_pos * 4 + index % 4];
+			const auto out_ptr = &REGS(ctx)->transform_program[first_word];
 
 			pipeline_state to_set_dirty = rsx::pipeline_state::vertex_program_ucode_dirty;
 
@@ -205,7 +239,9 @@ namespace rsx
 
 			RSX(ctx)->m_graphics_state |= to_set_dirty;
 			REGS(ctx)->transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
-			RSX(ctx)->fifo_ctrl->skip_methods(rcount - 1);
+
+			// If the FIFO span came up short, the remaining in-range args are dispatched again. Otherwise consume everything, including the trimmed tail.
+			RSX(ctx)->fifo_ctrl->skip_methods((rcount < write_count ? rcount : count) - 1);
 		}
 
 		///// Texture management
@@ -234,6 +270,22 @@ namespace rsx
 
 			RSX(ctx)->m_graphics_state.set(rtt_config_dirty);
 			RSX(ctx)->m_graphics_state.clear(rtt_config_contested);
+		}
+
+		void set_zmin_max_control(context* ctx, u32 /*reg*/, u32 arg)
+		{
+			if (arg == REGS(ctx)->latch)
+			{
+				return;
+			}
+
+			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+
+			// Depth clip and clamp are read by the fragment epilogue when the depth range is emulated
+			if (!RSX(ctx)->get_backend_config().supports_extended_depth_range && g_cfg.video.emulate_extended_depth_range)
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
 		}
 
 		void set_surface_format(context* ctx, u32 reg, u32 arg)

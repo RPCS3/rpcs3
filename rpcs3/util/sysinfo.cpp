@@ -501,6 +501,21 @@ bool utils::has_sve2()
 	return g_value;
 }
 
+bool utils::has_sve2p2()
+{
+	static const bool g_value = []() -> bool
+	{
+		// Detection for SVE2.2 is currently only supported on Linux
+#if defined(__linux__)
+		constexpr unsigned long sve2p2 = 1UL << 41;
+		return (getauxval(AT_HWCAP) & (HWCAP_SVE | sve2p2)) == (HWCAP_SVE | sve2p2);
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+
 #if defined(_MSC_VER)
 #define sve_func
 #else
@@ -588,7 +603,7 @@ std::string utils::get_system_info()
 
 	if (has_sve())
 	{
-		fmt::append(result, " | SVE%s-%d", has_sve2() ? "2" : "", sve_length());
+		fmt::append(result, " | SVE%s-%d", has_sve2p2() ? "2.2" : (has_sve2() ? "2" : ""), sve_length());
 	}
 	else
 	{

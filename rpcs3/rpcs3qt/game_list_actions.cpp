@@ -1395,14 +1395,18 @@ bool game_list_actions::RemoveHDD1Cache(const std::string& serial, bool is_inter
 	u32 dirs_removed = 0;
 	u32 dirs_total = 0;
 
-	const QStringList filter{ QString::fromStdString(serial + "_*") };
 	const QString q_base_dir = QString::fromStdString(base_dir);
+	const QString prefix = QString::fromStdString(serial + "_");
 
-	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot);
+	QDirIterator dir_iter(q_base_dir, QDir::Dirs | QDir::NoDotAndDotDot);
 
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
+		if (!dir_iter.fileName().startsWith(prefix))
+		{
+			continue;
+		}
 
 		if (fs::remove_all(filepath.toStdString()))
 		{
@@ -2241,11 +2245,12 @@ u32 game_list_actions::RemoveContentPathList(const std::set<std::string>& path_l
 bool game_list_actions::RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc)
 {
 	bool success = true;
+	const std::string serial_prefix = serial + "_";
 
 	for (const auto& entry : fs::dir(base_dir))
 	{
-		// Search for any path starting with serial (e.g. BCES01118_BCES01118)
-		if (!entry.name.starts_with(serial))
+		// Search for the serial or a suffixed entry (e.g. BCES01118_BCES01118)
+		if (entry.name != serial && !entry.name.starts_with(serial_prefix))
 		{
 			continue;
 		}

@@ -251,7 +251,8 @@ namespace vk
 		u8 num_draw_buffers,
 		u8 num_rasterization_samples,
 		bool depth_bounds_support,
-		bool force_disable_blending)
+		bool force_disable_blending,
+		bool force_depth_clamp)
 	{
 		vk::pipeline_props properties{};
 
@@ -262,7 +263,15 @@ namespace vk
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
 		properties.state.set_front_face(vk::get_front_face(REGS(ctx)->front_face_mode()));
-		properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
+		if (!force_depth_clamp) [[ likely ]]
+		{
+			properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
+		}
+		else
+		{
+			// Depth clip and clamp are emulated in the fragment shader
+			properties.state.enable_depth_clamp(true);
+		}
 		properties.state.enable_depth_bias(true);
 		properties.state.enable_depth_bounds_test(depth_bounds_support);
 
@@ -645,6 +654,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_instanced_rendering = true;
 	backend_config.supports_programmable_blending = true;
 
+	backend_config.supports_extended_depth_range = m_device->get_unrestricted_depth_range_support();
 	backend_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
 	if (!backend_config.supports_last_provoking_vertex)
 	{
@@ -665,6 +675,21 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		backend_config.supports_hw_a2c = true;
 		backend_config.supports_hw_a2c_1spp = true;
 		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
+	}
+
+	// Framebufferless rendering. Zero-attachment subpasses can only rasterize at the sample counts reported for them.
+	const VkSampleCountFlags required_sample_counts = (g_cfg.video.antialiasing_level == msaa_level::_auto)
+		? VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT
+		: VK_SAMPLE_COUNT_1_BIT;
+
+	if (const auto supported_sample_counts = m_device->gpu().get_limits().framebufferNoAttachmentsSampleCounts & required_sample_counts;
+		supported_sample_counts == required_sample_counts)
+	{
+		backend_config.supports_framebufferless_rendering = true;
+	}
+	else
+	{
+		rsx_log.warning("Framebufferless rendering is not supported with the current MSAA configuration. Some occlusion queries may return incorrect results.");
 	}
 
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
@@ -1289,7 +1314,7 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
-	if (skip_current_frame || swapchain_unavailable) return;
+	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
@@ -1328,16 +1353,18 @@ void VKGSRender::clear_surface(u32 mask)
 
 	const bool full_frame = (scissor_w == fb_width && scissor_h == fb_height);
 	bool update_color = false, update_z = false;
-	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	auto surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
-			float depth_clear = static_cast<float>(clear_depth) / max_depth_value;
+			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
+			f32 depth_clear = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+			if (vk::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				depth_clear = rsx::encode_emulated_depth(depth_clear);
+			}
 
 			depth_stencil_clear_values.depthStencil.depth = depth_clear;
 			depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
@@ -1349,7 +1376,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			if (mask & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+				u8 clear_stencil = REGS(m_ctx)->stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -1398,12 +1425,12 @@ void VKGSRender::clear_surface(u32 mask)
 		if (!m_draw_buffers.empty())
 		{
 			bool use_fast_clear = (colormask == RSX_GCM_CLEAR_COLOR_RGBA_MASK);;
-			u8 clear_a = rsx::method_registers.clear_color_a();
-			u8 clear_r = rsx::method_registers.clear_color_r();
-			u8 clear_g = rsx::method_registers.clear_color_g();
-			u8 clear_b = rsx::method_registers.clear_color_b();
+			u8 clear_a = REGS(m_ctx)->clear_color_a();
+			u8 clear_r = REGS(m_ctx)->clear_color_r();
+			u8 clear_g = REGS(m_ctx)->clear_color_g();
+			u8 clear_b = REGS(m_ctx)->clear_color_b();
 
-			switch (rsx::method_registers.surface_color())
+			switch (REGS(m_ctx)->surface_color())
 			{
 			case rsx::surface_color_format::x32:
 			case rsx::surface_color_format::w16z16y16x16:
@@ -1502,7 +1529,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (depth_stencil_mask)
 	{
 		if ((depth_stencil_mask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-			rsx::method_registers.stencil_mask() != 0xff)
+			REGS(m_ctx)->stencil_mask() != 0xff)
 		{
 			// Partial stencil clear. Disables fast stencil clear
 			auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -1512,7 +1539,7 @@ void VKGSRender::clear_surface(u32 mask)
 			vk::get_overlay_pass<vk::stencil_clear_pass>()->run(
 				*m_current_command_buffer, ds, region.rect,
 				depth_stencil_clear_values.depthStencil.stencil,
-				rsx::method_registers.stencil_mask(), renderpass);
+				REGS(m_ctx)->stencil_mask(), renderpass);
 
 			depth_stencil_mask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
@@ -1860,7 +1887,8 @@ bool VKGSRender::load_program()
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
 			m_device->get_depth_bounds_support(),
-			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING),
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
@@ -1905,12 +1933,16 @@ bool VKGSRender::load_program()
 		}
 
 		// Load current program from cache
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(
 			&m_program_cache_hint,
 			vertex_program,
 			fragment_program,
 			m_pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		vk::leave_uninterruptible();
 
@@ -2692,7 +2724,19 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		std::iota(input_attachments.begin(), input_attachments.end(), 0);
 	}
 
-	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images, input_attachments);
+	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	{
+		// Framebufferless rendering. The raster sample count must match what real surfaces would have used.
+		ensure(m_fbo_images.empty() && input_attachments.empty());
+
+		const u8 raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_current_renderpass_key = vk::get_renderpass_key_no_attachments(raster_samples);
+	}
+	else
+	{
+		m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images, input_attachments);
+	}
+
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
@@ -2732,9 +2776,6 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 
 bool VKGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
-	if (swapchain_unavailable)
-		return false;
-
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{
 		m_samplers_dirty.store(true);

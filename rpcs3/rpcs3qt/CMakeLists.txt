@@ -8,6 +8,7 @@ add_library(rpcs3_ui STATIC
     breakpoint_list.cpp
     call_stack_list.cpp
     camera_settings_dialog.cpp
+    wiimote_settings_dialog.cpp
     cg_disasm_window.cpp
     cheat_manager.cpp
     clans_settings_dialog.cpp
@@ -54,6 +55,7 @@ add_library(rpcs3_ui STATIC
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
+    sky_ipc_settings_dialog.cpp
     kamen_rider_dialog.cpp
     kernel_explorer.cpp
     localized.cpp
@@ -134,6 +136,7 @@ add_library(rpcs3_ui STATIC
 
     about_dialog.ui
     camera_settings_dialog.ui
+    wiimote_settings_dialog.ui
     main_window.ui
     music_player_dialog.ui
     pad_led_settings_dialog.ui
@@ -164,6 +167,7 @@ add_library(rpcs3_ui STATIC
     ../Input/dualsense_pad_handler.cpp
     ../Input/evdev_joystick_handler.cpp
     ../Input/gui_pad_thread.cpp
+    ../Input/hid_instance.cpp
     ../Input/hid_pad_handler.cpp
     ../Input/keyboard_pad_handler.cpp
     ../Input/mm_joystick_handler.cpp
@@ -181,6 +185,7 @@ add_library(rpcs3_ui STATIC
     ../Input/sdl_instance.cpp
     ../Input/sdl_pad_handler.cpp
     ../Input/skateboard_pad_handler.cpp
+    ../Input/wiimote_handler.cpp
     ../Input/xinput_pad_handler.cpp
 
     "../resources.qrc"

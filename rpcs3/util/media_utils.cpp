@@ -508,6 +508,7 @@ namespace utils
 
 	void audio_decoder::set_context(music_selection_context&& context)
 	{
+		stop();
 		m_context = std::move(context);
 	}
 
@@ -520,12 +521,13 @@ namespace utils
 	{
 		media_log.notice("audio_decoder: Clear data...");
 
-		track_fully_decoded = 0;
-		track_fully_consumed = 0;
-		has_error = false;
-		m_size = 0;
-		timestamps_ms.clear();
-		data.clear();
+		m_track_fully_decoded = 0;
+		m_track_fully_consumed = 0;
+		m_has_error = false;
+
+		std::scoped_lock lock(m_data_mtx);
+		m_timestamps_ms.clear();
+		m_data.clear();
 	}
 
 	void audio_decoder::stop()
@@ -536,13 +538,18 @@ namespace utils
 		{
 			auto& thread = *m_thread;
 			thread = thread_state::aborting;
-			track_fully_consumed = 1;
-			track_fully_consumed.notify_one();
+			wake_up();
 			thread();
 			m_thread.reset();
 		}
 
 		clear();
+	}
+
+	void audio_decoder::wake_up()
+	{
+		m_track_fully_consumed = 1;
+		m_track_fully_consumed.notify_one();
 	}
 
 	void audio_decoder::decode()
@@ -566,13 +573,13 @@ namespace utils
 			if (int err = avformat_open_input(&av.format_context, path.c_str(), nullptr, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Could not open file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 			if (int err = avformat_find_stream_info(av.format_context, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Could not retrieve stream info from file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -590,7 +597,7 @@ namespace utils
 			if (!stream)
 			{
 				media_log.error("audio_decoder: Could not retrieve audio stream from file '%s'", path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -599,7 +606,7 @@ namespace utils
 			if (!av.audio.codec)
 			{
 				media_log.error("audio_decoder: Failed to find decoder for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -608,7 +615,7 @@ namespace utils
 			if (!av.audio.context)
 			{
 				media_log.error("audio_decoder: Failed to allocate context for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -616,7 +623,7 @@ namespace utils
 			if (int err = avcodec_open2(av.audio.context, av.audio.codec, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Failed to open decoder for stream #%u in file '%s'. Error: %d='%s'", stream_index, path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -631,21 +638,21 @@ namespace utils
 			if (set_err < 0)
 			{
 				media_log.error("audio_decoder: Failed to set resampler options: Error: %d='%s'", set_err, av_error_to_string(set_err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
 			if (!av.swr)
 			{
 				media_log.error("audio_decoder: Failed to allocate resampler for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
 			if (int err = swr_init(av.swr); err < 0 || !swr_is_initialized(av.swr))
 			{
 				media_log.error("audio_decoder: Resampler has not been properly initialized: %d='%s'", err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -654,7 +661,7 @@ namespace utils
 			if (!av.audio.frame)
 			{
 				media_log.error("audio_decoder: Error allocating the frame");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -662,7 +669,7 @@ namespace utils
 			if (!packet)
 			{
 				media_log.error("audio_decoder: Error allocating the packet");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -680,8 +687,8 @@ namespace utils
 				constexpr u64 max_reserve = 256 * 1024 * 1024; // Don't trust the header blindly
 				const u64 expected_size = static_cast<u64>(av_rescale(duration, sample_rate * bytes_per_sample, AV_TIME_BASE));
 
-				std::scoped_lock lock(m_mtx);
-				data.reserve(std::min<u64>(expected_size, max_reserve));
+				std::scoped_lock lock(m_data_mtx);
+				m_data.reserve(std::min<u64>(expected_size, max_reserve));
 			}
 
 			// The output buffer is reused by every frame. Only its size may grow.
@@ -714,7 +721,7 @@ namespace utils
 					if (buffer_size < 0)
 					{
 						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, av_error_to_string(buffer_size));
-						has_error = true;
+						m_has_error = true;
 						return false;
 					}
 
@@ -728,7 +735,7 @@ namespace utils
 				if (frame_count < 0)
 				{
 					media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
-					has_error = true;
+					m_has_error = true;
 					return false;
 				}
 
@@ -754,11 +761,9 @@ namespace utils
 
 				// Append resampled frames to data
 				{
-					std::scoped_lock lock(m_mtx);
-					data.insert(data.cend(), out_buffer, out_buffer + size);
-
-					timestamps_ms.push_back({m_size, last_timestamp_ms});
-					m_size += size;
+					std::scoped_lock lock(m_data_mtx);
+					m_timestamps_ms.push_back({m_data.size(), last_timestamp_ms});
+					m_data.insert(m_data.cend(), out_buffer, out_buffer + size);
 				}
 
 				media_log.trace("audio_decoder: decoded frame_count=%d size=%d timestamp_ms=%d", frame_count, size, last_timestamp_ms);
@@ -791,7 +796,7 @@ namespace utils
 					}
 
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
-					has_error = true;
+					m_has_error = true;
 					return false;
 				}
 
@@ -803,7 +808,7 @@ namespace utils
 							break;
 
 						media_log.error("audio_decoder: Decoding error: %d='%s'", err, av_error_to_string(err));
-						has_error = true;
+						m_has_error = true;
 						return false;
 					}
 
@@ -847,7 +852,7 @@ namespace utils
 			if (m_context.playlist.empty())
 			{
 				media_log.error("audio_decoder: Can not play empty playlist");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -869,9 +874,9 @@ namespace utils
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));
-				track_fully_decoded = 1;
+				m_track_fully_decoded = 1;
 
-				if (has_error)
+				if (m_has_error)
 				{
 					media_log.notice("audio_decoder: stopping with error...");
 					break;
@@ -880,11 +885,11 @@ namespace utils
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
 
-				while (thread_ctrl::state() != thread_state::aborting && !track_fully_consumed)
+				while (thread_ctrl::state() != thread_state::aborting && !m_track_fully_consumed)
 				{
-					thread_ctrl::wait_on(track_fully_consumed, 0);
+					thread_ctrl::wait_on(m_track_fully_consumed, 0);
 				}
-				track_fully_consumed = 0;
+				m_track_fully_consumed = 0;
 			}
 
 			media_log.notice("audio_decoder: finished playlist");
@@ -894,6 +899,35 @@ namespace utils
 	u32 audio_decoder::set_next_index(bool next)
 	{
 		return m_context.step_track(next);
+	}
+
+	s64 audio_decoder::get_start_time_ms(u64 read_pos)
+	{
+		if (m_timestamps_ms.empty()) return 0;
+
+		const s64 start_time_ms = m_timestamps_ms.front().second;
+
+		while (m_timestamps_ms.size() > 1 && read_pos >= ::at32(m_timestamps_ms, 1).first)
+		{
+			m_timestamps_ms.pop_front();
+		}
+
+		return start_time_ms;
+	}
+
+	u64 audio_decoder::read(void* dst, u64 read_pos, u64 read_size)
+	{
+		if (!dst || read_pos >= m_data.size()) return 0;
+
+		const u64 size_left = m_data.size() - read_pos;
+		const u64 size_to_read = std::min(read_size, size_left);
+
+		if (size_to_read > 0)
+		{
+			std::memcpy(dst, &m_data[read_pos], size_to_read);
+		}
+
+		return size_to_read;
 	}
 
 	video_encoder::video_encoder()

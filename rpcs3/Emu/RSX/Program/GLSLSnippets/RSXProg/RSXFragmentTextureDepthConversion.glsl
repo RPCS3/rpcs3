@@ -11,11 +11,17 @@ vec4 decode_depth24(const in float depth_value, const in bool depth_float)
 	uint value;
 	if (!depth_float)
 	{
-		value = uint(depth_value * 16777215.);
+		// Round to nearest. See f32_to_unorm24 in ShuffleBytes.glsl.
+		const float scaled = depth_value * 16777215.;
+		value = uint(scaled) + uint(fract(scaled) >= 0.5);
 	}
 	else
 	{
+#ifdef _EMULATED_DEPTH_STORAGE
+		value = _get_bits(floatBitsToUint(decode_emulated_depth(depth_value)), 7, 24);
+#else
 		value = _get_bits(floatBitsToUint(depth_value), 7, 24);
+#endif
 	}
 
 	uint b = _get_bits(value, 0, 8);

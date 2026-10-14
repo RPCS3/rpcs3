@@ -601,7 +601,7 @@ void gui_application::InitializeConnects()
 std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	// Load AppIcon
-	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+	const QIcon app_icon = gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	if (m_game_window)
 	{

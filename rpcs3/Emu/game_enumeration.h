@@ -183,6 +183,11 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 	}
 
 	const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
+	if (title_id == "." || title_id == ".." || title_id.find_first_of("/\\") != umax)
+	{
+		sys_log.warning("Ignoring game with invalid TITLE_ID '%s': '%s'", title_id, dir_or_elf);
+		return std::nullopt;
+	}
 
 	if (title_id.empty())
 	{

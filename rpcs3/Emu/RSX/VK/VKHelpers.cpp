@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "VKHelpers.h"
 #include "VKGSRender.h"
 #include "VKCompute.h"
@@ -243,6 +244,11 @@ namespace vk
 	bool emulate_conditional_rendering()
 	{
 		return g_drv_emulate_cond_render;
+	}
+
+	bool emulate_extended_depth_range()
+	{
+		return !g_render_device->get_unrestricted_depth_range_support() && g_cfg.video.emulate_extended_depth_range;
 	}
 
 	bool use_strict_query_scopes()
