@@ -1617,8 +1617,9 @@ int run(const char* boot_path)
 						// MihawkGen's (VKFrameGenMihawk.h): what became of it
 						const u32 most = static_cast<u32>(g_cfg.video.frame_generation_frames);
 						const u32 step = static_cast<u32>(g_cfg.video.frame_generation_step_aside);
-						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, MihawkGen: %s", most ? std::to_string(most) : std::string("Auto"),
-							step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", vk::mihawk_status());
+						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, MihawkGen: %s, motion assist %s", most ? std::to_string(most) : std::string("Auto"),
+							step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", vk::mihawk_status(),
+							g_cfg.video.frame_generation_mihawk_assist ? "on" : "off");
 					}
 					else if (g_cfg.video.frame_generation)
 					{

@@ -28,3 +28,5 @@ void fg_neural_record(fg_neural *neural, VkCommandBuffer cmd, uint32_t slot, con
 void fg_neural_set_profile(fg_neural *neural, VkQueryPool pool, uint32_t base);
 uint32_t fg_neural_pass_count(const fg_neural *neural);
 const char *fg_neural_pass_label(const fg_neural *neural, uint32_t pass);
+/* PS5_RPCS3: the last call's flow in a slot (framegen.h, fg_context_neural_flow) */
+VkImageView fg_neural_flow(const fg_neural *neural, uint32_t slot, uint32_t *width, uint32_t *height, float *scale, uint32_t *work_w, uint32_t *work_h);

@@ -1559,7 +1559,7 @@ void main()
 	}
 
 	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-		vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide, bool repair)
+		vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide, bool repair, const guide_source* source)
 	{
 		take_capture();
 
@@ -1631,6 +1631,12 @@ void main()
 		barrier(cmd);
 
 		u32 made = 0;
+		vk::viewable_image* sourced[max_frames]{};
+		if (source && !make)
+		{
+			// (the other frame generation keeps the frame)
+			(*source)(cmd, nullptr, sourced);
+		}
 		if (make)
 		{
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_coarse[0].get(), m_luma_coarse[1].get() }, m_vectors_coarse.get(), coarse_grid_w, coarse_grid_h,
@@ -1697,6 +1703,15 @@ void main()
 			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { cur, m_hud_strong.get(), m_motion.get() }, m_blur[1].get(), half_w, half_h,
 				{ static_cast<f32>(width), static_cast<f32>(height), static_cast<f32>(half_w), static_cast<f32>(half_h) });
 			barrier(cmd);
+
+			// Another frame generation's frames between, made on this motion
+			if (source)
+			{
+				const frame_generation_motion motion{ m_vectors_smooth.get(), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f) };
+				count = std::min(count, (*source)(cmd, &motion, sourced));
+				guide = sourced;
+				barrier(cmd);
+			}
 
 			// The frames between, each at its time: with three, a quarter, a half
 			// and three quarters of the way from the last frame to this one

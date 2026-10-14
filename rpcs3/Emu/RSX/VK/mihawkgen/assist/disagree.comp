@@ -1,0 +1,30 @@
+#version 450
+// PS5_RPCS3: MihawkGen's motion assist, pass 3: for each texel of the network's flow, how far the two frames it read
+// disagree there, for the network on the frames as they are (x) and on the pre-aligned ones (y): the mean over the colours
+// of |frame 0 at its flow - frame 1 at its flow|. Where a flow is right the two reads are the same surface
+// SPDX-License-Identifier: GPL-3.0-or-later
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D last;
+layout(binding = 1) uniform sampler2D next;
+layout(binding = 2) uniform sampler2D alignedLast;
+layout(binding = 3) uniform sampler2D alignedNext;
+layout(binding = 4) uniform sampler2D flowRaw;
+layout(binding = 5) uniform sampler2D flowAligned;
+layout(binding = 6, rgba16f) uniform writeonly image2D disagreement;
+layout(push_constant) uniform Params { ivec2 size; vec2 work; float scale; } params;
+float gap(const vec3 a, const vec3 b)
+{
+	const vec3 d = abs(a - b);
+	return (d.r + d.g + d.b) / 3.0;
+}
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(p, params.size))) return;
+	const vec2 uv = (vec2(p) + 0.5) / vec2(params.size);
+	const vec4 fr = texelFetch(flowRaw, p, 0) * params.scale / params.work.xyxy;
+	const vec4 fa = texelFetch(flowAligned, p, 0) * params.scale / params.work.xyxy;
+	const float raw = gap(textureLod(last, uv + fr.xy, 0.0).rgb, textureLod(next, uv + fr.zw, 0.0).rgb);
+	const float aligned = gap(textureLod(alignedLast, uv + fa.xy, 0.0).rgb, textureLod(alignedNext, uv + fa.zw, 0.0).rgb);
+	imageStore(disagreement, p, vec4(raw, aligned, 0.0, 0.0));
+}

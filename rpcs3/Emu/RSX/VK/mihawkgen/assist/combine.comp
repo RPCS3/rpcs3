@@ -1,0 +1,53 @@
+#version 450
+// PS5_RPCS3: MihawkGen's motion assist, pass 4: each pixel the network's frame on the frames as they are or on the
+// pre-aligned ones, whichever's reads agree better about there (the disagreement averaged over 3x3 flow texels, a
+// smoothstep over 0.02 of the difference); and the HUD's own pixels the frames' blend: a pixel the same in both frames
+// (within 0.03 to 0.08), with contrast (0.04 to 0.12 to a neighbour), where the world moved (the vectors over 1 to 2
+// texels) and would have put something else (0.04 to 0.10), or one 2 pixels from it. (A rule that also took the frames
+// where a read landed on the HUD tore the road's repeating shadows in GTA IV, which it took for the HUD.)
+// SPDX-License-Identifier: GPL-3.0-or-later
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D last;
+layout(binding = 1) uniform sampler2D next;
+layout(binding = 2) uniform sampler2D madeRaw;
+layout(binding = 3) uniform sampler2D madeAligned;
+layout(binding = 4) uniform sampler2D disagreement;
+layout(binding = 5) uniform sampler2D vectors;
+layout(binding = 6, rgba8) uniform writeonly image2D result;
+layout(push_constant) uniform Params { ivec2 size; vec2 work; vec2 grid; float t; } params;
+float largest(const vec3 c) { return max(c.r, max(c.g, c.b)); }
+float luma(const vec3 c) { return dot(c, vec3(0.3, 0.59, 0.11)); }
+vec3 at(sampler2D tex, const ivec2 q) { return texelFetch(tex, clamp(q, ivec2(0), params.size - 1), 0).rgb; }
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(p, params.size))) return;
+	const vec2 uv = (vec2(p) + 0.5) / vec2(params.size);
+	const vec2 texel = 1.0 / vec2(textureSize(disagreement, 0));
+	vec2 dis = vec2(0.0);
+	for (int j = -1; j <= 1; j++)
+		for (int i = -1; i <= 1; i++)
+			dis += textureLod(disagreement, uv + vec2(i, j) * texel, 0.0).xy;
+	const float w = smoothstep(-0.01, 0.01, (dis.x - dis.y) / 9.0);
+	vec3 colour = mix(texelFetch(madeRaw, p, 0).rgb, texelFetch(madeAligned, p, 0).rgb, w);
+	float keep = 0.0;
+	for (int j = -2; j <= 2; j += 2)
+	{
+		for (int i = -2; i <= 2; i += 2)
+		{
+			const ivec2 q = p + ivec2(i, j);
+			const vec3 a = at(last, q);
+			const vec3 b = at(next, q);
+			const float same = 1.0 - smoothstep(0.03, 0.08, largest(abs(a - b)));
+			const float la = luma(a);
+			const float contrast = smoothstep(0.04, 0.12, max(abs(la - luma(at(last, q + ivec2(1, 0)))), abs(la - luma(at(last, q + ivec2(0, 1))))));
+			const vec2 quv = (vec2(clamp(q, ivec2(0), params.size - 1)) + 0.5) / vec2(params.size);
+			const vec2 v = textureLod(vectors, quv * params.grid, 0.0).xy;
+			const float moving = smoothstep(1.0, 2.0, length(v));
+			const float differs = smoothstep(0.04, 0.10, largest(abs(textureLod(last, quv + v / params.work, 0.0).rgb - b)));
+			keep = max(keep, same * contrast * moving * differs);
+		}
+	}
+	colour = mix(colour, mix(at(last, p), at(next, p), params.t), keep);
+	imageStore(result, p, vec4(colour, 1.0));
+}

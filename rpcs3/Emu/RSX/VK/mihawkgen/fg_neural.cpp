@@ -641,6 +641,21 @@ fg_neural *fg_neural_create(const fg_neural_info *info, const void *blob, size_t
 	return n;
 }
 
+// PS5_RPCS3: the last block's flow and its size, as nn_final.comp reads them (framegen.h, fg_context_neural_flow)
+VkImageView fg_neural_flow(const fg_neural *n, uint32_t slot, uint32_t *width, uint32_t *height, float *scale, uint32_t *work_w, uint32_t *work_h)
+{
+	if (!n || slot >= n->slots || !n->block_count) {
+		return VK_NULL_HANDLE;
+	}
+	const Block &last = n->blocks[n->block_count - 1];
+	*width = last.w;
+	*height = last.h;
+	*scale = float(last.scale);
+	*work_w = n->work_w;
+	*work_h = n->work_h;
+	return n->slot[slot].flow[n->block_count - 1].view;
+}
+
 void fg_neural_record(fg_neural *n, VkCommandBuffer cmd, uint32_t slot, const fg_frame_pair *pair, VkImageView output)
 {
 	if (!n || slot >= n->slots) {

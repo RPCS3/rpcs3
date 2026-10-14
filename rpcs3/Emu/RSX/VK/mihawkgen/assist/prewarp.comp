@@ -1,0 +1,21 @@
+#version 450
+// PS5_RPCS3: MihawkGen's motion assist, pass 2: the last frame and this one carried along the smoothed vectors to the time t
+// of the frame between (as pass_between reads them: the last at uv + t d, this one at uv - (1 - t) d), so that the network
+// is left only the motion the vectors did not take: in GTA IV's quick moves, 35 to 50 of 640 working texels, past its reach
+// SPDX-License-Identifier: GPL-3.0-or-later
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D last;
+layout(binding = 1) uniform sampler2D next;
+layout(binding = 2) uniform sampler2D smoothed;
+layout(binding = 3, rgba8) uniform writeonly image2D alignedLast;
+layout(binding = 4, rgba8) uniform writeonly image2D alignedNext;
+layout(push_constant) uniform Params { ivec2 size; vec2 work; vec2 grid; float t; } params;
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(p, params.size))) return;
+	const vec2 uv = (vec2(p) + 0.5) / vec2(params.size);
+	const vec2 d = textureLod(smoothed, uv * params.grid, 0.0).xy / params.work;
+	imageStore(alignedLast, p, vec4(textureLod(last, uv + params.t * d, 0.0).rgb, 1.0));
+	imageStore(alignedNext, p, vec4(textureLod(next, uv - (1.0 - params.t) * d, 0.0).rgb, 1.0));
+}

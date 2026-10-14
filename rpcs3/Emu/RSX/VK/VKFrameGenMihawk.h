@@ -17,6 +17,7 @@ namespace vk
 {
 	class command_buffer;
 	class viewable_image;
+	struct frame_generation_motion;
 
 	class mihawk_frame_generator
 	{
@@ -31,9 +32,12 @@ namespace vk
 		// between it and the last one, evenly spaced in time, into `out` in the
 		// order they are shown, and in any case keeps this frame for the next.
 		// Returns how many it made: none for the first frame after a start, a
-		// reset or a new size
+		// reset or a new size. With `motion` (the built-in frame generation's,
+		// VKFrameGen.h) and `assist`, the network also runs on the frames
+		// pre-aligned by that motion, and each pixel is the run whose reads
+		// agree better (the MihawkGen motion assist setting)
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count,
-			vk::viewable_image* (&out)[max_frames]);
+			vk::viewable_image* (&out)[max_frames], const frame_generation_motion* motion = nullptr, bool assist = false);
 
 		// Forgets the last frame: the next one is a first one
 		void reset();

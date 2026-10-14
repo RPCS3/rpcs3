@@ -1,0 +1,20 @@
+#version 450
+// PS5_RPCS3: MihawkGen's motion assist (../../VKFrameGenMihawk.cpp), pass 1: the built-in frame generation's block vectors
+// (VKFrameGen.h, pass_median: from a point of this frame to where it was in the last, in working texels) averaged over
+// (2 radius + 1)^2 blocks, so that the frames pre-aligned by them do not tear
+// SPDX-License-Identifier: GPL-3.0-or-later
+layout(local_size_x = 8, local_size_y = 8) in;
+layout(binding = 0) uniform sampler2D vectors;
+layout(binding = 1, rgba16f) uniform writeonly image2D smoothed;
+layout(push_constant) uniform Params { ivec2 size; int radius; } params;
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (any(greaterThanEqual(p, params.size))) return;
+	vec2 sum = vec2(0.0);
+	for (int dy = -params.radius; dy <= params.radius; dy++)
+		for (int dx = -params.radius; dx <= params.radius; dx++)
+			sum += texelFetch(vectors, clamp(p + ivec2(dx, dy), ivec2(0), params.size - 1), 0).xy;
+	const float n = float((2 * params.radius + 1) * (2 * params.radius + 1));
+	imageStore(smoothed, p, vec4(sum / n, 0.0, 0.0));
+}

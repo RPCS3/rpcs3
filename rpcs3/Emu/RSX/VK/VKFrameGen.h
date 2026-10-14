@@ -31,11 +31,24 @@
 #include "vkutils/sampler.h"
 #include "vkutils/sync.h"
 
+#include <functional>
 #include <memory>
 #include <string>
 
 namespace vk
 {
+	// What the motion search found for a pair of frames, for a frame
+	// generation that builds on it (VKFrameGenMihawk.h): the block vectors
+	// after the median (a vector per 8x8 block of the working size, from a point
+	// of this frame to where it was in the last, in working texels, in GENERAL
+	// layout), the working size, and the share of the vector grid it covers
+	struct frame_generation_motion
+	{
+		vk::viewable_image* vectors;
+		f32 work_w, work_h;
+		f32 grid_x, grid_y;
+	};
+
 	class frame_generator
 	{
 	public:
@@ -55,8 +68,13 @@ namespace vk
 		// between the same two (VKFrameGenLSFG.h): those, with the HUD that
 		// stands still and quick camera moves as this one has them (pass_guard),
 		// and with `repair`, their dark blotches replaced by this one's frames where it vouches
+		// With `source`, the frames between are another frame generation's, made
+		// when this one's motion search is done: it is called with that motion
+		// (or nullptr when this one makes none, to keep the frame), fills its
+		// array and returns how many; those are the guide
+		using guide_source = std::function<u32(const vk::command_buffer&, const frame_generation_motion*, vk::viewable_image* (&)[max_frames])>;
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-			vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide = nullptr, bool repair = false);
+			vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide = nullptr, bool repair = false, const guide_source* source = nullptr);
 
 		// Forgets the last frame: the next one is a first one
 		void reset();

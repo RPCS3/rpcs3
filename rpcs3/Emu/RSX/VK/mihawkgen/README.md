@@ -19,7 +19,11 @@ Mihawk's PS5_MihawkGen, at `bb45cf1c536996e0bfc295ca91a2896e54d2c44f`:
 - `network.fgw`: its `framegen/models/network.fgw`, the trained weights (1.7 MB),
   compiled into the title by `../VKFrameGenMihawk.cpp`.
 
-Every file is as it was there. RPCS3's integration is `../VKFrameGenMihawk.*`.
+Every file is as it was there, but for one addition, marked PS5_RPCS3: `fg_context_neural_flow`
+(`framegen.h`, `fg_vulkan.cpp`, `fg_neural.*`), which hands out the network's last flow in a slot for the
+motion assist. RPCS3's integration is `../VKFrameGenMihawk.*`, and the assist's own compute shaders are
+`assist/` (GPL-3.0-or-later, mine: their SPIR-V headers made with
+`glslangValidator -V --target-env vulkan1.1 --vn ps5_mg_<name> <name>.comp -o <name>.comp.h`).
 
 ## Licence
 

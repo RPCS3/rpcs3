@@ -296,6 +296,12 @@ void fg_record_generate(fg_context *ctx, VkCommandBuffer cmd, uint32_t slot, fg_
 	vkCmdDispatch(cmd, (ctx->width + kGroupSize - 1) / kGroupSize, (ctx->height + kGroupSize - 1) / kGroupSize, 1);
 }
 
+VkImageView fg_context_neural_flow(const fg_context *ctx, uint32_t slot, uint32_t *width, uint32_t *height, float *scale,
+	uint32_t *work_w, uint32_t *work_h)
+{
+	return ctx ? fg_neural_flow(ctx->neural, slot, width, height, scale, work_w, work_h) : VK_NULL_HANDLE;
+}
+
 VkResult fg_context_load_network(fg_context *ctx, const void *blob, size_t size, char *error, size_t error_size)
 {
 	if (!ctx || !blob || ctx->physicalDevice == VK_NULL_HANDLE) {

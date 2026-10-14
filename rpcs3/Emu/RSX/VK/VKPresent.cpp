@@ -1130,32 +1130,41 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				// frame, theirs as they are
 				vk::viewable_image* guide_frames[vk::frame_generator::max_frames]{};
 				u32 guide_made = 0;
-				bool running = false;
 				if (lossless)
 				{
 					vk::viewable_image* lossless_frames[vk::lsfg_frame_generator::max_frames]{};
 					guide_made = m_lsfg_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, lossless_frames);
 					std::copy_n(lossless_frames, guide_made, guide_frames);
-					running = !m_lsfg_generator->failed();
+					if (!m_lsfg_generator->failed())
+					{
+						made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, guide_made,
+							g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, guide_frames,
+							g_cfg.video.frame_generation_repair.get());
+					}
 				}
 				else
 				{
-					vk::viewable_image* mihawk_frames[vk::mihawk_frame_generator::max_frames]{};
-					guide_made = m_mihawk_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, mihawk_frames);
-					std::copy_n(mihawk_frames, guide_made, guide_frames);
-					running = !m_mihawk_generator->failed();
-				}
-				if (running)
-				{
-					made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, guide_made,
-						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, guide_frames,
-						lossless && g_cfg.video.frame_generation_repair.get());
-					if (made != guide_made)
+					// MihawkGen's frames are made once the built-in's motion search is
+					// done, which its motion assist builds on (VKFrameGenMihawk.h)
+					const bool assist = g_cfg.video.frame_generation_mihawk_assist.get();
+					const vk::frame_generator::guide_source source = [&](const vk::command_buffer& cmd, const vk::frame_generation_motion* motion,
+						vk::viewable_image* (&sourced)[vk::frame_generator::max_frames]) -> u32
 					{
-						std::copy_n(guide_frames, guide_made, between);
-						made = guide_made;
-						g_ps5_frames_generated += made;
-					}
+						vk::viewable_image* mihawk_frames[vk::mihawk_frame_generator::max_frames]{};
+						guide_made = m_mihawk_generator->process(cmd, image_to_flip, buffer_width, buffer_height, count, mihawk_frames, motion, assist);
+						std::copy_n(mihawk_frames, guide_made, guide_frames);
+						std::copy_n(mihawk_frames, guide_made, sourced);
+						return guide_made;
+					};
+					made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count,
+						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, nullptr, false, &source);
+				}
+				const bool running = lossless ? !m_lsfg_generator->failed() : !m_mihawk_generator->failed();
+				if (running && made != guide_made)
+				{
+					std::copy_n(guide_frames, guide_made, between);
+					made = guide_made;
+					g_ps5_frames_generated += made;
 				}
 			}
 			else

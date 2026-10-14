@@ -129,6 +129,12 @@ void fg_context_set_profile(fg_context *ctx, VkQueryPool pool, uint32_t base);
 uint32_t fg_neural_pass_count(const fg_context *ctx);
 const char *fg_neural_pass_label(const fg_context *ctx, uint32_t pass);
 
+/* PS5_RPCS3: the neural method's flow from the last fg_record_generate in a slot, as its last pass reads it: an RGBA16F image
+ * (in VK_IMAGE_LAYOUT_GENERAL) of width x height texels, its value times scale the flow in working pixels (work_w x work_h) from
+ * the generated frame's point to frame 0 (xy) and to frame 1 (zw). VK_NULL_HANDLE without a network. */
+VkImageView fg_context_neural_flow(const fg_context *ctx, uint32_t slot, uint32_t *width, uint32_t *height, float *scale,
+	uint32_t *work_w, uint32_t *work_h);
+
 /* Whether the method can be recorded: the baselines and mvwarp always; neural after a network is loaded */
 bool fg_method_available(const fg_context *ctx, fg_method method);
 
