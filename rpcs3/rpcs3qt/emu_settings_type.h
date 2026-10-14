@@ -114,6 +114,7 @@ enum class emu_settings_type
 	FrameGenerationStepAside, // PS5: when frame generation shows the real frames instead
 	FrameGenerationMethod, // PS5: the built-in frame generation or Lossless Scaling's
 	FrameGenerationFlowScale, // PS5: Lossless Scaling's optical flow size
+	FrameGenerationRepair, // PS5: Lossless Scaling's frames repaired by the built-in one's
 	DisableSamplingSkip, // PS5: offered in the launcher's Audio tab
 	LateAudioWait, // PS5: cellAudio's wait for a late game's sound
 	MenuSoundVolume, // PS5: the menus' sounds

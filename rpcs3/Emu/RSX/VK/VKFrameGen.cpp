@@ -72,7 +72,8 @@ layout(set = 0, binding = 2) uniform sampler2D tex2;
 layout(set = 0, binding = 3) uniform sampler2D tex3;
 layout(set = 0, binding = 4) uniform sampler2D tex4;
 layout(set = 0, binding = 5) uniform sampler2D tex5;
-layout(set = 0, binding = 6, %FORMAT%) uniform writeonly image2D dst;
+layout(set = 0, binding = 6) uniform sampler2D tex6;
+layout(set = 0, binding = 7, %FORMAT%) uniform writeonly image2D dst;
 layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 )";
 
@@ -1021,8 +1022,13 @@ void main()
 	float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, largest(still_gap)) : 0.0;
 	still = max(still, max(hud.a, texture(tex4, uv).a));
 	const vec3 nearer = t < 0.5 ? there : here;
-	const vec3 between = mix(fallback, moved, smoothstep(0.15, 0.6, best_agree));
-	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(between, nearer, still), 1.0));
+	const float trusted = smoothstep(0.15, 0.6, best_agree);
+	const vec3 between = mix(fallback, moved, trusted);
+	// For Lossless Scaling's repair (pass_guard, p2.y): how far this frame
+	// between vouches for this spot, in the alpha; none where the HUD or a
+	// quick move has the nearer frame anyway
+	const float vouch = p2.y > 0.5 ? (camera.w > 0.5 ? 0.0 : trusted * (1.0 - still)) : 1.0;
+	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(between, nearer, still), vouch));
 }
 )",
 			// pass_guard: tex0 the last frame (its own size) with its HUD
@@ -1036,8 +1042,31 @@ void main()
 			// pass_between has it: its optical flow carried the radar, the health
 			// and text along with the street under them, smeared, on my console
 			// (build 134); and everywhere while the camera moves too quickly, with
-			// the Step aside setting
+			// the Step aside setting.
+			// With the repair (p2.y; the Lossless Scaling repair setting), tex6
+			// the built-in frame between at the same time (pass_between), its
+			// alpha how far it vouches for each spot. Lossless Scaling's frames
+			// in GTA IV's quick moves, the game at 4K and 20 to 35 fps, had dark
+			// blotches on walls that only panned, and an arm doubled (its frames
+			// saved on my console, build 143); the built-in frame there had
+			// neither. Where Lossless Scaling's pixel, or one round it, is clearly
+			// darker than the built-in one's (by 0.02 to 0.06), the built-in
+			// one's, as far as it vouches on average about there: in the model of
+			// this pass on those frames, at a third of the size, most of the
+			// blotches and the doubled arm went, and 2.6% of the picture changed.
+			// Holding Lossless Scaling's pixels to the range of the built-in
+			// one's round them (as a temporal filter clamps its history) also
+			// took the blotches, but cut hard pale shards into the running
+			// player's outline where the built-in one's trust changes block by
+			// block; so it is left out, and the trust is averaged. Distances
+			// scale with the frame (a step of 1 to 4 pixels: the model's frames
+			// were 1175 across)
 			R"(
+float luma(const vec3 c)
+{
+	return dot(c, vec3(0.3, 0.59, 0.11));
+}
+
 void main()
 {
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
@@ -1046,7 +1075,31 @@ void main()
 	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
 	const vec4 hud = texture(tex0, uv);
 	const vec3 here = texture(tex1, uv * p0.xy).rgb;
-	const vec3 made = texelFetch(tex2, p, 0).rgb;
+	vec3 made = texelFetch(tex2, p, 0).rgb;
+	if (p2.y > 0.5)
+	{
+		const ivec2 last = ivec2(p0.zw) - 1;
+		const int step = clamp(int(p0.z / 1175.0 + 0.5), 1, 4);
+		float vouch = 0.0;
+		for (int dy = -1; dy <= 1; dy++)
+		{
+			for (int dx = -1; dx <= 1; dx++)
+			{
+				vouch += texelFetch(tex6, clamp(p + ivec2(dx, dy) * (3 * step), ivec2(0), last), 0).a;
+			}
+		}
+		vouch /= 9.0;
+		float darker = 0.0;
+		for (int dy = -2; dy <= 2; dy++)
+		{
+			for (int dx = -2; dx <= 2; dx++)
+			{
+				const ivec2 q = clamp(p + ivec2(dx, dy) * step, ivec2(0), last);
+				darker = max(darker, smoothstep(0.02, 0.06, luma(texelFetch(tex6, q, 0).rgb) - luma(texelFetch(tex2, q, 0).rgb)));
+			}
+		}
+		made = mix(made, texelFetch(tex6, p, 0).rgb, vouch * darker);
+	}
 	const vec3 nearer = t < 0.5 ? hud.rgb : here;
 	const float still = max(hud.a, max(texture(tex4, uv).a, texture(tex5, uv).a));
 	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
@@ -1058,7 +1111,7 @@ void main()
 		template <int Kind>
 		struct frame_generation_pass : compute_task
 		{
-			const vk::image_view* m_inputs[6]{};
+			const vk::image_view* m_inputs[7]{};
 			const vk::image_view* m_output = nullptr;
 			std::unique_ptr<vk::sampler> m_sampler;
 
@@ -1077,11 +1130,11 @@ void main()
 			std::vector<glsl::program_input> get_inputs() override
 			{
 				auto result = compute_task::get_inputs();
-				for (u32 i = 0; i < 6; i++)
+				for (u32 i = 0; i < 7; i++)
 				{
 					result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "tex" + std::to_string(i), vk::glsl::input_type_texture, 0, i));
 				}
-				result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "dst", vk::glsl::input_type_storage_texture, 0, 6));
+				result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "dst", vk::glsl::input_type_storage_texture, 0, 7));
 				return result;
 			}
 
@@ -1095,11 +1148,11 @@ void main()
 						VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 				}
 
-				for (u32 i = 0; i < 6; i++)
+				for (u32 i = 0; i < 7; i++)
 				{
 					m_program->bind_uniform({ *m_inputs[i], *m_sampler }, 0, i);
 				}
-				m_program->bind_uniform({ *m_output }, 0, 6);
+				m_program->bind_uniform({ *m_output }, 0, 7);
 			}
 
 			void run(const vk::command_buffer& cmd, std::initializer_list<vk::viewable_image*> inputs, vk::viewable_image* output, u32 width, u32 height, const std::array<f32, 12>& params)
@@ -1110,7 +1163,7 @@ void main()
 				{
 					m_inputs[i++] = view(input);
 				}
-				for (; i < 6; i++)
+				for (; i < 7; i++)
 				{
 					m_inputs[i] = m_inputs[0];
 				}
@@ -1246,6 +1299,7 @@ void main()
 		for (auto& image : m_vectors_refined) drop(image);
 		drop(m_capture_cur);
 		for (auto& image : m_output) drop(image);
+		drop(m_own);
 		m_width = m_height = 0;
 		m_have_prev = false;
 	}
@@ -1273,6 +1327,8 @@ void main()
 			image = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
 			outputs = outputs && image;
 		}
+		m_own = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
+		outputs = outputs && m_own;
 		for (u32 i = 0; i < 2; i++)
 		{
 			m_luma[i] = make_image(m_work_w, m_work_h, VK_FORMAT_R32_SFLOAT);
@@ -1503,7 +1559,7 @@ void main()
 	}
 
 	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-		vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide)
+		vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide, bool repair)
 	{
 		take_capture();
 
@@ -1523,7 +1579,7 @@ void main()
 			{
 				return 0;
 			}
-			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_blur[0].get(), m_blur[1].get(), m_hud_strong.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
+			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_blur[0].get(), m_blur[1].get(), m_hud_strong.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_own.get(), m_luma[0].get(), m_luma[1].get(),
 				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
 				m_camera.get(), m_camera_moved.get(),
 				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get(), m_vectors_refined[0].get(), m_vectors_refined[1].get() })
@@ -1647,7 +1703,19 @@ void main()
 			for (u32 k = 0; k < count; k++)
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
-				if (guide)
+				if (guide && repair && m_own)
+				{
+					// The built-in frame between first, what it vouches for in its
+					// alpha; then Lossless Scaling's, repaired where it vouches
+					vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get(), m_camera.get(), m_blur[0].get(), m_blur[1].get() }, m_own.get(), width, height,
+						{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t, 1.f });
+					barrier(cmd);
+					vk::get_compute_task<frame_generation_pass<pass_guard>>()->run(cmd, { m_prev_hud.get(), cur, guide[k], m_camera.get(), m_blur[0].get(), m_blur[1].get(), m_own.get() }, m_output[k].get(), width, height,
+						{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), 0.f, 0.f, 0.f, 0.f, t, 1.f });
+					// Its reads of m_own done before the next frame between writes it
+					barrier(cmd);
+				}
+				else if (guide)
 				{
 					vk::get_compute_task<frame_generation_pass<pass_guard>>()->run(cmd, { m_prev_hud.get(), cur, guide[k], m_camera.get(), m_blur[0].get(), m_blur[1].get() }, m_output[k].get(), width, height,
 						{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), 0.f, 0.f, 0.f, 0.f, t });

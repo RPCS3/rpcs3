@@ -1117,7 +1117,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				if (!m_lsfg_generator->failed())
 				{
 					made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, lossless_made,
-						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, lossless_frames);
+						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, lossless_frames, g_cfg.video.frame_generation_repair.get());
 					if (made != lossless_made)
 					{
 						std::copy_n(lossless_frames, lossless_made, between);

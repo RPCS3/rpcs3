@@ -53,9 +53,10 @@ namespace vk
 		// frames it made: none for the first frame, a new size or quality, or
 		// none asked for. With `guide`, the `count` frames Lossless Scaling made
 		// between the same two (VKFrameGenLSFG.h): those, with the HUD that
-		// stands still and quick camera moves as this one has them (pass_guard)
+		// stands still and quick camera moves as this one has them (pass_guard),
+		// and with `repair`, their dark blotches replaced by this one's frames where it vouches
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-			vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide = nullptr);
+			vk::viewable_image* (&out)[max_frames], vk::viewable_image* const* guide = nullptr, bool repair = false);
 
 		// Forgets the last frame: the next one is a first one
 		void reset();
@@ -108,5 +109,6 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> m_vectors_smooth;    // the same, outliers removed
 		std::unique_ptr<vk::viewable_image> m_vectors_refined[2]; // the rounds of agreeing with the neighbours, in turn
 		std::unique_ptr<vk::viewable_image> m_output[max_frames]; // the frames between
+		std::unique_ptr<vk::viewable_image> m_own;               // with Lossless Scaling's repair: the built-in frame between, what it vouches for in its alpha
 	};
 }

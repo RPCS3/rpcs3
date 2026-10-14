@@ -73,6 +73,7 @@ namespace rsx::overlays
 			{"Video", "Frame Generation Step Aside", "Frame generation steps aside"},
 			{"Video", "Frame Generation Method", "Frame generation method"},
 			{"Video", "Frame Generation Flow Scale", "Lossless Scaling flow scale"},
+			{"Video", "Frame Generation Repair", "Lossless Scaling repair"},
 			{"Audio", "Master Volume", "Volume"},
 			// Only for a game with collision code it applies to (GTA IV)
 			{"Core", "SPU Collision Accuracy", "Collision accuracy"},

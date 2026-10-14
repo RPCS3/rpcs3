@@ -916,13 +916,13 @@ namespace
 			const auto& video = g_cfg.video;
 			const char* zcull = video.relaxed_zcull_sync ? "Relaxed" : video.precise_zpass_count ? "Precise" : "Approximate";
 			trace("settings for %s: SPU block size %s, Max SPURS %s, SPU loop detection %s, accurate SPU reservations %s, accurate RSX reservation access %s, XFloat %s; "
-				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s, steps aside %s, method %s, flow scale %s%%); own core %s, collision accuracy %s",
+				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s, steps aside %s, method %s, flow scale %s%%, repair %s); own core %s, collision accuracy %s",
 				Emu.GetTitleID(), core.spu_block_size.to_string(), core.max_spurs_threads.to_string(), core.spu_loop_detection.to_string(),
 				core.spu_accurate_reservations.to_string(), core.rsx_accurate_res_access.to_string(), core.spu_xfloat_accuracy.to_string(),
 				video.frame_limit.to_string(), video.vblank_rate.to_string(), video.resolution.to_string(), video.resolution_scale_percent.to_string(), zcull,
 				video.write_color_buffers.to_string(), video.multithreaded_rsx.to_string(), g_cfg.audio.late_audio_wait.to_string(),
 				video.frame_generation.to_string(), video.frame_generation_frames.to_string(), video.frame_generation_quality.to_string(),
-				video.frame_generation_step_aside.to_string(), video.frame_generation_method == 1 ? "Lossless Scaling" : "built-in", video.frame_generation_flow_scale.to_string(), core.spu_own_core.to_string(), core.spu_collision_accuracy.to_string());
+				video.frame_generation_step_aside.to_string(), video.frame_generation_method == 1 ? "Lossless Scaling" : "built-in", video.frame_generation_flow_scale.to_string(), video.frame_generation_repair.to_string(), core.spu_own_core.to_string(), core.spu_collision_accuracy.to_string());
 		};
 		g_emu_callbacks.on_pause = []() {};
 		g_emu_callbacks.on_resume = []() {};
@@ -1608,9 +1608,9 @@ int run(const char* boot_path)
 						// Lossless Scaling's (VKFrameGenLSFG.h): what became of it
 						const u32 most = static_cast<u32>(g_cfg.video.frame_generation_frames);
 						const u32 step = static_cast<u32>(g_cfg.video.frame_generation_step_aside);
-						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, Lossless Scaling: %s, flow scale %u%%", most ? std::to_string(most) : std::string("Auto"),
+						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, Lossless Scaling: %s, flow scale %u%%, repair %s", most ? std::to_string(most) : std::string("Auto"),
 							step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", vk::lsfg_status(),
-							static_cast<u32>(g_cfg.video.frame_generation_flow_scale));
+							static_cast<u32>(g_cfg.video.frame_generation_flow_scale), g_cfg.video.frame_generation_repair ? "on" : "off");
 					}
 					else if (g_cfg.video.frame_generation)
 					{
