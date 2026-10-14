@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
@@ -1966,6 +1967,10 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 	{
 		thread->ch_in_mbox.notify();
 	}
+
+	// Configuable SPU head start (compensation)
+	// SPU wakes up immediately on realhW and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_eanbled ? +g_cfg.core.spu_mmio_delay : 3);
 
 	return CELL_OK;
 }

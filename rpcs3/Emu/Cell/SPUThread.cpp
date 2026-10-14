@@ -2022,7 +2022,7 @@ void spu_thread::push_snr(u32 number, u32 value)
 	{
 		set_events(event_bit);
 
-		// Wait until the thread wakes up
+		// Wait until the thread wakes up (SPU wakes up immediately on realhW)
 		if (push_state.notify)
 		{
 			for (u64 time = get_system_time(), current = time; state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(this->pc) && current - time < 500; current = get_system_time())
@@ -2045,6 +2045,10 @@ void spu_thread::push_snr(u32 number, u32 value)
 	{
 		ev.locks--;
 	});
+
+	// Configueable SPU head start (compnesation)
+	// SPU wakes up immediately on realhW and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_eanbled ? +g_cfg.core.spu_mmio_delay : 3);
 }
 
 void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls)
