@@ -298,12 +298,12 @@ namespace gui
 	const gui_save gs_geometry          = gui_save(gs_frame, "geometry",              QRect());
 	const gui_save gs_visibility        = gui_save(gs_frame, "visibility",            visibility_to_string(QWindow::Visibility::AutomaticVisibility));
 
-	const gui_save ss_icon_color      = gui_save(trophy, "icon_color",    gl_icon_color);
-	const gui_save ss_game_icon_size  = gui_save(trophy, "game_icon_size",  25);
-	const gui_save ss_geometry        = gui_save(trophy, "geometry",        QByteArray());
-	const gui_save ss_splitterState   = gui_save(trophy, "splitterState",   QByteArray());
-	const gui_save ss_games_state     = gui_save(trophy, "games_state",     QByteArray());
-	const gui_save ss_savestate_state = gui_save(trophy, "savestate_state", QByteArray());
+	const gui_save ss_icon_color      = gui_save(savestate, "icon_color",    gl_icon_color);
+	const gui_save ss_game_icon_size  = gui_save(savestate, "game_icon_size",  25);
+	const gui_save ss_geometry        = gui_save(savestate, "geometry",        QByteArray());
+	const gui_save ss_splitterState   = gui_save(savestate, "splitterState",   QByteArray());
+	const gui_save ss_games_state     = gui_save(savestate, "games_state",     QByteArray());
+	const gui_save ss_savestate_state = gui_save(savestate, "savestate_state", QByteArray());
 
 	const gui_save tr_icon_color    = gui_save(trophy, "icon_color",    gl_icon_color);
 	const gui_save tr_icon_height   = gui_save(trophy, "icon_height",   75);
