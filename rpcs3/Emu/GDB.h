@@ -66,24 +66,24 @@ class gdb_thread
 	void wait_with_interrupts();
 
 	//commands
-	bool cmd_extended_mode(gdb_cmd& cmd);
-	bool cmd_reason(gdb_cmd& cmd);
-	bool cmd_supported(gdb_cmd& cmd);
-	bool cmd_thread_info(gdb_cmd& cmd);
-	bool cmd_current_thread(gdb_cmd& cmd);
-	bool cmd_read_register(gdb_cmd& cmd);
-	bool cmd_write_register(gdb_cmd& cmd);
-	bool cmd_read_memory(gdb_cmd& cmd);
-	bool cmd_write_memory(gdb_cmd& cmd);
-	bool cmd_read_all_registers(gdb_cmd& cmd);
-	bool cmd_write_all_registers(gdb_cmd& cmd);
-	bool cmd_set_thread_ops(gdb_cmd& cmd);
-	bool cmd_attached_to_what(gdb_cmd& cmd);
-	static bool cmd_kill(gdb_cmd& cmd);
-	bool cmd_continue_support(gdb_cmd& cmd);
-	bool cmd_vcont(gdb_cmd& cmd);
-	bool cmd_set_breakpoint(gdb_cmd& cmd);
-	bool cmd_remove_breakpoint(gdb_cmd& cmd);
+	bool cmd_extended_mode(const gdb_cmd& cmd);
+	bool cmd_reason(const gdb_cmd& cmd);
+	bool cmd_supported(const gdb_cmd& cmd);
+	bool cmd_thread_info(const gdb_cmd& cmd);
+	bool cmd_current_thread(const gdb_cmd& cmd);
+	bool cmd_read_register(const gdb_cmd& cmd);
+	bool cmd_write_register(const gdb_cmd& cmd);
+	bool cmd_read_memory(const gdb_cmd& cmd);
+	bool cmd_write_memory(const gdb_cmd& cmd);
+	bool cmd_read_all_registers(const gdb_cmd& cmd);
+	bool cmd_write_all_registers(const gdb_cmd& cmd);
+	bool cmd_set_thread_ops(const gdb_cmd& cmd);
+	bool cmd_attached_to_what(const gdb_cmd& cmd);
+	static bool cmd_kill(const gdb_cmd& cmd);
+	bool cmd_continue_support(const gdb_cmd& cmd);
+	bool cmd_vcont(const gdb_cmd& cmd);
+	bool cmd_set_breakpoint(const gdb_cmd& cmd);
+	bool cmd_remove_breakpoint(const gdb_cmd& cmd);
 
 public:
 	bool from_breakpoint = true;
