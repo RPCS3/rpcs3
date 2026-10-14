@@ -294,6 +294,7 @@ public:
 
 	atomic_t<ppu_join_status> joiner; // Joining thread or status
 	u32 hw_sleep_time = 0; // Very specific delay for hardware threads switching, see lv2_obj::awake_unlocked for more details
+	u64 event_wakeup_time = 0;
 
 	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 

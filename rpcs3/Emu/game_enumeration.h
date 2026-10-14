@@ -576,7 +576,7 @@ void game_enumeration<game_info_type>::apply_patches()
 			// Let's fetch the game data movie if preferred or if the path was empty
 			if (m_prefer_game_data_icons || info.movie_path.empty())
 			{
-				if (std::string movie_path = other.path + "/" + m_localized_icon; fs::is_file(movie_path))
+				if (std::string movie_path = other.path + "/" + m_localized_movie; fs::is_file(movie_path))
 				{
 					info.movie_path = std::move(movie_path);
 					info.movie_in_archive = false;

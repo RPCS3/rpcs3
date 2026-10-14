@@ -54,6 +54,7 @@ enum class emu_settings_type
 	EnabledSPUEventsBusyLoop,
 	PPUReservationPriorityOverSPUs,
 	AccurateSpuReservations,
+	SPUMmioDelay,
 
 	// Graphics
 	Renderer,
@@ -104,6 +105,7 @@ enum class emu_settings_type
 	RelaxedZCULL,
 	PreciseZCULL,
 	DriverWakeUpDelay,
+	PPUEventWakeUpDelay,
 	VulkanAsyncTextureUploads,
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
