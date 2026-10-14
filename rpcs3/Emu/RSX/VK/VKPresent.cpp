@@ -13,6 +13,8 @@
 #include "util/asm.hpp"
 #include "util/video_provider.h"
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
 
@@ -255,22 +257,23 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 
 	// Resource cleanup.
 	{
-		if (m_overlay_manager && m_overlay_manager->has_dirty())
+		const auto overlay_manager = RSX(m_ctx)->overlay_manager();
+		if (overlay_manager && overlay_manager->has_dirty())
 		{
 			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-			m_overlay_manager->lock_shared();
+			overlay_manager->lock_shared();
 
 			std::vector<u32> uids_to_dispose;
-			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+			uids_to_dispose.reserve(overlay_manager->get_dirty().size());
 
-			for (const auto& view : m_overlay_manager->get_dirty())
+			for (const auto& view : overlay_manager->get_dirty())
 			{
 				ui_renderer->remove_temp_resources(view->uid);
 				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->unlock_shared();
-			m_overlay_manager->dispose(uids_to_dispose);
+			overlay_manager->unlock_shared();
+			overlay_manager->dispose(uids_to_dispose);
 		}
 
 		vk::get_resource_manager()->trim();
@@ -349,7 +352,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 				image_to_flip = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
-					resolution_scaling_config,
+					RSX(m_ctx)->resolution_scaling_config,
 					std::min(surface_width, info->width),
 					std::min(surface_height, info->height));
 			}
@@ -514,9 +517,10 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 		return false;
 	}
 
-	u32 buffer_width = display_buffers[info.buffer].width;
-	u32 buffer_height = display_buffers[info.buffer].height;
-	u32 buffer_pitch = display_buffers[info.buffer].pitch;
+	const auto& display_buffer = RSX(m_ctx)->display_buffers[info.buffer];
+	u32 buffer_width = display_buffer.width;
+	u32 buffer_height = display_buffer.height;
+	u32 buffer_pitch = display_buffer.pitch;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
@@ -548,11 +552,11 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
 
-	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
+	if (info.buffer < RSX(m_ctx)->display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
 		{
-			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
+			.address = rsx::get_address(display_buffer.offset, CELL_GCM_LOCATION_LOCAL),
 			.format = av_format,
 			.width = buffer_width,
 			.height = buffer_height,
@@ -563,11 +567,11 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 		if (avconfig.stereo_enabled) [[unlikely]]
 		{
-			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
-				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
+				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffer.offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
 				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
@@ -578,7 +582,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
 				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
@@ -589,7 +593,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 	if (info.emu_flip)
 	{
-		evaluate_cpu_usage_reduction_limits();
+		RSX(m_ctx)->evaluate_cpu_usage_reduction_limits();
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
@@ -662,7 +666,8 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 	vk::framebuffer_holder* direct_fbo = nullptr;
 	rsx::simple_array<vk::viewable_image*> calibration_src;
 
-	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
+	const auto overlay_manager = RSX(m_ctx)->overlay_manager();
+	const bool has_overlay = (overlay_manager && overlay_manager->has_visible());
 	const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
 	const bool user_is_recording = (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame());
 	const bool need_media_capture = user_asked_for_screenshot || user_is_recording;
@@ -673,10 +678,10 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 		// Lock to avoid modification during run-update chain
 		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-		std::lock_guard lock(*m_overlay_manager);
+		std::lock_guard lock(*overlay_manager);
 
 		const areau display_area = {0, 0, static_cast<u32>(m_swapchain_dims.width), static_cast<u32>(m_swapchain_dims.height)};
-		for (const auto& view : m_overlay_manager->get_views())
+		for (const auto& view : overlay_manager->get_views())
 		{
 			const areau render_area = view->use_window_space ? display_area : area;
 			ui_renderer->run(*m_current_command_buffer, render_area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
@@ -965,8 +970,8 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 				"Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)\n"
 				"Vertex cache hits: %10u/%u (%u%%)\n"
 				"Program cache lookup ellision: %u/%u (%u%%)",
-				info.stats.framebuffer_stats.to_string(resolution_scaling_config, !m_config.supports_hw_msaa),
-				get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
+				info.stats.framebuffer_stats.to_string(RSX(m_ctx)->resolution_scaling_config, !m_config.supports_hw_msaa),
+				RSX(m_ctx)->get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
 				info.stats.textures_upload_time, info.stats.draw_exec_time, info.stats.flip_time,
 				num_dirty_textures, texture_memory_size, tmp_texture_memory_size,
 				num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
@@ -1001,7 +1006,7 @@ void VKGSRender::post_present()
 		.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
 	};
 
-	if (active_res_scaling_config != this->resolution_scaling_config)
+	if (active_res_scaling_config != RSX(m_ctx)->resolution_scaling_config)
 	{
 		// First, try to reclaim any memory since the res scale upgrade is so memory intensive
 		if (const auto severity = vk::vmm_determine_memory_load_severity();
@@ -1012,7 +1017,7 @@ void VKGSRender::post_present()
 
 		// Then apply the change
 		m_rtts.sync_scaling_config(*m_current_command_buffer, active_res_scaling_config);
-		this->resolution_scaling_config = active_res_scaling_config;
+		RSX(m_ctx)->resolution_scaling_config = active_res_scaling_config;
 
 		// Finally reclaim any unused resources
 		if (const auto severity = vk::vmm_determine_memory_load_severity();

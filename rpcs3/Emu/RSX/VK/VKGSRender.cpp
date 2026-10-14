@@ -806,7 +806,7 @@ VKGSRender::~VKGSRender()
 	// Flush DMA queue
 	while (!g_fxo->get<rsx::dma_manager>().sync())
 	{
-		do_local_task(rsx::FIFO::state::lock_wait);
+		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
 	}
 
 	//Wait for device to finish up with resources
@@ -917,7 +917,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return zcull_ctrl->on_access_violation(address);
+		return RSX(m_ctx)->zcull().on_access_violation(address);
 	}
 
 	if (result.num_flushable > 0)
@@ -947,7 +947,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		bool has_queue_ref = false;
 		std::function<void()> data_transfer_completed_callback{};
 
-		if (!is_current_thread()) [[likely]]
+		if (!RSX(m_ctx)->is_current_thread()) [[likely]]
 		{
 			// Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
 			vm::temporary_unlock();
@@ -1018,10 +1018,10 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range32 &range,
 void VKGSRender::on_semaphore_acquire_wait()
 {
 	if (m_flush_requests.pending() ||
-		(async_flip_requested & flip_request::emu_requested) ||
+		(RSX(m_ctx)->async_flip_requested & flip_request::emu_requested) ||
 		(m_queue_status & flush_queue_state::deadlock))
 	{
-		do_local_task(rsx::FIFO::state::lock_wait);
+		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
 	}
 }
 
@@ -1150,8 +1150,8 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	//TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_pre_memory_unmapped(addr, tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
+		u32 addr = rsx::get_address(RSX(m_ctx)->tiles[tile].offset, RSX(m_ctx)->tiles[tile].location);
+		RSX(m_ctx)->on_notify_pre_memory_unmapped(addr, RSX(m_ctx)->tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
 		m_rtts.invalidate_surface_address(addr, false);
 	}
 
@@ -1179,7 +1179,7 @@ void VKGSRender::set_viewport()
 {
 	const auto& viewport = m_ctx->draw_state.viewport;
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
-		resolution_scaling_config,
+		RSX(m_ctx)->resolution_scaling_config,
 		viewport.clip_width, viewport.clip_height);
 
 	const auto zclip_near = viewport.z_clip_min;
@@ -1215,8 +1215,8 @@ void VKGSRender::set_scissor()
 	const auto& region = m_ctx->draw_state.scissor;
 
 	areau scissor;
-	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
-	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(RSX(m_ctx)->resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
 
 	m_scissor.extent.height = scissor.height();
 	m_scissor.extent.width = scissor.width();
@@ -1251,8 +1251,8 @@ void VKGSRender::on_init()
 	if (g_cfg.video.shadermode == shader_mode::async_with_interpreter ||
 		g_cfg.video.shadermode == shader_mode::interpreter_only)
 	{
-		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
-			? std::make_unique<rsx::shader_loading_dialog_native>(this)
+		std::unique_ptr<rsx::shader_loading_dialog> dlg = RSX(m_ctx)->overlay_manager()
+			? std::make_unique<rsx::shader_loading_dialog_native>(RSX(m_ctx))
 			: std::make_unique<rsx::shader_loading_dialog>();
 		m_shader_interpreter.preload(dlg.get());
 		dlg->close();
@@ -1260,7 +1260,7 @@ void VKGSRender::on_init()
 
 	if (g_cfg.video.shadermode != shader_mode::interpreter_only)
 	{
-		if (!m_overlay_manager)
+		if (!RSX(m_ctx)->overlay_manager())
 		{
 			m_frame->hide();
 			m_shaders_cache->load(nullptr);
@@ -1268,7 +1268,7 @@ void VKGSRender::on_init()
 		}
 		else
 		{
-			rsx::shader_loading_dialog_native dlg(this);
+			rsx::shader_loading_dialog_native dlg(RSX(m_ctx));
 
 			// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
 			m_shaders_cache->load(&dlg);
@@ -1585,7 +1585,7 @@ void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
 
 void VKGSRender::write_barrier(u32 address, u32 range)
 {
-	ensure(is_current_thread());
+	ensure(RSX(m_ctx)->is_current_thread());
 	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
 }
 
@@ -1610,7 +1610,7 @@ void VKGSRender::on_sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync
 
 		// If the result is not going to be read by CELL, do nothing
 		const auto ref_addr = static_cast<u32>(payload.address);
-		if (!zcull_ctrl->is_query_result_urgent(ref_addr))
+		if (!RSX(m_ctx)->zcull().is_query_result_urgent(ref_addr))
 		{
 			// No effect on CELL behaviour, it will be faster to handle this in RSX code
 			return;
@@ -1820,7 +1820,7 @@ bool VKGSRender::load_program()
 			// Notify the user with HUD notification
 			if (g_cfg.misc.show_shader_compilation_hint)
 			{
-				if (m_overlay_manager)
+				if (RSX(m_ctx)->overlay_manager())
 				{
 					rsx::overlays::show_shader_compile_notification();
 				}
@@ -1909,7 +1909,7 @@ void VKGSRender::load_program_env()
 		const auto mem = m_vertex_env_allocator->alloc();
 		auto buf = m_vertex_env_ring_info.map<char>(mem, 96);
 
-		m_draw_processor.fill_vertex_env(buf, resolution_scaling_config.scale_factor());
+		RSX(m_ctx)->draw_processor()->fill_vertex_env(buf, RSX(m_ctx)->resolution_scaling_config.scale_factor());
 
 		m_vertex_env_ring_info.unmap();
 		m_vertex_env_dynamic_offset = mem;
@@ -1938,7 +1938,7 @@ void VKGSRender::load_program_env()
 		});
 
 		const auto bound_vertex_prog = m_shader_interpreter.is_interpreter(m_program) ? nullptr : m_vertex_prog;
-		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, bound_vertex_prog);
+		RSX(m_ctx)->draw_processor()->fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, bound_vertex_prog);
 		m_instancing_buffer_ring_info.unmap();
 
 		m_instancing_indirection_buffer_info = { *m_instancing_buffer_ring_info.heap, indirection_table_offset, indirection_table_buf.size() };
@@ -1990,7 +1990,7 @@ void VKGSRender::load_program_env()
 		m_fragment_env_dynamic_offset = m_fragment_env_ring_info.static_alloc<32>();
 		auto buf = m_fragment_env_ring_info.map(m_fragment_env_dynamic_offset, 32);
 
-		m_draw_processor.fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
+		RSX(m_ctx)->draw_processor()->fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
 		m_fragment_env_ring_info.unmap();
 
 		m_fragment_env_buffer_info = m_fragment_env_ring_info.window<32>(m_fragment_env_dynamic_offset, 32, gpu_limits.maxUniformBufferRange);
@@ -2027,7 +2027,7 @@ void VKGSRender::load_program_env()
 			auto vp_mapping = m_vertex_instructions_buffer.alloc<256>(vp_block_length);
 			auto vp_buf = static_cast<u8*>(m_vertex_instructions_buffer.map(vp_mapping, vp_block_length));
 
-			m_draw_processor.fill_interpreter_vertex_header(vp_buf);
+			RSX(m_ctx)->draw_processor()->fill_interpreter_vertex_header(vp_buf);
 
 			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 			m_vertex_instructions_buffer.unmap();
@@ -2042,7 +2042,7 @@ void VKGSRender::load_program_env()
 			auto fp_mapping = m_fragment_instructions_buffer.alloc<256>(fp_block_length);
 			auto fp_buf = static_cast<u8*>(m_fragment_instructions_buffer.map(fp_mapping, fp_block_length));
 
-			m_draw_processor.fill_interpreter_fragment_header(fp_buf);
+			RSX(m_ctx)->draw_processor()->fill_interpreter_fragment_header(fp_buf);
 
 			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
@@ -2135,7 +2135,7 @@ void VKGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 		const auto constant_ids = (transform_constants_size == 8192)
 			? std::span<const u16>{}
 			: std::span<const u16>(m_vertex_prog->constant_ids);
-		m_draw_processor.fill_vertex_program_constants_data(buf, constant_ids);
+		RSX(m_ctx)->draw_processor()->fill_vertex_program_constants_data(buf, constant_ids);
 	}
 }
 
@@ -2222,7 +2222,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	}
 
 	// Now actually fill in the data
-	m_draw_processor.fill_vertex_layout_state(
+	RSX(m_ctx)->draw_processor()->fill_vertex_layout_state(
 		m_vertex_layout,
 		m_ctx->program.vp_metadata,
 		vertex_info.first_vertex,
@@ -2391,7 +2391,7 @@ bool VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		m_ctx->fb.layout.target, m_ctx->fb.layout.aa_mode, m_ctx->fb.layout.raster_type,
 		m_ctx->fb.layout.color_addresses, m_ctx->fb.layout.zeta_address,
 		m_ctx->fb.layout.actual_color_pitch, m_ctx->fb.layout.actual_zeta_pitch,
-		resolution_scaling_config);
+		RSX(m_ctx)->resolution_scaling_config);
 
 	// Reset framebuffer information
 	const auto color_bpp = get_format_block_size_in_bytes(m_ctx->fb.layout.color_format);
@@ -2574,7 +2574,7 @@ bool VKGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
 
 	if (m_draw_fbo)
 	{
