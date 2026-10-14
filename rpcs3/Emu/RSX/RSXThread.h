@@ -36,8 +36,6 @@ extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
-	class RSXDMAWriter;
-
 	struct context;
 
 	namespace overlays
@@ -74,10 +72,9 @@ namespace rsx
 		display_flip_info_t m_queued_flip{};
 
 		void cpu_task() override;
-	protected:
 
-		// FIFO
 	public:
+		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
@@ -122,8 +119,6 @@ namespace rsx
 
 		// Host window
 		display_output m_display_out;
-
-		// Host DMA
 
 		// Draw call management
 		draw_command_processor m_draw_processor;
@@ -229,11 +224,6 @@ namespace rsx
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
-	protected:
-		// Forwarded to the GRAPH engine
-		bool requires_depth_range_emulation() const;
-
-	public:
 		bool invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size);
 		void on_framebuffer_options_changed(u32 opt);
 
@@ -277,7 +267,7 @@ namespace rsx
 		thread() = delete;
 
 	protected:
-		virtual void on_task();
+		void on_task();
 		void on_exit();
 
 		void run_FIFO();
@@ -295,7 +285,7 @@ namespace rsx
 		// NV4097_CLEAR_SURFACE, forwarded to the renderer core
 		void clear_surface(u32 arg);
 
-		virtual void on_frame_end(u32 buffer, bool forced = false);
+		void on_frame_end(u32 buffer, bool forced = false);
 		void flip(const display_flip_info_t& info);
 		u64 timestamp();
 
@@ -320,17 +310,7 @@ namespace rsx
 		void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 
 	public:
-
-		/**
-		 * Computes VRAM requirements needed to upload raw vertex streams
-		 * result.first contains persistent memory requirements
-		 * result.second contains volatile memory requirements
-		 */
-		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count);
-
 		void evaluate_cpu_usage_reduction_limits();
-
-	protected:
 
 	private:
 		shared_mutex m_mtx_task;
