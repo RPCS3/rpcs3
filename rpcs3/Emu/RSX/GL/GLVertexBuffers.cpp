@@ -173,7 +173,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	}
 
 	//Do actual vertex upload
-	auto required = RSX(m_ctx)->calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
+	auto required = RSX(m_ctx)->draw_processor()->calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
 	gl::vertex_upload_info upload_info =

@@ -236,7 +236,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	}
 
 	//Do actual vertex upload
-	auto required = RSX(m_ctx)->calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
+	auto required = RSX(m_ctx)->draw_processor()->calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 	u32 persistent_range_base = -1, volatile_range_base = -1;
 	usz persistent_offset = -1, volatile_offset = -1;
 

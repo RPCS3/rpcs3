@@ -1015,7 +1015,7 @@ bool Emulator::BootBigPictureMode()
 	// Initialize performance monitor
 	g_fxo->init<named_thread<perf_monitor>>();
 
-	// No PS3 executable is loaded. GSRender/pad_thread only exist to host the Big Picture Mode overlay.
+	// No PS3 executable is loaded. rsx::thread/pad_thread only exist to host the Big Picture Mode overlay.
 	m_state = system_state::ready;
 	g_emu_callbacks.on_ready();
 
