@@ -54,6 +54,7 @@ enum class emu_settings_type
 	EnabledSPUEventsBusyLoop,
 	PPUReservationPriorityOverSPUs,
 	AccurateSpuReservations,
+	SPUMmioDelay,
 
 	// Graphics
 	Renderer,
