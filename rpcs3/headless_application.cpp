@@ -75,7 +75,7 @@ void headless_application::create_callbacks()
 		{
 		case video_renderer::null:
 		{
-			rsx::create_render_thread(type, ar);
+			rsx::create_render_thread(ar);
 			break;
 		}
 		case video_renderer::opengl:

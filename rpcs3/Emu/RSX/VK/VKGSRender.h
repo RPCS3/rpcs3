@@ -19,7 +19,9 @@
 #include "VKShaderInterpreter.h"
 #include "VKQueryPool.h"
 
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Core/RSXRenderBackend.h"
+#include "Emu/RSX/GSFrameBase.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include <functional>
 #include <initializer_list>
@@ -35,7 +37,7 @@ namespace vk
 	using host_data_t = rsx::host_gpu_context_t;
 }
 
-class VKGSRender : public GSRender, public ::rsx::reports::occlusion_query_provider
+class VKGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
 private:
 	enum frame_context_state : u32
@@ -212,8 +214,7 @@ private:
 public:
 	~VKGSRender() override;
 
-	VKGSRender(utils::serial* ar) noexcept;
-	VKGSRender() noexcept : VKGSRender(nullptr) {}
+	VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept;
 
 private:
 	void close_and_submit_command_buffer(
