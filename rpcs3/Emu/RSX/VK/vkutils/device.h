@@ -201,7 +201,7 @@ namespace vk
 		VkQueue get_graphics_queue() const { return m_graphics_queue; }
 		VkQueue get_transfer_queue() const { return m_transfer_queue; }
 		u32 get_graphics_queue_family() const { return m_graphics_queue_family; }
-		u32 get_present_queue_family() const { return m_graphics_queue_family; }
+		u32 get_present_queue_family() const { return m_present_queue_family; }
 		u32 get_transfer_queue_family() const { return m_transfer_queue_family; }
 
 		mem_allocator_base* get_allocator() const { return m_allocator.get(); }
