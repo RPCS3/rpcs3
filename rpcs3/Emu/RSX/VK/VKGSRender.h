@@ -13,6 +13,7 @@
 #ifdef __PROSPERO__
 #include "VKFrameGen.h"
 #include "VKFrameGenLSFG.h"
+#include "VKFrameGenMihawk.h"
 #endif
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
@@ -80,6 +81,7 @@ private:
 	// frame generation's images
 	std::unique_ptr<vk::frame_generator> m_frame_generator;
 	std::unique_ptr<vk::lsfg_frame_generator> m_lsfg_generator; // Lossless Scaling's, by the Frame Generation Method setting (VKFrameGenLSFG.h)
+	std::unique_ptr<vk::mihawk_frame_generator> m_mihawk_generator; // MihawkGen's, by the same setting (VKFrameGenMihawk.h)
 	u64 m_last_game_flip_us = 0;
 	f64 m_display_taken_at_us = 0.;
 	bool m_frame_gen_swapchain = false;

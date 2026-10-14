@@ -25,7 +25,7 @@ extern atomic_t<bool> g_big_picture_mode_active; // System.cpp: a stop goes back
 void ps5_launcher_message(std::string title, std::string body); // ps5_launcher.cpp: shown when it next opens
 bool sysutil_callbacks_pending(); // cellSysutil.cpp: callbacks the game has yet to take
 std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state (empty without collision code)
-namespace vk { std::string lsfg_status(); std::string lsfg_dll_path(); } // VKFrameGenLSFG.h: Lossless Scaling's frame generation
+namespace vk { std::string lsfg_status(); std::string lsfg_dll_path(); std::string mihawk_status(); } // VKFrameGenLSFG.h, VKFrameGenMihawk.h: Lossless Scaling's and MihawkGen's frame generation
 
 namespace rsx::overlays
 {
@@ -1146,6 +1146,10 @@ namespace rsx::overlays
 				{
 					const std::string lsfg = vk::lsfg_status();
 					status = lsfg != "not started" ? "Lossless Scaling: " + lsfg + "." : vk::lsfg_dll_path().empty() ? std::string("Lossless.dll: not found.") : std::string("Lossless.dll: found.");
+					if (const std::string mihawk = vk::mihawk_status(); mihawk != "not started")
+					{
+						status += " MihawkGen: " + mihawk + ".";
+					}
 				}
 				help = short_help(status.empty() ? setting.help : status + " " + setting.help);
 				const cfg::_base* live = find_setting(g_cfg, setting.section, setting.key);

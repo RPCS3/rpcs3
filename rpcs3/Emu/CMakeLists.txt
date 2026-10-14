@@ -95,6 +95,27 @@ if(PS5)
         COMPILE_OPTIONS "-fexceptions;-Wno-error;-Wno-old-style-cast;-Wno-sign-compare;-Wno-unused-parameter;-Wno-missing-noreturn"
         SKIP_PRECOMPILE_HEADERS ON
     )
+
+    # PS5: MihawkGen's frame generation (RSX/VK/VKFrameGenMihawk.h): the
+    # generator from PS5_MihawkGen (GPL-3.0-or-later, RSX/VK/mihawkgen/README.md),
+    # its shaders compiled in, as it is, with its own style; and its trained
+    # network, compiled into VKFrameGenMihawk.cpp's .incbin from this file
+    set(ps5_mihawkgen_sources
+        RSX/VK/mihawkgen/fg_common.cpp
+        RSX/VK/mihawkgen/fg_neural.cpp
+        RSX/VK/mihawkgen/fg_splat.cpp
+        RSX/VK/mihawkgen/fg_vulkan.cpp
+    )
+    target_sources(rpcs3_emu PRIVATE ${ps5_mihawkgen_sources} RSX/VK/VKFrameGenMihawk.cpp)
+    set_source_files_properties(${ps5_mihawkgen_sources} PROPERTIES
+        COMPILE_OPTIONS "-Wno-error;-Wno-old-style-cast;-Wno-sign-compare;-Wno-unused-parameter;-Wno-missing-noreturn;-Wno-missing-field-initializers"
+        SKIP_PRECOMPILE_HEADERS ON
+    )
+    set(ps5_mihawkgen_network ${CMAKE_CURRENT_SOURCE_DIR}/RSX/VK/mihawkgen/network.fgw)
+    set_source_files_properties(RSX/VK/VKFrameGenMihawk.cpp PROPERTIES
+        COMPILE_DEFINITIONS "PS5_MIHAWKGEN_NETWORK=\"${ps5_mihawkgen_network}\""
+        OBJECT_DEPENDS ${ps5_mihawkgen_network}
+    )
 endif()
 
 # For stdafx.h

@@ -922,7 +922,7 @@ namespace
 				video.frame_limit.to_string(), video.vblank_rate.to_string(), video.resolution.to_string(), video.resolution_scale_percent.to_string(), zcull,
 				video.write_color_buffers.to_string(), video.multithreaded_rsx.to_string(), g_cfg.audio.late_audio_wait.to_string(),
 				video.frame_generation.to_string(), video.frame_generation_frames.to_string(), video.frame_generation_quality.to_string(),
-				video.frame_generation_step_aside.to_string(), video.frame_generation_method == 1 ? "Lossless Scaling" : "built-in", video.frame_generation_flow_scale.to_string(), video.frame_generation_repair.to_string(), core.spu_own_core.to_string(), core.spu_collision_accuracy.to_string());
+				video.frame_generation_step_aside.to_string(), video.frame_generation_method == 1 ? "Lossless Scaling" : video.frame_generation_method == 2 ? "MihawkGen" : "built-in", video.frame_generation_flow_scale.to_string(), video.frame_generation_repair.to_string(), core.spu_own_core.to_string(), core.spu_collision_accuracy.to_string());
 		};
 		g_emu_callbacks.on_pause = []() {};
 		g_emu_callbacks.on_resume = []() {};
@@ -1611,6 +1611,14 @@ int run(const char* boot_path)
 						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, Lossless Scaling: %s, flow scale %u%%, repair %s", most ? std::to_string(most) : std::string("Auto"),
 							step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", vk::lsfg_status(),
 							static_cast<u32>(g_cfg.video.frame_generation_flow_scale), g_cfg.video.frame_generation_repair ? "on" : "off");
+					}
+					else if (g_cfg.video.frame_generation && g_cfg.video.frame_generation_method == 2)
+					{
+						// MihawkGen's (VKFrameGenMihawk.h): what became of it
+						const u32 most = static_cast<u32>(g_cfg.video.frame_generation_frames);
+						const u32 step = static_cast<u32>(g_cfg.video.frame_generation_step_aside);
+						frame_gen = fmt::format(", up to %s a frame, stepping aside %s, MihawkGen: %s", most ? std::to_string(most) : std::string("Auto"),
+							step == 0 ? "never" : step == 2 ? "in most moves" : step == 3 ? "in some moves" : "in quick moves", vk::mihawk_status());
 					}
 					else if (g_cfg.video.frame_generation)
 					{

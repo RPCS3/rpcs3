@@ -97,6 +97,7 @@ bool VKGSRender::reinitialize_swapchain()
 #ifdef __PROSPERO__
 	m_frame_generator.reset();
 	m_lsfg_generator.reset();
+	m_mihawk_generator.reset();
 #endif
 
 	// Drain all the queues
@@ -1094,44 +1095,71 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				count = fit >= 2. ? std::min(static_cast<u32>(fit) - 1, most) : 0;
 			}
 
-			// Lossless Scaling's frame generation when the setting asks for it
-			// and it runs (VKFrameGenLSFG.h), else the built-in one; Lossless
-			// Scaling not fed this frame forgets its last, to start again when
-			// used
-			const bool lossless = g_cfg.video.frame_generation_method == 1 && !(m_lsfg_generator && m_lsfg_generator->failed());
+			// Lossless Scaling's or MihawkGen's frame generation when the setting
+			// asks for it and it runs (VKFrameGenLSFG.h, VKFrameGenMihawk.h),
+			// else the built-in one; one not fed this frame forgets its last, to
+			// start again when used
+			const u32 method = g_cfg.video.frame_generation_method;
+			const bool lossless = method == 1 && !(m_lsfg_generator && m_lsfg_generator->failed());
+			const bool mihawk = method == 2 && !(m_mihawk_generator && m_mihawk_generator->failed());
 			if (lossless && !m_lsfg_generator)
 			{
 				m_lsfg_generator = std::make_unique<vk::lsfg_frame_generator>();
 			}
+			if (mihawk && !m_mihawk_generator)
+			{
+				m_mihawk_generator = std::make_unique<vk::mihawk_frame_generator>();
+			}
+			if (!lossless && m_lsfg_generator)
+			{
+				m_lsfg_generator->reset();
+			}
+			if (!mihawk && m_mihawk_generator)
+			{
+				m_mihawk_generator->reset();
+			}
 
 			vk::viewable_image* between[vk::frame_generator::max_frames]{};
 			u32 made = 0;
-			if (lossless)
+			if (lossless || mihawk)
 			{
-				// Its frames, then the built-in one's look at the same two: the
+				// Their frames, then the built-in one's look at the same two: the
 				// HUD that stands still, and quick camera moves with the Step aside
-				// setting, kept from the game's frames (pass_guard). Before the
-				// built-in one has a last frame, Lossless Scaling's as they are
-				vk::viewable_image* lossless_frames[vk::lsfg_frame_generator::max_frames]{};
-				const u32 lossless_made = m_lsfg_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, lossless_frames);
-				if (!m_lsfg_generator->failed())
+				// setting, kept from the game's frames (pass_guard), and for
+				// Lossless Scaling's the repair. Before the built-in one has a last
+				// frame, theirs as they are
+				vk::viewable_image* guide_frames[vk::frame_generator::max_frames]{};
+				u32 guide_made = 0;
+				bool running = false;
+				if (lossless)
 				{
-					made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, lossless_made,
-						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, lossless_frames, g_cfg.video.frame_generation_repair.get());
-					if (made != lossless_made)
+					vk::viewable_image* lossless_frames[vk::lsfg_frame_generator::max_frames]{};
+					guide_made = m_lsfg_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, lossless_frames);
+					std::copy_n(lossless_frames, guide_made, guide_frames);
+					running = !m_lsfg_generator->failed();
+				}
+				else
+				{
+					vk::viewable_image* mihawk_frames[vk::mihawk_frame_generator::max_frames]{};
+					guide_made = m_mihawk_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count, mihawk_frames);
+					std::copy_n(mihawk_frames, guide_made, guide_frames);
+					running = !m_mihawk_generator->failed();
+				}
+				if (running)
+				{
+					made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, guide_made,
+						g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between, guide_frames,
+						lossless && g_cfg.video.frame_generation_repair.get());
+					if (made != guide_made)
 					{
-						std::copy_n(lossless_frames, lossless_made, between);
-						made = lossless_made;
+						std::copy_n(guide_frames, guide_made, between);
+						made = guide_made;
 						g_ps5_frames_generated += made;
 					}
 				}
 			}
 			else
 			{
-				if (m_lsfg_generator)
-				{
-					m_lsfg_generator->reset();
-				}
 				made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count,
 					g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between);
 			}
@@ -1164,6 +1192,10 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			if (m_lsfg_generator)
 			{
 				m_lsfg_generator->reset();
+			}
+			if (m_mihawk_generator)
+			{
+				m_mihawk_generator->reset();
 			}
 		}
 	}
