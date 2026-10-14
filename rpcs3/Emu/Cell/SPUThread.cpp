@@ -2015,11 +2015,21 @@ void spu_thread::push_snr(u32 number, u32 value)
 	});
 
 	// Check corresponding SNR register settings
+	const u32 old_spu_pc = this->pc; 
 	auto push_state = channel->push(value, bitor_bit);
 
 	if (push_state.old_count < push_state.count)
 	{
 		set_events(event_bit);
+
+		// Wait until the thread wakes up
+		if (push_state.notify)
+		{
+			for (u64 time = get_system_time(), current = time; state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(this->pc) && current - time < 500; current = get_system_time())
+			{
+				std::this_thread::yield();
+			}
+		}
 	}
 	else if (!push_state.op_done)
 	{
