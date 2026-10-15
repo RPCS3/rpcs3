@@ -539,6 +539,13 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 
 usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
 {
+#ifdef ARCH_X64
+	if (program.ucode_length >= 128 && utils::has_avx512_icl())
+	{
+		return get_fragment_program_ucode_hash_512(program);
+	}
+#endif
+
 	// Checksum as hash with rotated data
 	const void* instbuffer = program.get_data();
 	usz acc0 = 0;
@@ -560,17 +567,7 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 
 usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
 {
-	usz ucode_hash;
-#ifdef ARCH_X64
-	if (program.ucode_length >= 128 && utils::has_avx512_icl())
-	{
-		ucode_hash = get_fragment_program_ucode_hash_512(program);
-	}
-	else
-#endif
-	{
-		ucode_hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
-	}
+	const usz ucode_hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
 	const u32 state_params[] =
 	{
 		program.ctrl,
