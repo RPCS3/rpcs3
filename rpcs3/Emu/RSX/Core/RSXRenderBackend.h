@@ -11,6 +11,7 @@
 #include "Emu/system_config_types.h"
 #include "Emu/RSX/Common/texture_cache_types.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
+#include "Emu/RSX/Core/RSXContextResources.h"
 #include "Emu/RSX/Core/RSXDisplay.h"
 #include "Emu/RSX/RSXFIFO.h"
 #include "Emu/RSX/RSXZCULL.h"
@@ -67,6 +68,12 @@ namespace rsx
 		// Backend lifecycle management.
 		virtual void on_init() {}
 		virtual void on_shutdown() {}
+
+		// Create per-context resources.
+		virtual std::unique_ptr<context_resources> create_context_resources(context* ctx) = 0;
+
+		// Called before the core destroys a context's resources.
+		virtual void on_release_context_resources(context* /*ctx*/) {}
 
 		// Framebuffer. Returns false if the host could not build the framebuffer; the core then treats the configuration as invalid.
 		virtual bool on_framebuffer_bound(const framebuffer_layout& /*layout*/) { return true; }

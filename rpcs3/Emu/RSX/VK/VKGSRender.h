@@ -40,6 +40,11 @@ namespace vk
 class VKGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
 private:
+	// Per-context caches, stored on the context
+	struct vk_context_resources final : rsx::context_resources
+	{
+	};
+
 	enum frame_context_state : u32
 	{
 		dirty = 1
@@ -303,6 +308,7 @@ protected:
 
 	void on_init() override;
 	void on_shutdown() override;
+	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 
