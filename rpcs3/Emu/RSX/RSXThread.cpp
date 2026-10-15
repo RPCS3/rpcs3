@@ -689,7 +689,15 @@ namespace rsx
 	{
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
-			return m_renderer->on_access_violation(address, is_writing);
+			rsx::mm_flush(address);
+
+			bool handled = false;
+			for_each_context([&](context* ctx)
+			{
+				handled |= m_renderer->on_access_violation(ctx, address, is_writing);
+			});
+
+			return handled || zcull_ctrl->on_access_violation(address);
 		};
 
 		g_user_asked_for_frame_capture = false;
@@ -1782,13 +1790,21 @@ namespace rsx
 		if (is_stopped())
 		{
 			// We only need to commit host-resident memory to the guest in case of savestates or captures.
-			m_renderer->on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::read);
+			for_each_context([this](context* ctx)
+			{
+				m_renderer->on_invalidate_memory_range(ctx, m_invalidated_memory_range, rsx::invalidation_cause::read);
+			});
 		}
 
 		// Host sync
 		rsx::mm_flush();
 
-		m_renderer->on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
+		for_each_context([this](context* ctx)
+		{
+			m_renderer->on_invalidate_memory_range(ctx, m_invalidated_memory_range, rsx::invalidation_cause::unmap);
+		});
+
+		m_renderer->on_unmap_memory_range(m_invalidated_memory_range);
 		m_invalidated_memory_range.invalidate();
 	}
 
