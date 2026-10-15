@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "RSXDisplayEngine.h"
 #include "RSXDisplayOutput.h"
+#include "RSXPowerMgmt.h"
 
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -172,7 +173,6 @@ namespace rsx
 	void display_engine::evaluate_cpu_usage_reduction_limits()
 	{
 		const u64 max_preempt_count = g_cfg.core.max_cpu_preempt_count_per_frame;
-
 		if (!max_preempt_count)
 		{
 			frame_times.clear();
@@ -182,196 +182,87 @@ namespace rsx
 
 		const u64 current_time = get_system_time();
 		const u64 current_tsc = utils::get_tsc();
-		u64 preempt_count = 0;
 
-		if (frame_times.size() >= 60)
+		if (frame_times.size() < power_mgmt::frame_history_length)
 		{
-			u64 diffs = 0;
+			lv2_obj::set_yield_frequency(0, 0);
+			frame_times.push_back(frame_time_t{0, current_time, current_tsc});
+			return;
+		}
 
-			for (usz i = 1; i < frame_times.size(); i++)
+		const auto stats = power_mgmt::collect_frame_pacing_stats(frame_times, current_time);
+		const auto targets = power_mgmt::get_pacing_targets(g_cfg.video.vblank_rate * 10);
+
+		const bool can_raise = stats.settled && !stats.hard_fails && stats.fails < 6 && power_mgmt::match_pacing_target(targets, stats.fps_10, 3, 4);
+
+		const bool sudden_fps_drop = stats.last_frame_hard_fail &&
+			stats.preempt_drops < stats.preempt_raises + stats.hard_fails &&
+			(stats.fails > 13 || stats.hard_fails > 2 || !power_mgmt::match_pacing_target(targets, stats.fps_10, 20, 30));
+
+		const u64 old_preempt_count = std::min<u64>(frame_times.back().preempt_count, max_preempt_count);
+		u64 preempt_count = old_preempt_count;
+		bool hard_measures_taken = false;
+
+		if (can_raise)
+		{
+			if (prevent_preempt_increase_tickets)
 			{
-				const u64 cur_diff = frame_times[i].timestamp - frame_times[i - 1].timestamp;
-				diffs += cur_diff;
-			}
-
-			const usz avg_frame_time = diffs / 59;
-
-			u32 lowered_delay = 0;
-			u32 raised_delay = 0;
-			bool can_reevaluate = true;
-			u64 prev_preempt_count = umax;
-
-			for (usz i = frame_times.size() - 30; i < frame_times.size(); i++)
-			{
-				if (prev_preempt_count == umax)
-				{
-					prev_preempt_count = frame_times[i].preempt_count;
-					continue;
-				}
-
-				if (prev_preempt_count != frame_times[i].preempt_count)
-				{
-					if (prev_preempt_count > frame_times[i].preempt_count)
-					{
-						lowered_delay++;
-					}
-					else if (prev_preempt_count < frame_times[i].preempt_count)
-					{
-						raised_delay++;
-					}
-
-					if (i > frame_times.size() - 30)
-					{
-						// Slow preemption count increase
-						can_reevaluate = false;
-					}
-				}
-
-				prev_preempt_count = frame_times[i].preempt_count;
-			}
-
-			preempt_count = std::min<u64>(frame_times.back().preempt_count, max_preempt_count);
-
-			u32 fails = 0;
-			u32 hard_fails = 0;
-			bool is_last_frame_a_fail = false;
-
-			auto abs_dst = [](u64 a, u64 b)
-			{
-				return a >= b ? a - b : b - a;
-			};
-
-			for (u32 i = 1; i <= frame_times.size(); i++)
-			{
-				const u64 cur_diff = (i == frame_times.size() ? current_time : frame_times[i].timestamp) - frame_times[i - 1].timestamp;
-
-				if (const u64 diff_of_diff = abs_dst(cur_diff, avg_frame_time);
-					diff_of_diff >= avg_frame_time / 7)
-				{
-					if (diff_of_diff >= avg_frame_time / 3)
-					{
-						raised_delay++;
-						hard_fails++;
-
-						if (i == frame_times.size())
-						{
-							is_last_frame_a_fail = true;
-						}
-					}
-
-					if (fails != umax)
-					{
-						fails++;
-					}
-				}
-			}
-
-			bool hard_measures_taken = false;
-			const usz fps_10 = 10'000'000 / avg_frame_time;
-
-			auto lower_preemption_count = [&]()
-			{
-				if (preempt_count >= 10)
-				{
-					preempt_count -= 10;
-				}
-				else
-				{
-					preempt_count = 0;
-				}
-
-				if ((hard_fails > 2 || fails > 20) && is_last_frame_a_fail)
-				{
-					hard_measures_taken = preempt_count > 1;
-					preempt_count = preempt_count * 7 / 8;
-					prevent_preempt_increase_tickets = 10;
-				}
-				else
-				{
-					prevent_preempt_increase_tickets = std::max<u32>(7, prevent_preempt_increase_tickets);
-				}
-			};
-
-			const u64 vblank_rate_10 = g_cfg.video.vblank_rate * 10;
-
-			if (can_reevaluate)
-			{
-				const bool is_avg_fps_ok = (abs_dst(fps_10, 300) < 3 || abs_dst(fps_10, 600) < 4 || abs_dst(fps_10, vblank_rate_10) < 4 || abs_dst(fps_10, vblank_rate_10 / 2) < 3);
-
-				if (!hard_fails && fails < 6 && is_avg_fps_ok)
-				{
-					if (prevent_preempt_increase_tickets)
-					{
-						prevent_preempt_increase_tickets--;
-					}
-					else
-					{
-						preempt_count = std::min<u64>(preempt_count + 4, max_preempt_count);
-					}
-				}
-				else
-				{
-					lower_preemption_count();
-				}
-			}
-			// Sudden FPS drop detection
-			else if ((fails > 13 || hard_fails > 2 || !(abs_dst(fps_10, 300) < 20 || abs_dst(fps_10, 600) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10) < 30 || abs_dst(fps_10, g_cfg.video.vblank_rate * 10 / 2) < 20)) && lowered_delay < raised_delay && is_last_frame_a_fail)
-			{
-				lower_preemption_count();
-			}
-
-			perf_log.trace("CPU preemption control: reeval=%d, preempt_count=%llu, fails=%u, hard=%u, avg_frame_time=%llu, highered=%u, lowered=%u, taken=%u", can_reevaluate, preempt_count, fails, hard_fails, avg_frame_time, raised_delay, lowered_delay, ::g_lv2_preempts_taken.load());
-
-			if (hard_measures_taken)
-			{
-				preempt_fail_old_preempt_count = std::max<u64>(preempt_fail_old_preempt_count, std::min<u64>(frame_times.back().preempt_count, max_preempt_count));
-			}
-			else if (preempt_fail_old_preempt_count)
-			{
-				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%llu, new-count=%llu)", preempt_fail_old_preempt_count, preempt_count);
-				preempt_fail_old_preempt_count = 0;
-			}
-
-			const u64 tsc_diff = (current_tsc - frame_times.back().tsc);
-			const u64 time_diff = (current_time - frame_times.back().timestamp);
-			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * std::max<u64>(preempt_count, 1ull));
-
-			if (!preempt_count)
-			{
-				lv2_obj::set_yield_frequency(0, 0);
-			}
-			else if (abs_dst(fps_10, 300) < 30)
-			{
-				// Set an upper limit so a backoff technique would be taken if there is a sudden performance drop
-				// Allow 4% of no yield to reduce significantly the risk of stutter
-				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 96 / (30 * 100)) / time_diff));
-			}
-			else if (abs_dst(fps_10, 600) < 40)
-			{
-				// 5% for 60fps
-				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 94 / (60 * 100)) / time_diff));
-			}
-			else if (abs_dst(fps_10, vblank_rate_10) < 40)
-			{
-				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 94 / (vblank_rate_10 * 10)) / time_diff));
-			}
-			else if (abs_dst(fps_10, vblank_rate_10 / 2) < 30)
-			{
-				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * (1'000'000 * 96 / ((vblank_rate_10 / 2) * 10)) / time_diff));
+				prevent_preempt_increase_tickets--;
 			}
 			else
 			{
-				// Undetected case, last 12% is with no yield
-				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * 88 / 100));
+				preempt_count = std::min<u64>(preempt_count + 4, max_preempt_count);
 			}
-
-			frame_times.pop_front();
 		}
-		else
+		else if (stats.settled || sudden_fps_drop)
+		{
+			preempt_count -= std::min<u64>(preempt_count, 10);
+
+			if ((stats.hard_fails > 2 || stats.fails > 20) && stats.last_frame_hard_fail)
+			{
+				hard_measures_taken = preempt_count > 1;
+				preempt_count = preempt_count * 7 / 8;
+				prevent_preempt_increase_tickets = 10;
+			}
+			else
+			{
+				prevent_preempt_increase_tickets = std::max<u32>(7, prevent_preempt_increase_tickets);
+			}
+		}
+
+		perf_log.trace("CPU preemption control: settled=%d, preempt_count=%llu, fails=%u, hard=%u, avg_frame_time=%llu, raised=%u, lowered=%u, taken=%u",
+			stats.settled, preempt_count, stats.fails, stats.hard_fails, stats.avg_frame_time, stats.preempt_raises, stats.preempt_drops, ::g_lv2_preempts_taken.load());
+
+		if (hard_measures_taken)
+		{
+			preempt_fail_old_preempt_count = std::max<u64>(preempt_fail_old_preempt_count, old_preempt_count);
+		}
+		else if (preempt_fail_old_preempt_count)
+		{
+			perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%llu, new-count=%llu)", preempt_fail_old_preempt_count, preempt_count);
+			preempt_fail_old_preempt_count = 0;
+		}
+
+		if (!preempt_count)
 		{
 			lv2_obj::set_yield_frequency(0, 0);
 		}
+		else
+		{
+			const u64 tsc_diff = current_tsc - frame_times.back().tsc;
+			const u64 time_diff = current_time - frame_times.back().timestamp;
+			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * preempt_count);
 
+			// Stop yielding near the end of the frame so a sudden performance drop backs off instead of stuttering
+			const auto target = power_mgmt::match_pacing_target(targets, stats.fps_10, 30, 40);
+			const u64 yield_window_tsc = target
+				? tsc_diff * (1'000'000 * target->yield_pct / (target->fps_10 * 10)) / time_diff
+				: tsc_diff * 88 / 100;
+
+			lv2_obj::set_yield_frequency(preempt_diff, current_tsc + yield_window_tsc);
+		}
+
+		frame_times.pop_front();
 		frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
 	}
 
