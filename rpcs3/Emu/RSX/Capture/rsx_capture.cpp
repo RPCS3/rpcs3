@@ -358,12 +358,12 @@ namespace rsx
 			u64& mem_indexer = frame_capture.memory_indexer;
 
 			frame_capture_data::display_buffers_state dbstate;
-			dbstate.count = rsx->display_buffers_count;
+			dbstate.count = rsx->get_context()->display_buffers_count;
 
 			// should this only happen on flip?
-			for (u32 i = 0; i < rsx->display_buffers_count; ++i)
+			for (u32 i = 0; i < rsx->get_context()->display_buffers_count; ++i)
 			{
-				const auto& db            = rsx->display_buffers[i];
+				const auto& db            = rsx->get_context()->display_buffers[i];
 				dbstate.buffers[i].height = db.height;
 				dbstate.buffers[i].width  = db.width;
 				dbstate.buffers[i].offset = db.offset;

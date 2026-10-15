@@ -854,12 +854,12 @@ void kernel_explorer::update()
 		QTreeWidgetItem* db_tree = add_volatile_node(rsx_tree, tr("Display Buffers"));
 
 		decltype(rsx->iomap_table) table;
-		decltype(rsx->display_buffers) dbs;
+		decltype(rsx->get_context()->display_buffers) dbs;
 		decltype(rsx->zculls) zcs;
 		{
 			reader_lock lock(rsx->sys_rsx_mtx);
 			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
-			std::memcpy(&dbs, rsx->display_buffers, sizeof(dbs));
+			std::memcpy(&dbs, rsx->get_context()->display_buffers, sizeof(dbs));
 			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));
 		}
 

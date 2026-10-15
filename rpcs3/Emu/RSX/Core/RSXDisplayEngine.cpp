@@ -184,7 +184,7 @@ namespace rsx
 
 		int_flip_index += flip_notification_count;
 
-		m_pump->current_display_buffer = buffer;
+		m_pump->get_context()->current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
 		m_queued_flip.in_progress = true;
 		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;

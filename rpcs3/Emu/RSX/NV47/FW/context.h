@@ -21,7 +21,7 @@ namespace rsx
 		utils::address_range32 tile_align(const utils::address_range32& range) const;
 	};
 
-	// Firmware and low-level driver state: DMA control, IO mapping, tiling/zcull regions, display buffers and device info.
+	// Firmware and low-level driver state: DMA control, IO mapping, tiling/zcull regions and device info.
 	struct fw_context
 	{
 		RsxDmaControl* ctrl = nullptr;
@@ -30,10 +30,6 @@ namespace rsx
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
-
-		RsxDisplayInfo display_buffers[8];
-		u32 display_buffers_count{ 0 };
-		u32 current_display_buffer{ 0 };
 
 		shared_mutex sys_rsx_mtx;
 		u32 device_addr{ 0 };

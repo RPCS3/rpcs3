@@ -638,11 +638,11 @@ namespace rsx
 		}
 
 		ar(m_draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, m_ctx->fb.zcull_surface_active, m_ctx->fb.surface_info, m_ctx->fb.depth_surface_info, m_ctx->fb.layout);
-		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
+		ar(dma_address, iomap_table, restore_point, tiles, zculls, m_ctx->display_buffers, m_ctx->display_buffers_count, m_ctx->current_display_buffer);
 		ar(enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
 		ar(m_ctx->in_begin_end);
-		ar(display_buffers, display_buffers_count, current_display_buffer);
+		ar(m_ctx->display_buffers, m_ctx->display_buffers_count, m_ctx->current_display_buffer);
 		ar(unsent_gcm_events, REGS(m_ctx)->current_draw_clause);
 
 		if (ar.is_writing() || version >= 2)
@@ -1137,7 +1137,7 @@ namespace rsx
 			if (m_display.has_flip_request(flip_request::native_ui) && !should_ignore && !is_stopped())
 			{
 				display_flip_info_t info{};
-				info.buffer = current_display_buffer;
+				info.buffer = m_ctx->current_display_buffer;
 				m_display.flip(info);
 			}
 		}
@@ -1180,7 +1180,7 @@ namespace rsx
 		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
 		vm::write32(device_addr + 0x30, 1);
-		std::memset(display_buffers, 0, sizeof(display_buffers));
+		std::memset(m_ctx->display_buffers, 0, sizeof(m_ctx->display_buffers));
 
 		rsx_thread_running = true;
 	}

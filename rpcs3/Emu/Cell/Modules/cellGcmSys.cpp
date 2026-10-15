@@ -519,7 +519,7 @@ error_code cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 
 
 	const auto render = rsx::get_current_renderer();
 
-	auto buffers = render->display_buffers;
+	auto buffers = render->get_context()->display_buffers;
 
 	buffers[id].offset = offset;
 	buffers[id].pitch = pitch;
@@ -531,9 +531,9 @@ error_code cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 
 	gcm_cfg.gcm_buffers[id].width = width;
 	gcm_cfg.gcm_buffers[id].height = height;
 
-	if (id + 1u > render->display_buffers_count)
+	if (id + 1u > render->get_context()->display_buffers_count)
 	{
-		render->display_buffers_count = id + 1;
+		render->get_context()->display_buffers_count = id + 1;
 	}
 
 	return CELL_OK;
@@ -833,7 +833,7 @@ error_code cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 {
 	cellGcmSys.warning("cellGcmGetCurrentDisplayBufferId(id=*0x%x)", id);
 
-	*id = ::narrow<u8>(rsx::get_current_renderer()->current_display_buffer);
+	*id = ::narrow<u8>(rsx::get_current_renderer()->get_context()->current_display_buffer);
 
 	return CELL_OK;
 }
