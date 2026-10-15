@@ -887,10 +887,8 @@ VKGSRender::~VKGSRender()
 #endif
 }
 
-bool VKGSRender::on_access_violation(u32 address, bool is_writing)
+bool VKGSRender::on_access_violation(rsx::context* ctx, u32 address, bool is_writing)
 {
-	rsx::mm_flush(address);
-
 	vk::texture_cache::thrashed_set result;
 	{
 		const rsx::invalidation_cause cause = is_writing ? rsx::invalidation_cause::deferred_write : rsx::invalidation_cause::deferred_read;
@@ -905,7 +903,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return RSX(m_ctx)->zcull().on_access_violation(address);
+		return false;
 	}
 
 	if (result.num_flushable > 0)
@@ -915,6 +913,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			// The offloader thread cannot handle flush requests
 			ensure(!(m_queue_status & flush_queue_state::deadlock));
 
+			m_offloader_fault_ctx = ctx;
 			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>().get_fault_range(is_writing);
 			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
 
@@ -981,26 +980,27 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void VKGSRender::on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause)
+void VKGSRender::on_invalidate_memory_range(rsx::context* /*ctx*/, const utils::address_range32 &range, rsx::invalidation_cause cause)
 {
 	std::lock_guard lock(m_secondary_cb_guard);
 
 	auto data = m_texture_cache.invalidate_range(*m_secondary_cb_list.next(), range, cause);
 	AUDIT(data.empty());
 
-	if (cause == rsx::invalidation_cause::unmap)
+	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
 	{
-		if (data.violation_handled)
+		m_texture_cache.purge_unreleased_sections();
 		{
-			m_texture_cache.purge_unreleased_sections();
-			{
-				std::lock_guard lock(m_sampler_mutex);
-				m_samplers_dirty.store(true);
-			}
+			std::lock_guard lock(m_sampler_mutex);
+			m_samplers_dirty.store(true);
 		}
-
-		vk::unmap_dma(range.start, range.length());
 	}
+}
+
+void VKGSRender::on_unmap_memory_range(const utils::address_range32& range)
+{
+	std::lock_guard lock(m_secondary_cb_guard);
+	vk::unmap_dma(range.start, range.length());
 }
 
 void VKGSRender::on_semaphore_acquire_wait()
@@ -1685,7 +1685,7 @@ bool VKGSRender::on_local_task(rsx::FIFO::state state)
 		// Clear offloader deadlock
 		// NOTE: It is not possible to handle regular flush requests before this is cleared
 		// NOTE: This may cause graphics corruption due to unsynchronized modification
-		on_invalidate_memory_range(m_offloader_fault_range, m_offloader_fault_cause);
+		on_invalidate_memory_range(m_offloader_fault_ctx, m_offloader_fault_range, m_offloader_fault_cause);
 		m_queue_status.clear(flush_queue_state::deadlock);
 	}
 

@@ -193,6 +193,8 @@ private:
 
 	// Offloader thread deadlock recovery
 	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
+	// A fault has no owning context: the core asks every context in turn. This is the one whose cache the pending deadlock replay invalidates.
+	rsx::context* m_offloader_fault_ctx = nullptr;
 	utils::address_range32 m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
@@ -323,7 +325,8 @@ protected:
 	bool scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 
-	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause) override;
+	bool on_access_violation(rsx::context* ctx, u32 address, bool is_writing) override;
+	void on_invalidate_memory_range(rsx::context* ctx, const utils::address_range32 &range, rsx::invalidation_cause cause) override;
+	void on_unmap_memory_range(const utils::address_range32& range) override;
 	void on_semaphore_acquire_wait() override;
 };
