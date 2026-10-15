@@ -720,6 +720,7 @@
     <ClInclude Include="Emu\RSX\Common\time.hpp" />
     <ClInclude Include="Emu\RSX\Common\unordered_map.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXContext.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXContextResources.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDrawCommands.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDriverState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />

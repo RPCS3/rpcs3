@@ -6,6 +6,7 @@
 #include "Emu/RSX/NV47/FW/context.h"
 #include "Emu/RSX/NV47/HW/context.h"
 #include "Emu/RSX/RSXZCULL.h"
+#include "RSXContextResources.h"
 #include "RSXDisplay.h"
 #include "RSXDrawState.h"
 #include "RSXDriverState.h"
@@ -44,6 +45,9 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{ 0 };
 		u32 current_display_buffer{ 0 };
+
+		// Host resources of the render backend. Core manages lifetime.
+		std::unique_ptr<context_resources> resources;
 
 		context(u32 id, thread* owner);
 		~context();
