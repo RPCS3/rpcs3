@@ -334,7 +334,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 
 		if (!m_samplers_dirty &&
 			!(m_ctx->textures.fragment_textures_dirty & (1u << i)) &&
-			!m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
+			!res()->texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			continue;
 		}
@@ -347,7 +347,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			continue;
 		}
 
-		*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
+		*sampler_state = res()->texture_cache.upload_texture(cmd, tex, m_rtts);
 		if (!sampler_state->validate())
 		{
 			continue;
@@ -467,7 +467,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 
 		if (!m_samplers_dirty &&
 			!(m_ctx->textures.vertex_textures_dirty & (1u << i)) &&
-			!m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
+			!res()->texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			continue;
 		}
@@ -480,7 +480,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			continue;
 		}
 
-		*sampler_state = m_gl_texture_cache.upload_texture(cmd, REGS(m_ctx)->vertex_textures[i], m_rtts);
+		*sampler_state = res()->texture_cache.upload_texture(cmd, REGS(m_ctx)->vertex_textures[i], m_rtts);
 
 		if (!sampler_state->validate())
 		{
@@ -558,7 +558,7 @@ void GLGSRender::bind_texture_env()
 				? rtt->get_memory_range()
 				: utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
 
-			return m_gl_texture_cache.create_temporary_subresource(cmd, flatten_op);
+			return res()->texture_cache.create_temporary_subresource(cmd, flatten_op);
 		}
 
 		return image->get_view(decoded_remap, base->aspect());
@@ -580,7 +580,7 @@ void GLGSRender::bind_texture_env()
 		{
 			if (primary_view = sampler_state->image_handle; !primary_view) [[unlikely]]
 			{
-				primary_view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
+				primary_view = res()->texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 			}
 		}
 
@@ -649,7 +649,7 @@ void GLGSRender::bind_texture_env()
 		{
 			if (view = sampler_state->image_handle; !view)
 			{
-				view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
+				view = res()->texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 			}
 		}
 
@@ -920,7 +920,7 @@ bool GLGSRender::end_draw()
 	m_ctx->stats.setup_time += m_profiler.duration();
 
 	bind_texture_env();
-	m_gl_texture_cache.release_uncached_temporary_subresources();
+	res()->texture_cache.release_uncached_temporary_subresources();
 	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	gl::command_context cmd{ gl_state };

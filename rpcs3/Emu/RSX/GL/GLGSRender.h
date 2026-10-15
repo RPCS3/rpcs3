@@ -45,6 +45,7 @@ namespace gl
 
 	struct work_item
 	{
+		rsx::context* ctx = nullptr;
 		u32  address_to_flush = 0;
 		gl::texture_cache::thrashed_set section_data;
 
@@ -76,6 +77,7 @@ namespace gl
 	struct context_resources final : rsx::context_resources
 	{
 		std::unique_ptr<gl::vertex_cache> vertex_cache;
+		gl::texture_cache texture_cache;
 	};
 }
 
@@ -96,7 +98,6 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 
 	gl_render_targets m_rtts;
 
-	gl::texture_cache m_gl_texture_cache;
 
 	gl::buffer_view m_persistent_stream_view;
 	gl::buffer_view m_volatile_stream_view;
@@ -201,7 +202,7 @@ public:
 	void set_viewport();
 	void set_scissor(bool force = false);
 
-	gl::work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
+	gl::work_item& post_flush_request(rsx::context* ctx, u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	// NV3089
 	bool scaled_image_from_memory(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate) override;
@@ -243,6 +244,7 @@ protected:
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	void on_bind_context(rsx::context* ctx) override;
 	void on_unbind_context(rsx::context* ctx) override;
+	void on_release_context_resources(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 
