@@ -517,7 +517,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 		return false;
 	}
 
-	const auto& display_buffer = RSX(m_ctx)->display_buffers[info.buffer];
+	const auto& display_buffer = m_ctx->display_buffers[info.buffer];
 	u32 buffer_width = display_buffer.width;
 	u32 buffer_height = display_buffer.height;
 	u32 buffer_pitch = display_buffer.pitch;
@@ -552,7 +552,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
 
-	if (info.buffer < RSX(m_ctx)->display_buffers_count && buffer_width && buffer_height)
+	if (info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
 		{

@@ -40,6 +40,11 @@ namespace rsx
 		frame_statistics_t stats{};
 		frame_skip_state frame_skip;
 
+		// Display buffers registered by the lv2 driver. Per-context.
+		RsxDisplayInfo display_buffers[8];
+		u32 display_buffers_count{ 0 };
+		u32 current_display_buffer{ 0 };
+
 		context(u32 id, thread* owner);
 		~context();
 
