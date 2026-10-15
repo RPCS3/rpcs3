@@ -130,6 +130,7 @@
     <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplayEngine.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXPowerMgmt.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXRenderBackend.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXRendererFactory.cpp">
       <AdditionalIncludeDirectories>
@@ -726,6 +727,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDisplayEngine.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXPowerMgmt.h" />
     <ClInclude Include="Emu\RSX\Core\RSXRendererFactory.h" />
     <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDrawState.h" />
