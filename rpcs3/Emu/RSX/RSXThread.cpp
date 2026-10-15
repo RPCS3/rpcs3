@@ -1106,7 +1106,7 @@ namespace rsx
 		{
 			// NOTE: This has to be executed immediately
 			// Delaying this operation can cause desync due to the delay in firing the flip event
-			handle_emu_flip(m_display.async_flip_buffer);
+			m_display.handle_emu_flip(m_display.async_flip_buffer);
 		}
 
 		if (state != FIFO::state::lock_wait)
@@ -1164,7 +1164,7 @@ namespace rsx
 			{
 				display_flip_info_t info{};
 				info.buffer = current_display_buffer;
-				flip(info);
+				m_display.flip(info);
 			}
 		}
 	}
@@ -1209,43 +1209,6 @@ namespace rsx
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
 		rsx_thread_running = true;
-	}
-
-	void thread::flip(const display_flip_info_t& info)
-	{
-		const bool presented = m_renderer->present_frame(info);
-
-		m_ctx->eng_interrupt_mask.clear(rsx::display_interrupt);
-
-		if (m_display.async_flip_requested & flip_request::any)
-		{
-			// Deferred flip
-			if (info.emu_flip)
-			{
-				m_display.async_flip_requested.clear(flip_request::emu_requested);
-			}
-			else
-			{
-				m_display.async_flip_requested.clear(flip_request::native_ui);
-			}
-		}
-
-		if (info.emu_flip)
-		{
-			performance_counters.sampled_frames++;
-
-			if (m_display.m_pause_after_x_flips && m_display.m_pause_after_x_flips-- == 1)
-			{
-				Emu.Pause();
-			}
-		}
-
-		m_display.last_host_flip_timestamp = get_system_time();
-
-		if (presented)
-		{
-			m_renderer->post_present();
-		}
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -1972,10 +1935,8 @@ namespace rsx
 			zcull_ctrl->clear(this, CELL_GCM_ZPASS_PIXEL_CNT | CELL_GCM_ZCULL_STATS);
 		}
 
-		// Save current state
-		m_display.m_queued_flip.stats = m_ctx->stats;
-		m_display.m_queued_flip.push(buffer);
-		m_display.m_queued_flip.skip_frame = m_ctx->frame_skip.skip_current_frame;
+		// Save current state for the next flip
+		m_display.queue_frame(buffer);
 
 		if (!forced) [[likely]]
 		{
@@ -2019,161 +1980,5 @@ namespace rsx
 		// Reset current stats
 		m_ctx->stats = {};
 		m_profiler.enabled = !!g_cfg.video.debug_overlay;
-	}
-
-	bool thread::request_emu_flip(u32 buffer)
-	{
-		if (is_current_thread()) // requested through command buffer
-		{
-			// NOTE: The flip will clear any queued flip requests
-			handle_emu_flip(buffer);
-		}
-		else // requested 'manually' through ppu syscall
-		{
-			if (m_display.async_flip_requested & flip_request::emu_requested)
-			{
-				// ignore multiple requests until previous happens
-				return true;
-			}
-
-			m_display.async_flip_buffer = buffer;
-			m_display.async_flip_requested |= flip_request::emu_requested;
-
-			m_ctx->eng_interrupt_mask |= rsx::display_interrupt;
-
-			if (state & cpu_flag::exit)
-			{
-				// Resubmit possibly-ignored flip on savestate load
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	void thread::handle_emu_flip(u32 buffer)
-	{
-		if (m_display.m_queued_flip.in_progress)
-		{
-			// Rescursion not allowed!
-			return;
-		}
-
-		if (!m_display.m_queued_flip.pop(buffer))
-		{
-			// Frame was not queued before flipping
-			on_frame_end(buffer, true);
-			ensure(m_display.m_queued_flip.pop(buffer));
-		}
-
-		double limit = 0.;
-		const auto frame_limit = g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit;
-
-		switch (frame_limit)
-		{
-		case frame_limit_type::none: limit = g_cfg.core.max_cpu_preempt_count_per_frame ? static_cast<double>(g_cfg.video.vblank_rate) : 0.; break;
-		case frame_limit_type::_30: limit = 30.; break;
-		case frame_limit_type::_50: limit = 50.; break;
-		case frame_limit_type::_60: limit = 60.; break;
- 		case frame_limit_type::_120: limit = 120.; break;
-		case frame_limit_type::display_rate: limit = m_display.cached_refresh_rate(); break;
-		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
-		case frame_limit_type::_ps3: limit = 0.; break;
-		case frame_limit_type::infinite: limit = 0.; break;
-		default:
-			break;
-		}
-
-		if (double limit2 = g_cfg.video.second_frame_limit; limit2 >= 0.1 && (limit2 < limit || !limit))
-		{
-			// Apply a second limit
-			limit = limit2;
-		}
-
-		if (limit)
-		{
-			const u64 needed_us = static_cast<u64>(1000000 / limit);
-			const u64 time = std::max<u64>(get_system_time(), m_display.target_rsx_flip_time > needed_us ? m_display.target_rsx_flip_time - needed_us : 0);
-
-			if (m_display.int_flip_index)
-			{
-				if (m_display.target_rsx_flip_time > time + 1000)
-				{
-					const auto delay_us = m_display.target_rsx_flip_time - time;
-					lv2_obj::wait_timeout(delay_us, nullptr, false);
-					performance_counters.idle_time += delay_us;
-				}
-			}
-
-			m_display.target_rsx_flip_time = std::max(time, m_display.target_rsx_flip_time) + needed_us;
-			m_display.flip_notification_count = 1;
-		}
-		else if (frame_limit == frame_limit_type::_ps3)
-		{
-			bool exit = false;
-
-			if (m_display.vblank_at_flip == umax)
-			{
-				m_display.vblank_at_flip = +m_display.vblank_count;
-				m_display.flip_notification_count = 1;
-				exit = true;
-			}
-
-			if (requested_vsync && (exit || m_display.vblank_at_flip == m_display.vblank_count))
-			{
-				// Not yet signaled, handle it later
-				m_display.async_flip_requested |= flip_request::emu_requested;
-				m_display.async_flip_buffer = buffer;
-				return;
-			}
-
-			m_display.vblank_at_flip = umax;
-		}
-		else
-		{
-			m_display.flip_notification_count = 1;
-		}
-
-		m_display.int_flip_index += m_display.flip_notification_count;
-
-		current_display_buffer = buffer;
-		m_display.m_queued_flip.emu_flip = true;
-		m_display.m_queued_flip.in_progress = true;
-		m_display.m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;
-
-		flip(m_display.m_queued_flip);
-
-		m_display.last_guest_flip_timestamp = get_system_time() - 1000000;
-		m_display.flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
-		m_display.m_queued_flip.in_progress = false;
-
-		while (m_display.flip_notification_count--)
-		{
-			if (!isHLE)
-			{
-				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
-
-				if (unsent_gcm_events)
-				{
-					// TODO: A proper fix
-					return;
-				}
-
-				continue;
-			}
-
-			if (auto ptr = flip_handler)
-			{
-				intr_thread->cmd_list
-				({
-					{ ppu_cmd::set_args, 1 }, u64{ 1 },
-					{ ppu_cmd::lle_call, ptr },
-					{ ppu_cmd::sleep, 0 }
-				});
-
-				intr_thread->cmd_notify.store(1);
-				intr_thread->cmd_notify.notify_one();
-			}
-		}
 	}
 } // namespace rsx
