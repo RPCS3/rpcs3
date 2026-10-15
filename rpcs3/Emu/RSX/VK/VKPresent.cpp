@@ -201,7 +201,10 @@ void VKGSRender::advance_queued_frames()
 
 	vk::remove_unused_framebuffers();
 
-	m_vertex_cache->purge();
+	if (const auto resources = res())
+	{
+		resources->vertex_cache->purge();
+	}
 	m_current_frame->tag_frame_end();
 
 	m_queued_frames.push_back(m_current_frame);

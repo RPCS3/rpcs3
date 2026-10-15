@@ -550,7 +550,11 @@ void GLGSRender::post_present()
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
-	m_vertex_cache->purge();
+
+	if (const auto resources = res())
+	{
+		resources->vertex_cache->purge();
+	}
 
 	auto removed_textures = m_rtts.trim(cmd);
 	m_framebuffer_cache.remove_if([&](auto& fbo)

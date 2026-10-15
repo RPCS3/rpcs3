@@ -72,15 +72,15 @@ namespace gl
 		u32 pitch;
 		u8  eye;
 	};
+
+	struct context_resources final : rsx::context_resources
+	{
+		std::unique_ptr<gl::vertex_cache> vertex_cache;
+	};
 }
 
 class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
-	// Per-context caches, stored on the context
-	struct gl_context_resources final : rsx::context_resources
-	{
-	};
-
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
@@ -122,7 +122,6 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 	// Used for hot-patching
 	std::unique_ptr<gl::ring_buffer> m_scratch_ring_buffer;
 
-	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
 	std::unique_ptr<gl::shader_cache> m_shaders_cache;
 
 	GLint m_min_texbuffer_alignment = 256;
@@ -169,15 +168,14 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 	std::unique_ptr<gl::buffer> m_host_gpu_context_data;
 	std::unique_ptr<gl::scratch_ring_buffer> m_enqueued_host_write_buffer;
 
-public:
+	// State tracking
+	gl::driver_state gl_state;
 
+public:
 	GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept;
 	virtual ~GLGSRender();
 
 private:
-
-	gl::driver_state gl_state;
-
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
 	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
@@ -195,6 +193,9 @@ private:
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 
 	void update_swap_interval();
+
+	static gl::context_resources* res(rsx::context* ctx) { return static_cast<gl::context_resources*>(ctx->resources.get()); }
+	gl::context_resources* res() const { return res(m_ctx); }
 
 public:
 	void set_viewport();
@@ -241,6 +242,7 @@ protected:
 	void on_shutdown() override;
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	void on_bind_context(rsx::context* ctx) override;
+	void on_unbind_context(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 
