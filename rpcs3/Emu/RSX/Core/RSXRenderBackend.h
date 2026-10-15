@@ -107,9 +107,11 @@ namespace rsx
 		virtual void on_begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& /*sources*/) {}
 		virtual void on_end_conditional_rendering() {}
 
-		// Memory
-		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_invalidate_memory_range(const utils::address_range32& /*range*/, invalidation_cause /*cause*/) {}
+		// Memory. Handled per-context.
+		virtual bool on_access_violation(context* /*ctx*/, u32 /*address*/, bool /*is_writing*/) { return false; }
+		virtual void on_invalidate_memory_range(context* /*ctx*/, const utils::address_range32& /*range*/, invalidation_cause /*cause*/) {}
+		virtual void on_unmap_memory_range(const utils::address_range32& /*range*/) {}
+
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 		virtual void write_barrier(u32 /*memory_address*/, u32 /*memory_range*/) {}
 
