@@ -2794,6 +2794,9 @@
     <ClInclude Include="Emu\RSX\Core\RSXContext.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXContextResources.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Crypto\unzip.h">
       <Filter>Crypto</Filter>
     </ClInclude>

@@ -76,6 +76,11 @@ namespace gl
 
 class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
+	// Per-context caches, stored on the context
+	struct gl_context_resources final : rsx::context_resources
+	{
+	};
+
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
 	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
@@ -234,6 +239,7 @@ protected:
 
 	void on_init() override;
 	void on_shutdown() override;
+	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 

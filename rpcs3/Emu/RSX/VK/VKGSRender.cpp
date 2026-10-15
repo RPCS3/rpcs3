@@ -1276,6 +1276,11 @@ void VKGSRender::on_init()
 	}
 }
 
+std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx::context* /*ctx*/)
+{
+	return std::make_unique<vk_context_resources>();
+}
+
 void VKGSRender::on_shutdown()
 {
 	// Flush DMA queue

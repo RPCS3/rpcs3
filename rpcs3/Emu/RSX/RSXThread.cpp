@@ -623,6 +623,7 @@ namespace rsx
 	{
 		g_access_violation_handler = nullptr;
 
+		release_backend_resources();
 		m_renderer.reset();
 	}
 
@@ -870,6 +871,7 @@ namespace rsx
 		{
 			g_fxo->get<rsx::dma_manager>().init();
 			m_renderer->on_init();
+			create_backend_resources();
 
 			if (m_ctx->in_begin_end)
 			{
@@ -1028,7 +1030,30 @@ namespace rsx
 
 		// Firmware first, then the window, then the renderer
 		m_display_out.on_exit();
+		release_backend_resources();
 		m_renderer->on_shutdown();
+	}
+
+	void thread::create_backend_resources()
+	{
+		for_each_context([this](context* ctx)
+		{
+			ctx->resources = m_renderer->create_context_resources(ctx);
+		});
+	}
+
+	void thread::release_backend_resources()
+	{
+		for_each_context([this](context* ctx)
+		{
+			if (!ctx->resources)
+			{
+				return;
+			}
+
+			m_renderer->on_release_context_resources(ctx);
+			ctx->resources.reset();
+		});
 	}
 
 	u64 thread::timestamp()

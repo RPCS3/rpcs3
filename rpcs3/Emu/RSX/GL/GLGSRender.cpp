@@ -453,6 +453,11 @@ void GLGSRender::on_init()
 	}
 }
 
+std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* /*ctx*/)
+{
+	return std::make_unique<gl_context_resources>();
+}
+
 void GLGSRender::on_shutdown()
 {
 	destroy_frame_context();

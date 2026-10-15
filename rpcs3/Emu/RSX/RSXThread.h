@@ -183,6 +183,13 @@ namespace rsx
 
 		context* get_context() const { return m_ctx; }
 
+		// Every live context. Only the primary context exists for now.
+		template <typename F>
+		void for_each_context(F&& func)
+		{
+			func(m_primary_ctx.get());
+		}
+
 		render_backend* renderer() const { return m_renderer.get(); }
 		core_renderer& core() { return m_core; }
 		display_output& display() { return m_display_out; }
@@ -289,6 +296,10 @@ namespace rsx
 		shared_mutex m_mtx_task;
 
 		void handle_invalidated_memory_range();
+
+		// Render backend resources of every context
+		void create_backend_resources();
+		void release_backend_resources();
 
 	public:
 
