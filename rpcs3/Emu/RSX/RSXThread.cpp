@@ -285,7 +285,7 @@ namespace rsx
 	{
 		if (auto rsxthr = rsx::get_current_renderer())
 		{
-			rsxthr->display_ctrl().async_flip_requested |= rsx::thread::flip_request::native_ui;
+			rsxthr->display_ctrl().request_native_ui_flip();
 		}
 	}
 
@@ -647,28 +647,7 @@ namespace rsx
 
 		if (ar.is_writing() || version >= 2)
 		{
-			ar(m_display.vblank_count);
-
-			b8 flip_pending{};
-
-			if (ar.is_writing())
-			{
-				flip_pending = !!(m_display.async_flip_requested & flip_request::emu_requested);
-			}
-
-			ar(flip_pending);
-
-			if (flip_pending)
-			{
-				ar(m_display.vblank_at_flip);
-				ar(m_display.async_flip_buffer);
-
-				if (!ar.is_writing())
-				{
-					m_display.async_flip_requested |= flip_request::emu_requested;
-					m_display.flip_notification_count = 1;
-				}
-			}
+			m_display.save(ar);
 		}
 
 		if (ar.is_writing())
@@ -764,7 +743,7 @@ namespace rsx
 		if (g_cfg.savestate.start_paused)
 		{
 			// Allow to render a whole frame within this emulation session so there won't be missing graphics
-			m_display.m_pause_after_x_flips = 2;
+			m_display.pause_after_flips(2);
 		}
 
 		create_renderer();
@@ -949,9 +928,7 @@ namespace rsx
 			.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
 		};
 
-		m_display.last_guest_flip_timestamp = get_system_time() - 1000000;
-
-		m_display.vblank_count = 0;
+		m_display.on_thread_start();
 
 		if (serialized)
 		{
@@ -1102,12 +1079,9 @@ namespace rsx
 
 		m_ctx->eng_interrupt_mask.clear(rsx::backend_interrupt);
 
-		if (m_display.async_flip_requested & flip_request::emu_requested)
-		{
-			// NOTE: This has to be executed immediately
-			// Delaying this operation can cause desync due to the delay in firing the flip event
-			m_display.handle_emu_flip(m_display.async_flip_buffer);
-		}
+		// NOTE: This has to be executed immediately
+		// Delaying this operation can cause desync due to the delay in firing the flip event
+		m_display.handle_pending_flip();
 
 		if (state != FIFO::state::lock_wait)
 		{
@@ -1160,7 +1134,7 @@ namespace rsx
 		if (m_overlay_manager)
 		{
 			const auto should_ignore = m_ctx->in_begin_end && state != FIFO::state::empty;
-			if ((m_display.async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
+			if (m_display.has_flip_request(flip_request::native_ui) && !should_ignore && !is_stopped())
 			{
 				display_flip_info_t info{};
 				info.buffer = current_display_buffer;
@@ -1202,7 +1176,7 @@ namespace rsx
 	{
 		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
-		m_display.flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		m_display.set_flip_status(CELL_GCM_DISPLAY_FLIP_STATUS_DONE);
 		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
 		vm::write32(device_addr + 0x30, 1);

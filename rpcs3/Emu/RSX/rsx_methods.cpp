@@ -40,10 +40,7 @@ namespace rsx
 	{
 		ensure(RSX(ctx)->isHLE);
 
-		if (RSX(ctx)->display_ctrl().vblank_at_flip != umax)
-		{
-			RSX(ctx)->display_ctrl().flip_notification_count++;
-		}
+		RSX(ctx)->display_ctrl().on_flip_queued();
 
 		if (auto ptr = RSX(ctx)->queue_handler)
 		{
@@ -105,10 +102,7 @@ namespace rsx
 		{
 			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				if (RSX(ctx)->display_ctrl().vblank_at_flip != umax)
-				{
-					RSX(ctx)->display_ctrl().flip_notification_count++;
-				}
+				RSX(ctx)->display_ctrl().on_flip_queued();
 
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}

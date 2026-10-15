@@ -191,7 +191,7 @@ namespace rsx
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
-			auto last_flip = render->display_ctrl().int_flip_index;
+			auto last_flip = render->display_ctrl().get_flip_index();
 
 			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
@@ -239,7 +239,7 @@ namespace rsx
 			}
 
 			// Check if the captured application used syscall instead of a gcm command to flip
-			if (render->display_ctrl().int_flip_index == last_flip)
+			if (render->display_ctrl().get_flip_index() == last_flip)
 			{
 				// Capture did not include a display flip, flip manually
 				render->request_emu_flip(1u);

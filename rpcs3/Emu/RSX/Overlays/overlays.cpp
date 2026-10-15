@@ -527,9 +527,9 @@ namespace rsx
 			}
 
 			if (auto rsxthr = rsx::get_current_renderer(); rsxthr &&
-				(min_refresh_duration_us + rsxthr->display_ctrl().last_host_flip_timestamp) < get_system_time())
+				(min_refresh_duration_us + rsxthr->display_ctrl().get_last_host_flip_timestamp()) < get_system_time())
 			{
-				rsxthr->display_ctrl().async_flip_requested |= rsx::thread::flip_request::native_ui;
+				rsxthr->display_ctrl().request_native_ui_flip();
 			}
 		}
 	} // namespace overlays

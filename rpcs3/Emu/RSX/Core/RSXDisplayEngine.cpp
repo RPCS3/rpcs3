@@ -12,6 +12,7 @@
 #include "Emu/system_config.h"
 
 #include "util/asm.hpp"
+#include "util/serialization.hpp"
 
 extern atomic_t<u32> g_lv2_preempts_taken;
 
@@ -25,6 +26,39 @@ namespace rsx
 		m_output = output;
 	}
 
+	void display_engine::save(utils::serial& ar)
+	{
+		ar(vblank_count);
+
+		b8 flip_pending{};
+
+		if (ar.is_writing())
+		{
+			flip_pending = async_flip_requested.test(flip_request::emu_requested);
+		}
+
+		ar(flip_pending);
+
+		if (flip_pending)
+		{
+			ar(vblank_at_flip);
+			ar(async_flip_buffer);
+
+			if (!ar.is_writing())
+			{
+				async_flip_requested |= flip_request::emu_requested;
+				flip_notification_count = 1;
+			}
+		}
+	}
+
+	void display_engine::on_thread_start()
+	{
+		last_guest_flip_timestamp = get_system_time() - 1000000;
+
+		vblank_count = 0;
+	}
+
 	bool display_engine::request_emu_flip(u32 buffer)
 	{
 		if (m_pump->is_current_thread()) // requested through command buffer
@@ -34,7 +68,7 @@ namespace rsx
 		}
 		else // requested 'manually' through ppu syscall
 		{
-			if (async_flip_requested & flip_request::emu_requested)
+			if (async_flip_requested.test(flip_request::emu_requested))
 			{
 				// ignore multiple requests until previous happens
 				return true;
@@ -53,6 +87,16 @@ namespace rsx
 		}
 
 		return true;
+	}
+
+	void display_engine::handle_pending_flip()
+	{
+		if (!async_flip_requested.test(flip_request::emu_requested))
+		{
+			return;
+		}
+
+		handle_emu_flip(async_flip_buffer);
 	}
 
 	void display_engine::handle_emu_flip(u32 buffer)
