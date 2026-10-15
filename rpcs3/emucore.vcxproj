@@ -769,6 +769,7 @@
     <ClInclude Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.h" />
     <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
+    <ClInclude Include="Emu\RSX\Program\ProgramStateCache512.h" />
     <ClInclude Include="Emu\RSX\Program\program_util.h" />
     <ClInclude Include="Emu\RSX\Program\RSXOverlay.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderInterpreter.h" />

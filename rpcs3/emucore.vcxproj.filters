@@ -2464,6 +2464,9 @@
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\ProgramStateCache512.h">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
