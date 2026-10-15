@@ -254,7 +254,7 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 	if (info.emu_flip)
 	{
-		RSX(m_ctx)->evaluate_cpu_usage_reduction_limits();
+		RSX(m_ctx)->display_ctrl().evaluate_cpu_usage_reduction_limits();
 		update_swap_interval();
 	}
 

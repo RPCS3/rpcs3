@@ -10,9 +10,15 @@
 
 namespace rsx
 {
+	class thread;
+	class display_output;
+
 	// Display management (flip, vblank and frame-pacing) state of RSX.
 	class display_engine
 	{
+		thread* m_pump = nullptr;
+		display_output* m_output = nullptr;
+
 	public:
 		enum class flip_request : u32
 		{
@@ -50,5 +56,19 @@ namespace rsx
 
 		// Savestates: pause after this many flips once loaded
 		u32 m_pause_after_x_flips = 0;
+
+		void init(thread* pump, display_output* output);
+
+		// Vblank.
+		// NOTE: The vblank thread posts post_vblank_event at the configured vblank rate.
+		void start_vblank_thread();
+		void stop_vblank_thread();
+		void post_vblank_event(u64 post_event_time);
+
+		// Host display refresh rate
+		f64 cached_refresh_rate();
+
+		// Power saving stuff. Called when a guest flip is presented.
+		void evaluate_cpu_usage_reduction_limits();
 	};
 }
