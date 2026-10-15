@@ -597,11 +597,6 @@ VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept 
 		}
 	);
 
-	if (g_cfg.video.disable_vertex_cache)
-		m_vertex_cache = std::make_unique<vk::null_vertex_cache>();
-	else
-		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
-
 	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.95");
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
@@ -1277,7 +1272,14 @@ void VKGSRender::on_init()
 
 std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx::context* /*ctx*/)
 {
-	return std::make_unique<vk_context_resources>();
+	auto resources = std::make_unique<vk::context_resources>();
+
+	if (g_cfg.video.disable_vertex_cache)
+		resources->vertex_cache = std::make_unique<vk::null_vertex_cache>();
+	else
+		resources->vertex_cache = std::make_unique<vk::weak_vertex_cache>();
+
+	return resources;
 }
 
 void VKGSRender::on_bind_context(rsx::context* ctx)
@@ -1285,6 +1287,14 @@ void VKGSRender::on_bind_context(rsx::context* ctx)
 	m_rtts.set_context(ctx);
 	m_vertex_layout.set_context(ctx);
 	m_shader_interpreter.set_context(ctx);
+}
+
+void VKGSRender::on_unbind_context(rsx::context* ctx)
+{
+	if (const auto resources = res(ctx))
+	{
+		resources->vertex_cache->purge();
+	}
 }
 
 void VKGSRender::on_shutdown()

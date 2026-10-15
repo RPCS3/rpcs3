@@ -35,16 +35,17 @@ using fs_binding_table_t = decltype(VKFragmentProgram::binding_table);
 namespace vk
 {
 	using host_data_t = rsx::host_gpu_context_t;
+
+	// Per-context caches, stored on the context
+	struct context_resources final : rsx::context_resources
+	{
+		std::unique_ptr<vk::vertex_cache> vertex_cache;
+	};
 }
 
 class VKGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
 private:
-	// Per-context caches, stored on the context
-	struct vk_context_resources final : rsx::context_resources
-	{
-	};
-
 	enum frame_context_state : u32
 	{
 		dirty = 1
@@ -95,7 +96,6 @@ private:
 
 public:
 	//vk::fbo draw_fbo;
-	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
@@ -257,6 +257,9 @@ private:
 	bool bind_texture_env();
 	bool bind_interpreter_texture_env();
 
+	static vk::context_resources* res(rsx::context* ctx) { return static_cast<vk::context_resources*>(ctx->resources.get()); }
+	vk::context_resources* res() const { return res(m_ctx); }
+
 public:
 	void set_viewport();
 	void set_scissor();
@@ -310,6 +313,7 @@ protected:
 	void on_shutdown() override;
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	void on_bind_context(rsx::context* ctx) override;
+	void on_unbind_context(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 

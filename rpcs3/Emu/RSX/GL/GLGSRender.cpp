@@ -39,11 +39,6 @@ GLGSRender::GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept 
 
 	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.95");
 
-	if (g_cfg.video.disable_vertex_cache)
-		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
-	else
-		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
-
 	m_config.supports_multidraw = true;
 	m_config.supports_normalized_barycentrics = true;
 	m_config.supports_hw_instanced_rendering = true;
@@ -454,7 +449,14 @@ void GLGSRender::on_init()
 
 std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* /*ctx*/)
 {
-	return std::make_unique<gl_context_resources>();
+	auto resources = std::make_unique<gl::context_resources>();
+
+	if (g_cfg.video.disable_vertex_cache)
+		resources->vertex_cache = std::make_unique<gl::null_vertex_cache>();
+	else
+		resources->vertex_cache = std::make_unique<gl::weak_vertex_cache>();
+
+	return resources;
 }
 
 void GLGSRender::on_bind_context(rsx::context* ctx)
@@ -462,6 +464,14 @@ void GLGSRender::on_bind_context(rsx::context* ctx)
 	m_rtts.set_context(ctx);
 	m_vertex_layout.set_context(ctx);
 	m_shader_interpreter.set_context(ctx);
+}
+
+void GLGSRender::on_unbind_context(rsx::context* ctx)
+{
+	if (const auto resources = res(ctx))
+	{
+		resources->vertex_cache->purge();
+	}
 }
 
 void GLGSRender::on_shutdown()
