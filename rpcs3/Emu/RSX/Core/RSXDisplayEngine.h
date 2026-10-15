@@ -59,6 +59,16 @@ namespace rsx
 
 		void init(thread* pump, display_output* output);
 
+		// Guest flip. Flips immediately when called on the RSX thread (command buffer), otherwise queues it for the RSX thread (lv2 syscall).
+		bool request_emu_flip(u32 buffer);
+		void handle_emu_flip(u32 buffer);
+
+		// Records the finished frame (buffer, stats, frame-skip flag) for the next guest flip
+		void queue_frame(u32 buffer);
+
+		// Presents a frame through the renderer. Guest flips and the native UI both end here.
+		void flip(const display_flip_info_t& info);
+
 		// Vblank.
 		// NOTE: The vblank thread posts post_vblank_event at the configured vblank rate.
 		void start_vblank_thread();

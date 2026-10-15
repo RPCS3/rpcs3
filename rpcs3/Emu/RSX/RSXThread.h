@@ -262,7 +262,7 @@ namespace rsx
 		void clear_surface(u32 arg);
 
 		void on_frame_end(u32 buffer, bool forced = false);
-		void flip(const display_flip_info_t& info);
+		void flip(const display_flip_info_t& info) { m_display.flip(info); }
 		u64 timestamp();
 
 		// control
@@ -288,7 +288,6 @@ namespace rsx
 	private:
 		shared_mutex m_mtx_task;
 
-		void handle_emu_flip(u32 buffer);
 		void handle_invalidated_memory_range();
 
 	public:
@@ -320,7 +319,7 @@ namespace rsx
 		void init(u32 ctrlAddress);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
-		bool request_emu_flip(u32 buffer);
+		bool request_emu_flip(u32 buffer) { return m_display.request_emu_flip(buffer); }
 
 		void pause();
 		void unpause();

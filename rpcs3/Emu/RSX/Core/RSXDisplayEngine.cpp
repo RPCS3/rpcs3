@@ -25,6 +25,207 @@ namespace rsx
 		m_output = output;
 	}
 
+	bool display_engine::request_emu_flip(u32 buffer)
+	{
+		if (m_pump->is_current_thread()) // requested through command buffer
+		{
+			// NOTE: The flip will clear any queued flip requests
+			handle_emu_flip(buffer);
+		}
+		else // requested 'manually' through ppu syscall
+		{
+			if (async_flip_requested & flip_request::emu_requested)
+			{
+				// ignore multiple requests until previous happens
+				return true;
+			}
+
+			async_flip_buffer = buffer;
+			async_flip_requested |= flip_request::emu_requested;
+
+			m_pump->get_context()->eng_interrupt_mask |= rsx::display_interrupt;
+
+			if (m_pump->state & cpu_flag::exit)
+			{
+				// Resubmit possibly-ignored flip on savestate load
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	void display_engine::handle_emu_flip(u32 buffer)
+	{
+		if (m_queued_flip.in_progress)
+		{
+			// Rescursion not allowed!
+			return;
+		}
+
+		if (!m_queued_flip.pop(buffer))
+		{
+			// Frame was not queued before flipping
+			m_pump->on_frame_end(buffer, true);
+			ensure(m_queued_flip.pop(buffer));
+		}
+
+		double limit = 0.;
+		const auto frame_limit = g_disable_frame_limit ? frame_limit_type::none : g_cfg.video.frame_limit;
+
+		switch (frame_limit)
+		{
+		case frame_limit_type::none: limit = g_cfg.core.max_cpu_preempt_count_per_frame ? static_cast<double>(g_cfg.video.vblank_rate) : 0.; break;
+		case frame_limit_type::_30: limit = 30.; break;
+		case frame_limit_type::_50: limit = 50.; break;
+		case frame_limit_type::_60: limit = 60.; break;
+		case frame_limit_type::_120: limit = 120.; break;
+		case frame_limit_type::display_rate: limit = cached_refresh_rate(); break;
+		case frame_limit_type::_auto: limit = static_cast<double>(g_cfg.video.vblank_rate); break;
+		case frame_limit_type::_ps3: limit = 0.; break;
+		case frame_limit_type::infinite: limit = 0.; break;
+		default:
+			break;
+		}
+
+		if (double limit2 = g_cfg.video.second_frame_limit; limit2 >= 0.1 && (limit2 < limit || !limit))
+		{
+			// Apply a second limit
+			limit = limit2;
+		}
+
+		if (limit)
+		{
+			const u64 needed_us = static_cast<u64>(1000000 / limit);
+			const u64 time = std::max<u64>(get_system_time(), target_rsx_flip_time > needed_us ? target_rsx_flip_time - needed_us : 0);
+
+			if (int_flip_index)
+			{
+				if (target_rsx_flip_time > time + 1000)
+				{
+					const auto delay_us = target_rsx_flip_time - time;
+					lv2_obj::wait_timeout(delay_us, nullptr, false);
+					m_pump->performance_counters.idle_time += delay_us;
+				}
+			}
+
+			target_rsx_flip_time = std::max(time, target_rsx_flip_time) + needed_us;
+			flip_notification_count = 1;
+		}
+		else if (frame_limit == frame_limit_type::_ps3)
+		{
+			bool exit = false;
+
+			if (vblank_at_flip == umax)
+			{
+				vblank_at_flip = +vblank_count;
+				flip_notification_count = 1;
+				exit = true;
+			}
+
+			if (m_pump->requested_vsync && (exit || vblank_at_flip == vblank_count))
+			{
+				// Not yet signaled, handle it later
+				async_flip_requested |= flip_request::emu_requested;
+				async_flip_buffer = buffer;
+				return;
+			}
+
+			vblank_at_flip = umax;
+		}
+		else
+		{
+			flip_notification_count = 1;
+		}
+
+		int_flip_index += flip_notification_count;
+
+		m_pump->current_display_buffer = buffer;
+		m_queued_flip.emu_flip = true;
+		m_queued_flip.in_progress = true;
+		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;
+
+		flip(m_queued_flip);
+
+		last_guest_flip_timestamp = get_system_time() - 1000000;
+		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		m_queued_flip.in_progress = false;
+
+		while (flip_notification_count--)
+		{
+			if (!m_pump->isHLE)
+			{
+				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+
+				if (m_pump->unsent_gcm_events)
+				{
+					// TODO: A proper fix
+					return;
+				}
+
+				continue;
+			}
+
+			if (auto ptr = m_pump->flip_handler)
+			{
+				m_pump->intr_thread->cmd_list
+				({
+					{ ppu_cmd::set_args, 1 }, u64{ 1 },
+					{ ppu_cmd::lle_call, ptr },
+					{ ppu_cmd::sleep, 0 }
+				});
+
+				m_pump->intr_thread->cmd_notify.store(1);
+				m_pump->intr_thread->cmd_notify.notify_one();
+			}
+		}
+	}
+
+	void display_engine::queue_frame(u32 buffer)
+	{
+		const auto ctx = m_pump->get_context();
+		m_queued_flip.stats = ctx->stats;
+		m_queued_flip.push(buffer);
+		m_queued_flip.skip_frame = ctx->frame_skip.skip_current_frame;
+	}
+
+	void display_engine::flip(const display_flip_info_t& info)
+	{
+		const bool presented = m_pump->renderer()->present_frame(info);
+
+		m_pump->get_context()->eng_interrupt_mask.clear(rsx::display_interrupt);
+
+		if (async_flip_requested & flip_request::any)
+		{
+			// Deferred flip
+			if (info.emu_flip)
+			{
+				async_flip_requested.clear(flip_request::emu_requested);
+			}
+			else
+			{
+				async_flip_requested.clear(flip_request::native_ui);
+			}
+		}
+
+		if (info.emu_flip)
+		{
+			m_pump->performance_counters.sampled_frames++;
+
+			if (m_pause_after_x_flips && m_pause_after_x_flips-- == 1)
+			{
+				Emu.Pause();
+			}
+		}
+
+		last_host_flip_timestamp = get_system_time();
+
+		if (presented)
+		{
+			m_pump->renderer()->post_present();
+		}
+	}
+
 	void display_engine::post_vblank_event(u64 post_event_time)
 	{
 		vblank_count++;
