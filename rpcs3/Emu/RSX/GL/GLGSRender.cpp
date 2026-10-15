@@ -1180,10 +1180,8 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 	m_scratch_ring_buffer->copy_to(m_transform_constants_buffer.get(), mapping.second, data_range.first, data_range.second);
 }
 
-bool GLGSRender::on_access_violation(u32 address, bool is_writing)
+bool GLGSRender::on_access_violation(rsx::context* /*ctx*/, u32 address, bool is_writing)
 {
-	rsx::mm_flush(address);
-
 	const bool can_flush = RSX(m_ctx)->is_current_thread();
 	const rsx::invalidation_cause cause = is_writing
 		? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
@@ -1200,7 +1198,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return RSX(m_ctx)->zcull().on_access_violation(address);
+		return false;
 	}
 
 	if (result.num_flushable > 0)
@@ -1215,7 +1213,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void GLGSRender::on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause)
+void GLGSRender::on_invalidate_memory_range(rsx::context* /*ctx*/, const utils::address_range32 &range, rsx::invalidation_cause cause)
 {
 	gl::command_context cmd{ gl_state };
 	auto data = m_gl_texture_cache.invalidate_range(cmd, range, cause);
