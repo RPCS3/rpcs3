@@ -13,6 +13,7 @@
 #include <string>
 #include <source_location>
 #include <new>
+#include <vector>
 
 #if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
 #define ARCH_X64 1

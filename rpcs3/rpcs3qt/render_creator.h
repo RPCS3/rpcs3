@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include "emu_settings_type.h"
 
 #include <QString>
