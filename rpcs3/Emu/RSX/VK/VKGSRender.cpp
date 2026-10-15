@@ -1012,7 +1012,7 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range32 &range,
 void VKGSRender::on_semaphore_acquire_wait()
 {
 	if (m_flush_requests.pending() ||
-		(RSX(m_ctx)->async_flip_requested & rsx::thread::flip_request::emu_requested) ||
+		(RSX(m_ctx)->display_ctrl().async_flip_requested & rsx::thread::flip_request::emu_requested) ||
 		(m_queue_status & flush_queue_state::deadlock))
 	{
 		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);

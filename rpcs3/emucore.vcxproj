@@ -723,6 +723,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayEngine.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h" />
     <ClInclude Include="Emu\RSX\Core\RSXRendererFactory.h" />
     <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h" />
