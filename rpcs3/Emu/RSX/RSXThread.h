@@ -19,6 +19,7 @@
 #include "Emu/IdManager.h"
 
 #include "Core/RSXDisplay.h"
+#include "Core/RSXDisplayEngine.h"
 #include "Core/RSXDisplayOutput.h"
 #include "Core/RSXDrawCommands.h"
 #include "Core/RSXDriverState.h"
@@ -69,8 +70,6 @@ namespace rsx
 		u64 timestamp_subvalue = 0;
 		u64 m_cycles_counter = 0;
 
-		display_flip_info_t m_queued_flip{};
-
 		void cpu_task() override;
 
 	public:
@@ -94,8 +93,6 @@ namespace rsx
 		// Overlays
 		rsx::overlays::display_manager* m_overlay_manager = nullptr;
 
-		atomic_t<u64> m_display_rate_fetch_count = 0;
-		atomic_t<f64> m_cached_display_rate = 60.;
 		f64 get_cached_display_refresh_rate();
 
 		// Invalidated memory range
@@ -103,9 +100,6 @@ namespace rsx
 
 		// Profiler
 		rsx::profiling_timer m_profiler;
-
-		// Savestates related
-		u32 m_pause_after_x_flips = 0;
 
 		// Context
 		std::unique_ptr<context> m_primary_ctx;
@@ -119,6 +113,9 @@ namespace rsx
 
 		// Host window
 		display_output m_display_out;
+
+		// Flip, vblank and frame pacing
+		display_engine m_display;
 
 		// Draw call management
 		draw_command_processor m_draw_processor;
@@ -166,16 +163,7 @@ namespace rsx
 		}
 		performance_counters;
 
-		enum class flip_request : u32
-		{
-			emu_requested = 1,
-			native_ui = 2,
-
-			any = emu_requested | native_ui
-		};
-
-		atomic_bitmask_t<flip_request> async_flip_requested{};
-		u8 async_flip_buffer{ 0 };
+		using flip_request = display_engine::flip_request;
 
 		surface_scaling_config_t resolution_scaling_config{};
 
@@ -200,6 +188,7 @@ namespace rsx
 		render_backend* renderer() const { return m_renderer.get(); }
 		core_renderer& core() { return m_core; }
 		display_output& display() { return m_display_out; }
+		display_engine& display_ctrl() { return m_display; }
 
 		// Callable from any thread. Asks the RSX thread to run the backend's part of the local task (render_backend::on_local_task) soon.
 		inline void raise_backend_interrupt() { m_ctx->eng_interrupt_mask |= rsx::backend_interrupt; }
@@ -211,7 +200,6 @@ namespace rsx
 		bool isHLE{ false };
 		bool serialized = false;
 
-		u32 flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		int debug_level = CELL_GCM_DEBUG_LEVEL0;
 
 		atomic_t<bool> requested_vsync{true};
@@ -228,20 +216,12 @@ namespace rsx
 		void on_framebuffer_options_changed(u32 opt);
 
 	public:
-		u64 target_rsx_flip_time = 0;
-		u64 int_flip_index = 0;
-		u64 last_guest_flip_timestamp = 0;
-		u64 last_host_flip_timestamp = 0;
-
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
 		vm::ptr<void(u32)> queue_handler = vm::null;
-		atomic_t<u64> vblank_count{0};
 		bool capture_current_frame = false;
 
-		u64 vblank_at_flip = umax;
-		u64 flip_notification_count = 0;
 		void post_vblank_event(u64 post_event_time);
 
 	public:
@@ -249,9 +229,6 @@ namespace rsx
 		atomic_t<bool> pause_on_draw = false;
 
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
-		std::deque<frame_time_t> frame_times;
-		u32 prevent_preempt_increase_tickets = 0;
-		u64 preempt_fail_old_preempt_count = 0;
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
