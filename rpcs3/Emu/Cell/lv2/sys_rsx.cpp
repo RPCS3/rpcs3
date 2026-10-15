@@ -472,8 +472,8 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	sys_event_queue_create(cpu, vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
 	sys_event_port_connect_local(cpu, render->rsx_event_port, driverInfo.handler_queue);
 
-	render->display_buffers_count = 0;
-	render->current_display_buffer = 0;
+	render->get_context()->display_buffers_count = 0;
+	render->get_context()->current_display_buffer = 0;
 	render->label_addr = vm::cast(*lpar_reports);
 	render->init(dma_address);
 
@@ -524,8 +524,8 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 	render->driver_info = 0;
 	render->main_mem_size = 0;
 	render->rsx_event_port = 0;
-	render->display_buffers_count = 0;
-	render->current_display_buffer = 0;
+	render->get_context()->display_buffers_count = 0;
+	render->get_context()->current_display_buffer = 0;
 	render->ctrl = nullptr;
 	render->rsx_thread_running = false;
 	render->serialized = false;
@@ -730,9 +730,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 		else
 		{
-			for (u32 i = 0; i < render->display_buffers_count; ++i)
+			for (u32 i = 0; i < render->get_context()->display_buffers_count; ++i)
 			{
-				if (render->display_buffers[i].offset == a4)
+				if (render->get_context()->display_buffers[i].offset == a4)
 				{
 					flip_idx = i;
 					break;
@@ -794,12 +794,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
 		const u32 offset = a5 & 0xFFFFFFFF;
 
-		render->display_buffers[id].width = width;
-		render->display_buffers[id].height = height;
-		render->display_buffers[id].pitch = pitch;
-		render->display_buffers[id].offset = offset;
+		render->get_context()->display_buffers[id].width = width;
+		render->get_context()->display_buffers[id].height = height;
+		render->get_context()->display_buffers[id].pitch = pitch;
+		render->get_context()->display_buffers[id].offset = offset;
 
-		render->display_buffers_count = std::max<u32>(id + 1, render->display_buffers_count);
+		render->get_context()->display_buffers_count = std::max<u32>(id + 1, render->get_context()->display_buffers_count);
 		break;
 	}
 	case 0x105: // destroy buffer?
