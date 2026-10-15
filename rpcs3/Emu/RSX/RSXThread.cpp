@@ -288,7 +288,7 @@ namespace rsx
 	{
 		if (auto rsxthr = rsx::get_current_renderer())
 		{
-			rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
+			rsxthr->display_ctrl().async_flip_requested |= rsx::thread::flip_request::native_ui;
 		}
 	}
 
@@ -650,26 +650,26 @@ namespace rsx
 
 		if (ar.is_writing() || version >= 2)
 		{
-			ar(vblank_count);
+			ar(m_display.vblank_count);
 
 			b8 flip_pending{};
 
 			if (ar.is_writing())
 			{
-				flip_pending = !!(async_flip_requested & flip_request::emu_requested);
+				flip_pending = !!(m_display.async_flip_requested & flip_request::emu_requested);
 			}
 
 			ar(flip_pending);
 
 			if (flip_pending)
 			{
-				ar(vblank_at_flip);
-				ar(async_flip_buffer);
+				ar(m_display.vblank_at_flip);
+				ar(m_display.async_flip_buffer);
 
 				if (!ar.is_writing())
 				{
-					async_flip_requested |= flip_request::emu_requested;
-					flip_notification_count = 1;
+					m_display.async_flip_requested |= flip_request::emu_requested;
+					m_display.flip_notification_count = 1;
 				}
 			}
 		}
@@ -766,7 +766,7 @@ namespace rsx
 		if (g_cfg.savestate.start_paused)
 		{
 			// Allow to render a whole frame within this emulation session so there won't be missing graphics
-			m_pause_after_x_flips = 2;
+			m_display.m_pause_after_x_flips = 2;
 		}
 
 		create_renderer();
@@ -873,7 +873,7 @@ namespace rsx
 
 	void thread::post_vblank_event(u64 post_event_time)
 	{
-		vblank_count++;
+		m_display.vblank_count++;
 
 		if (isHLE)
 		{
@@ -976,9 +976,9 @@ namespace rsx
 			.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
 		};
 
-		last_guest_flip_timestamp = get_system_time() - 1000000;
+		m_display.last_guest_flip_timestamp = get_system_time() - 1000000;
 
-		vblank_count = 0;
+		m_display.vblank_count = 0;
 
 		if (serialized)
 		{
@@ -1204,11 +1204,11 @@ namespace rsx
 
 		m_ctx->eng_interrupt_mask.clear(rsx::backend_interrupt);
 
-		if (async_flip_requested & flip_request::emu_requested)
+		if (m_display.async_flip_requested & flip_request::emu_requested)
 		{
 			// NOTE: This has to be executed immediately
 			// Delaying this operation can cause desync due to the delay in firing the flip event
-			handle_emu_flip(async_flip_buffer);
+			handle_emu_flip(m_display.async_flip_buffer);
 		}
 
 		if (state != FIFO::state::lock_wait)
@@ -1262,7 +1262,7 @@ namespace rsx
 		if (m_overlay_manager)
 		{
 			const auto should_ignore = m_ctx->in_begin_end && state != FIFO::state::empty;
-			if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
+			if ((m_display.async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
 			{
 				display_flip_info_t info{};
 				info.buffer = current_display_buffer;
@@ -1304,7 +1304,7 @@ namespace rsx
 	{
 		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
-		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		m_display.flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
 		vm::write32(device_addr + 0x30, 1);
@@ -1319,16 +1319,16 @@ namespace rsx
 
 		m_ctx->eng_interrupt_mask.clear(rsx::display_interrupt);
 
-		if (async_flip_requested & flip_request::any)
+		if (m_display.async_flip_requested & flip_request::any)
 		{
 			// Deferred flip
 			if (info.emu_flip)
 			{
-				async_flip_requested.clear(flip_request::emu_requested);
+				m_display.async_flip_requested.clear(flip_request::emu_requested);
 			}
 			else
 			{
-				async_flip_requested.clear(flip_request::native_ui);
+				m_display.async_flip_requested.clear(flip_request::native_ui);
 			}
 		}
 
@@ -1336,13 +1336,13 @@ namespace rsx
 		{
 			performance_counters.sampled_frames++;
 
-			if (m_pause_after_x_flips && m_pause_after_x_flips-- == 1)
+			if (m_display.m_pause_after_x_flips && m_display.m_pause_after_x_flips-- == 1)
 			{
 				Emu.Pause();
 			}
 		}
 
-		last_host_flip_timestamp = get_system_time();
+		m_display.last_host_flip_timestamp = get_system_time();
 
 		if (presented)
 		{
@@ -2075,9 +2075,9 @@ namespace rsx
 		}
 
 		// Save current state
-		m_queued_flip.stats = m_ctx->stats;
-		m_queued_flip.push(buffer);
-		m_queued_flip.skip_frame = m_ctx->frame_skip.skip_current_frame;
+		m_display.m_queued_flip.stats = m_ctx->stats;
+		m_display.m_queued_flip.push(buffer);
+		m_display.m_queued_flip.skip_frame = m_ctx->frame_skip.skip_current_frame;
 
 		if (!forced) [[likely]]
 		{
@@ -2127,21 +2127,21 @@ namespace rsx
 	{
 		constexpr u64 uses_per_query = 512;
 
-		f64 result = m_cached_display_rate;
-		u64 count = m_display_rate_fetch_count++;
+		f64 result = m_display.m_cached_display_rate;
+		u64 count = m_display.m_display_rate_fetch_count++;
 
 		while (true)
 		{
 			if (count % 512 == 0)
 			{
 				result = m_display_out.refresh_rate();
-				m_cached_display_rate.store(result);
-				m_display_rate_fetch_count += uses_per_query; // Notify users of the new value
+				m_display.m_cached_display_rate.store(result);
+				m_display.m_display_rate_fetch_count += uses_per_query; // Notify users of the new value
 				break;
 			}
 
-			const u64 new_count = m_display_rate_fetch_count;
-			const f64 new_cached = m_cached_display_rate;
+			const u64 new_count = m_display.m_display_rate_fetch_count;
+			const f64 new_cached = m_display.m_cached_display_rate;
 
 			if (result == new_cached && count / uses_per_query == new_count / uses_per_query)
 			{
@@ -2165,14 +2165,14 @@ namespace rsx
 		}
 		else // requested 'manually' through ppu syscall
 		{
-			if (async_flip_requested & flip_request::emu_requested)
+			if (m_display.async_flip_requested & flip_request::emu_requested)
 			{
 				// ignore multiple requests until previous happens
 				return true;
 			}
 
-			async_flip_buffer = buffer;
-			async_flip_requested |= flip_request::emu_requested;
+			m_display.async_flip_buffer = buffer;
+			m_display.async_flip_requested |= flip_request::emu_requested;
 
 			m_ctx->eng_interrupt_mask |= rsx::display_interrupt;
 
@@ -2188,17 +2188,17 @@ namespace rsx
 
 	void thread::handle_emu_flip(u32 buffer)
 	{
-		if (m_queued_flip.in_progress)
+		if (m_display.m_queued_flip.in_progress)
 		{
 			// Rescursion not allowed!
 			return;
 		}
 
-		if (!m_queued_flip.pop(buffer))
+		if (!m_display.m_queued_flip.pop(buffer))
 		{
 			// Frame was not queued before flipping
 			on_frame_end(buffer, true);
-			ensure(m_queued_flip.pop(buffer));
+			ensure(m_display.m_queued_flip.pop(buffer));
 		}
 
 		double limit = 0.;
@@ -2228,61 +2228,61 @@ namespace rsx
 		if (limit)
 		{
 			const u64 needed_us = static_cast<u64>(1000000 / limit);
-			const u64 time = std::max<u64>(get_system_time(), target_rsx_flip_time > needed_us ? target_rsx_flip_time - needed_us : 0);
+			const u64 time = std::max<u64>(get_system_time(), m_display.target_rsx_flip_time > needed_us ? m_display.target_rsx_flip_time - needed_us : 0);
 
-			if (int_flip_index)
+			if (m_display.int_flip_index)
 			{
-				if (target_rsx_flip_time > time + 1000)
+				if (m_display.target_rsx_flip_time > time + 1000)
 				{
-					const auto delay_us = target_rsx_flip_time - time;
+					const auto delay_us = m_display.target_rsx_flip_time - time;
 					lv2_obj::wait_timeout(delay_us, nullptr, false);
 					performance_counters.idle_time += delay_us;
 				}
 			}
 
-			target_rsx_flip_time = std::max(time, target_rsx_flip_time) + needed_us;
-			flip_notification_count = 1;
+			m_display.target_rsx_flip_time = std::max(time, m_display.target_rsx_flip_time) + needed_us;
+			m_display.flip_notification_count = 1;
 		}
 		else if (frame_limit == frame_limit_type::_ps3)
 		{
 			bool exit = false;
 
-			if (vblank_at_flip == umax)
+			if (m_display.vblank_at_flip == umax)
 			{
-				vblank_at_flip = +vblank_count;
-				flip_notification_count = 1;
+				m_display.vblank_at_flip = +m_display.vblank_count;
+				m_display.flip_notification_count = 1;
 				exit = true;
 			}
 
-			if (requested_vsync && (exit || vblank_at_flip == vblank_count))
+			if (requested_vsync && (exit || m_display.vblank_at_flip == m_display.vblank_count))
 			{
 				// Not yet signaled, handle it later
-				async_flip_requested |= flip_request::emu_requested;
-				async_flip_buffer = buffer;
+				m_display.async_flip_requested |= flip_request::emu_requested;
+				m_display.async_flip_buffer = buffer;
 				return;
 			}
 
-			vblank_at_flip = umax;
+			m_display.vblank_at_flip = umax;
 		}
 		else
 		{
-			flip_notification_count = 1;
+			m_display.flip_notification_count = 1;
 		}
 
-		int_flip_index += flip_notification_count;
+		m_display.int_flip_index += m_display.flip_notification_count;
 
 		current_display_buffer = buffer;
-		m_queued_flip.emu_flip = true;
-		m_queued_flip.in_progress = true;
-		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;
+		m_display.m_queued_flip.emu_flip = true;
+		m_display.m_queued_flip.in_progress = true;
+		m_display.m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;
 
-		flip(m_queued_flip);
+		flip(m_display.m_queued_flip);
 
-		last_guest_flip_timestamp = get_system_time() - 1000000;
-		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
-		m_queued_flip.in_progress = false;
+		m_display.last_guest_flip_timestamp = get_system_time() - 1000000;
+		m_display.flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		m_display.m_queued_flip.in_progress = false;
 
-		while (flip_notification_count--)
+		while (m_display.flip_notification_count--)
 		{
 			if (!isHLE)
 			{
@@ -2318,7 +2318,7 @@ namespace rsx
 
 		if (!max_preempt_count)
 		{
-			frame_times.clear();
+			m_display.frame_times.clear();
 			lv2_obj::set_yield_frequency(0, 0);
 			return;
 		}
@@ -2327,13 +2327,13 @@ namespace rsx
 		const u64 current_tsc = utils::get_tsc();
 		u64 preempt_count = 0;
 
-		if (frame_times.size() >= 60)
+		if (m_display.frame_times.size() >= 60)
 		{
 			u64 diffs = 0;
 
-			for (usz i = 1; i < frame_times.size(); i++)
+			for (usz i = 1; i < m_display.frame_times.size(); i++)
 			{
-				const u64 cur_diff = frame_times[i].timestamp - frame_times[i - 1].timestamp;
+				const u64 cur_diff = m_display.frame_times[i].timestamp - m_display.frame_times[i - 1].timestamp;
 				diffs += cur_diff;
 			}
 
@@ -2344,36 +2344,36 @@ namespace rsx
 			bool can_reevaluate = true;
 			u64 prev_preempt_count = umax;
 
-			for (usz i = frame_times.size() - 30; i < frame_times.size(); i++)
+			for (usz i = m_display.frame_times.size() - 30; i < m_display.frame_times.size(); i++)
 			{
 				if (prev_preempt_count == umax)
 				{
-					prev_preempt_count = frame_times[i].preempt_count;
+					prev_preempt_count = m_display.frame_times[i].preempt_count;
 					continue;
 				}
 
-				if (prev_preempt_count != frame_times[i].preempt_count)
+				if (prev_preempt_count != m_display.frame_times[i].preempt_count)
 				{
-					if (prev_preempt_count > frame_times[i].preempt_count)
+					if (prev_preempt_count > m_display.frame_times[i].preempt_count)
 					{
 						lowered_delay++;
 					}
-					else if (prev_preempt_count < frame_times[i].preempt_count)
+					else if (prev_preempt_count < m_display.frame_times[i].preempt_count)
 					{
 						raised_delay++;
 					}
 
-					if (i > frame_times.size() - 30)
+					if (i > m_display.frame_times.size() - 30)
 					{
 						// Slow preemption count increase
 						can_reevaluate = false;
 					}
 				}
 
-				prev_preempt_count = frame_times[i].preempt_count;
+				prev_preempt_count = m_display.frame_times[i].preempt_count;
 			}
 
-			preempt_count = std::min<u64>(frame_times.back().preempt_count, max_preempt_count);
+			preempt_count = std::min<u64>(m_display.frame_times.back().preempt_count, max_preempt_count);
 
 			u32 fails = 0;
 			u32 hard_fails = 0;
@@ -2384,9 +2384,9 @@ namespace rsx
 				return a >= b ? a - b : b - a;
 			};
 
-			for (u32 i = 1; i <= frame_times.size(); i++)
+			for (u32 i = 1; i <= m_display.frame_times.size(); i++)
 			{
-				const u64 cur_diff = (i == frame_times.size() ? current_time : frame_times[i].timestamp) - frame_times[i - 1].timestamp;
+				const u64 cur_diff = (i == m_display.frame_times.size() ? current_time : m_display.frame_times[i].timestamp) - m_display.frame_times[i - 1].timestamp;
 
 				if (const u64 diff_of_diff = abs_dst(cur_diff, avg_frame_time);
 					diff_of_diff >= avg_frame_time / 7)
@@ -2396,7 +2396,7 @@ namespace rsx
 						raised_delay++;
 						hard_fails++;
 
-						if (i == frame_times.size())
+						if (i == m_display.frame_times.size())
 						{
 							is_last_frame_a_fail = true;
 						}
@@ -2427,11 +2427,11 @@ namespace rsx
 				{
 					hard_measures_taken = preempt_count > 1;
 					preempt_count = preempt_count * 7 / 8;
-					prevent_preempt_increase_tickets = 10;
+					m_display.prevent_preempt_increase_tickets = 10;
 				}
 				else
 				{
-					prevent_preempt_increase_tickets = std::max<u32>(7, prevent_preempt_increase_tickets);
+					m_display.prevent_preempt_increase_tickets = std::max<u32>(7, m_display.prevent_preempt_increase_tickets);
 				}
 			};
 
@@ -2443,9 +2443,9 @@ namespace rsx
 
 				if (!hard_fails && fails < 6 && is_avg_fps_ok)
 				{
-					if (prevent_preempt_increase_tickets)
+					if (m_display.prevent_preempt_increase_tickets)
 					{
-						prevent_preempt_increase_tickets--;
+						m_display.prevent_preempt_increase_tickets--;
 					}
 					else
 					{
@@ -2467,16 +2467,16 @@ namespace rsx
 
 			if (hard_measures_taken)
 			{
-				preempt_fail_old_preempt_count = std::max<u64>(preempt_fail_old_preempt_count, std::min<u64>(frame_times.back().preempt_count, max_preempt_count));
+				m_display.preempt_fail_old_preempt_count = std::max<u64>(m_display.preempt_fail_old_preempt_count, std::min<u64>(m_display.frame_times.back().preempt_count, max_preempt_count));
 			}
-			else if (preempt_fail_old_preempt_count)
+			else if (m_display.preempt_fail_old_preempt_count)
 			{
-				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%llu, new-count=%llu)", preempt_fail_old_preempt_count, preempt_count);
-				preempt_fail_old_preempt_count = 0;
+				perf_log.error("Lowering current preemption count significantly due to a performance drop, if this issue persists frequently consider lowering max preemptions count to 'new-count' or lower. (old-count=%llu, new-count=%llu)", m_display.preempt_fail_old_preempt_count, preempt_count);
+				m_display.preempt_fail_old_preempt_count = 0;
 			}
 
-			const u64 tsc_diff = (current_tsc - frame_times.back().tsc);
-			const u64 time_diff = (current_time - frame_times.back().timestamp);
+			const u64 tsc_diff = (current_tsc - m_display.frame_times.back().tsc);
+			const u64 time_diff = (current_time - m_display.frame_times.back().timestamp);
 			const u64 preempt_diff = tsc_diff * (1'000'000 / 30) / (time_diff * std::max<u64>(preempt_count, 1ull));
 
 			if (!preempt_count)
@@ -2508,14 +2508,14 @@ namespace rsx
 				lv2_obj::set_yield_frequency(preempt_diff, current_tsc + (tsc_diff * 88 / 100));
 			}
 
-			frame_times.pop_front();
+			m_display.frame_times.pop_front();
 		}
 		else
 		{
 			lv2_obj::set_yield_frequency(0, 0);
 		}
 
-		frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
+		m_display.frame_times.push_back(frame_time_t{preempt_count, current_time, current_tsc});
 	}
 
 	void vblank_thread::set_thread(std::shared_ptr<named_thread<std::function<void()>>> thread)

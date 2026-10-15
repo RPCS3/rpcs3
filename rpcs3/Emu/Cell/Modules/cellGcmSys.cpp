@@ -347,7 +347,7 @@ void cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 
 u32 cellGcmGetFlipStatus()
 {
-	u32 status = rsx::get_current_renderer()->flip_status;
+	u32 status = rsx::get_current_renderer()->display_ctrl().flip_status;
 
 	cellGcmSys.trace("cellGcmGetFlipStatus() -> %d", status);
 
@@ -480,7 +480,7 @@ void cellGcmResetFlipStatus()
 {
 	cellGcmSys.trace("cellGcmResetFlipStatus()");
 
-	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
+	rsx::get_current_renderer()->display_ctrl().flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
 }
 
 error_code cellGcmResetFlipStatus2()
@@ -572,7 +572,7 @@ void cellGcmSetFlipStatus()
 {
 	cellGcmSys.warning("cellGcmSetFlipStatus()");
 
-	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+	rsx::get_current_renderer()->display_ctrl().flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 }
 
 error_code cellGcmSetFlipStatus2()
@@ -865,7 +865,7 @@ u64 cellGcmGetLastFlipTime()
 {
 	cellGcmSys.trace("cellGcmGetLastFlipTime()");
 
-	return rsx::get_current_renderer()->last_guest_flip_timestamp;
+	return rsx::get_current_renderer()->display_ctrl().last_guest_flip_timestamp;
 }
 
 error_code cellGcmGetLastFlipTime2()
@@ -884,7 +884,7 @@ u64 cellGcmGetVBlankCount()
 {
 	cellGcmSys.trace("cellGcmGetVBlankCount()");
 
-	return rsx::get_current_renderer()->vblank_count;
+	return rsx::get_current_renderer()->display_ctrl().vblank_count;
 }
 
 error_code cellGcmGetVBlankCount2()

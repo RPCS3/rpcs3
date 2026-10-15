@@ -2650,6 +2650,9 @@
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayEngine.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
