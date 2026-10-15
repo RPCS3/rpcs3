@@ -3,6 +3,7 @@
 #include <array>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "util/types.hpp"
 #include "Utilities/mutex.h"
