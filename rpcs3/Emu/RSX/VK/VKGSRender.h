@@ -309,6 +309,7 @@ protected:
 	void on_init() override;
 	void on_shutdown() override;
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
+	void on_bind_context(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 

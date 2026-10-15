@@ -35,8 +35,7 @@ namespace
 
 GLGSRender::GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept : render_backend(ctx, output)
 {
-	m_rtts.set_context(m_ctx);
-	m_vertex_layout.set_context(m_ctx);
+	on_bind_context(m_ctx);
 
 	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.95");
 
@@ -456,6 +455,13 @@ void GLGSRender::on_init()
 std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* /*ctx*/)
 {
 	return std::make_unique<gl_context_resources>();
+}
+
+void GLGSRender::on_bind_context(rsx::context* ctx)
+{
+	m_rtts.set_context(ctx);
+	m_vertex_layout.set_context(ctx);
+	m_shader_interpreter.set_context(ctx);
 }
 
 void GLGSRender::on_shutdown()
