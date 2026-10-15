@@ -73,10 +73,14 @@ bool ps5_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		return false;
 	}
 
+	// As the base handler's (PadHandler.cpp), motion sensors among them: a
+	// game whose cellPadSetSensorMode is refused may take the pad for one it
+	// can't use (Spider-Man: Web of Shadows never swung with R2); the sensors
+	// report a controller at rest
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR,
+		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
 		CELL_PAD_PCLASS_TYPE_STANDARD,
 		0, 0, 0,

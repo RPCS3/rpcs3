@@ -564,6 +564,24 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 		data->len = CELL_PAD_LEN_NO_CHANGE;
 	}
 
+#ifdef __PROSPERO__
+	// PS5: what the game is handed, at each change of its buttons or of a
+	// trigger's pull by a quarter, so a log shows whether a press reached it
+	{
+		static u16 s_last[CELL_PAD_MAX_PORT_NUM][4]{};
+		const u16 now[4] = {output.button[CELL_PAD_BTN_OFFSET_DIGITAL1], output.button[CELL_PAD_BTN_OFFSET_DIGITAL2],
+			static_cast<u16>(output.button[CELL_PAD_BTN_OFFSET_PRESS_L2] / 64), static_cast<u16>(output.button[CELL_PAD_BTN_OFFSET_PRESS_R2] / 64)};
+		if (port_no < CELL_PAD_MAX_PORT_NUM && std::memcmp(now, s_last[port_no], sizeof(now)) != 0)
+		{
+			std::memcpy(s_last[port_no], now, sizeof(now));
+			cellPad.success("Pad %u to the game: digital 0x%04x 0x%04x, L2 %u, R2 %u (%s), press mode %s, sensors %s, len %d%s", port_no, now[0], now[1],
+				output.button[CELL_PAD_BTN_OFFSET_PRESS_L2], output.button[CELL_PAD_BTN_OFFSET_PRESS_R2], (now[1] & CELL_PAD_CTRL_R2) ? "R2 down" : "R2 up",
+				(setting & CELL_PAD_SETTING_PRESS_ON) ? "on" : "off", (setting & CELL_PAD_SETTING_SENSOR_ON) ? "on" : "off", s32{data->len},
+				(rinfo.ignore_input || !is_input_allowed()) ? ", input held back" : "");
+		}
+	}
+#endif
+
 	pad->m_buffer_cleared = false;
 
 	// only update parts of the output struct depending on the controller setting
