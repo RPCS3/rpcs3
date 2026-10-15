@@ -196,7 +196,10 @@ void VKGSRender::advance_queued_frames()
 	m_rtts.trim(*m_current_command_buffer, vk::vmm_determine_memory_load_severity());
 
 	// Texture cache is also double buffered to prevent use-after-free
-	m_texture_cache.on_frame_end();
+	if (const auto resources = res())
+	{
+		resources->texture_cache.on_frame_end();
+	}
 	m_samplers_dirty.store(true);
 
 	vk::remove_unused_framebuffers();
@@ -361,7 +364,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 			}
 		}
 	}
-	else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
+	else if (auto surface = res()->texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
 			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
@@ -379,7 +382,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 		// Read from cell
 		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
 		const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
-		const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
+		const auto overlap = res()->texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
 
 		for (const auto & section : overlap)
 		{
@@ -395,13 +398,13 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 			flush_command_queue();
 		}
 
-		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, expected_format, info->address, info->width, info->height, info->pitch);
+		res()->texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
+		image_to_flip = res()->texture_cache.upload_image_simple(*m_current_command_buffer, expected_format, info->address, info->width, info->height, info->pitch);
 	}
 	else if (image_to_flip->format() != expected_format)
 	{
 		// Devs are being creative. Force-cast this to the proper pixel layout.
-		auto dst_img = m_texture_cache.create_temporary_subresource_storage(
+		auto dst_img = res()->texture_cache.create_temporary_subresource_storage(
 			RSX_FORMAT_CLASS_COLOR, expected_format, info->width, info->height, 1, 1, 1,
 			VK_IMAGE_TYPE_2D, 0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 
@@ -422,7 +425,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 			}
 
 			image_to_flip = dst_img.get();
-			m_texture_cache.dispose_reusable_image(dst_img);
+			res()->texture_cache.dispose_reusable_image(dst_img);
 		}
 	}
 
@@ -555,7 +558,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
 
-	if (info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
+	if (res() && info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
 		{
@@ -931,21 +934,21 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 		render_overlays(direct_fbo, areau(aspect_ratio));
 
-		if (g_cfg.video.debug_overlay)
+		if (g_cfg.video.debug_overlay && res())
 		{
-			const auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
-			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
-			const auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
-			const auto num_flushes = m_texture_cache.get_num_flush_requests();
-			const auto num_mispredict = m_texture_cache.get_num_cache_mispredictions();
-			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
-			const auto num_misses = m_texture_cache.get_num_cache_misses();
-			const auto num_unavoidable = m_texture_cache.get_num_unavoidable_hard_faults();
-			const auto cache_miss_ratio = static_cast<u32>(ceil(m_texture_cache.get_cache_miss_ratio() * 100));
-			const auto num_texture_upload = m_texture_cache.get_texture_upload_calls_this_frame();
-			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
-			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
-			const auto texture_copies_ellided = m_texture_cache.get_texture_copies_ellided_this_frame();
+			const auto num_dirty_textures = res()->texture_cache.get_unreleased_textures_count();
+			const auto texture_memory_size = res()->texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+			const auto tmp_texture_memory_size = res()->texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
+			const auto num_flushes = res()->texture_cache.get_num_flush_requests();
+			const auto num_mispredict = res()->texture_cache.get_num_cache_mispredictions();
+			const auto num_speculate = res()->texture_cache.get_num_cache_speculative_writes();
+			const auto num_misses = res()->texture_cache.get_num_cache_misses();
+			const auto num_unavoidable = res()->texture_cache.get_num_unavoidable_hard_faults();
+			const auto cache_miss_ratio = static_cast<u32>(ceil(res()->texture_cache.get_cache_miss_ratio() * 100));
+			const auto num_texture_upload = res()->texture_cache.get_texture_upload_calls_this_frame();
+			const auto num_texture_upload_miss = res()->texture_cache.get_texture_upload_misses_this_frame();
+			const auto texture_upload_miss_ratio = res()->texture_cache.get_texture_upload_miss_percentage();
+			const auto texture_copies_ellided = res()->texture_cache.get_texture_copies_ellided_this_frame();
 			const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
 			const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
 				? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
