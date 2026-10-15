@@ -8,6 +8,11 @@
 #include "Emu/RSX/gcm_enums.h"
 #include "RSXDisplay.h"
 
+namespace utils
+{
+	struct serial;
+}
+
 namespace rsx
 {
 	class thread;
@@ -16,9 +21,6 @@ namespace rsx
 	// Display management (flip, vblank and frame-pacing) state of RSX.
 	class display_engine
 	{
-		thread* m_pump = nullptr;
-		display_output* m_output = nullptr;
-
 	public:
 		enum class flip_request : u32
 		{
@@ -27,6 +29,10 @@ namespace rsx
 
 			any = emu_requested | native_ui
 		};
+
+	private:
+		thread* m_pump = nullptr;
+		display_output* m_output = nullptr;
 
 		// Flip requests
 		atomic_bitmask_t<flip_request> async_flip_requested{};
@@ -57,11 +63,45 @@ namespace rsx
 		// Savestates: pause after this many flips once loaded
 		u32 m_pause_after_x_flips = 0;
 
+		void handle_emu_flip(u32 buffer);
+
+	public:
 		void init(thread* pump, display_output* output);
+
+		// Savestates
+		void save(utils::serial& ar);
+
+		// Called when the RSX thread starts, before the vblank thread
+		void on_thread_start();
+
+		// Savestates: pause the emulator after this many flips
+		void pause_after_flips(u32 count) { m_pause_after_x_flips = count; }
 
 		// Guest flip. Flips immediately when called on the RSX thread (command buffer), otherwise queues it for the RSX thread (lv2 syscall).
 		bool request_emu_flip(u32 buffer);
-		void handle_emu_flip(u32 buffer);
+
+		// RSX thread: runs the guest flip queued by request_emu_flip if requested
+		void handle_pending_flip();
+
+		void request_native_ui_flip() { async_flip_requested |= flip_request::native_ui; }
+		bool has_flip_request(flip_request request) const { return async_flip_requested & request; }
+
+		// A flip command reached the FIFO. A vsync-held flip still pending sends one more flip notification when it presents.
+		void on_flip_queued()
+		{
+			if (vblank_at_flip != umax)
+			{
+				flip_notification_count++;
+			}
+		}
+
+		// Guest-visible flip state (cellGcmSys, capture replay)
+		u32 get_flip_status() const { return flip_status; }
+		void set_flip_status(u32 status) { flip_status = status; }
+		u64 get_flip_index() const { return int_flip_index; }
+		u64 get_last_guest_flip_timestamp() const { return last_guest_flip_timestamp; }
+		u64 get_last_host_flip_timestamp() const { return last_host_flip_timestamp; }
+		u64 get_vblank_count() const { return vblank_count; }
 
 		// Records the finished frame (buffer, stats, frame-skip flag) for the next guest flip
 		void queue_frame(u32 buffer);
