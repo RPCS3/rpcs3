@@ -93,8 +93,6 @@ namespace rsx
 		// Overlays
 		rsx::overlays::display_manager* m_overlay_manager = nullptr;
 
-		f64 get_cached_display_refresh_rate();
-
 		// Invalidated memory range
 		address_range32 m_invalidated_memory_range;
 
@@ -222,7 +220,8 @@ namespace rsx
 		vm::ptr<void(u32)> queue_handler = vm::null;
 		bool capture_current_frame = false;
 
-		void post_vblank_event(u64 post_event_time);
+		// lv2 entry point, forwarded to the display engine
+		void post_vblank_event(u64 post_event_time) { m_display.post_vblank_event(post_event_time); }
 
 	public:
 		atomic_t<bool> sync_point_request = false;
@@ -285,9 +284,6 @@ namespace rsx
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
-
-	public:
-		void evaluate_cpu_usage_reduction_limits();
 
 	private:
 		shared_mutex m_mtx_task;
