@@ -40,6 +40,7 @@ namespace vk
 	struct context_resources final : rsx::context_resources
 	{
 		std::unique_ptr<vk::vertex_cache> vertex_cache;
+		vk::texture_cache texture_cache;
 	};
 }
 
@@ -68,7 +69,6 @@ private:
 	const vs_binding_table_t* m_vs_binding_table = nullptr;
 	const fs_binding_table_t* m_fs_binding_table = nullptr;
 
-	vk::texture_cache m_texture_cache;
 	vk::surface_cache m_rtts;
 
 	std::unique_ptr<vk::buffer> null_buffer;
@@ -316,6 +316,7 @@ protected:
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	void on_bind_context(rsx::context* ctx) override;
 	void on_unbind_context(rsx::context* ctx) override;
+	void on_release_context_resources(rsx::context* ctx) override;
 	bool present_frame(const rsx::display_flip_info_t& info) override;
 	void post_present() override;
 

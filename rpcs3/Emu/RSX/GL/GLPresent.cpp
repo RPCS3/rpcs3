@@ -103,7 +103,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 			}
 		}
 	}
-	else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
+	else if (auto surface = res()->texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
 			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
@@ -133,7 +133,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 
 		gl::command_context cmd{ gl_state };
 		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
-		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
+		res()->texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
 		const rsx::io_buffer read_buf = { vm::base(info->address), range.length() };
 		flip_image->copy_from(read_buf, static_cast<gl::texture::format>(expected_format), gl::texture::type::uint_8_8_8_8, unpack_settings);
@@ -211,7 +211,7 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 	gl::texture* image_to_flip = nullptr;
 	gl::texture* image_to_flip2 = nullptr;
 
-	if (info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
+	if (res() && info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
 	{
 		// Find the source image
 		gl::present_surface_info present_info
@@ -455,20 +455,20 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 	render_overlays(nullptr, areau(aspect_ratio));
 
-	if (g_cfg.video.debug_overlay)
+	if (g_cfg.video.debug_overlay && res())
 	{
-		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
-		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
-		const auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
-		const auto num_mispredict = m_gl_texture_cache.get_num_cache_mispredictions();
-		const auto num_speculate = m_gl_texture_cache.get_num_cache_speculative_writes();
-		const auto num_misses = m_gl_texture_cache.get_num_cache_misses();
-		const auto num_unavoidable = m_gl_texture_cache.get_num_unavoidable_hard_faults();
-		const auto cache_miss_ratio = static_cast<u32>(ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100));
-		const auto num_texture_upload = m_gl_texture_cache.get_texture_upload_calls_this_frame();
-		const auto num_texture_upload_miss = m_gl_texture_cache.get_texture_upload_misses_this_frame();
-		const auto texture_upload_miss_ratio = m_gl_texture_cache.get_texture_upload_miss_percentage();
-		const auto texture_copies_ellided = m_gl_texture_cache.get_texture_copies_ellided_this_frame();
+		const auto num_dirty_textures = res()->texture_cache.get_unreleased_textures_count();
+		const auto texture_memory_size = res()->texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+		const auto num_flushes = res()->texture_cache.get_num_flush_requests();
+		const auto num_mispredict = res()->texture_cache.get_num_cache_mispredictions();
+		const auto num_speculate = res()->texture_cache.get_num_cache_speculative_writes();
+		const auto num_misses = res()->texture_cache.get_num_cache_misses();
+		const auto num_unavoidable = res()->texture_cache.get_num_unavoidable_hard_faults();
+		const auto cache_miss_ratio = static_cast<u32>(ceil(res()->texture_cache.get_cache_miss_ratio() * 100));
+		const auto num_texture_upload = res()->texture_cache.get_texture_upload_calls_this_frame();
+		const auto num_texture_upload_miss = res()->texture_cache.get_texture_upload_misses_this_frame();
+		const auto texture_upload_miss_ratio = res()->texture_cache.get_texture_upload_miss_percentage();
+		const auto texture_copies_ellided = res()->texture_cache.get_texture_copies_ellided_this_frame();
 		const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
 		const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
 			? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
@@ -549,10 +549,9 @@ void GLGSRender::post_present()
 	}
 
 	// Cleanup
-	m_gl_texture_cache.on_frame_end();
-
 	if (const auto resources = res())
 	{
+		resources->texture_cache.on_frame_end();
 		resources->vertex_cache->purge();
 	}
 

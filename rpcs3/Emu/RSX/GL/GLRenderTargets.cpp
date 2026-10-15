@@ -139,8 +139,8 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		if (m_ctx->fb.surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
 			const utils::address_range32 surface_range = m_ctx->fb.surface_info[i].get_memory_range();
-			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
+			res()->texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+			res()->texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 		}
 
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
@@ -156,7 +156,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 			m_ctx->fb.surface_info[i].color_format = m_ctx->fb.layout.color_format;
 			m_ctx->fb.surface_info[i].bpp = color_bpp;
 			m_ctx->fb.surface_info[i].samples = samples;
-			m_gl_texture_cache.notify_surface_changed(m_ctx->fb.surface_info[i].get_memory_range(m_ctx->fb.layout.aa_factors));
+			res()->texture_cache.notify_surface_changed(m_ctx->fb.surface_info[i].get_memory_range(m_ctx->fb.layout.aa_factors));
 		}
 		else
 		{
@@ -168,8 +168,8 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 	if (m_ctx->fb.depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 	{
 		const utils::address_range32 surface_range = m_ctx->fb.depth_surface_info.get_memory_range();
-		m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-		m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
+		res()->texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+		res()->texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 	}
 
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
@@ -187,7 +187,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		m_ctx->fb.depth_surface_info.bpp = get_format_block_size_in_bytes(m_ctx->fb.layout.depth_format);
 		m_ctx->fb.depth_surface_info.samples = samples;
 
-		m_gl_texture_cache.notify_surface_changed(m_ctx->fb.depth_surface_info.get_memory_range(m_ctx->fb.layout.aa_factors));
+		res()->texture_cache.notify_surface_changed(m_ctx->fb.depth_surface_info.get_memory_range(m_ctx->fb.layout.aa_factors));
 	}
 	else
 	{
@@ -300,13 +300,13 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 
 	set_viewport();
 
-	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
+	res()->texture_cache.clear_ro_tex_invalidate_intr();
 
 	if (!m_rtts.superseded_surfaces.empty())
 	{
 		for (auto& surface : m_rtts.superseded_surfaces)
 		{
-			m_gl_texture_cache.discard_framebuffer_memory_region(cmd, surface->get_memory_range());
+			res()->texture_cache.discard_framebuffer_memory_region(cmd, surface->get_memory_range());
 		}
 
 		m_rtts.superseded_surfaces.clear();
@@ -321,7 +321,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 
 			if (lock &&
 #ifdef TEXTURE_CACHE_DEBUG
-				!m_gl_texture_cache.is_protected(
+				!res()->texture_cache.is_protected(
 					base_addr,
 					surface->get_memory_range(),
 					rsx::texture_upload_context::framebuffer_storage)
@@ -335,11 +335,11 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 
 			if (!lock) [[likely]]
 			{
-				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
+				res()->texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
 				continue;
 			}
 
-			m_gl_texture_cache.lock_memory_region(
+			res()->texture_cache.lock_memory_region(
 				cmd, surface, surface->get_memory_range(), false,
 				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
 				surface);
@@ -356,14 +356,14 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		if (g_cfg.video.write_color_buffers)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
-			m_gl_texture_cache.lock_memory_region(
+			res()->texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_render_targets[i].second, surface_range, true,
 				m_ctx->fb.surface_info[i].width, m_ctx->fb.surface_info[i].height, m_ctx->fb.surface_info[i].pitch,
 				m_rtts.m_bound_render_targets[i].second);
 		}
 		else
 		{
-			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
+			res()->texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
 		}
 	}
 
@@ -372,18 +372,18 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		const auto surface_range = m_ctx->fb.depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
-			m_gl_texture_cache.lock_memory_region(
+			res()->texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_ctx->fb.depth_surface_info.width, m_ctx->fb.depth_surface_info.height, m_ctx->fb.depth_surface_info.pitch,
 				m_rtts.m_bound_depth_stencil.second);
 		}
 		else
 		{
-			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
+			res()->texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
 		}
 	}
 
-	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
+	if (res()->texture_cache.get_ro_tex_invalidate_intr())
 	{
 		// Invalidate cached sampler state
 		m_samplers_dirty.store(true);

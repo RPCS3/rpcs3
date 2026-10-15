@@ -410,7 +410,6 @@ void GLGSRender::on_init()
 	m_video_output_pass.create();
 
 	gl::init_global_texture_resources();
-	m_gl_texture_cache.initialize();
 
 	m_prog_buffer.initialize
 	(
@@ -456,6 +455,8 @@ std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx
 	else
 		resources->vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
+	resources->texture_cache.initialize();
+
 	return resources;
 }
 
@@ -464,6 +465,11 @@ void GLGSRender::on_bind_context(rsx::context* ctx)
 	m_rtts.set_context(ctx);
 	m_vertex_layout.set_context(ctx);
 	m_shader_interpreter.set_context(ctx);
+}
+
+void GLGSRender::on_release_context_resources(rsx::context* ctx)
+{
+	res(ctx)->texture_cache.destroy();
 }
 
 void GLGSRender::on_unbind_context(rsx::context* ctx)
@@ -606,7 +612,6 @@ void GLGSRender::on_shutdown()
 	}
 
 	m_null_textures.clear();
-	m_gl_texture_cache.destroy();
 	m_ui_renderer.destroy();
 	m_video_output_pass.destroy();
 
@@ -1180,15 +1185,21 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 	m_scratch_ring_buffer->copy_to(m_transform_constants_buffer.get(), mapping.second, data_range.first, data_range.second);
 }
 
-bool GLGSRender::on_access_violation(rsx::context* /*ctx*/, u32 address, bool is_writing)
+bool GLGSRender::on_access_violation(rsx::context* ctx, u32 address, bool is_writing)
 {
+	const auto resources = res(ctx);
+	if (!resources)
+	{
+		return false;
+	}
+
 	const bool can_flush = RSX(m_ctx)->is_current_thread();
 	const rsx::invalidation_cause cause = is_writing
 		? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		: (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
 
 	auto cmd = can_flush ? gl::command_context{ gl_state } : gl::command_context{};
-	auto result = m_gl_texture_cache.invalidate_address(cmd, address, cause);
+	auto result = resources->texture_cache.invalidate_address(cmd, address, cause);
 
 	if (result.invalidate_samplers)
 	{
@@ -1203,7 +1214,7 @@ bool GLGSRender::on_access_violation(rsx::context* /*ctx*/, u32 address, bool is
 
 	if (result.num_flushable > 0)
 	{
-		auto &task = post_flush_request(address, result);
+		auto &task = post_flush_request(ctx, address, result);
 
 		RSX(m_ctx)->raise_backend_interrupt();
 		vm::temporary_unlock();
@@ -1213,15 +1224,21 @@ bool GLGSRender::on_access_violation(rsx::context* /*ctx*/, u32 address, bool is
 	return true;
 }
 
-void GLGSRender::on_invalidate_memory_range(rsx::context* /*ctx*/, const utils::address_range32 &range, rsx::invalidation_cause cause)
+void GLGSRender::on_invalidate_memory_range(rsx::context* ctx, const utils::address_range32 &range, rsx::invalidation_cause cause)
 {
+	const auto resources = res(ctx);
+	if (!resources)
+	{
+		return;
+	}
+
 	gl::command_context cmd{ gl_state };
-	auto data = m_gl_texture_cache.invalidate_range(cmd, range, cause);
+	auto data = resources->texture_cache.invalidate_range(cmd, range, cause);
 	AUDIT(data.empty());
 
 	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
 	{
-		m_gl_texture_cache.purge_unreleased_sections();
+		resources->texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
@@ -1251,7 +1268,7 @@ bool GLGSRender::on_local_task(rsx::FIFO::state state)
 			if (q.processed.load()) continue;
 
 			gl::command_context cmd{ gl_state };
-			q.result = m_gl_texture_cache.flush_all(cmd, q.section_data);
+			q.result = res(q.ctx)->texture_cache.flush_all(cmd, q.section_data);
 			q.processed = true;
 		}
 	}
@@ -1261,7 +1278,10 @@ bool GLGSRender::on_local_task(rsx::FIFO::state state)
 		{
 			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 			//Only call when there are no waiters
-			m_gl_texture_cache.do_update();
+			if (const auto resources = res())
+			{
+				resources->texture_cache.do_update();
+			}
 			m_ctx->graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
 		}
 	}
@@ -1269,11 +1289,12 @@ bool GLGSRender::on_local_task(rsx::FIFO::state state)
 	return true;
 }
 
-gl::work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
+gl::work_item& GLGSRender::post_flush_request(rsx::context* ctx, u32 address, gl::texture_cache::thrashed_set& flush_data)
 {
 	std::lock_guard lock(queue_guard);
 
 	auto &result = work_queue.emplace_back();
+	result.ctx = ctx;
 	result.address_to_flush = address;
 	result.section_data = std::move(flush_data);
 	return result;
@@ -1282,7 +1303,7 @@ gl::work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::th
 bool GLGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
 	gl::command_context cmd{ gl_state };
-	if (m_gl_texture_cache.blit(cmd, src, dst, interpolate, m_rtts))
+	if (res()->texture_cache.blit(cmd, src, dst, interpolate, m_rtts))
 	{
 		m_samplers_dirty.store(true);
 		return true;
