@@ -90,6 +90,9 @@ namespace vk
 		void init(rsx::context* ctx, const vk::render_device& dev);
 		void destroy();
 
+		// Follows the backend's bound context
+		void set_context(rsx::context* ctx) { m_ctx = ctx; }
+
 		void preload(rsx::shader_loading_dialog* dlg);
 
 		glsl::program* get(

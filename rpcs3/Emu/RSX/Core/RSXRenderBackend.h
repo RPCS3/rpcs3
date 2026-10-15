@@ -52,7 +52,7 @@ namespace rsx
 	class render_backend
 	{
 	public:
-		// The backend renders for the given context and presents to the given display output (the host window).
+		// The backend starts bound to the given context and presents to the given display output (the host window).
 		render_backend(context* ctx, display_output* display);
 		virtual ~render_backend();
 
@@ -74,6 +74,11 @@ namespace rsx
 
 		// Called before the core destroys a context's resources.
 		virtual void on_release_context_resources(context* /*ctx*/) {}
+
+		// One backend serves every context, one at a time, like a video player playing one movie file. It owns the window, so there is only ever one.
+		// The core switches the bound context here and keeps it valid while the backend runs.
+		// TODO: Actual work scheduling.
+		void bind_context(context* ctx);
 
 		// Framebuffer. Returns false if the host could not build the framebuffer; the core then treats the configuration as invalid.
 		virtual bool on_framebuffer_bound(const framebuffer_layout& /*layout*/) { return true; }
@@ -136,6 +141,10 @@ namespace rsx
 		virtual bool is_current_program_interpreted() const { return false; }
 
 	protected:
+		// Context switch notifications.
+		virtual void on_unbind_context(context* /*ctx*/) {}
+		virtual void on_bind_context(context* /*ctx*/) {}
+
 		// Generic draw context on the host window, made current on the calling thread. GL creates its own context instead.
 		void create_frame_context();
 		void destroy_frame_context();

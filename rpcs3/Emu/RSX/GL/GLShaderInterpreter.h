@@ -133,6 +133,9 @@ namespace gl
 		void create(rsx::context* ctx, rsx::shader_loading_dialog* dlg);
 		void destroy();
 
+		// Follows the backend's bound context
+		void set_context(rsx::context* ctx) { m_ctx = ctx; }
+
 		// Update texture bindings based on the incoming descriptor structures
 		void bind_fragment_texture(int i, handle64_t handle, const rsx::sampled_image_descriptor_base& descriptor);
 		void flush_fragment_texture_bindings(glsl::program* program = nullptr);

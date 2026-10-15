@@ -393,8 +393,7 @@ namespace vk
 
 VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept : render_backend(ctx, output)
 {
-	m_rtts.set_context(m_ctx);
-	m_vertex_layout.set_context(m_ctx);
+	on_bind_context(m_ctx);
 
 	// Initialize dependencies
 	g_fxo->need<rsx::dma_manager>();
@@ -1279,6 +1278,13 @@ void VKGSRender::on_init()
 std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx::context* /*ctx*/)
 {
 	return std::make_unique<vk_context_resources>();
+}
+
+void VKGSRender::on_bind_context(rsx::context* ctx)
+{
+	m_rtts.set_context(ctx);
+	m_vertex_layout.set_context(ctx);
+	m_shader_interpreter.set_context(ctx);
 }
 
 void VKGSRender::on_shutdown()

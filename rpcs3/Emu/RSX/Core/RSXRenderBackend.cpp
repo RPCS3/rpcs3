@@ -21,6 +21,20 @@ namespace rsx
 
 	render_backend::~render_backend() = default;
 
+	void render_backend::bind_context(context* ctx)
+	{
+		ensure(ctx);
+
+		if (ctx == m_ctx)
+		{
+			return;
+		}
+
+		on_unbind_context(m_ctx);
+		m_ctx = ctx;
+		on_bind_context(ctx);
+	}
+
 	void render_backend::create_frame_context()
 	{
 		if (m_frame)
