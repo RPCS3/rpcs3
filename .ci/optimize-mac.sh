@@ -16,6 +16,6 @@ fi
 
 # shellcheck disable=SC3045
 find "$1" -type f -print0 | while IFS= read -r -d '' file; do
-    echo Thinning "$file" -> "$target_architecture"
+    echo "Thinning $file -> $target_architecture"
     lipo "$file" -thin "$target_architecture" -output "$file" || true
 done
