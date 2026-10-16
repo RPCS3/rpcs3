@@ -24,6 +24,15 @@
 // emulated, and its first use in a thread allocates, inside this allocator.
 // Threads RPCS3 did not name (the driver's, libc++'s) share bucket 0. Nothing
 // is recorded until the frontend says the title is up (ps5_alloc_track_start).
+//
+// And by place (build 148): GTA IV's rsx::thread held 1.6 GiB after ten
+// minutes, growing as the city streamed in, flat when standing still, with
+// its shaders, pipelines and textures flat (build 146). Each recorded block
+// also notes the return addresses that led to it, walked by frame pointer
+// (the title is built with -fno-omit-frame-pointer), and the live bytes are
+// summed by that chain (ps5_alloc_sites). The walk stays inside the thread's
+// live stack: from the allocation up to the frame where the thread named
+// itself, so threads RPCS3 did not name are not walked.
 
 #include "stdafx.h"
 
@@ -60,6 +69,9 @@ namespace
 	constexpr u64 c_table_size = u64{1} << 20; // 16 MiB of records
 	constexpr u32 c_threads = 1024;
 	constexpr uptr c_tombstone = 1;
+	constexpr u32 c_sites = 4096; // [0]: blocks whose place was not walked or found
+	constexpr u32 c_frames = 12;
+	constexpr u16 c_exact_flag = 0x8000;
 
 	struct alignas(64) bucket
 	{
@@ -75,13 +87,27 @@ namespace
 		std::atomic<uptr> address;
 		u32 size;
 		u16 bucket;
-		u16 exact;
+		u16 site; // with c_exact_flag when recorded exactly
 	};
 
 	struct thread_slot
 	{
 		std::atomic<uptr> key;
 		std::atomic<u16> bucket;
+		std::atomic<uptr> anchor; // the frame where the thread named itself: the walk's ceiling
+	};
+
+	struct site
+	{
+		std::atomic<u64> key;
+		std::atomic<bool> ready;
+		u16 bucket; // the thread that first allocated here
+		u32 count;
+		uptr frames[c_frames];
+		std::atomic<s64> sampled_bytes;
+		std::atomic<s64> sampled_blocks;
+		std::atomic<s64> exact_bytes;
+		std::atomic<s64> exact_blocks;
 	};
 
 	// [0]: threads RPCS3 did not name; the last: threads past the others' count
@@ -92,6 +118,8 @@ namespace
 	std::atomic<u64> g_table_full{0};
 	record g_table[c_table_size]{};
 	thread_slot g_threads[c_threads]{};
+	site g_sites[c_sites]{};
+	std::atomic<u64> g_sites_full{0};
 
 	u64 address_hash(uptr address)
 	{
@@ -173,8 +201,9 @@ namespace
 		return found;
 	}
 
-	u16 current_bucket()
+	u16 current_bucket(uptr& anchor)
 	{
+		anchor = 0;
 		const uptr key = self_key();
 		const u64 hash = address_hash(key);
 		for (u32 probe = 0; probe < 64; probe++)
@@ -187,9 +216,76 @@ namespace
 			}
 			if (seen == key)
 			{
+				anchor = slot.anchor.load(std::memory_order_relaxed);
 				return slot.bucket.load(std::memory_order_relaxed);
 			}
 		}
+		return 0;
+	}
+
+	// The return addresses from here up, while each frame lies between this
+	// one and the thread's anchor: all of it this thread's stack, so mapped,
+	// whatever a frame without a frame pointer left in rbp (JIT code, the
+	// driver's) – such a frame ends the walk
+	__attribute__((noinline)) u32 walk(uptr anchor, uptr (&frames)[c_frames])
+	{
+		u32 count = 0;
+		uptr fp = reinterpret_cast<uptr>(__builtin_frame_address(0));
+		// Not from another stack: a fault handler's (Thread.cpp's ps5_alt_stack,
+		// a heap block) lies far from the thread's 8 MiB stack
+		if (fp >= anchor || anchor - fp > (uptr{4} << 20))
+		{
+			return 0;
+		}
+		while (count < c_frames && fp && fp < anchor)
+		{
+			const uptr* const frame = reinterpret_cast<const uptr*>(fp);
+			const uptr next = frame[0];
+			frames[count++] = frame[1];
+			if (next <= fp || next >= anchor || (next & 7) != 0)
+			{
+				break;
+			}
+			fp = next;
+		}
+		return count;
+	}
+
+	// The chain's site, made on first sight; 0 when the table is full or the
+	// site is being made by another thread this moment
+	u16 site_for(const uptr (&frames)[c_frames], u32 count, u16 bucket_index)
+	{
+		if (!count)
+		{
+			return 0;
+		}
+		u64 key = 0x9e3779b97f4a7c15ull;
+		for (u32 i = 0; i < count; i++)
+		{
+			key ^= frames[i];
+			key *= 0xff51afd7ed558ccdull;
+			key ^= key >> 29;
+		}
+		key |= 1;
+		for (u32 probe = 0; probe < 64; probe++)
+		{
+			const u32 index = 1 + static_cast<u32>((key + probe) % (c_sites - 1));
+			site& s = g_sites[index];
+			u64 seen = s.key.load(std::memory_order_acquire);
+			if (seen == 0 && s.key.compare_exchange_strong(seen, key, std::memory_order_acq_rel))
+			{
+				std::memcpy(s.frames, frames, sizeof(frames));
+				s.count = count;
+				s.bucket = bucket_index;
+				s.ready.store(true, std::memory_order_release);
+				return static_cast<u16>(index);
+			}
+			if (seen == key)
+			{
+				return s.ready.load(std::memory_order_acquire) ? static_cast<u16>(index) : 0;
+			}
+		}
+		g_sites_full.fetch_add(1, std::memory_order_relaxed);
 		return 0;
 	}
 
@@ -214,7 +310,10 @@ namespace
 		{
 			return;
 		}
-		const u16 index = current_bucket();
+		uptr anchor = 0;
+		const u16 index = current_bucket(anchor);
+		uptr frames[c_frames];
+		const u16 place = site_for(frames, anchor ? walk(anchor, frames) : 0, index);
 		for (u64 probe = 0; probe < 64; probe++)
 		{
 			record& slot = g_table[(hash + probe) & (c_table_size - 1)];
@@ -223,10 +322,13 @@ namespace
 			{
 				slot.size = static_cast<u32>(std::min<usz>(size, u32{umax}));
 				slot.bucket = index;
-				slot.exact = exact;
+				slot.site = static_cast<u16>(place | (exact ? c_exact_flag : 0));
 				bucket& b = g_buckets[index];
 				(exact ? b.exact_bytes : b.sampled_bytes).fetch_add(static_cast<s64>(slot.size), std::memory_order_relaxed);
 				(exact ? b.exact_blocks : b.sampled_blocks).fetch_add(1, std::memory_order_relaxed);
+				site& s = g_sites[place];
+				(exact ? s.exact_bytes : s.sampled_bytes).fetch_add(static_cast<s64>(slot.size), std::memory_order_relaxed);
+				(exact ? s.exact_blocks : s.sampled_blocks).fetch_add(1, std::memory_order_relaxed);
 				return;
 			}
 		}
@@ -259,11 +361,15 @@ namespace
 			{
 				const u32 size = slot.size;
 				const u16 index = slot.bucket;
-				const bool was_exact = slot.exact;
+				const bool was_exact = (slot.site & c_exact_flag) != 0;
+				const u16 place = static_cast<u16>(slot.site & ~c_exact_flag);
 				slot.address.store(c_tombstone, std::memory_order_release);
 				bucket& b = g_buckets[index];
 				(was_exact ? b.exact_bytes : b.sampled_bytes).fetch_sub(static_cast<s64>(size), std::memory_order_relaxed);
 				(was_exact ? b.exact_blocks : b.sampled_blocks).fetch_sub(1, std::memory_order_relaxed);
+				site& s = g_sites[place < c_sites ? place : 0];
+				(was_exact ? s.exact_bytes : s.sampled_bytes).fetch_sub(static_cast<s64>(size), std::memory_order_relaxed);
+				(was_exact ? s.exact_blocks : s.sampled_blocks).fetch_sub(1, std::memory_order_relaxed);
 				return;
 			}
 		}
@@ -276,6 +382,18 @@ void ps5_alloc_track_name(const char* name)
 	const uptr key = self_key();
 	const u64 hash = address_hash(key);
 	const u16 index = name ? bucket_for(name) : 0;
+	// Two frames up, at the caller of thread_base::set_name, so the thread's
+	// own top-level functions are walked too
+	uptr anchor = reinterpret_cast<uptr>(__builtin_frame_address(0));
+	for (u32 up = 0; up < 2; up++)
+	{
+		const uptr next = *reinterpret_cast<const uptr*>(anchor);
+		if (next <= anchor || next - anchor > (uptr{1} << 20) || (next & 7) != 0)
+		{
+			break;
+		}
+		anchor = next;
+	}
 	for (u32 probe = 0; probe < 64; probe++)
 	{
 		thread_slot& slot = g_threads[(hash + probe) % c_threads];
@@ -285,6 +403,7 @@ void ps5_alloc_track_name(const char* name)
 			if (name)
 			{
 				slot.bucket.store(index, std::memory_order_relaxed);
+				slot.anchor.store(anchor, std::memory_order_relaxed);
 			}
 			else
 			{
@@ -311,6 +430,7 @@ void ps5_alloc_track_name(const char* name)
 			continue;
 		}
 		slot.bucket.store(index, std::memory_order_relaxed);
+		slot.anchor.store(anchor, std::memory_order_relaxed);
 		if (slot.key.compare_exchange_strong(seen, key, std::memory_order_release))
 		{
 			return;
@@ -376,6 +496,61 @@ std::string ps5_alloc_report(u32 top, s64* total, s64* exact_total)
 	if (exact_total)
 	{
 		*exact_total = exact_sum;
+	}
+	return result;
+}
+
+// The places holding the most live bytes: "812 MiB in about 40000 blocks (530
+// MiB in 530 of 1 MiB or more) by rsx::thread at 0x... 0x...", the innermost
+// return address first; with where this function is, to find the image's base
+// in the link's llvm-pie.elf
+std::string ps5_alloc_sites(u32 top)
+{
+	struct entry
+	{
+		s64 bytes;
+		s64 blocks;
+		u32 index;
+	};
+	std::vector<entry> entries;
+	u32 used = 0;
+	for (u32 i = 0; i < c_sites; i++)
+	{
+		const site& s = g_sites[i];
+		if (i && !s.ready.load(std::memory_order_acquire))
+		{
+			continue;
+		}
+		used += i != 0;
+		const s64 bytes = (s.sampled_bytes.load(std::memory_order_relaxed) << c_sample_bits) + s.exact_bytes.load(std::memory_order_relaxed);
+		const s64 blocks = (s.sampled_blocks.load(std::memory_order_relaxed) << c_sample_bits) + s.exact_blocks.load(std::memory_order_relaxed);
+		if (bytes >= (s64{1} << 20))
+		{
+			entries.push_back({bytes, blocks, i});
+		}
+	}
+	std::sort(entries.begin(), entries.end(), [](const entry& a, const entry& b) { return a.bytes > b.bytes; });
+
+	std::string result = fmt::format("ps5_alloc_sites at %p, %u places", reinterpret_cast<const void*>(&ps5_alloc_sites), used);
+	if (const u64 full = g_sites_full.load(std::memory_order_relaxed))
+	{
+		fmt::append(result, " (%u blocks unplaced: the table was full)", full);
+	}
+	for (usz i = 0; i < entries.size() && i < top; i++)
+	{
+		const site& s = g_sites[entries[i].index];
+		fmt::append(result, "; %d MiB in about %d blocks (%d MiB in %d of 1 MiB or more)", static_cast<s32>(entries[i].bytes >> 20), static_cast<s32>(entries[i].blocks),
+			static_cast<s32>(s.exact_bytes.load(std::memory_order_relaxed) >> 20), static_cast<s32>(s.exact_blocks.load(std::memory_order_relaxed)));
+		if (entries[i].index == 0)
+		{
+			result += " not walked (threads RPCS3 did not name) or not placed";
+			continue;
+		}
+		fmt::append(result, " by %s at", s.bucket == 0 ? "threads RPCS3 did not name" : g_buckets[s.bucket].name);
+		for (u32 f = 0; f < s.count; f++)
+		{
+			fmt::append(result, " %x", s.frames[f]);
+		}
 	}
 	return result;
 }

@@ -108,6 +108,7 @@ extern atomic_t<u32> g_ps5_rsx_cpus[16]; // RSXThread.cpp: the CPUs the RSX thre
 extern atomic_t<u64> g_ps5_vk_memory[9]; // VKPresent.cpp: what the renderer's caches hold
 std::array<s64, 5> ps5_vk_driver_bytes(); // vkutils/instance.cpp: the Vulkan driver's own memory, by scope
 std::string ps5_alloc_report(u32 top, s64* total, s64* exact_total); // ps5_alloc_track.cpp: the heap's live blocks, by the thread that allocated them
+std::string ps5_alloc_sites(u32 top); // ps5_alloc_track.cpp: and by the code that allocated them
 void ps5_alloc_track_start(); // ps5_alloc_track.cpp: recording starts
 void ps5_alloc_track_name(const char* name); // ps5_alloc_track.cpp: this thread's name for it
 const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
@@ -1569,6 +1570,14 @@ int run(const char* boot_path)
 						const std::string owners = ps5_alloc_report(8, &live, &exact);
 						trace_logged("memory by thread (C and C++; blocks of 1 MiB or more all, smaller ones one in 256): about %d MiB live of the heap's %u MiB (%d MiB in large blocks): %s",
 							static_cast<s32>(live >> 20), static_cast<u32>(now.mapped_bytes >> 20), static_cast<s32>(exact >> 20), owners);
+
+						// And every 30 s by the code that allocated them, the return
+						// addresses to read against the link's llvm-pie.elf (build 148)
+						static u32 s_place_lines = 0;
+						if (s_place_lines++ % 6 == 0)
+						{
+							trace_logged("memory by place (live, the most first; return addresses, innermost first): %s", ps5_alloc_sites(14));
+						}
 					}
 					s_last_flips = flips;
 					s_last_flips_us = flips_us;
