@@ -1576,7 +1576,7 @@ int run(const char* boot_path)
 						static u32 s_place_lines = 0;
 						if (s_place_lines++ % 6 == 0)
 						{
-							trace_logged("memory by place (live, the most first; return addresses, innermost first): %s", ps5_alloc_sites(14));
+							trace_logged("memory by place (live, the most first; return addresses, innermost first): %s", ps5_alloc_sites(20));
 						}
 					}
 					s_last_flips = flips;

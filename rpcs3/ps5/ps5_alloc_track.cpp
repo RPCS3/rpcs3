@@ -69,8 +69,14 @@ namespace
 	constexpr u64 c_table_size = u64{1} << 20; // 16 MiB of records
 	constexpr u32 c_threads = 1024;
 	constexpr uptr c_tombstone = 1;
-	constexpr u32 c_sites = 4096; // [0]: blocks whose place was not walked or found
+	constexpr u32 c_sites = 32768; // [0]: blocks whose place was not walked or found
 	constexpr u32 c_frames = 12;
+	// A place is the chain's first frames past the tracker and the wrap (the
+	// first two): all twelve made a place of every route LLVM's compilers took,
+	// and build 148's 4096 were taken 36 s after the start. When the table is
+	// full, a place of the nearest caller alone
+	constexpr u32 c_skip = 2;
+	constexpr u32 c_key_frames = 4;
 	constexpr u16 c_exact_flag = 0x8000;
 
 	struct alignas(64) bucket
@@ -251,38 +257,43 @@ namespace
 		return count;
 	}
 
-	// The chain's site, made on first sight; 0 when the table is full or the
-	// site is being made by another thread this moment
+	// The chain's site, made on first sight; 0 when the table is full even for
+	// the nearest caller, or the site is being made by another thread this moment
 	u16 site_for(const uptr (&frames)[c_frames], u32 count, u16 bucket_index)
 	{
 		if (!count)
 		{
 			return 0;
 		}
-		u64 key = 0x9e3779b97f4a7c15ull;
-		for (u32 i = 0; i < count; i++)
+		const u32 first = std::min(count, c_skip);
+		for (u32 depth : {std::min(count, c_skip + c_key_frames), std::min(count, c_skip + 1)})
 		{
-			key ^= frames[i];
-			key *= 0xff51afd7ed558ccdull;
-			key ^= key >> 29;
-		}
-		key |= 1;
-		for (u32 probe = 0; probe < 64; probe++)
-		{
-			const u32 index = 1 + static_cast<u32>((key + probe) % (c_sites - 1));
-			site& s = g_sites[index];
-			u64 seen = s.key.load(std::memory_order_acquire);
-			if (seen == 0 && s.key.compare_exchange_strong(seen, key, std::memory_order_acq_rel))
+			u64 key = 0x9e3779b97f4a7c15ull ^ depth;
+			for (u32 i = first; i < depth; i++)
 			{
-				std::memcpy(s.frames, frames, sizeof(frames));
-				s.count = count;
-				s.bucket = bucket_index;
-				s.ready.store(true, std::memory_order_release);
-				return static_cast<u16>(index);
+				key ^= frames[i];
+				key *= 0xff51afd7ed558ccdull;
+				key ^= key >> 29;
 			}
-			if (seen == key)
+			key |= 1;
+			for (u32 probe = 0; probe < 64; probe++)
 			{
-				return s.ready.load(std::memory_order_acquire) ? static_cast<u16>(index) : 0;
+				const u32 index = 1 + static_cast<u32>((key + probe) % (c_sites - 1));
+				site& s = g_sites[index];
+				u64 seen = s.key.load(std::memory_order_acquire);
+				if (seen == 0 && s.key.compare_exchange_strong(seen, key, std::memory_order_acq_rel))
+				{
+					// The whole chain of its first block, to read where it came from
+					std::memcpy(s.frames, frames, sizeof(frames));
+					s.count = count;
+					s.bucket = bucket_index;
+					s.ready.store(true, std::memory_order_release);
+					return static_cast<u16>(index);
+				}
+				if (seen == key)
+				{
+					return s.ready.load(std::memory_order_acquire) ? static_cast<u16>(index) : 0;
+				}
 			}
 		}
 		g_sites_full.fetch_add(1, std::memory_order_relaxed);
