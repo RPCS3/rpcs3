@@ -291,31 +291,10 @@ if(NOT ANDROID)
 	else()
 		message(STATUS "RPCS3: using builtin ffmpeg")
 		add_subdirectory(ffmpeg EXCLUDE_FROM_ALL)
-		# ffmpeg-core libraries are extracted to CMAKE_BINARY_DIR
-		set(FFMPEG_LIB_DIR "${CMAKE_BINARY_DIR}/3rdparty/ffmpeg/lib")
 
-		if (WIN32)
-			target_link_libraries(3rdparty_ffmpeg INTERFACE "Bcrypt.lib")
-		endif()
-
-		find_library(FFMPEG_LIB_AVFORMAT avformat PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_AVCODEC avcodec PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_AVUTIL avutil PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_SWSCALE swscale PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-		find_library(FFMPEG_LIB_SWRESAMPLE swresample PATHS ${FFMPEG_LIB_DIR} NO_DEFAULT_PATH)
-
-		if (FFMPEG_LIB_AVFORMAT MATCHES "FFMPEG_LIB_AVFORMAT-NOTFOUND")
-			message(FATAL_ERROR "@#$%! FFMPEG NOT FOUND! ${FFMPEG_LIB_DIR}")
-		endif()
-
-		target_link_libraries(3rdparty_ffmpeg
-		INTERFACE
-			${FFMPEG_LIB_AVFORMAT}
-			${FFMPEG_LIB_AVCODEC}
-			${FFMPEG_LIB_AVUTIL}
-			${FFMPEG_LIB_SWSCALE}
-			${FFMPEG_LIB_SWRESAMPLE}
-		)
+		# The submodule target also carries the platform system libraries
+		# (e.g. the frameworks on macOS).
+		target_link_libraries(3rdparty_ffmpeg INTERFACE ffmpeg)
 		target_include_directories(3rdparty_ffmpeg SYSTEM INTERFACE "ffmpeg/include")
 	endif()
 endif()
