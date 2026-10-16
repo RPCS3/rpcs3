@@ -9,7 +9,7 @@
 #ifdef _WIN32
 #include "util/asm.hpp"
 #include "windows.h"
-#include "tlhelp32.h"
+#include "processsnapshot.h"
 #ifdef _MSC_VER
 #pragma comment(lib, "pdh.lib")
 #endif
@@ -356,24 +356,24 @@ namespace utils
 	u32 cpu_stats::get_current_thread_count() // static
 	{
 #ifdef _WIN32
-		// first determine the id of the current process
-		const DWORD id = GetCurrentProcessId();
+		// first get a handle to the current process
+		const HANDLE process = GetCurrentProcess();
 
-		// then get a process list snapshot.
-		const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-		// initialize the process entry structure.
-		PROCESSENTRY32 entry = {0};
-		entry.dwSize         = sizeof(entry);
-
-		// get the first process info.
-		BOOL ret = Process32First(snapshot, &entry);
-		while (ret && entry.th32ProcessID != id)
+		// then capture a snapshot of its threads
+		HPSS snapshot{};
+		if (PssCaptureSnapshot(process, PSS_CAPTURE_THREADS, 0, &snapshot) != ERROR_SUCCESS)
 		{
-			ret = Process32Next(snapshot, &entry);
+			return 0;
 		}
-		CloseHandle(snapshot);
-		return ret ? entry.cntThreads : 0;
+
+		// get the thread count from the snapshot
+		PSS_THREAD_INFORMATION info{};
+		const DWORD result = PssQuerySnapshot(snapshot, PSS_QUERY_THREAD_INFORMATION, &info, sizeof(info));
+
+		// free the snapshot
+		PssFreeSnapshot(process, snapshot);
+
+		return result == ERROR_SUCCESS ? info.ThreadsCaptured : 0;
 #elif defined(__APPLE__)
 		const task_t task = mach_task_self();
 		mach_msg_type_number_t thread_count;
