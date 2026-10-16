@@ -858,6 +858,7 @@ public:
 	std::array<std::array<u8, 16>, SPU_LS_SIZE / 128> eventstat_wait_time{};
  
 	void push_snr(u32 number, u32 value);
+	void push_in_mbox(u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);
