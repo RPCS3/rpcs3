@@ -3,6 +3,7 @@
 #include <util/types.hpp>
 #include <functional>
 #include <algorithm>
+#include <vector>
 
 #include "aligned_malloc.hpp"
 #include "reverse_ptr.hpp"
