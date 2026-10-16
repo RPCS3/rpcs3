@@ -647,6 +647,10 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 		{
 			res[1] = umax;
 		}
+		else if (index == 1)
+		{
+			std::swap(res[0], res[1]);
+		}
 
 		break;
 	}
