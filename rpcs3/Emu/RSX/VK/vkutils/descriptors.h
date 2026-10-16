@@ -95,7 +95,17 @@ namespace vk
 
 	class descriptor_set
 	{
+#ifdef __PROSPERO__
+		// PS5: each program's descriptor set reserves its three pools whole at
+		// its first use (init), as pending writes point into them: at 16384,
+		// about 900 KiB a program, and GTA IV held 1.48 GiB of them after six
+		// minutes (build 149, memory by place), GTA V died of std::bad_alloc in
+		// rsx::simple_array. The pools are flushed once one reaches this size
+		// (on_bind), so a smaller one only flushes sooner: about 18 KiB a program
+		static constexpr size_t max_cache_size = 256;
+#else
 		static constexpr size_t max_cache_size = 16384;
+#endif
 		static constexpr size_t max_overflow_size = 64;
 		static constexpr size_t m_pool_size = max_cache_size + max_overflow_size;
 
