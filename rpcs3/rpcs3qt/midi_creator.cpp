@@ -4,35 +4,50 @@
 #include "Utilities/StrFmt.h"
 #include "Utilities/StrUtil.h"
 
-#include <rtmidi_c.h>
+#include "util/midi_types.h"
 
 #include <mutex>
 #include <thread>
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-inline constexpr auto midi_deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
-using midi_ptr = std::unique_ptr<RtMidiWrapper, decltype(midi_deleter)>;
-
 namespace
 {
 	// Joins on static destruction, which also runs when exit() is called directly (e.g. by Cocoa on macOS).
 	struct midi_init_thread
 	{
-		std::mutex mutex;
-		std::thread thread;
-		bool started = false;
-
-		void join()
+	public:
+		~midi_init_thread()
 		{
-			std::lock_guard lock(mutex);
-			if (thread.joinable())
+			join();
+		}
+
+		void init_async()
+		{
+			std::lock_guard lock(m_mutex);
+			if (!m_started)
 			{
-				thread.join();
+				m_started = true;
+				m_thread = std::thread([]
+				{
+					[[maybe_unused]] midi_ptr midi_in(rtmidi_in_create_default());
+				});
 			}
 		}
 
-		~midi_init_thread() { join(); }
+		void join()
+		{
+			std::lock_guard lock(m_mutex);
+			if (m_thread.joinable())
+			{
+				m_thread.join();
+			}
+		}
+
+	private:
+		std::mutex m_mutex;
+		std::thread m_thread;
+		bool m_started = false;
 	} g_midi_init = {};
 }
 
@@ -41,15 +56,7 @@ midi_creator::midi_creator()
 	setObjectName("midi_creator");
 
 	// Initialize rtmidi async. This can take 10+ seconds on a cold start.
-	std::lock_guard lock(g_midi_init.mutex);
-	if (!g_midi_init.started)
-	{
-		g_midi_init.started = true;
-		g_midi_init.thread = std::thread([]
-		{
-			[[maybe_unused]] midi_ptr midi_in(rtmidi_in_create_default());
-		});
-	}
+	g_midi_init.init_async();
 }
 
 midi_creator::~midi_creator()
