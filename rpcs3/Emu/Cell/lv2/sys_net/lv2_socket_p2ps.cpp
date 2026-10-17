@@ -275,14 +275,9 @@ std::vector<u8> generate_u2s_packet(const p2ps_encapsulated_tcp& header, const u
 lv2_socket_p2ps::lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 	: lv2_socket_p2p(family, type, protocol)
 {
-	sockopt_cache cache_type;
-	cache_type.data._int = SYS_NET_SOCK_STREAM_P2P;
-	cache_type.len = 4;
-
-	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_TYPE] = cache_type;
 }
 
-lv2_socket_p2ps::lv2_socket_p2ps(socket_type native_socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio)
+lv2_socket_p2ps::lv2_socket_p2ps(socket_type native_socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio, s32 so_rcvbuf)
 	: lv2_socket_p2p(SYS_NET_AF_INET, SYS_NET_SOCK_STREAM_P2P, SYS_NET_IPPROTO_IP)
 {
 	this->native_socket = native_socket;
@@ -294,6 +289,7 @@ lv2_socket_p2ps::lv2_socket_p2ps(socket_type native_socket, u16 port, u16 vport,
 	this->cur_seq      = cur_seq;
 	this->data_beg_seq = data_beg_seq;
 	this->so_nbio      = so_nbio;
+	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_RCVBUF].data._int = so_rcvbuf;
 	status             = p2ps_stream_status::stream_connected;
 }
 
@@ -301,6 +297,25 @@ lv2_socket_p2ps::lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type)
 	: lv2_socket_p2p(ar, type)
 {
 	ar(status, max_backlog, backlog, op_port, op_vport, op_addr, data_beg_seq, received_data, cur_seq);
+
+	usz received_packets = 0;
+	for (auto it = received_data.begin(); it != received_data.end();)
+	{
+		const u64 seq_offset = it->first - data_beg_seq;
+		const usz packet_size = it->second.size();
+
+		// Socket options are not serialized, so only apply the host safety limits while restoring queued data.
+		if (it->first < data_beg_seq || seq_offset > MAX_RECEIVED_BUFFER || packet_size > MAX_RECEIVED_BUFFER - seq_offset ||
+			received_packets >= MAX_RECEIVED_PACKETS || received_data_size >= MAX_RECEIVED_BUFFER || packet_size > MAX_RECEIVED_BUFFER - received_data_size)
+		{
+			it = received_data.erase(it);
+			continue;
+		}
+
+		received_data_size += packet_size;
+		received_packets++;
+		it++;
+	}
 
 	if (GET_SERIALIZATION_VERSION(lv2_net) < 3 && status == p2ps_stream_status::stream_closed && op_addr)
 	{
@@ -422,8 +437,21 @@ bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* da
 
 			if (!received_data.count(tcp_header->seq) && tcp_header->length != 0u)
 			{
-				// New data
-				received_data.emplace(tcp_header->seq, std::vector<u8>(data, data + tcp_header->length));
+				const u64 seq_offset = tcp_header->seq - data_beg_seq;
+				const usz packet_size = tcp_header->length;
+				const usz receive_buffer_size = get_receive_buffer_size();
+
+				if (seq_offset > receive_buffer_size || packet_size > receive_buffer_size - seq_offset ||
+					received_data.size() >= MAX_RECEIVED_PACKETS || received_data_size >= receive_buffer_size || packet_size > receive_buffer_size - received_data_size)
+				{
+					sys_net.trace("[P2PS] Dropped packet outside the receive window or with a full receive queue");
+				}
+				else
+				{
+					// New data
+					received_data.emplace(tcp_header->seq, std::vector<u8>(data, data + packet_size));
+					received_data_size += packet_size;
+				}
 			}
 			else
 			{
@@ -494,7 +522,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 		const u16 new_op_vport     = tcp_header->src_port;
 		const u64 new_cur_seq      = send_hdr.seq + 1;
 		const u64 new_data_beg_seq = send_hdr.ack;
-		auto sock_lv2 = make_shared<lv2_socket_p2ps>(native_socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio);
+		auto sock_lv2 = make_shared<lv2_socket_p2ps>(native_socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio, static_cast<s32>(get_receive_buffer_size()));
 		const s32 new_sock_id      = idm::import_existing<lv2_socket>(sock_lv2);
 		sock_lv2->set_lv2_id(new_sock_id);
 		const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
@@ -828,6 +856,7 @@ std::optional<s32> lv2_socket_p2ps::connect(const sys_net_sockaddr& addr)
 	data_beg_seq   = 0;
 	data_available = 0u;
 	received_data.clear();
+	received_data_size = 0;
 	status = p2ps_stream_status::stream_handshaking;
 
 	std::vector<u8> packet = generate_u2s_packet(send_hdr, nullptr, 0);
@@ -906,6 +935,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 	data_available -= to_give;
 	data_beg_seq += to_give;
+	received_data_size -= to_give;
 
 	sys_net_sockaddr_in_p2p* addr_p2p = reinterpret_cast<sys_net_sockaddr_in_p2p*>(&addr);
 	addr_p2p->sin_family              = AF_INET;
