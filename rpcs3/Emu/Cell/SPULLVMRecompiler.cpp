@@ -5216,7 +5216,8 @@ public:
 					break;
 				}
 
-				bool must_use_cpp_functions = !!g_cfg.core.spu_accurate_dma;
+				// Inline transfers would bypass the shuffled MFC queue
+				bool must_use_cpp_functions = g_cfg.core.spu_accurate_dma || g_cfg.core.mfc_transfers_shuffling;
 
 				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); g_cfg.core.rsx_fifo_accuracy || g_cfg.video.strict_rendering_mode || /*!g_use_rtm*/ true)
 				{
