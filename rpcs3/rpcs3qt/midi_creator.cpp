@@ -33,7 +33,7 @@ namespace
 		}
 
 		~midi_init_thread() { join(); }
-	} g_midi_init;
+	} g_midi_init = {};
 }
 
 midi_creator::midi_creator()
