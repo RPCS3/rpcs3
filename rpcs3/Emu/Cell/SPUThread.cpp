@@ -647,6 +647,10 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 		{
 			res[1] = umax;
 		}
+		else if (index == 1)
+		{
+			std::swap(res[0], res[1]);
+		}
 
 		break;
 	}
@@ -2049,7 +2053,70 @@ void spu_thread::push_snr(u32 number, u32 value)
 
 	// Configueable SPU head start (compnesation)
 	// SPU wakes up immediately on realhW and is faster than PPU
-	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_eanbled ? +g_cfg.core.spu_mmio_delay : 3);
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_enabled ? +g_cfg.core.spu_mmio_delay : 3);
+}
+
+void spu_thread::push_in_mbox(u32 value)
+{
+	shared_mutex dummy_m{};
+
+	// Lock event channel in case it needs event notification
+	ch_events.atomic_op([](ch_events_t& ev)
+	{
+		ev.locks++;
+	});
+
+	std::unique_lock lock(group ? group->mutex : dummy_m, std::defer_lock);
+
+	if (group)
+	{
+		lock.lock();
+	}
+
+	const u32 old_spu_pc = this->pc; 
+	const auto push_state = ch_in_mbox.push(value, true);
+
+	if (lock)
+	{
+		lock.unlock();
+	}
+
+	if (push_state.notify)
+	{
+		ch_in_mbox.notify();
+	}
+
+	if (push_state.old_count < push_state.count)
+	{
+		set_events(SPU_EVENT_MB);
+
+		// Wait until the thread wakes up (SPU wakes up immediately on realhw)
+		if (push_state.notify)
+		{
+			for (u64 time = get_system_time(), current = time; state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(this->pc) && current - time < 500; current = get_system_time())
+			{
+				std::this_thread::yield();
+			}
+		}
+	}
+	else if (!push_state.op_done)
+	{
+		ensure(is_stopped());
+
+		if (auto cpu = cpu_thread::get_current())
+		{
+			cpu->state += cpu_flag::again;
+		}
+	}
+
+	ch_events.atomic_op([](ch_events_t& ev)
+	{
+		ev.locks--;
+	});
+
+	// Configurable SPU head start (compensation)
+	// SPU wakes up immediately on realhw and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_enabled ? +g_cfg.core.spu_mmio_delay : 3);
 }
 
 void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls)
