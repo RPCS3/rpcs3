@@ -1432,17 +1432,18 @@ void spu_thread::cpu_return()
 					exit_status.set_value(last_exit_status);
 				}
 
-				last_stop = group->stop_count;
-
-				if (last_stop == umax)
+				last_stop = group->stop_count.fetch_op([&](u32& count)
 				{
-					// Restart with some high count to preserve some meaning
-					group->stop_count = 1000;
-				}
-				else
-				{
-					group->stop_count++;
-				}
+					if (count == umax)
+					{
+						// Restart with some high count to preserve some meaning
+						count = 1000;
+					}
+					else
+					{
+						count++;
+					}
+				});
 
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{

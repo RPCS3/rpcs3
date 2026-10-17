@@ -1647,7 +1647,12 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	for (auto& thread : group->threads)
 	{
-		while (thread && group->running && thread->state & cpu_flag::wait)
+		if (!group->running)
+		{
+			break;
+		}
+
+		if (thread && thread->state & cpu_flag::wait)
 		{
 			thread_ctrl::notify(*thread);
 
