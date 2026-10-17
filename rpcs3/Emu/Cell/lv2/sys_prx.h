@@ -191,6 +191,7 @@ struct lv2_prx final : ppu_module<lv2_obj>
 	atomic_t<u32> state = PRX_STATE_INITIALIZED;
 	shared_mutex mutex;
 	u32 hle_data = 0;
+	bool stop_disabled = false;
 
 	std::unordered_map<u32, u32> specials;
 
