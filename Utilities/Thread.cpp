@@ -2195,11 +2195,20 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 			// TODO:
 			// RawSPU: Send appropriate interrupt
 			// SPUThread: Send sys_spu exception event
-			cpu->state += cpu_flag::dbg_pause;
-
-			if (cpu->check_state() && !hack_alloc())
+			//
+			// cpu_flag::dbg_pause is only ever cleared by the GDB stub (GDB.cpp), so pausing
+			// on a *recoverable* fault leaves the SPU thread stuck forever, which in turn
+			// deadlocks sys_spu_thread_group_terminate() (it busy-waits for every member to
+			// clear cpu_flag::wait). Recover first; only pause when the page cannot be
+			// recovered (a real fault, where a debugger's help is wanted).
+			if (!hack_alloc())
 			{
-				return false;
+				cpu->state += cpu_flag::dbg_pause;
+
+				if (cpu->check_state())
+				{
+					return false;
+				}
 			}
 
 			return true;
