@@ -90,6 +90,8 @@ void screenshot_manager_dialog::add_entry(const QString& path)
 {
 	screenshot_item* item = new screenshot_item(m_flow_widget, m_icon_size, path, m_placeholder);
 	connect(item, &screenshot_item::signal_icon_preview, this, &screenshot_manager_dialog::show_preview);
+	// QueuedConnection ensures reload() runs after delete_screenshot() has unwound to prevent deleting an active widget
+	connect(item, &screenshot_item::signal_screenshot_deleted, this, &screenshot_manager_dialog::reload, Qt::ConnectionType::QueuedConnection);
 
 	m_flow_widget->add_widget(item);
 }
@@ -163,7 +165,8 @@ void screenshot_manager_dialog::reload()
 		{
 			m_combo_game_filter->addItem(text, dirname);
 		}
-		m_combo_game_filter->setCurrentIndex(m_combo_game_filter->findData(old_filter));
+		const int new_index = m_combo_game_filter->findData(old_filter);
+		m_combo_game_filter->setCurrentIndex(new_index >= 0 ? new_index : 0);
 		m_combo_game_filter->blockSignals(false);
 	});
 
