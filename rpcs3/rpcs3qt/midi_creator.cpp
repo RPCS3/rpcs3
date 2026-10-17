@@ -6,23 +6,46 @@
 
 #include <rtmidi_c.h>
 
+#include <mutex>
+#include <thread>
+
 LOG_CHANNEL(cfg_log, "CFG");
 
 inline constexpr auto midi_deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
 using midi_ptr = std::unique_ptr<RtMidiWrapper, decltype(midi_deleter)>;
 
-std::mutex midi_creator::m_midi_init_mutex = {};
-std::unique_ptr<std::thread> midi_creator::m_midi_init_thread = {};
+namespace
+{
+	// Joins on static destruction, which also runs when exit() is called directly (e.g. by Cocoa on macOS).
+	struct midi_init_thread
+	{
+		std::mutex mutex;
+		std::thread thread;
+		bool started = false;
+
+		void join()
+		{
+			std::lock_guard lock(mutex);
+			if (thread.joinable())
+			{
+				thread.join();
+			}
+		}
+
+		~midi_init_thread() { join(); }
+	} g_midi_init = {};
+}
 
 midi_creator::midi_creator()
 {
 	setObjectName("midi_creator");
 
 	// Initialize rtmidi async. This can take 10+ seconds on a cold start.
-	std::lock_guard lock(m_midi_init_mutex);
-	if (!m_midi_init_thread)
+	std::lock_guard lock(g_midi_init.mutex);
+	if (!g_midi_init.started)
 	{
-		m_midi_init_thread = std::make_unique<std::thread>([]
+		g_midi_init.started = true;
+		g_midi_init.thread = std::thread([]
 		{
 			[[maybe_unused]] midi_ptr midi_in(rtmidi_in_create_default());
 		});
@@ -31,11 +54,12 @@ midi_creator::midi_creator()
 
 midi_creator::~midi_creator()
 {
-	std::lock_guard lock(m_midi_init_mutex);
-	if (m_midi_init_thread && m_midi_init_thread->joinable())
-	{
-		m_midi_init_thread->join();
-	}
+	g_midi_init.join();
+}
+
+void midi_creator::wait_for_init()
+{
+	g_midi_init.join();
 }
 
 // We need to recreate the localized string because the midi creator is currently only created once.
@@ -47,13 +71,7 @@ QString midi_creator::get_none() const
 void midi_creator::refresh_list()
 {
 	// Wait for initial initialization
-	{
-		std::lock_guard lock(m_midi_init_mutex);
-		if (m_midi_init_thread && m_midi_init_thread->joinable())
-		{
-			m_midi_init_thread->join();
-		}
-	}
+	g_midi_init.join();
 
 	m_midi_list.clear();
 	m_midi_list.append(get_none());

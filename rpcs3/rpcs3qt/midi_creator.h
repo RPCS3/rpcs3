@@ -3,9 +3,6 @@
 #include "util/types.hpp"
 #include "Emu/Io/midi_config_types.h"
 
-#include <mutex>
-#include <thread>
-
 #include <QObject>
 #include <QStringList>
 
@@ -24,9 +21,10 @@ public:
 	const QStringList& get_midi_list() const;
 	const std::array<midi_device, max_midi_devices>& get_selection_list() const;
 
+	// Wait for the async rtmidi initialization to finish
+	static void wait_for_init();
+
 private:
-	static std::mutex m_midi_init_mutex;
-	static std::unique_ptr<std::thread> m_midi_init_thread;
 	QStringList m_midi_list;
 	std::array<midi_device, max_midi_devices> m_sel_list;
 };
