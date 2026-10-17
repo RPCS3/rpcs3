@@ -57,6 +57,11 @@ midi_creator::~midi_creator()
 	g_midi_init.join();
 }
 
+void midi_creator::wait_for_init()
+{
+	g_midi_init.join();
+}
+
 // We need to recreate the localized string because the midi creator is currently only created once.
 QString midi_creator::get_none() const
 {
