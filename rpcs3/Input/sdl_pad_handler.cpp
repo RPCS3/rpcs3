@@ -520,11 +520,26 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 
 			// Find out if we already know this controller
 			std::shared_ptr<SDLDevice> sdl_device = get_device_by_gamepad(gamepad);
-			SDL_CloseGamepad(gamepad);
 
 			// Re-attach the controller if the device matches the current one
-			if (sdl_device && sdl_device.get() == dev)
+			bool reattach = sdl_device && sdl_device.get() == dev;
+
+			// The path is not stable on every platform (on macOS it contains the IOKit registry ID, which changes
+			// when the controller reconnects). Accept an unknown controller with the same name and serial instead.
+			if (!reattach && !dev->sdl.is_virtual_device && (!sdl_device || sdl_device->sdl.is_virtual_device))
 			{
+				const char* name = SDL_GetGamepadName(gamepad);
+				const char* serial = SDL_GetGamepadSerial(gamepad);
+
+				reattach = name && dev->sdl.name == name && (serial ? dev->sdl.serial == serial : dev->sdl.serial.empty());
+			}
+
+			SDL_CloseGamepad(gamepad);
+
+			if (reattach)
+			{
+				sdl_log.notice("Re-attaching device '%s' (old path='%s')", dev->sdl.name, dev->sdl.path);
+
 				if (SDLDevice::sdl_info info = get_sdl_info(gamepads[i]); info.gamepad)
 				{
 					dev->sdl = std::move(info);
