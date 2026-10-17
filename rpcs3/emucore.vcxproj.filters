@@ -3052,6 +3052,9 @@
     <ClInclude Include="Emu\emu_callbacks.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="util\midi_types.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\E4M12Conversion.glsl">
