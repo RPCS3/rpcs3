@@ -54,7 +54,7 @@ namespace
 		observed_iso_file(u64& reads, Args&&... args)
 			: Base(std::forward<Args>(args)...)
 		{
-			this->m_file = fs::file(std::make_unique<counted_file>(std::move(this->m_file), reads));
+			this->m_file = std::make_shared<fs::file>(std::make_unique<counted_file>(std::move(*this->m_file), reads));
 		}
 	};
 }

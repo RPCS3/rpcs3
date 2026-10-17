@@ -50,6 +50,7 @@
 !/bin/test/
 
 # Themes
+!/bin/licenses/
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini
 /bin/GuiConfigs/*.ini.*

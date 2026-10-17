@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="libchdr\src\libchdr_bitstream.c" />
+    <ClCompile Include="libchdr\src\libchdr_cdrom.c" />
+    <ClCompile Include="libchdr\src\libchdr_chd.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_avhuff.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_cdfl.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_cdlz.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_cdzl.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_cdzs.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_flac.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_huff.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_lzma.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_zlib.c" />
+    <ClCompile Include="libchdr\src\libchdr_codec_zstd.c" />
+    <ClCompile Include="libchdr\src\libchdr_flac.c" />
+    <ClCompile Include="libchdr\src\libchdr_huffman.c" />
+    <ClCompile Include="libchdr\deps\lzma-26.02\src\LzmaDec.c" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D609C46D-A726-43DD-884D-5AB5760AC48B}</ProjectGuid>
+    <RootNamespace>libchdr</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>CHDR_SYSTEM_ZLIB;CHDR_SYSTEM_ZSTD;WANT_RAW_DATA_SECTOR=1;WANT_SUBCODE=1;VERIFY_BLOCK_CRC=1;LOWRAM_TARGET=0;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>libchdr\include;..\zlib\zlib;..\zstd\zstd\lib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
