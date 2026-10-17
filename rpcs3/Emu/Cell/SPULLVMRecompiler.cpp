@@ -2494,6 +2494,15 @@ public:
 		m_ir->CreateRetVoid();
 
 		m_ir->SetInsertPoint(label_stop);
+
+		if (g_cfg.core.mfc_transfers_shuffling)
+		{
+			// cpu_work() keeps cpu_flag::pending set while shuffled MFC commands are queued, so escaping here would never execute the function
+			const auto label_escape = BasicBlock::Create(m_context, "", m_function);
+			m_ir->CreateCondBr(call("spu_exec_check_state", &exec_check_state, m_thread), label_escape, label_test);
+			m_ir->SetInsertPoint(label_escape);
+		}
+
 		call("spu_escape", spu_runtime::g_escape, m_thread)->setTailCall();
 		m_ir->CreateRetVoid();
 
@@ -4680,6 +4689,20 @@ public:
 		}
 		case MFC_RdTagStat:
 		{
+			if (g_cfg.core.mfc_transfers_shuffling)
+			{
+				// Execute shuffled MFC commands before reading (see spu_thread::get_ch_value)
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
+				m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size))), _mfc, next, m_md_unlikely);
+				m_ir->SetInsertPoint(_mfc);
+				ensure_gpr_stores();
+				update_pc();
+				call("spu_do_mfc", &exec_do_mfc, m_thread);
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(next);
+			}
+
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_tag_stat), false);
 			break;
 		}
@@ -5029,6 +5052,11 @@ public:
 			}
 		}
 
+		_spu->do_mfc();
+	}
+
+	static void exec_do_mfc(spu_thread* _spu)
+	{
 		_spu->do_mfc();
 	}
 

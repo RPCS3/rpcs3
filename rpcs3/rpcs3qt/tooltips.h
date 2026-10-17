@@ -112,7 +112,7 @@ public:
 		const QString accurate_ppuvnan             = tr("Accurately set NaN results in vector instructions in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString accurate_ppufpcc             = tr("Accurately set FPCC Bits in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString accurate_cache_line_stores   = tr("Accurately processes PPU DCBZ instruction.\nIn addition, when combined with Accurate SPU DMA, SPU PUT cache line accesses will be processed atomically.");
-		const QString mfc_delay_command            = tr("Forces delaying any odd MFC command, waits for at least 2 pending commands to execute them in a random order.\nMust be used with either SPU interpreters currently.\nSeverely degrades performance! If unsure, don't use this option.");
+		const QString mfc_delay_command            = tr("Forces delaying any odd MFC command, waits for at least 2 pending commands to execute them in a random order.\nSeverely degrades performance! If unsure, don't use this option.");
 		const QString hook_static_functions        = tr("Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.");
 		const QString renderdoc_compatibility      = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nAlso allows Vulkan to use debug markers for nicer Renderdoc captures.\nIf unsure, don't use this option.");
 		const QString force_high_pz                = tr("Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.");
