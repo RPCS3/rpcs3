@@ -237,6 +237,7 @@ private:
 	void invalidate_render_pass();
 
 	void update_draw_state();
+	std::pair<f32, f32> get_viewport_depth_range() const;
 	void check_present_status();
 
 	vk::vertex_upload_info upload_vertex_data();
