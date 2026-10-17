@@ -776,7 +776,15 @@ void gui_application::create_callbacks()
 			}
 
 			gui_log.notice("Quitting gui application (force_quit=%d, no-gui=%d)", force_quit, no_gui);
+#ifdef __APPLE__
+			// quit() calls [NSApp terminate:]. If we are already inside a termination request
+			// (Cmd+Q, Dock or AppleEvent quit), AppKit then calls exit() from inside the event loop,
+			// so exec() never returns and Qt objects are torn down during static destruction.
+			// Leave the event loop instead and let main() return.
+			QCoreApplication::exit(0);
+#else
 			quit();
+#endif
 			return true;
 		}
 
