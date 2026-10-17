@@ -5,6 +5,8 @@
 
 #ifdef _WIN32
 #include "Utilities/StrUtil.h"
+#elif defined(__APPLE__)
+#include "Utilities/File.h"
 #endif
 
 LOG_CHANNEL(network_log, "NET");
@@ -34,6 +36,21 @@ curl_handle::curl_handle()
 	// Tell curl to use the native CA store for certificate verification
 	err = curl_easy_setopt(m_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_SSL_OPTIONS): %s", curl_easy_strerror(err));
+#elif defined(__APPLE__)
+	// Use the system CA bundle, since the linked libcurl may have a build-time CA path that does not exist on the user's machine
+	static constexpr const char* macos_ca_bundle = "/etc/ssl/cert.pem";
+	static const bool has_macos_ca_bundle = []()
+	{
+		const bool exists = fs::is_file(macos_ca_bundle);
+		if (!exists) network_log.warning("CA bundle not found: %s", macos_ca_bundle);
+		return exists;
+	}();
+
+	if (has_macos_ca_bundle)
+	{
+		err = curl_easy_setopt(m_curl, CURLOPT_CAINFO, macos_ca_bundle);
+		if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_CAINFO, %s): %s", macos_ca_bundle, curl_easy_strerror(err));
+	}
 #endif
 
 	const std::string user_agent = utils::get_user_agent();
