@@ -71,13 +71,20 @@ std::string microphone_creator::set_device(u32 num, const QString& text)
 	return m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
 }
 
-void microphone_creator::parse_devices(std::string_view list)
+std::array<std::string, 4> microphone_creator::parse_device_selection(std::string_view list)
 {
-	m_sel_list = {};
+	std::array<std::string, 4> devices {};
 
 	std::vector<std::string> devices_list = fmt::split(list, { "@@@" });
-	for (usz index = 0; index < std::min(m_sel_list.size(), devices_list.size()); index++)
+	for (usz index = 0; index < std::min(devices.size(), devices_list.size()); index++)
 	{
-		m_sel_list[index] = std::move(devices_list[index]);
+		devices[index] = std::move(devices_list[index]);
 	}
+
+	return devices;
+}
+
+void microphone_creator::update_device_selection(std::string_view list)
+{
+	m_sel_list = parse_device_selection(list);
 }
