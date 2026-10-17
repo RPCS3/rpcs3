@@ -411,7 +411,7 @@ void usb_handler_thread::perform_scan()
 			}
 		}
 
-		if (desc.idVendor == 0x1209 && desc.idProduct == 0x2882)
+		if (desc.idVendor == 0x1209 && (desc.idProduct == 0x2882 || desc.idProduct == 0x2883))
 		{
 			sys_usbd.success("Found device: Santroller");
 			// Send the device a specific control transfer so that it jumps to a RPCS3 compatible mode
