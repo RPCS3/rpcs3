@@ -329,6 +329,11 @@ public:
 
 	// Returns a core affinity mask. Set whether to generate the high priority set or not
 	static u64 get_affinity_mask(thread_class group);
+	
+#ifdef __APPLE__
+	// Sets the thread's QoS priority & class.
+	static void set_QoS_policy(qos_class_t qosClass, int priority);
+#endif
 
 	// Sets the native thread priority
 	static void set_native_priority(int priority);
