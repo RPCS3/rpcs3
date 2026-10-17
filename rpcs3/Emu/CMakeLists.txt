@@ -501,6 +501,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Core/RSXContext.cpp
     RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
+    RSX/Core/RSXFrameBuffer.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
     RSX/GSRender.cpp
@@ -508,6 +509,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Host/RSXDMAWriter.cpp
     RSX/Null/NullGSRender.cpp
     RSX/NV47/FW/draw_call.cpp
+    RSX/NV47/FW/GRAPH_backend.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
     RSX/NV47/HW/nv0039.cpp

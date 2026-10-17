@@ -38,5 +38,9 @@ namespace rsx
 		rsx::surface_raster_type raster_type;
 		u32 aa_factors[2];
 		bool ignore_change;
+
+		u8 color_attachment_count() const;
+		u8 depth_stencil_attachment_count() const { return zeta_address ? 1 : 0; }
+		u8 all_attachments_count() const { return color_attachment_count() + depth_stencil_attachment_count(); }
 	};
 }
