@@ -664,6 +664,9 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		case RSX_FP_OPCODE_UPG:
 			result.has_pack_instructions = true;
 			break;
+		case RSX_FP_OPCODE_KIL:
+			result.has_kil_instructions = true;
+			break;
 		case RSX_FP_OPCODE_BRK:
 		case RSX_FP_OPCODE_CAL:
 		case RSX_FP_OPCODE_IFE:
