@@ -110,6 +110,8 @@ namespace np
 		u32 get_public_ip_addr() const;
 		u32 get_dns_ip() const;
 		u32 get_bind_ip() const;
+		u32 get_netmask() const;
+		u32 get_default_route() const;
 
 		s32 get_psn_status() const;
 		s32 get_net_status() const;
@@ -303,6 +305,7 @@ namespace np
 		// Various generic helpers
 		bool discover_ip_address();
 		bool discover_ether_address();
+		void discover_route();
 		bool error_and_disconnect(std::string_view error_msg);
 
 		// Notification handlers
@@ -431,6 +434,8 @@ namespace np
 		be_t<u32> public_ip_addr{};
 		be_t<u32> dns_ip = 0x08080808;
 		be_t<u32> bind_ip = 0x00000000;
+		be_t<u32> netmask{};
+		be_t<u32> default_route{};
 
 		// User infos
 		SceNpId npid{};
