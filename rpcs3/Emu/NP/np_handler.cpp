@@ -6,6 +6,7 @@
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/cellNetCtl.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm_var.h"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
@@ -863,6 +864,17 @@ namespace np
 	{
 		np_memory.release();
 
+		{
+			std::lock_guard lock(mutex_custom_menu);
+			custom_menu.reset();
+		}
+
+		{
+			std::lock_guard lock(m_mutex_selected_messages);
+			selected_invite.reset();
+			selected_message.reset();
+		}
+
 		manager_cb = {};
 		manager_cb_arg = {};
 		basic_handler_registered = false;
@@ -1043,17 +1055,18 @@ namespace np
 		return get_rpcn()->get_message(id);
 	}
 
-	void np_handler::set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id)
+	void np_handler::set_message_selected(SceNpBasicAttachmentDataId id, shared_ptr<std::pair<std::string, message_data>> message)
 	{
+		ensure(message);
 		std::lock_guard lock(m_mutex_selected_messages);
 
 		switch (id)
 		{
 		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
-			selected_invite_id = msg_id;
+			selected_invite = std::move(message);
 			break;
 		case SCE_NP_BASIC_SELECTED_MESSAGE_DATA:
-			selected_message_id = msg_id;
+			selected_message = std::move(message);
 			break;
 		default:
 			fmt::throw_exception("set_message_selected with id %d", id);
@@ -1067,15 +1080,15 @@ namespace np
 		switch (id)
 		{
 		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
-			if (!selected_invite_id)
+			if (!selected_invite)
 				return std::nullopt;
 
-			return get_message(*selected_invite_id);
+			return selected_invite;
 		case SCE_NP_BASIC_SELECTED_MESSAGE_DATA:
-			if (!selected_message_id)
+			if (!selected_message)
 				return std::nullopt;
 
-			return get_message(*selected_message_id);
+			return selected_message;
 		default:
 			fmt::throw_exception("get_message_selected with id %d", id);
 		}
@@ -1088,14 +1101,117 @@ namespace np
 		switch (id)
 		{
 		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
-			selected_invite_id = std::nullopt;
+			selected_invite.reset();
 			break;
 		case SCE_NP_BASIC_SELECTED_MESSAGE_DATA:
-			selected_message_id = std::nullopt;
+			selected_message.reset();
 			break;
 		default:
 			fmt::throw_exception("clear_message_selected with id %d", id);
 		}
+	}
+
+	void np_handler::mark_message_used(u64 msg_id)
+	{
+		get_rpcn()->mark_message_used(msg_id);
+	}
+
+	std::vector<np_handler::custom_menu_action> np_handler::get_custom_menu_actions()
+	{
+		std::lock_guard lock(mutex_custom_menu);
+		return custom_menu.get_local_actions();
+	}
+
+	void np_handler::invoke_custom_menu_action(const custom_menu_action& action)
+	{
+		sysutil_register_cb([this, action](ppu_thread& ppu) -> s32
+		{
+			std::optional<custom_menu_state::selection> selection;
+
+			{
+				std::lock_guard lock(mutex_custom_menu);
+
+				// The game may replace or disable its menu while the home menu is closing.
+				selection = custom_menu.resolve_local_action(action);
+				if (!selection)
+				{
+					rpcn_log.notice("Custom menu action is no longer available: index=%d", action.id);
+					return CELL_OK;
+				}
+			}
+
+			// Invoke guest code without holding the menu lock: it may register new actions.
+			const vm::var<SceNpId> selected_npid(get_npid());
+			return selection->handler(ppu, CELL_OK, selection->index, selected_npid, SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME, selection->user_arg);
+		});
+	}
+
+	bool np_handler::complete_message_selection(u64 msg_id, u16 main_type, u32 recv_result, u32 recv_options)
+	{
+		const auto opt_msg = get_message(msg_id);
+
+		if (!opt_msg || opt_msg.value()->second.mainType != main_type)
+		{
+			rpcn_log.error("Cannot complete invalid message selection: msg_id=%d, main_type=%d", msg_id, main_type);
+			return false;
+		}
+
+		const auto msg_pair = opt_msg.value();
+		const auto& msg = msg_pair->second;
+		u32 event_to_send;
+		SceNpBasicAttachmentData data{};
+		data.size = static_cast<u32>(msg.data.size());
+
+		switch (main_type)
+		{
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
+			event_to_send = SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT;
+			data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+			break;
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
+			event_to_send = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
+			data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
+			break;
+		case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
+			event_to_send = SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
+			data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
+			break;
+		default:
+			rpcn_log.error("Cannot complete unsupported message selection: msg_id=%d, main_type=%d", msg_id, main_type);
+			return false;
+		}
+
+		basic_event to_add{};
+		to_add.event = event_to_send;
+		strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
+		strcpy_trunc(to_add.from.name.data, msg_pair->first);
+
+		if (main_type == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT)
+		{
+			to_add.data.resize(sizeof(SceNpBasicAttachmentData));
+			*reinterpret_cast<SceNpBasicAttachmentData*>(to_add.data.data()) = data;
+		}
+		else
+		{
+			to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
+			auto* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
+			att_data->flags = 0;
+			att_data->msgId = msg_id;
+			att_data->data = data;
+			att_data->userAction = recv_result;
+			att_data->markedAsUsed = (recv_options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
+		}
+
+		set_message_selected(data.id, msg_pair);
+		if (!(recv_options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE))
+		{
+			mark_message_used(msg_id);
+		}
+
+		queue_basic_event(std::move(to_add));
+		send_basic_event(event_to_send, 0, 0);
+
+		return true;
 	}
 
 	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
@@ -1110,13 +1226,13 @@ namespace np
 	{
 		const auto message = get_message(msg_id);
 
-		if (!message || message.value()->second.mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+		if (!message || !message.value()->second.is_bootable_invitation())
 		{
 			rpcn_log.error("Cannot select invalid invitation: msg_id=%d", msg_id);
 			return false;
 		}
 
-		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, msg_id);
+		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, message.value());
 
 		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
 		{
@@ -1125,7 +1241,8 @@ namespace np
 			return false;
 		}
 
-		get_rpcn()->mark_message_used(msg_id);
+		mark_message_used(msg_id);
+		rpcn_log.notice("Selected invitation: msg_id=%d", msg_id);
 		return true;
 	}
 

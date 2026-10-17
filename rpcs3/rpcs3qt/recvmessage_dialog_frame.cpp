@@ -62,10 +62,9 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 	m_dialog->setLayout(vbox_global);
 
 	error_code result           = CELL_CANCEL;
-	const bool preserve         = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
 	const bool include_bootable = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE;
 
-	auto accept_or_deny = [preserve, this, &result, &recv_result, &chosen_msg_id](SceNpBasicMessageRecvAction result_from_action)
+	auto accept_or_deny = [this, &result, &recv_result, &chosen_msg_id](SceNpBasicMessageRecvAction result_from_action)
 	{
 		auto selected = m_lst_messages->selectedItems();
 		if (selected.empty())
@@ -77,12 +76,6 @@ error_code recvmessage_dialog_frame::Exec(SceNpBasicMessageMainType type, SceNpB
 		chosen_msg_id = selected[0]->data(Qt::UserRole).toULongLong();
 		recv_result   = result_from_action;
 		result        = CELL_OK;
-
-		if (!preserve)
-		{
-			m_rpcn->mark_message_used(chosen_msg_id);
-		}
-
 		m_dialog->close();
 	};
 

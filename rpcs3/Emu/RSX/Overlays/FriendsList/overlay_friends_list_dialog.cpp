@@ -1,6 +1,9 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_friends_list_dialog.h"
+#include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
+#include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu_components.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/System.h"
@@ -315,10 +318,28 @@ namespace rsx
 				}
 				case friends_list_dialog_page::game_invites:
 				{
-					if (index >= m_game_invites.size() || !m_message_box || m_message_box->visible)
+					if (index < m_custom_menu_actions.size())
+					{
+						// These actions belong to the local user, not to a particular invitation.
+						if (button_press != pad_button::cross)
+							return;
+
+						const auto action = m_custom_menu_actions[index];
+						auto home_menu = ensure(g_fxo->get<display_manager>().get<home_menu_dialog>());
+						rsx_log.notice("User selected custom NP menu action '%s' (index=%d) in Friends invitations", action.name, action.id);
+						close(true, false);
+						home_menu->request_close([action]()
+						{
+							g_fxo->get<named_thread<np::np_handler>>().invoke_custom_menu_action(action);
+						});
+						break;
+					}
+
+					const usz invite_index = index - m_custom_menu_actions.size();
+					if (invite_index >= m_game_invites.size() || !m_message_box || m_message_box->visible)
 						break;
 
-					const auto& [message_id, message] = ::at32(m_game_invites, index);
+					const auto& [message_id, message] = ::at32(m_game_invites, invite_index);
 					ensure(message);
 
 					const localized_string_id prompt = button_press == pad_button::cross ?
@@ -329,10 +350,18 @@ namespace rsx
 					{
 						m_message_box->show(get_localized_string(prompt, message->first.c_str()), [this, message_id]()
 						{
-							if (g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id))
+							// Native system software reports the selected invitation after closing the home menu.
+							auto home_menu = ensure(g_fxo->get<display_manager>().get<home_menu_dialog>());
+							close(true, false);
+							home_menu->request_close([message_id]()
 							{
-								remove_game_invite(message_id);
-							}
+								// Let the game process all system menu close callbacks before reporting the selected invitation.
+								sysutil_register_cb([message_id](ppu_thread&) -> s32
+								{
+									g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id);
+									return CELL_OK;
+								});
+							});
 						});
 					}
 					else
@@ -443,6 +472,13 @@ namespace rsx
 			{
 				std::lock_guard lock(m_list_mutex);
 
+				// Games can register, replace, or deactivate actions while this overlay is open.
+				if (m_current_page == friends_list_dialog_page::game_invites &&
+					m_custom_menu_actions != g_fxo->get<named_thread<np::np_handler>>().get_custom_menu_actions())
+				{
+					m_list_dirty = true;
+				}
+
 				if (m_list_dirty.exchange(false))
 				{
 					if (m_current_page != m_last_page)
@@ -483,7 +519,8 @@ namespace rsx
 								m_extra_btn.set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST));
 								result.add(m_extra_btn.get_compiled());
 							}
-							else if (m_current_page == friends_list_dialog_page::game_invites && index < m_game_invites.size())
+							else if (m_current_page == friends_list_dialog_page::game_invites &&
+								index >= m_custom_menu_actions.size() && index - m_custom_menu_actions.size() < m_game_invites.size())
 							{
 								m_extra_btn.set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE));
 								result.add(m_extra_btn.get_compiled());
@@ -523,6 +560,11 @@ namespace rsx
 
 		void friends_list_dialog::message_callback_handler(const shared_ptr<std::pair<std::string, message_data>>& message, u64 message_id)
 		{
+			// Ordinary invitations are handled by the game's receive dialog.
+			// Only bootable invitations belong to the system-level selection path.
+			if (!message || !message->second.is_bootable_invitation())
+				return;
+
 			std::lock_guard lock(m_list_mutex);
 
 			if (std::none_of(m_game_invite_messages.cbegin(), m_game_invite_messages.cend(), [message_id](const game_invite& invite)
@@ -552,6 +594,7 @@ namespace rsx
 		{
 			std::vector<std::unique_ptr<overlay_element>> entries;
 			std::string selected_user;
+			std::optional<np::custom_menu_action> selected_action;
 			u64 selected_message_id = 0;
 			s32 selected_index = 0;
 			bool rpcn_connected = true;
@@ -566,12 +609,15 @@ namespace rsx
 				{
 				case friends_list_dialog_page::friends:
 				{
-					for (const auto& [username, data] : m_friend_data.friends)
+					// Match the online-first order used to display the list.
+					for (const bool online : {true, false})
 					{
-						if (i++ == old_index)
+						for (const auto& [username, data] : m_friend_data.friends)
 						{
-							selected_user = username;
-							break;
+							if (data.online == online && i++ == old_index)
+							{
+								selected_user = username;
+							}
 						}
 					}
 					break;
@@ -601,9 +647,19 @@ namespace rsx
 				}
 				case friends_list_dialog_page::game_invites:
 				{
-					if (old_index >= 0 && static_cast<usz>(old_index) < m_game_invites.size())
+					if (old_index < 0)
+						break;
+
+					if (static_cast<usz>(old_index) < m_custom_menu_actions.size())
 					{
-						selected_message_id = ::at32(m_game_invites, old_index).first;
+						selected_action = m_custom_menu_actions[old_index];
+						break;
+					}
+
+					const usz invite_index = static_cast<usz>(old_index) - m_custom_menu_actions.size();
+					if (invite_index < m_game_invites.size())
+					{
+						selected_message_id = ::at32(m_game_invites, invite_index).first;
 					}
 					break;
 				}
@@ -714,12 +770,24 @@ namespace rsx
 			}
 			case friends_list_dialog_page::game_invites:
 			{
+				// Show all active local-user actions without assuming they handle invitations.
+				auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+				m_custom_menu_actions = nph.get_custom_menu_actions();
+				for (const auto& action : m_custom_menu_actions)
+				{
+					if (selected_action && action.id == selected_action->id && action.generation == selected_action->generation)
+					{
+						selected_index = ::size32(entries);
+					}
+					// home_menu_entry adds a left spacer and icon before the text.
+					const u16 text_width = virtual_width - 2 * 20 - menu_entry_height - 32;
+					entries.push_back(std::make_unique<home_menu_entry>(home_menu::fa_icon::gamepad, action.name, text_width, overlay_element::text_align::left));
+				}
+
 				m_game_invites.clear();
 
 				if (!rpcn_connected)
 					break;
-
-				auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 				if (!nph.basic_handler_registered)
 					break;

@@ -62,7 +62,10 @@ public:
 	void set_self_sig_info(SceNpId& npid);
 
 	u32 init_sig1(const SceNpId& npid);
-	u32 init_sig2(const SceNpId& npid, u64 room_id, u16 member_id);
+	// Prepare before publishing the room event; start after the guest receives it.
+	u64 prepare_sig2(u16 ctx_id, const SceNpId& npid, u64 room_id, u16 member_id, u32 addr, u16 port);
+	bool start_sig2(u64 pending_id);
+	void cancel_pending_sig2(u64 room_id, u16 member_id);
 	std::optional<signaling_info> get_sig_infos(u32 conn_id) const;
 	std::optional<u32> get_conn_id_from_npid(const SceNpId& npid) const;
 	std::optional<u32> get_conn_id_from_addr(u32 addr, u16 port) const;
@@ -127,6 +130,23 @@ private:
 	void retire_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd);
 	void retire_all_packets(std::shared_ptr<signaling_info>& si);
 	void stop_sig_nl(u32 conn_id, bool forceful);
+	void start_sig_nl(u32 conn_id, u32 addr, u16 port);
+	u32 init_sig2_nl(const SceNpId& npid, u64 room_id, u16 member_id);
+
+	struct pending_sig2_start
+	{
+		u16 ctx_id;
+		SceNpId npid;
+		u64 room_id;
+		u16 member_id;
+		u32 addr;
+		u16 port;
+	};
+
+	// Protected by data_mutex, including consumption and connection startup.
+	// IDs are never reused when rooms or contexts are cleared.
+	u64 next_pending_sig2_id = 1;
+	std::unordered_map<u64, pending_sig2_start> pending_sig2_starts;
 
 	mutable shared_mutex data_mutex;
 	atomic_t<u32> wakey = 0;

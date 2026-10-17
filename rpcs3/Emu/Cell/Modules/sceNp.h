@@ -1839,6 +1839,10 @@ struct message_data
 	std::string subject;
 	std::string body;
 	std::vector<u8> data;
+	bool is_bootable_invitation() const
+	{
+		return mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE && (msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE);
+	}
 	void print() const;
 };
 
