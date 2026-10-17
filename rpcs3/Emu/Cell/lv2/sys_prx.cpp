@@ -332,6 +332,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 	const s64 offset{ar};
 	const u32 state{ar};
 	const u32 hle_data{ar};
+	const bool stop_disabled = version >= 3 ? ar.pop<bool>() : false;
 
 	usz seg_count = 0;
 	ar.deserialize_vle<9>(seg_count);
@@ -396,6 +397,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 	}
 
 	prx->state = state;
+	prx->stop_disabled = stop_disabled;
 
 	return [prx](void* storage)
 	{
@@ -409,7 +411,7 @@ void lv2_prx::save(utils::serial& ar)
 
 	const std::string vpath = vfs::retrieve(path);
 
-	ar(vpath, offset, state, hle_data);
+	ar(vpath, offset, state, hle_data, stop_disabled);
 
 	// Save segments count
 	ar.serialize_vle(segs.size());
@@ -678,8 +680,8 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		}
 
 		ppu.check_state();
-		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
-		set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+		pOpt->entry.set(prx->stop && !prx->stop_disabled ? prx->stop.addr() : ~0ull);
+		set_entry2(prx->epilogue && !prx->stop_disabled ? prx->epilogue.addr() : ~0ull);
 		return CELL_OK;
 	}
 	case 2:
@@ -724,14 +726,14 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		if (pOpt->cmd == 4u)
 		{
 			ppu.check_state();
-			pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
-			set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+			pOpt->entry.set(prx->stop && !prx->stop_disabled ? prx->stop.addr() : ~0ull);
+			set_entry2(prx->epilogue && !prx->stop_disabled ? prx->epilogue.addr() : ~0ull);
 		}
 		else
 		{
 			// Disables stop function execution (but the real value can be read through _sys_prx_get_module_info)
-			sys_prx.todo("_sys_prx_stop_module(): cmd is 8 (stop function = *0x%x)", prx->stop);
-			//prx->stop = vm::null;
+			sys_prx.notice("_sys_prx_stop_module(): cmd is 8 (stop function = *0x%x)", prx->stop);
+			prx->stop_disabled = true;
 		}
 
 		return CELL_OK;
