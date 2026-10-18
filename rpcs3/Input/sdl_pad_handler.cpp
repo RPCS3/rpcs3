@@ -426,19 +426,36 @@ std::shared_ptr<SDLDevice> sdl_pad_handler::get_device_by_gamepad(SDL_Gamepad* g
 	const char* path = SDL_GetGamepadPath(gamepad);
 	const char* serial = SDL_GetGamepadSerial(gamepad);
 
+	const auto is_same = [](const char* c, std::string_view s) -> bool
+	{
+		return c ? c == s : s.empty();
+	};
+
 	// Try to find a real device
 	for (const auto& controller : m_controllers)
 	{
 		if (!controller.second || controller.second->sdl.is_virtual_device)
 			continue;
 
-		const auto is_same = [](const char* c, std::string_view s) -> bool
-		{
-			return c ? c == s : s.empty();
-		};
-
 		if (is_same(name, controller.second->sdl.name) &&
 			is_same(path, controller.second->sdl.path) &&
+			is_same(serial, controller.second->sdl.serial))
+		{
+			return controller.second;
+		}
+	}
+
+	// The path may change when a controller reconnects (on macOS it contains the IOKit registry ID).
+	// Try to find a disconnected real device with the same name and serial if we can't find an exact match.
+	for (const auto& controller : m_controllers)
+	{
+		if (!controller.second || controller.second->sdl.is_virtual_device)
+			continue;
+
+		if (controller.second->sdl.gamepad && SDL_GamepadConnected(controller.second->sdl.gamepad))
+			continue;
+
+		if (is_same(name, controller.second->sdl.name) &&
 			is_same(serial, controller.second->sdl.serial))
 		{
 			return controller.second;
