@@ -77,6 +77,7 @@ namespace gl
 	struct context_resources final : rsx::context_resources
 	{
 		std::unique_ptr<gl::vertex_cache> vertex_cache;
+		gl_render_targets surface_cache;
 		gl::texture_cache texture_cache;
 	};
 }
@@ -96,7 +97,6 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 	gl::shader_interpreter m_shader_interpreter;
 
-	gl_render_targets m_rtts;
 
 
 	gl::buffer_view m_persistent_stream_view;

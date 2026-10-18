@@ -120,7 +120,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 	}
 
 	gl::command_context cmd{ gl_state };
-	m_rtts.prepare_render_target(cmd,
+	res()->surface_cache.prepare_render_target(cmd,
 		m_ctx->fb.layout.color_format, m_ctx->fb.layout.depth_format,
 		m_ctx->fb.layout.width, m_ctx->fb.layout.height,
 		m_ctx->fb.layout.target, m_ctx->fb.layout.aa_mode, m_ctx->fb.layout.raster_type,
@@ -143,9 +143,9 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 			res()->texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 		}
 
-		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
+		if (std::get<0>(res()->surface_cache.m_bound_render_targets[i]))
 		{
-			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
+			auto rtt = std::get<1>(res()->surface_cache.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
 			ensure(rtt->get_rsx_pitch() == m_ctx->fb.layout.actual_color_pitch[i]); // "Pitch mismatch!"
@@ -172,12 +172,12 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		res()->texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 	}
 
-	if (std::get<0>(m_rtts.m_bound_depth_stencil))
+	if (std::get<0>(res()->surface_cache.m_bound_depth_stencil))
 	{
-		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
-		ensure(std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_ctx->fb.layout.actual_zeta_pitch); // "Pitch mismatch!"
+		ensure(std::get<1>(res()->surface_cache.m_bound_depth_stencil)->get_rsx_pitch() == m_ctx->fb.layout.actual_zeta_pitch); // "Pitch mismatch!"
 
 		m_ctx->fb.depth_surface_info.address = m_ctx->fb.layout.zeta_address;
 		m_ctx->fb.depth_surface_info.pitch = m_ctx->fb.layout.actual_zeta_pitch;
@@ -302,19 +302,19 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 
 	res()->texture_cache.clear_ro_tex_invalidate_intr();
 
-	if (!m_rtts.superseded_surfaces.empty())
+	if (!res()->surface_cache.superseded_surfaces.empty())
 	{
-		for (auto& surface : m_rtts.superseded_surfaces)
+		for (auto& surface : res()->surface_cache.superseded_surfaces)
 		{
 			res()->texture_cache.discard_framebuffer_memory_region(cmd, surface->get_memory_range());
 		}
 
-		m_rtts.superseded_surfaces.clear();
+		res()->surface_cache.superseded_surfaces.clear();
 	}
 
-	if (!m_rtts.orphaned_surfaces.empty())
+	if (!res()->surface_cache.orphaned_surfaces.empty())
 	{
-		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
+		for (auto& [base_addr, surface] : res()->surface_cache.orphaned_surfaces)
 		{
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
@@ -345,7 +345,7 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 				surface);
 		}
 
-		m_rtts.orphaned_surfaces.clear();
+		res()->surface_cache.orphaned_surfaces.clear();
 	}
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
@@ -357,9 +357,9 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
 			res()->texture_cache.lock_memory_region(
-				cmd, m_rtts.m_bound_render_targets[i].second, surface_range, true,
+				cmd, res()->surface_cache.m_bound_render_targets[i].second, surface_range, true,
 				m_ctx->fb.surface_info[i].width, m_ctx->fb.surface_info[i].height, m_ctx->fb.surface_info[i].pitch,
-				m_rtts.m_bound_render_targets[i].second);
+				res()->surface_cache.m_bound_render_targets[i].second);
 		}
 		else
 		{
@@ -373,9 +373,9 @@ bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
 		if (g_cfg.video.write_depth_buffer)
 		{
 			res()->texture_cache.lock_memory_region(
-				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
+				cmd, res()->surface_cache.m_bound_depth_stencil.second, surface_range, true,
 				m_ctx->fb.depth_surface_info.width, m_ctx->fb.depth_surface_info.height, m_ctx->fb.depth_surface_info.pitch,
-				m_rtts.m_bound_depth_stencil.second);
+				res()->surface_cache.m_bound_depth_stencil.second);
 		}
 		else
 		{
