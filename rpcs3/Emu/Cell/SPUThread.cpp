@@ -2089,7 +2089,7 @@ void spu_thread::push_in_mbox(u32 value)
 		ch_in_mbox.notify();
 	}
 
-	if (push_state.old_count < push_state.count)
+	if (push_state.old_count == 0)
 	{
 		set_events(SPU_EVENT_MB);
 
