@@ -601,7 +601,7 @@ void gui_application::InitializeConnects()
 std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	// Load AppIcon
-	const QIcon app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
+	const QIcon app_icon = gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	if (m_game_window)
 	{
@@ -765,6 +765,9 @@ void gui_application::create_callbacks()
 			}
 
 			const bool no_gui = !m_main_window;
+
+			// Don't let CoreMIDI init race with app termination (e.g. Cocoa calling exit() on macOS)
+			midi_creator::wait_for_init();
 
 			if (m_main_window)
 			{

@@ -294,6 +294,7 @@ public:
 
 	atomic_t<ppu_join_status> joiner; // Joining thread or status
 	u32 hw_sleep_time = 0; // Very specific delay for hardware threads switching, see lv2_obj::awake_unlocked for more details
+	u64 event_wakeup_time = 0;
 
 	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 
@@ -303,6 +304,8 @@ public:
 	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 	atomic_t<u32> cmd_notify = 0;
+
+	atomic_t<u32> start_gate_caller = 0; // Caller of sys_ppu_thread_start waiting for this thread to reach its entry command, cleared by this thread
 
 	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint

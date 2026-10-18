@@ -386,7 +386,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 
 		case 0x67: // group 4
 		{
-			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length, prefix);
+			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length);
 			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;
@@ -2197,11 +2197,35 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 			// SPUThread: Send sys_spu exception event
 			cpu->state += cpu_flag::dbg_pause;
 
-			if (cpu->check_state() && !hack_alloc())
-			{
-				return false;
+			// Remove flags preventing check_state() from waiting here (access violation cannot be returned without being handled)
+			bs_t<cpu_flag> to_restore_flags = {};
+			constexpr bs_t<cpu_flag> remove_cpu_flags = cpu_flag::stop + cpu_flag::ret;
+
+			while (cpu->check_state())
+			{ 
+				const bool is_emu_stopped = ::is_stopped(cpu->state - cpu_flag::stop);
+
+				if (is_emu_stopped)
+				{	
+					for (u32 try_count = 0; !hack_alloc(); try_count++)
+					{
+						if (try_count == 100)
+						{
+							fmt::throw_exception("Failed to rescue CPU thread from access violation handler.");
+						}
+
+						thread_ctrl::wait_for(10000);
+					}
+
+					break;
+				}
+
+				ensure(cpu->state & cpu_flag::stop);
+				to_restore_flags += cpu->state.fetch_sub(remove_cpu_flags) & remove_cpu_flags;
 			}
 
+			// Restore them
+			cpu->state += to_restore_flags;
 			return true;
 		}
 		else
@@ -2278,9 +2302,14 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 	{
 		// Keep retrying until the page is mapped: the thread must be able to resume so it can observe cpu_flag::exit and terminate cleanly.
 		// Reporting the violation as unhandled here would escalate a guest crash into an unhandled host exception.
-		while (!hack_alloc())
+		for (u32 try_count = 0; !hack_alloc(); try_count++)
 		{
-			thread_ctrl::wait_for(1000);
+			if (try_count == 100)
+			{
+				fmt::throw_exception("Failed to rescue CPU thread from access violation handler.");
+			}
+
+			thread_ctrl::wait_for(10000);
 		}
 	}
 

@@ -46,7 +46,7 @@ namespace rsx
 			m_dim_background.set_size(virtual_width, virtual_height);
 			m_dim_background.back_color.a = 0.85f;
 
-			m_description.set_font("Arial", 20);
+			m_description.set_font(20);
 			m_description.set_pos(20, 37);
 			m_description.set_text(get_localized_string(localized_string_id::BIG_PICTURE_MODE_TITLE));
 			m_description.auto_resize();

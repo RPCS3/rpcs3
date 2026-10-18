@@ -4,6 +4,7 @@ R"(
 
 #define ENABLE_DEPTH_STENCIL_LOAD %stencil_export_supported
 #define LEGACY_FORMAT_SUPPORT %legacy_format_support
+#define EMULATED_DEPTH_STORAGE %emulated_depth_storage
 
 #define FMT_GL_DEPTH_COMPONENT16      0x81A5
 #define FMT_GL_DEPTH_COMPONENT32F     0x8CAC
@@ -45,11 +46,13 @@ layout(%push_block) uniform UnpackConfiguration
 	uint swap_bytes;
 	uint src_pitch;
 	uint format;
+	uint depth_float;
 };
 #else
 	uniform uint swap_bytes;
 	uniform uint src_pitch;
 	uniform uint format;
+	uniform uint depth_float;
 #endif
 
 uint getTexelOffset()
@@ -122,7 +125,19 @@ vec4 readFixed8x4(const in uint address)
 	) / 255.f;
 }
 
+float readE4M12(const in uint address)
+{
+	const uint value = readUint16(address);
+	const uint bits = (value << 11) & 0x07FFF800u;
+	return uintBitsToFloat(bits) * uintBitsToFloat(0x77000000u); // Rebias by 2^111: unsigned E4M12 with bias 16, see E4M12Conversion.glsl
+}
+
 #define readFixed16(address) readUint16(uint(address)) / 65535.f
+
+#if EMULATED_DEPTH_STORAGE
+// Float depth surfaces hold half the IEEE bit pattern, see encode_emulated_depth
+#define encodeDepth(value) uintBitsToFloat((floatBitsToUint(max(value, 0.)) & 0x7fffffffu) >> 1)
+#endif
 #define readFixed16x2(address) vec2(readFixed16(address * 2 + 0), readFixed16(address * 2 + 1))
 #define readFixed16x4(address) vec4(readFixed16(address * 4 + 0), readFixed16(address * 4 + 1), readFixed16(address * 4 + 2), readFixed16(address * 4 + 3))
 
@@ -146,7 +161,11 @@ void main()
 		gl_FragDepth = readFixed16(texel_address);
 		break;
 	case FMT_GL_DEPTH_COMPONENT32F:
-		gl_FragDepth = readFloat16(texel_address);
+#if EMULATED_DEPTH_STORAGE
+		gl_FragDepth = encodeDepth(readE4M12(texel_address));
+#else
+		gl_FragDepth = readE4M12(texel_address);
+#endif
 		break;
 
 #if ENABLE_DEPTH_STENCIL_LOAD
@@ -155,6 +174,13 @@ void main()
 	case FMT_GL_DEPTH24_STENCIL8:
 	case FMT_GL_DEPTH32F_STENCIL8:
 		utmp2 = readUint24_8(texel_address);
+#if EMULATED_DEPTH_STORAGE
+		if (depth_float != 0)
+		{
+			gl_FragDepth = encodeDepth(uintBitsToFloat(utmp2.x << 7));
+		}
+		else
+#endif
 		gl_FragDepth = float(utmp2.x) / 0xffffff;
 		gl_FragStencilRefARB = int(utmp2.y);
 		break;

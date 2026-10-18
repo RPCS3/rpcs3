@@ -560,7 +560,8 @@ namespace gl
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
 			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
-			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
+			{ "%legacy_format_support", legacy_format_support ? "1" : "0" },
+			{ "%emulated_depth_storage", gl::emulate_extended_depth_range() ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
@@ -576,13 +577,29 @@ namespace gl
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_buffer_layout& layout)
 	{
-		const u32 bpp = dst->image()->pitch() / dst->image()->width();
+		u32 bpp;
+		switch (dst->image()->get_internal_format())
+		{
+		case gl::texture::internal_format::depth32f:
+			bpp = 2; break; // D16F emulation
+		case gl::texture::internal_format::depth32f_stencil8:
+			bpp = 4; break; // D24S8 emulation
+		default:
+			bpp = dst->image()->pitch() / dst->image()->width();
+			break;
+		}
+
 		const u32 aligned_width = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
 		const u32 row_length = layout.row_length ? layout.row_length : aligned_width;
 
 		program_handle.uniforms["src_pitch"] = row_length;
 		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
 		program_handle.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
+
+		if (gl::emulate_extended_depth_range())
+		{
+			program_handle.uniforms["depth_float"] = (dst->image()->format_class() & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK) ? 1u : 0u;
+		}
 		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 
 		cmd->stencil_mask(0xFF);

@@ -891,6 +891,12 @@
     <ClCompile Include="Emu\Io\Skylander.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\KamenRider.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -958,6 +964,9 @@
       <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\GunCon3.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\wiimote_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\Buzz.cpp">
@@ -1417,6 +1426,12 @@
     <ClCompile Include="Emu\NP\clans_client.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\IRD.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\IRD_validation.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Loader\ISO.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -1678,6 +1693,15 @@
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_neon.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_sve.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_compact.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="util\types.hpp">
@@ -2205,6 +2229,12 @@
     <ClInclude Include="Emu\Io\Skylander.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\KamenRider.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2335,9 +2365,6 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\init_mutex.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="util\slow_mutex.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\fifo_mutex.hpp">
@@ -2680,6 +2707,9 @@
     <ClInclude Include="Emu\Io\guncon3_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\wiimote_config.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\topshotelite_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2926,6 +2956,12 @@
     <ClInclude Include="Emu\NP\clans_config.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="Loader\IRD.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\IRD_validation.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
     <ClInclude Include="Loader\ISO.h">
       <Filter>Loader</Filter>
     </ClInclude>
@@ -3010,17 +3046,20 @@
     <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.h">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h">
-      <Filter>Emu\Cell\lv2</Filter>
-    </ClInclude>
     <ClInclude Include="util\cctype.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\emu_callbacks.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="util\midi_types.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Emu\RSX\Program\GLSLSnippets\E4M12Conversion.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
@@ -3053,6 +3092,9 @@
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentEpilogue.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>

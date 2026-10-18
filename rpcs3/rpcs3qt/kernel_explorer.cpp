@@ -917,7 +917,7 @@ void kernel_explorer::update()
 			if (zc.bound)
 			{
 				add_leaf(zc_tree, QString::fromStdString(fmt::format("O: %07x, W: %u, H: %u, Zformat: 0x%x, AAformat: 0x%x, Dir: 0x%x, sFunc: 0x%x, sRef: %02x, sMask: %02x"
-					, zc.offset, zc.height, zc.width, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
+					, zc.offset, zc.width, zc.height, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
 			}
 		}
 
@@ -926,7 +926,7 @@ void kernel_explorer::update()
 			if (db.valid())
 			{
 				add_leaf(db_tree, QString::fromStdString(fmt::format("Offset: %07x, Width: %u, Height: %u, Pitch: %u"
-					, db.offset, db.height, db.width, db.pitch)));
+					, db.offset, db.width, db.height, db.pitch)));
 			}
 		}
 	}

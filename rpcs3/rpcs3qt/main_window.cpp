@@ -33,8 +33,10 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "wiimote_settings_dialog.h"
 #include "ps_move_tracker_dialog.h"
 #include "ipc_settings_dialog.h"
+#include "sky_ipc_settings_dialog.h"
 #include "config_checker.h"
 #include "shortcut_dialog.h"
 #include "steam_utils.h"
@@ -348,12 +350,6 @@ QString main_window::GetCurrentTitle()
 	return QString::fromStdString(title);
 }
 
-// returns appIcon
-QIcon main_window::GetAppIcon() const
-{
-	return m_app_icon;
-}
-
 void main_window::OnMissingFw()
 {
 	const QString title = tr("Missing Firmware Detected!");
@@ -471,7 +467,7 @@ void main_window::OnPlayOrPause()
 			if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
 			{
 				gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-				show_boot_error(error);
+				gui::utils::show_boot_error(this, error, path);
 			}
 		}
 		else if (!m_recent_game.actions.isEmpty())
@@ -484,71 +480,6 @@ void main_window::OnPlayOrPause()
 	case system_state::starting: break;
 	default: fmt::throw_exception("Unreachable");
 	}
-}
-
-void main_window::show_boot_error(game_boot_result status)
-{
-	QString message;
-	switch (status)
-	{
-	case game_boot_result::nothing_to_boot:
-		message = tr("No bootable content was found.");
-		break;
-	case game_boot_result::wrong_disc_location:
-		message = tr("Disc could not be mounted properly. Make sure the disc is not in the dev_hdd0/game folder.");
-		break;
-	case game_boot_result::invalid_file_or_folder:
-		message = tr("The selected file or folder is invalid or corrupted.");
-		break;
-	case game_boot_result::invalid_bdvd_folder:
-		message = tr("The virtual dev_bdvd folder does not exist or is not empty.");
-		break;
-	case game_boot_result::install_failed:
-		message = tr("Additional content could not be installed.");
-		break;
-	case game_boot_result::decryption_error:
-		message = tr("Digital content could not be decrypted. This is usually caused by a missing or invalid license (RAP) file.");
-		break;
-	case game_boot_result::file_creation_error:
-		message = tr("The emulator could not create files required for booting.");
-		break;
-	case game_boot_result::unsupported_disc_type:
-		message = tr("This disc type is not supported yet.");
-		break;
-	case game_boot_result::savestate_corrupted:
-		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
-		break;
-	case game_boot_result::savestate_version_unsupported:
-		message = tr("Savestate versioning data differs from your RPCS3 build.");
-		break;
-	case game_boot_result::still_running:
-		message = tr("A game or PS3 application is still running or has yet to be fully stopped.");
-		break;
-	case game_boot_result::firmware_version:
-		message = tr("The game or PS3 application needs a more recent firmware version.");
-		break;
-	case game_boot_result::database_config_missing:
-		message = tr("Could not find any configuration for this game in the database.");
-		break;
-	case game_boot_result::firmware_missing: // Handled elsewhere
-	case game_boot_result::already_added: // Handled elsewhere
-	case game_boot_result::currently_restricted:
-	case game_boot_result::no_errors:
-		return;
-	case game_boot_result::generic_error:
-		message = tr("Unknown error.");
-		break;
-	}
-	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
-
-	QMessageBox* msg = new QMessageBox(this);
-	msg->setWindowTitle(tr("Boot Failed"));
-	msg->setIcon(QMessageBox::Critical);
-	msg->setTextFormat(Qt::RichText);
-	msg->setStandardButtons(QMessageBox::Ok);
-	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
-	msg->setAttribute(Qt::WA_DeleteOnClose);
-	msg->open();
 }
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
@@ -568,8 +499,6 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	Emu.GracefulShutdown(false);
 
-	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
-
 	std::optional<std::string> db_config = std::nullopt;
 
 	// Get database config if possible or if we are in database_config mode (to ensure we see an error on invalid use)
@@ -581,7 +510,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		if (!config)
 		{
 			gui_log.error("Boot failed: reason: no database config found for '%s'", title_id);
-			show_boot_error(game_boot_result::database_config_missing);
+			gui::utils::show_boot_error(this, game_boot_result::database_config_missing);
 			return;
 		}
 
@@ -596,7 +525,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path, db_config); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-		show_boot_error(error);
+		gui::utils::show_boot_error(this, error, path);
 		return;
 	}
 
@@ -3199,6 +3128,12 @@ void main_window::CreateConnects()
 		dlg->open();
 	});
 
+	connect(ui->confWiimoteAct, &QAction::triggered, this, [this]()
+	{
+		wiimote_settings_dialog* dlg = new wiimote_settings_dialog(this);
+		dlg->show();
+	});
+
 	const auto open_rpcn_settings = [this]
 	{
 		rpcn_settings_dialog dlg(this);
@@ -3222,6 +3157,12 @@ void main_window::CreateConnects()
 	connect(ui->confIPCAct, &QAction::triggered, this, [this]()
 	{
 		ipc_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confSkyIPCAct, &QAction::triggered, this, [this]()
+	{
+		sky_ipc_settings_dialog dlg(this);
 		dlg.exec();
 	});
 
@@ -4270,7 +4211,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 
 						if (!resolved_path.empty() && !claimed_paths.count(resolved_path))
 						{
-							claimed_paths.emplace(game->path);
+							claimed_paths.emplace(std::move(resolved_path));
 							paths_added.emplace(game->path, QString::fromStdString(game->serial));
 						}
 
@@ -4494,7 +4435,7 @@ void main_window::dropEvent(QDropEvent* event)
 		if (const auto error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-			show_boot_error(error);
+			gui::utils::show_boot_error(this, error, path);
 			return;
 		}
 

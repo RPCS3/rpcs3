@@ -9,6 +9,8 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/Core/RSXEngLock.hpp"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
+#include "Emu/RSX/Overlays/overlay_cursor.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "util/asm.hpp"
 #include "sys_event.h"
@@ -35,6 +37,68 @@ void fmt_class_string<sys_rsx_error>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+// ---- Hardware cursor ----
+// The hardware cursor is part of the display circuitry. It is not rendered directly by PGRAPH or any of the other 2D objects.
+// Emulation is implemented using the overlay system. It has a fixed 64x64 bitmap size.
+
+rsx::overlays::bitmap_cursor* _sys_rsx_get_cursor()
+{
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		return manager->get<rsx::overlays::bitmap_cursor>().get();
+	}
+
+	return nullptr;
+}
+
+void _sys_rsx_init_cursor_overlay()
+{
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		auto cursor = manager->create<rsx::overlays::bitmap_cursor>();
+		if (const auto avconfig = g_fxo->try_get<rsx::avconf>())
+		{
+			cursor->set_screen_size(
+				::narrow<u16>(avconfig->resolution_x),
+				::narrow<u16>(avconfig->resolution_y));
+		}
+	}
+}
+
+void _sys_rsx_enable_cursor_overlay()
+{
+	if (auto cursor = _sys_rsx_get_cursor())
+	{
+		cursor->enable();
+	}
+}
+
+void _sys_rsx_disable_cursor_overlay()
+{
+	if (auto cursor = _sys_rsx_get_cursor())
+	{
+		cursor->disable();
+	}
+}
+
+void _sys_rsx_move_cursor_overlay(s32 x, s32 y)
+{
+	if (auto cursor = _sys_rsx_get_cursor())
+	{
+		cursor->set_pos(x, y);
+	}
+}
+
+void _sys_rsx_update_cursor_image(u32 cursor_offset)
+{
+	if (auto cursor = _sys_rsx_get_cursor())
+	{
+		cursor->set_bitmap(cursor_offset);
+	}
+}
+
+// ---- Util ----
 
 static u64 rsx_timeStamp()
 {
@@ -142,6 +206,8 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 	return true;
 }
 
+// ---- Event Queue ----
+
 void _sys_rsx_drain_event_queue(rsx::thread* rsxthr, u64 event_flags = umax, u64 wait_timeout_ms = 1000ull)
 {
 	const auto& driverInfo = *vm::_ptr<RsxDriverInfo>(rsxthr->driver_info);
@@ -179,8 +245,7 @@ void _sys_rsx_drain_event_queue(rsx::thread* rsxthr, u64 event_flags = umax, u64
 			break;
 		}
 
-		// Wait
-		thread_ctrl::wait_for(100);
+		utils::spin_on_cacheline_once(queue->mutex.raw(), 0u, 100);
 
 		// Check for timeout
 		if (wait_timeout_ms == umax)
@@ -203,6 +268,8 @@ void _sys_rsx_drain_event_queue(rsx::thread* rsxthr, u64 event_flags = umax, u64
 		}
 	}
 }
+
+// ---- LV2 ----
 
 error_code sys_rsx_device_open(cpu_thread& cpu)
 {
@@ -777,7 +844,30 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		});
 		break;
 	}
-	case 0x10D: // Called by cellGcmInitCursor
+	case 0x10b:
+		// when a4=3, cellGcmSetCursorPosition(a5=xpos, a6=ypos)
+		// when a4=2, cellGcmSetCursorImageOffset(a5=offset)
+		if (a4 == 3)
+			_sys_rsx_move_cursor_overlay(static_cast<s32>(a5), static_cast<s32>(a6));
+		else if (a4 == 2)
+			_sys_rsx_update_cursor_image(static_cast<u32>(a5));
+		else
+			sys_rsx.error("Unknown subfunction 0x%llx (package=0x10b)", a4);
+		break;
+	case 0x10c:
+		// when a4=1, cellGcmSetCursorEnable()
+		// when a4=2, cellGcmSetCursorDisable()
+		if (a4 == 1)
+			_sys_rsx_enable_cursor_overlay();
+		else if (a4 == 2)
+			_sys_rsx_disable_cursor_overlay();
+		else
+			sys_rsx.error("Unknown subfunction 0x%llx (package=0x10c)", a4);
+		break;
+	case 0x10d:
+		// cellGcmInitCursor(a3=1, a4=1, a5=0, a6=0)
+		ensure(a4 == 1);
+		_sys_rsx_init_cursor_overlay();
 		break;
 
 	case 0x300: // Tiles

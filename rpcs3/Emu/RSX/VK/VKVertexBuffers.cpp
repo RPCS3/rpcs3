@@ -62,7 +62,7 @@ namespace
 		vk::data_heap& m_index_buffer_ring_info)
 	{
 		u32 index_count = get_index_count(clause.primitive, vertex_count);
-		u32 upload_size = index_count * sizeof(u16);
+		u32 upload_size = index_count * sizeof(u32);
 
 		VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
@@ -71,7 +71,7 @@ namespace
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(
-			index_count, std::make_tuple(offset_in_index_buffer, VK_INDEX_TYPE_UINT16));
+			index_count, std::make_tuple(offset_in_index_buffer, VK_INDEX_TYPE_UINT32));
 	}
 
 	struct vertex_input_state
@@ -117,7 +117,7 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
-			auto primitive = rsx::method_registers.current_draw_clause.primitive;
+			const auto primitive = rsx::method_registers.current_draw_clause.primitive;
 			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(primitive);
 			const bool emulate_restart = rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
 
@@ -129,7 +129,7 @@ namespace
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
-				index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, index_count);
+				index_count = get_index_count(primitive, index_count);
 			u32 upload_size = index_count * type_size;
 
 			if (emulate_restart) upload_size *= 2;
@@ -161,9 +161,10 @@ namespace
 				rsx::method_registers.restart_index(),
 				[](auto prim) { return !vk::is_primitive_native(prim); });
 
-			if (min_index >= max_index)
+			if (min_index > max_index ||
+				(min_index == max_index && primitive != rsx::primitive_type::points))
 			{
-				//empty set, do not draw
+				// empty set, do not draw
 				m_index_buffer_ring_info.unmap();
 				return{ prims, false, 0, 0, 0, 0, {} };
 			}

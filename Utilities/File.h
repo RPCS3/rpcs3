@@ -263,8 +263,8 @@ namespace fs
 	// Set file access/modification time
 	bool utime(const std::string& path, s64 atime, s64 mtime);
 
-	// Synchronize filesystems (TODO)
-	void sync();
+	// Synchronize the filesystem containing the given path (only that filesystem where supported)
+	void sync(const std::string& path);
 
 	class file final
 	{

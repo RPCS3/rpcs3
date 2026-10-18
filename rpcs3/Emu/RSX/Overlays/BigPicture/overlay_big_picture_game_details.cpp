@@ -21,13 +21,13 @@ namespace rsx
 			m_icon.set_size(320, 176);
 			m_icon.back_color.a = 0.f;
 
-			m_title.set_font("Arial", 28);
+			m_title.set_font(28);
 			m_title.set_pos(x + 40, y + 240);
 			m_title.back_color.a = 0.f;
 			m_title.set_wrap_text(true);
 			m_title.set_size(width - 80, 80);
 
-			m_info_text.set_font("Arial", 16);
+			m_info_text.set_font(16);
 			m_info_text.set_pos(x + 40, y + 330);
 			m_info_text.back_color.a = 0.f;
 			m_info_text.set_wrap_text(true);
@@ -35,12 +35,12 @@ namespace rsx
 
 			m_start_btn.set_image_resource(resource_config::confirm_button_resource());
 			m_start_btn.set_text(localized_string_id::BIG_PICTURE_GAME_DETAILS_START);
-			m_start_btn.set_font("Arial", 16);
+			m_start_btn.set_font(16);
 			m_start_btn.set_pos(x + 40, y + height - 80);
 
 			m_back_hint.set_image_resource(resource_config::cancel_button_resource());
 			m_back_hint.set_text(localized_string_id::BIG_PICTURE_HINT_BACK);
-			m_back_hint.set_font("Arial", 16);
+			m_back_hint.set_font(16);
 			m_back_hint.set_pos(x + 40 + 120 + 20, y + height - 80);
 		}
 

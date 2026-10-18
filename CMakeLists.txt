@@ -29,6 +29,7 @@ else()
 endif()
 
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
+option(USE_ARM_LSE2 "Compile with LSE2 instructions" OFF)
 option(WITH_LLVM "Enable usage of LLVM library" ON)
 option(BUILD_LLVM "Build LLVM from git submodule" OFF)
 option(STATIC_LINK_LLVM "Link against LLVM statically. This will get set to ON if you build LLVM from the submodule." OFF)
@@ -63,6 +64,7 @@ option(USE_LTO "Use LTO for building" ON)
 option(BUILD_RPCS3_TESTS "Build RPCS3 unit tests." OFF)
 option(RUN_RPCS3_TESTS "Run RPCS3 unit tests. Requires BUILD_RPCS3_TESTS" OFF)
 option(USE_GAMEMODE "Choose whether to enable GameMode features or not." ON)
+option(BUNDLE_UDEV_RULES "Include udev rules on Linux/FreeBSD" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/buildfiles/cmake")
 

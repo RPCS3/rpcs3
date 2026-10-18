@@ -56,12 +56,16 @@ namespace vk
 		void notify_completed(u64 eid);
 		void drain();
 
+		void set_enabled(bool state);
+
 	private:
 		atomic_t<u64> m_eid_ctr = 0ull;
 		atomic_t<u64> m_last_completed_eid = 0ull;
 
 		atomic_t<u32> m_wake_event = 0u;
 		atomic_t<u32> m_completed_signal = 0u;     //<- Works around atomic_engine's lack of 64-bit observables support
+
+		atomic_t<bool> m_enabled = true;
 	};
 
 	using driver_manager_thread = named_thread<driver_manager_t>;

@@ -47,12 +47,14 @@ enum class emu_settings_type
 	AccuratePPUNJ,
 	AccuratePPUVNAN,
 	AccuratePPUFPCC,
+	AccuratePPUVEST,
 	MaxPreemptCount,
 	SPUProfiler,
 	DisableSpinOptimization,
 	EnabledSPUEventsBusyLoop,
 	PPUReservationPriorityOverSPUs,
 	AccurateSpuReservations,
+	SPUMmioDelay,
 
 	// Graphics
 	Renderer,
@@ -103,6 +105,7 @@ enum class emu_settings_type
 	RelaxedZCULL,
 	PreciseZCULL,
 	DriverWakeUpDelay,
+	PPUEventWakeUpDelay,
 	VulkanAsyncTextureUploads,
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
@@ -179,6 +182,7 @@ enum class emu_settings_type
 	Buzz,
 	Turntable,
 	GHLtar,
+	USIO,
 	MidiDevices,
 	SDLMappings,
 	MouseBasedGyro,
@@ -228,12 +232,16 @@ enum class emu_settings_type
 	DateFormat,
 	TimeFormat,
 	ConsoleTimeOffset,
+	HDDModelName,
+	HDDSerialNumber,
 
 	// VFS
 	EnableHostRoot,
 	EmptyHdd0Tmp,
 	LimitCacheSize,
 	MaximumCacheSize,
+	EmulateHddSpeed,
+	EmulateBdvdSpeed,
 
 	// Log
 	Log,

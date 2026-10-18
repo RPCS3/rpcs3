@@ -330,3 +330,22 @@ public:
 };
 
 #undef GET
+
+namespace spu_instructions
+{
+	inline u32 STOP(u32 code) { return code & 0x3fff; }
+	inline u32 LNOP() { spu_opcode_t op{ 0x1u << 21 }; return op.opcode; }
+	inline u32 NOP() { spu_opcode_t op{ 0x201u << 21 }; return op.opcode; }
+	inline u32 SF(u32 rt, u32 ra, u32 rb) { spu_opcode_t op{ 0x40u << 21 }; op.rt = rt; op.ra = ra; op.rb = rb; return op.opcode; }
+	inline u32 ORX(u32 rt, u32 ra) { spu_opcode_t op{ 0x1f0u << 21 }; op.rt = rt; op.ra = ra; return op.opcode; }
+	inline u32 XOR(u32 rt, u32 ra, u32 rb) { spu_opcode_t op{ 0x241u << 21 }; op.rt = rt; op.ra = ra; op.rb = rb; return op.opcode; }
+	inline u32 WRCH(u32 ch, u32 rt) { spu_opcode_t op{ 0x10du << 21 }; op.ra = ch; op.rt = rt; return op.opcode; }
+	inline u32 BR(s32 offset) { spu_opcode_t op{ 0x64u << 23 }; op.si16 = offset / 4; return op.opcode; }
+	inline u32 BRNZ(u32 rt, s32 offset) { spu_opcode_t op{ 0x42u << 23 }; op.rt = rt; op.si16 = offset / 4; return op.opcode; }
+	inline u32 ILA(u32 rt, u32 imm) { spu_opcode_t op{ 0x21u << 25 }; op.rt = rt; op.i18 = imm; return op.opcode; }
+	inline u32 HBRA(s32 offset, u32 target) { spu_opcode_t op{ 0x8u << 25 }; op.r0h = (offset / 4) >> 7; op.rt = (offset / 4) & 0x7f; op.i16 = target / 4; return op.opcode; }
+	inline u32 AI(u32 rt, u32 ra, s32 si) { spu_opcode_t op{ 0x1cu << 24 }; op.rt = rt; op.ra = ra; op.si10 = si; return op.opcode; }
+	inline u32 CGTI(u32 rt, u32 ra, s32 si) { spu_opcode_t op{ 0x4cu << 24 }; op.rt = rt; op.ra = ra; op.si10 = si; return op.opcode; }
+	inline u32 STQD(u32 rt, u32 ra, s32 offset) { spu_opcode_t op{ 0x24u << 24 }; op.rt = rt; op.ra = ra; op.si10 = offset / 16; return op.opcode; }
+	inline u32 LQD(u32 rt, u32 ra, s32 offset) { spu_opcode_t op{ 0x34u << 24 }; op.rt = rt; op.ra = ra; op.si10 = offset / 16; return op.opcode; }
+}

@@ -436,7 +436,8 @@ public:
 		header.e_shstrndx = this->header.e_shstrndx;
 		stream.write(header);
 
-		sz_t off = header.e_shoff + u32{sizeof(shdr_t)} * ::size32(shdrs);
+		const sz_t data_start = header.e_shoff + u32{sizeof(shdr_t)} * header.e_shnum;
+		sz_t off = data_start;
 
 		for (phdr_t phdr : progs)
 		{
@@ -457,7 +458,7 @@ public:
 			if (is_memorizable_section(shdr.sh_type, shdr.sh_flags()))
 			{
 				usz p_index = umax;
-				usz data_base = header.e_shoff + u32{sizeof(shdr_t)} * ::size32(shdrs);
+				usz data_base = data_start;
 				bool result = false;
 
 				for (const auto& hdr : progs)

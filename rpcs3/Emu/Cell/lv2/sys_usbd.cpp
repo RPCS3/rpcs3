@@ -411,7 +411,7 @@ void usb_handler_thread::perform_scan()
 			}
 		}
 
-		if (desc.idVendor == 0x1209 && desc.idProduct == 0x2882)
+		if (desc.idVendor == 0x1209 && (desc.idProduct == 0x2882 || desc.idProduct == 0x2883))
 		{
 			sys_usbd.success("Found device: Santroller");
 			// Send the device a specific control transfer so that it jumps to a RPCS3 compatible mode
@@ -1621,7 +1621,7 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 	transfer.iso_request.num_packets = iso_request->num_packets;
 	for (u32 index = 0; index < iso_request->num_packets; index++)
 	{
-		transfer.iso_request.packets[index] = iso_request->packets[index];
+		::at32(transfer.iso_request.packets, index) = ::at32(iso_request->packets, index);
 	}
 
 	pipe.device->isochronous_transfer(&transfer);

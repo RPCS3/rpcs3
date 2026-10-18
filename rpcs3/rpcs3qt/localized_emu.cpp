@@ -49,6 +49,9 @@ QString localized_emu::translated_pad_button(pad_button btn)
 	case pad_button::mouse_button_6: return tr("Mouse 6");
 	case pad_button::mouse_button_7: return tr("Mouse 7");
 	case pad_button::mouse_button_8: return tr("Mouse 8");
+	case pad_button::mouse: return tr("Mouse");
+	case pad_button::left_stick: return tr("Left Stick");
+	case pad_button::right_stick: return tr("Right Stick");
 	}
 	return "";
 }

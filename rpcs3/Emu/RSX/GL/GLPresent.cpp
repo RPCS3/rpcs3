@@ -373,7 +373,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 			glGetError();
 
-			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+			const coord3u region = { {}, { buffer_width, buffer_height, 1 } };
+			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, 0, region, pack_settings);
 
 			m_sshot_tex.reset();
 

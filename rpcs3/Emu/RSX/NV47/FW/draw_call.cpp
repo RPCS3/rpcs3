@@ -218,7 +218,7 @@ namespace rsx
 			case transform_constant_load_modifier_barrier:
 			{
 				// Change the transform load target. Does not change result mask.
-				REGS(ctx)->decode(NV4097_SET_TRANSFORM_PROGRAM_LOAD, barrier.arg0);
+				REGS(ctx)->decode(NV4097_SET_TRANSFORM_CONSTANT_LOAD, barrier.arg0);
 				break;
 			}
 			case transform_constant_update_barrier:

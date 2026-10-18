@@ -36,7 +36,7 @@ namespace rsx
 			}
 
 			std::unique_ptr<overlay_element> title = std::make_unique<label>(entry.name.empty() ? entry.serial : entry.name);
-			title->set_font("Arial", 13);
+			title->set_font(13);
 			title->set_size(tile_width, 84);
 			title->set_wrap_text(true);
 			title->align_text(text_align::center);
@@ -51,7 +51,7 @@ namespace rsx
 			, m_on_game_selected(std::move(on_game_selected))
 		{
 			m_placeholder_text = std::make_unique<label>(get_localized_string(localized_string_id::BIG_PICTURE_LOADING));
-			m_placeholder_text->set_font("Arial", 20);
+			m_placeholder_text->set_font(20);
 			m_placeholder_text->set_pos(x, y + (height / 2) - 20);
 			m_placeholder_text->set_size(width, 40);
 			m_placeholder_text->align_text(text_align::center);
@@ -67,12 +67,12 @@ namespace rsx
 
 			m_back_hint.set_image_resource(resource_config::cancel_button_resource());
 			m_back_hint.set_text(localized_string_id::BIG_PICTURE_HINT_BACK);
-			m_back_hint.set_font("Arial", 16);
+			m_back_hint.set_font(16);
 			m_back_hint.set_pos(x + width - 2 * (30 + 120), y + height + 20);
 
 			m_select_hint.set_image_resource(resource_config::confirm_button_resource());
 			m_select_hint.set_text(localized_string_id::BIG_PICTURE_HINT_SELECT);
-			m_select_hint.set_font("Arial", 16);
+			m_select_hint.set_font(16);
 			m_select_hint.set_pos(x + width - (30 + 120), y + height + 20);
 
 			m_details = std::make_unique<big_picture_game_details>(x, y, width, height);

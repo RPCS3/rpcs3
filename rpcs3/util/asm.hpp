@@ -421,6 +421,14 @@ namespace utils
 		return static_cast<std::make_unsigned_t<std::common_type_t<T, U>>>((value + (align - 1)) & (T{0} - align));
 	}
 
+	// Align to power of 2 but also promotes already aligned values
+	template <typename T, typename U>
+		requires std::is_unsigned_v<T>
+	constexpr std::make_unsigned_t<std::common_type_t<T, U>> align_forced(T value, U align)
+	{
+		return static_cast<std::make_unsigned_t<std::common_type_t<T, U>>>((value | (align - 1)) + 1);
+	}
+
 	// General purpose aligned division, the result is rounded up not truncated
 	template <typename T>
 		requires std::is_unsigned_v<T>

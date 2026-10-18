@@ -647,6 +647,10 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 		{
 			res[1] = umax;
 		}
+		else if (index == 1)
+		{
+			std::swap(res[0], res[1]);
+		}
 
 		break;
 	}
@@ -1218,18 +1222,25 @@ void spu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 		func_data->cpu_id = this->id;
 	}
 
+	const u64 current_block_hash = atomic_storage<u64>::load(block_hash);
 	const u64 current_block_counter = atomic_storage<u64>::load(block_counter);
+	const u64 current_block_failure = atomic_storage<u64>::load(block_failure);
+	const u64 current_start_time = atomic_storage<u64>::load(start_time);
+	const u32 current_ch_tag_mask = atomic_storage<u32>::load(ch_tag_mask);
+	const spu_mfc_cmd current_ch_mfc_cmd = ch_mfc_cmd;
+	const u32 current_mfc_size = atomic_storage<u32>::load(mfc_size);
+	const std::vector<spu_mfc_cmd> current_mfc_queue(mfc_queue, mfc_queue + std::min<u32>(std::size(mfc_queue), current_mfc_size));
 
 	const auto [diff_time, diff_block] = func_data->update(current_block_counter);
 
 	const u64 rate_of_diff = diff_block ? std::max<u64>(1, utils::rational_mul<u64>(diff_block, 1'000'000, std::max<u64>(diff_time, 1))) : 0;
 
-	fmt::append(ret, "Block Weight: log10(%u/second): %.1f (Retreats: %u)", rate_of_diff, std::log10(std::max<u64>(rate_of_diff, 10)), block_failure);
+	fmt::append(ret, "Block Weight: log10(%u/second): %.1f (Retreats: %u)", rate_of_diff, std::log10(std::max<u64>(rate_of_diff, 10)), current_block_failure);
 
-	if (u64 hash = atomic_storage<u64>::load(block_hash))
+	if (current_block_hash)
 	{
 		// Get short function hash and position in chunk
-		fmt::append(ret, "\nCurrent block: %s", spu_block_hash{hash});
+		fmt::append(ret, "\nCurrent block: %s", spu_block_hash{current_block_hash});
 	}
 	else if (g_cfg.core.spu_prof || g_cfg.core.spu_debug)
 	{
@@ -1238,10 +1249,10 @@ void spu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 
 	const u32 offset = group ? SPU_FAKE_BASE_ADDR + (id & 0xffffff) * SPU_LS_SIZE : RAW_SPU_BASE_ADDR + index * RAW_SPU_OFFSET;
 
-	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
+	fmt::append(ret, "\n[%s]", current_ch_mfc_cmd);
 	fmt::append(ret, "\nLocal Storage: 0x%08x..0x%08x", offset, offset + 0x3ffff);
 
-	if (const u64 _time = start_time)
+	if (current_start_time)
 	{
 		if (const auto func = current_func)
 		{
@@ -1253,27 +1264,19 @@ void spu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 			ret += '\n';
 		}
 
-
-		fmt::append(ret, "\nWaiting: %fs", (get_system_time() - _time) / 1000000.);
+		fmt::append(ret, "\nWaiting: %fs", (get_system_time() - current_start_time) / 1000000.);
 	}
 	else
 	{
 		ret += "\n\n";
 	}
 
-	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
-	fmt::append(ret, "\nMFC Queue Size: %u", mfc_size);
+	fmt::append(ret, "\nTag Mask: 0x%08x", current_ch_tag_mask);
+	fmt::append(ret, "\nMFC Queue Size: %u (max: %u)", current_mfc_size, std::size(mfc_queue));
 
-	for (u32 i = 0; i < 16; i++)
+	for (u32 i = 0; i < current_mfc_queue.size(); i++)
 	{
-		if (i < mfc_size)
-		{
-			fmt::append(ret, "\n%s", mfc_queue[i]);
-		}
-		else
-		{
-			break;
-		}
+		fmt::append(ret, "\n%s", current_mfc_queue[i]);
 	}
 }
 
@@ -1429,17 +1432,18 @@ void spu_thread::cpu_return()
 					exit_status.set_value(last_exit_status);
 				}
 
-				last_stop = group->stop_count;
-
-				if (last_stop == umax)
+				last_stop = group->stop_count.fetch_op([&](u32& count)
 				{
-					// Restart with some high count to preserve some meaning
-					group->stop_count = 1000;
-				}
-				else
-				{
-					group->stop_count++;
-				}
+					if (count == umax)
+					{
+						// Restart with some high count to preserve some meaning
+						count = 1000;
+					}
+					else
+					{
+						count++;
+					}
+				});
 
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
@@ -1858,6 +1862,7 @@ void spu_thread::serialize_common(utils::serial& ar)
 		, ch_out_mbox.data, ch_out_intr_mbox.data, snr_config, ch_snr1.data, ch_snr2.data, ch_events.raw().all, interrupts_enabled
 		, run_ctrl, exit_status.data, status_npc.raw().status, ch_dec_start_timestamp, ch_dec_value, is_dec_frozen);
 
+	ensure(mfc_size <= std::size(mfc_queue));
 	ar(std::span(mfc_queue, mfc_size));
 
 	u32 vals[4]{};
@@ -1870,6 +1875,7 @@ void spu_thread::serialize_common(utils::serial& ar)
 	else
 	{
 		const u8 count{ar};
+		ensure(count <= std::size(vals));
 		ar(std::span(vals, count));
 		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
 	}
@@ -2015,11 +2021,21 @@ void spu_thread::push_snr(u32 number, u32 value)
 	});
 
 	// Check corresponding SNR register settings
+	const u32 old_spu_pc = this->pc; 
 	auto push_state = channel->push(value, bitor_bit);
 
 	if (push_state.old_count < push_state.count)
 	{
 		set_events(event_bit);
+
+		// Wait until the thread wakes up (SPU wakes up immediately on realhW)
+		if (push_state.notify)
+		{
+			for (u64 time = get_system_time(), current = time; state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(this->pc) && current - time < 500; current = get_system_time())
+			{
+				std::this_thread::yield();
+			}
+		}
 	}
 	else if (!push_state.op_done)
 	{
@@ -2035,6 +2051,73 @@ void spu_thread::push_snr(u32 number, u32 value)
 	{
 		ev.locks--;
 	});
+
+	// Configueable SPU head start (compnesation)
+	// SPU wakes up immediately on realhW and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_enabled ? +g_cfg.core.spu_mmio_delay : 3);
+}
+
+void spu_thread::push_in_mbox(u32 value)
+{
+	shared_mutex dummy_m{};
+
+	// Lock event channel in case it needs event notification
+	ch_events.atomic_op([](ch_events_t& ev)
+	{
+		ev.locks++;
+	});
+
+	std::unique_lock lock(group ? group->mutex : dummy_m, std::defer_lock);
+
+	if (group)
+	{
+		lock.lock();
+	}
+
+	const u32 old_spu_pc = this->pc; 
+	const auto push_state = ch_in_mbox.push(value, true);
+
+	if (lock)
+	{
+		lock.unlock();
+	}
+
+	if (push_state.notify)
+	{
+		ch_in_mbox.notify();
+	}
+
+	if (push_state.old_count < push_state.count)
+	{
+		set_events(SPU_EVENT_MB);
+
+		// Wait until the thread wakes up (SPU wakes up immediately on realhw)
+		if (push_state.notify)
+		{
+			for (u64 time = get_system_time(), current = time; state & cpu_flag::wait && old_spu_pc == atomic_storage<u32>::load(this->pc) && current - time < 500; current = get_system_time())
+			{
+				std::this_thread::yield();
+			}
+		}
+	}
+	else if (!push_state.op_done)
+	{
+		ensure(is_stopped());
+
+		if (auto cpu = cpu_thread::get_current())
+		{
+			cpu->state += cpu_flag::again;
+		}
+	}
+
+	ch_events.atomic_op([](ch_events_t& ev)
+	{
+		ev.locks--;
+	});
+
+	// Configurable SPU head start (compensation)
+	// SPU wakes up immediately on realhw and is faster than PPU
+	thread_ctrl::wait_for_accurate(g_cfg.core.spu_mmio_delay_enabled ? +g_cfg.core.spu_mmio_delay : 3);
 }
 
 void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls)
@@ -2148,7 +2231,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 	rsx::reservation_lock<false, 1> rsx_lock(eal, args.size, !is_get && (g_cfg.video.strict_rendering_mode || (g_cfg.core.rsx_fifo_accuracy && !g_cfg.core.spu_accurate_dma && eal < rsx::constants::local_mem_base)));
 
-	if (!is_get || g_cfg.core.spu_accurate_dma)  [[unlikely]]
+	// Make 128-byte GET & PUT atomic by default (fast check)
+	if (!is_get || g_cfg.core.spu_accurate_dma || u64{eal & 127} + args.size - 128 == 0)  [[unlikely]]
 	{
 		perf_meter<"ADMA_GET"_u64> perf_get = perf_;
 		perf_meter<"ADMA_PUT"_u64> perf_put = perf_;
@@ -2299,13 +2383,15 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			}
 		}
 
-		if (g_cfg.core.spu_accurate_dma) [[unlikely]]
+		// Make 128 byte PUT atomic
+		// Plus MGS4 specific accuracy improvement: this is not a hack, it is selective accuracy improvement
+		if (g_cfg.core.spu_accurate_dma || ((eal & 127) == 0 && (args.size == 128 || args.lsa == 0xb100) && ~args.cmd & MFC_LIST_MASK)) [[unlikely]]
 		{
 			for (u32 size0, size = args.size;; size -= size0, dst += size0, src += size0, eal += size0)
 			{
 				size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
 
-				if (size0 == 128u && g_cfg.core.accurate_cache_line_stores)
+				if (size0 == 128u)
 				{
 					// As atomic as PUTLLUC
 					do_cell_atomic_128_store(eal, src);
@@ -6192,6 +6278,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				}
 
 				// Use the syscall to set flag
+				ensure(flag < 64); // bit shift with flag >= 64 is undefined behaviour
 				const auto res = 0u + sys_event_flag_set(*this, data, 1ull << flag);
 
 				if (res == CELL_EAGAIN)
@@ -6209,7 +6296,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			{
 				/* ===== sys_event_flag_set_bit_impatient ===== */
 
-				u32 flag = value & 0xffffff;
+				const u32 flag = value & 0xffffff;
 				u32 data = 0;
 
 				if (!ch_out_mbox.try_pop(data))
@@ -6222,6 +6309,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				spu_function_logger logger(*this, "sys_event_flag_set_bit_impatient");
 
 				// Use the syscall to set flag
+				ensure(flag < 64); // bit shift with flag >= 64 is undefined behaviour
 				if (sys_event_flag_set(*this, data, 1ull << flag) + 0u == CELL_EAGAIN)
 				{
 					ch_out_mbox.set_value(data);

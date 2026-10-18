@@ -20,6 +20,7 @@
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
 #include "PPUDisAsm.h"
+#include "Common.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
 #include "lv2/sys_sync.h"
@@ -2158,7 +2159,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			{
 				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
 
-				for (usz inst_pc = work_pc;;)
+				for (u32 inst_pc = work_pc;;)
 				{
 					be_t<u32>& opcode = get_inst(inst_pc, func_call_before_target);
 
@@ -2308,7 +2309,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			{
 				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
 
-				for (usz inst_pc = work_pc;;)
+				for (u32 inst_pc = work_pc;;)
 				{
 					if (inst_pc == func_call_next)
 					{
@@ -2543,6 +2544,41 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::entry_call:
 		{
+			if (const u32 caller_id = start_gate_caller.exchange(0))
+			{
+				// The caller of sys_ppu_thread_start has higher or equal priority and waits for the exchange above:
+				// let it leave the syscall and run its first instructions before this thread starts
+				// Bounded, as it may enter another syscall right away (e.g. joining this thread), and ended on suspension, which cannot be acknowledged here
+				if (const auto caller = idm::get_unlocked<named_thread<ppu_thread>>(caller_id))
+				{
+					for (const u64 wait_start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - wait_start < 1000;)
+					{
+						const auto caller_state = +caller->state;
+
+						// Cannot run anyway: nothing to wait for
+						if (caller_state.all_of(cpu_flag::suspend) || ::is_stopped(caller_state))
+						{
+							break;
+						}
+
+						// Left the syscall: heuristic margin, as the first instructions it runs are not observable
+						if (caller_state.none_of(cpu_flag::wait))
+						{
+							constexpr u64 caller_head_start_us = 10;
+
+							for (const u64 start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - start < caller_head_start_us;)
+							{
+								std::this_thread::yield();
+							}
+
+							break;
+						}
+
+						std::this_thread::yield();
+					}
+				}
+			}
+
 			cmd_pop(), fast_call(entry_func.addr, entry_func.rtoc, true);
 			break;
 		}
@@ -4852,6 +4888,15 @@ extern void ppu_initialize()
 	}
 }
 
+template <u32 (*Estimate)(u32, bool)>
+static void ppu_vec_estimate(v128& v, u32 nj)
+{
+	for (u32 i = 0; i < 4; i++)
+	{
+		v._u32[i] = Estimate(v._u32[i], nj != 0);
+	}
+}
+
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
 	ppu_log.notice("Entering ppu_initialize(const ppu_module&..)");
@@ -4932,6 +4977,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
 			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
+			{ "__vrefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrefp>) },
+			{ "__vrsqrtefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrsqrtefp>) },
+			{ "__vexptefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vexptefp>) },
+			{ "__vlogefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vlogefp>) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -5520,6 +5569,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				accurate_nj_mode,
 				contains_symbol_resolver,
 				daz_and_ftz,
+				accurate_vest,
 
 				__bitset_enum_max
 			};
@@ -5550,9 +5600,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 			if (g_cfg.core.set_daz_and_ftz)
 				settings += ppu_settings::daz_and_ftz;
+			if (g_cfg.core.ppu_set_vest)
+				settings += ppu_settings::accurate_vest;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v8-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+			fmt::append(obj_name, "v9-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())

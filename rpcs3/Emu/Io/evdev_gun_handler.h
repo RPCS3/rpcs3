@@ -30,16 +30,16 @@ public:
 	bool is_init() const;
 	u32 get_num_guns() const;
 	int get_button(u32 gunno, gun_button button) const;
-	int get_axis_x(u32 gunno) const;
-	int get_axis_y(u32 gunno) const;
-	int get_axis_x_max(u32 gunno) const;
-	int get_axis_y_max(u32 gunno) const;
+	f32 get_axis_x(u32 gunno) const;
+	f32 get_axis_y(u32 gunno) const;
 
 	void poll(u32 index);
 
 	shared_mutex mutex;
 
 private:
+	f32 get_axis(u32 gunno, int code) const;
+
 	atomic_t<bool> m_is_init{false};
 	struct udev* m_udev = nullptr;
 

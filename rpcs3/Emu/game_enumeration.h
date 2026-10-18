@@ -183,6 +183,11 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 	}
 
 	const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
+	if (title_id == "." || title_id == ".." || title_id.find_first_of("/\\") != umax)
+	{
+		sys_log.warning("Ignoring game with invalid TITLE_ID '%s': '%s'", title_id, dir_or_elf);
+		return std::nullopt;
+	}
 
 	if (title_id.empty())
 	{
@@ -571,7 +576,7 @@ void game_enumeration<game_info_type>::apply_patches()
 			// Let's fetch the game data movie if preferred or if the path was empty
 			if (m_prefer_game_data_icons || info.movie_path.empty())
 			{
-				if (std::string movie_path = other.path + "/" + m_localized_icon; fs::is_file(movie_path))
+				if (std::string movie_path = other.path + "/" + m_localized_movie; fs::is_file(movie_path))
 				{
 					info.movie_path = std::move(movie_path);
 					info.movie_in_archive = false;

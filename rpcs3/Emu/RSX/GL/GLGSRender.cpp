@@ -52,6 +52,7 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_instanced_rendering = true;
 	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
 	backend_config.supports_last_provoking_vertex = true;
+	backend_config.supports_extended_depth_range = gl::get_driver_caps().NV_depth_buffer_float_supported;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
@@ -189,6 +190,11 @@ void GLGSRender::on_init_thread()
 	{
 		rsx_log.warning("[PERFORMANCE WARNING] SSBOs are not supported by your GPU. Some functionality such as hardware instancing will be unavailable.");
 		backend_config.supports_hw_instanced_rendering = false;
+	}
+
+	if (gl_caps.ARB_framebuffer_no_attachments_supported)
+	{
+		backend_config.supports_framebufferless_rendering = true;
 	}
 
 	if (!gl_caps.ARB_bindless_texture_supported)
@@ -642,7 +648,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
+	if (!REGS(m_ctx)->stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
 	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
@@ -659,61 +665,63 @@ void GLGSRender::clear_surface(u32 arg)
 
 	gl::command_context cmd{ gl_state };
 	const bool full_frame =
-		rsx::method_registers.scissor_origin_x() == 0 &&
-		rsx::method_registers.scissor_origin_y() == 0 &&
-		rsx::method_registers.scissor_width() >= rsx::method_registers.surface_clip_width() &&
-		rsx::method_registers.scissor_height() >= rsx::method_registers.surface_clip_height();
+		REGS(m_ctx)->scissor_origin_x() == 0 &&
+		REGS(m_ctx)->scissor_origin_y() == 0 &&
+		REGS(m_ctx)->scissor_width() >= REGS(m_ctx)->surface_clip_width() &&
+		REGS(m_ctx)->scissor_height() >= REGS(m_ctx)->surface_clip_height();
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	rsx::surface_depth_format2 surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
+			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
+			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+      clear_cmd.aspect_mask |= gl::image_aspect::depth;
 
-			clear_cmd.clear_depth.value = f32(clear_depth) / max_depth_value;
-			clear_cmd.aspect_mask |= gl::image_aspect::depth;
+			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				clear_cmd.clear_depth.value = rsx::encode_emulated_depth(clear_cmd.clear_depth.value);
+			}
 		}
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				clear_cmd.clear_stencil.mask = rsx::method_registers.stencil_mask();
-				clear_cmd.clear_stencil.value = rsx::method_registers.stencil_clear_value();
+				clear_cmd.clear_stencil.mask = REGS(m_ctx)->stencil_mask();
+				clear_cmd.clear_stencil.value = REGS(m_ctx)->stencil_clear_value();
 				clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 			}
+		}
 
-			if (const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
-				ds_mask != RSX_GCM_CLEAR_DEPTH_STENCIL_MASK || !full_frame)
+		if (clear_cmd.aspect_mask && (clear_cmd.aspect_mask != ds->aspect() || !full_frame))
+		{
+			const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+
+			if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
+				ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 			{
-				ensure(clear_cmd.aspect_mask);
-
-				if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
-					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
+				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
+				if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
 				{
-					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-					if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
-					{
-						// Depth was cleared, initialize stencil
-						clear_cmd.clear_stencil.mask = 0xff;
-						clear_cmd.clear_stencil.value = 0xff;
-						clear_cmd.aspect_mask |= gl::image_aspect::stencil;
-					}
-					else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
-					{
-						// Stencil was cleared, initialize depth
-						clear_cmd.clear_depth.value = 1.f;
-						clear_cmd.aspect_mask |= gl::image_aspect::depth;
-					}
+					// Depth was cleared, initialize stencil
+					clear_cmd.clear_stencil.mask = 0xff;
+					clear_cmd.clear_stencil.value = 0xff;
+					clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 				}
-				else
+				else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 				{
-					ds->write_barrier(cmd);
+					// Stencil was cleared, initialize depth
+					clear_cmd.clear_depth.value = 1.f;
+					clear_cmd.aspect_mask |= gl::image_aspect::depth;
 				}
+			}
+			else
+			{
+				ds->write_barrier(cmd);
 			}
 		}
 
@@ -726,12 +734,12 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (auto colormask = (arg & 0xf0))
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
+		u8 clear_a = REGS(m_ctx)->clear_color_a();
+		u8 clear_r = REGS(m_ctx)->clear_color_r();
+		u8 clear_g = REGS(m_ctx)->clear_color_g();
+		u8 clear_b = REGS(m_ctx)->clear_color_b();
 
-		switch (rsx::method_registers.surface_color())
+		switch (REGS(m_ctx)->surface_color())
 		{
 		case rsx::surface_color_format::x32:
 		case rsx::surface_color_format::w16z16y16x16:
@@ -864,12 +872,16 @@ bool GLGSRender::load_program()
 		}
 
 		void* pipeline_properties = nullptr;
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(
 			&m_program_cache_hint,
 			current_vertex_program,
 			current_fragment_program,
 			pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{

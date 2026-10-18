@@ -2,9 +2,13 @@
 #include "overlay_cursor.h"
 #include "overlay_manager.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm.h"
+#include "Emu/RSX/gcm_enums.h"
 
 namespace rsx
 {
+	extern u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
+
 	namespace overlays
 	{
 		cursor_item::cursor_item()
@@ -151,5 +155,68 @@ namespace rsx
 			}
 		}
 
+		void bitmap_cursor::enable()
+		{
+			std::lock_guard lock(m_mutex);
+
+			m_visible = true;
+		}
+
+		void bitmap_cursor::disable()
+		{
+			std::lock_guard lock(m_mutex);
+
+			m_visible = false;
+		}
+
+		void bitmap_cursor::set_screen_size(u16 w, u16 h)
+		{
+			std::lock_guard lock(m_mutex);
+
+			m_virtual_width = w;
+			m_virtual_height = h;
+		}
+
+		void bitmap_cursor::set_pos(s32 x, s32 y)
+		{
+			std::lock_guard lock(m_mutex);
+
+			m_position.x = ::narrow<s16>(x);
+			m_position.y = ::narrow<s16>(y);
+
+			if (m_bitmap)
+			{
+				m_bitmap->set_pos(m_position.x, m_position.y);
+			}
+		}
+
+		void bitmap_cursor::set_bitmap(u32 address)
+		{
+			std::lock_guard lock(m_mutex);
+
+			if (!m_bitmap)
+			{
+				m_bitmap = std::make_unique<image_view>();
+				m_bitmap->set_size(64, 64);
+				m_bitmap->set_pos(m_position.x, m_position.y);
+			}
+
+			auto vm_address = rsx::get_address(address, CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER);
+			auto data = vm::get_super_ptr<const u8>(vm_address);
+			m_image_storage = { 64, 64, 4, data };
+			m_bitmap->set_raw_image(&m_image_storage);
+		}
+
+		compiled_resource bitmap_cursor::get_compiled()
+		{
+			std::lock_guard lock(m_mutex);
+
+			if (!m_visible || !m_bitmap)
+			{
+				return {};
+			}
+
+			return m_bitmap->get_compiled();
+		}
 	} // namespace overlays
 } // namespace rsx

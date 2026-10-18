@@ -109,7 +109,7 @@ namespace rsx
 			load_data(bytes, grayscaled);
 		}
 
-		image_info::image_info(const std::vector<u8>& bytes, bool grayscaled)
+		image_info::image_info(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			load_data(bytes, grayscaled);
 		}
@@ -119,7 +119,7 @@ namespace rsx
 			if (data) stbi_image_free(data);
 		}
 
-		void image_info::load_data(const std::vector<u8>& bytes, bool grayscaled)
+		void image_info::load_data(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, grayscaled ? STBI_grey_alpha : STBI_rgb_alpha);
 			channels = grayscaled ? 2 : 4;
@@ -505,9 +505,17 @@ namespace rsx
 			set_text(container.str);
 		}
 
-		void overlay_element::set_font(const char* font_name, u16 font_size)
+		void overlay_element::set_font(u16 font_size, std::string_view font_name)
 		{
-			font_ref = fontmgr::get(font_name, font_size);
+			if (font_name.empty())
+			{
+				font_ref = fontmgr::get(g_cfg.video.ui.default_font.get(), font_size);
+			}
+			else
+			{
+				font_ref = fontmgr::get(font_name, font_size);
+			}
+
 			m_is_compiled = false;
 		}
 
@@ -525,7 +533,7 @@ namespace rsx
 
 		font* overlay_element::get_font() const
 		{
-			return font_ref ? font_ref : fontmgr::get("Arial", 12);
+			return font_ref ? font_ref : fontmgr::get(g_cfg.video.ui.default_font.get(), 12);
 		}
 
 		std::vector<vertex> overlay_element::render_text(const char32_t* string, f32 x, f32 y)

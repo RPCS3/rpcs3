@@ -19,7 +19,7 @@ namespace rsx::overlays
 	{
 		std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(title);
 		label_widget->set_size(m_headers_width, 60);
-		label_widget->set_font("Arial", 18);
+		label_widget->set_font(18);
 		label_widget->back_color.a = 0.f;
 		label_widget->set_padding(16, 4, 16, 4);
 		add_tab(label_widget, panel);

@@ -188,6 +188,18 @@ struct content_permission final
 	}
 };
 
+// Content directory of the last cellGameDataCheckCreate2() call, measured by cellGameDataGetSizeKB()
+// A game may check several different directories: Rock Band 2 checks its own game data and then Rock Band's
+// in order to import its songs, so the size always refers to the dirName of the check which asked for it
+struct game_data_check final
+{
+	shared_mutex mutex; // Checks may be issued from more than one thread of the game
+	std::string dir; // "/dev_hdd0/game/" + dirName, empty until the first check
+
+	void set_dir(std::string_view path) { std::lock_guard lock(mutex); dir = path; }
+	std::string get_dir() { reader_lock lock(mutex); return dir; }
+};
+
 template<>
 void fmt_class_string<content_permission::check_mode>::format(std::string& out, u64 arg)
 {
@@ -693,11 +705,14 @@ error_code cellGameDataGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
+	const std::string content_dir = g_fxo->get<game_data_check>().get_dir();
+
 	lv2_obj::sleep(ppu);
 
 	const u64 start_sleep = ppu.start_time;
 
-	const std::string local_dir = vfs::get(Emu.GetDir());
+	// Until the first check there is no dirName to go by: the booted directory is the game data itself for an HDD game
+	const std::string local_dir = vfs::get(content_dir.empty() ? Emu.GetDir() : content_dir);
 
 	const auto dirsz = fs::get_dir_size(local_dir, 1024);
 
@@ -709,11 +724,15 @@ error_code cellGameDataGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 	{
 		const auto error = fs::g_tls_error;
 
-		if (fs::exists(local_dir))
+		if (!fs::exists(local_dir))
 		{
-			cellGame.error("cellGameDataGetSizeKB(): Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
+			// The content directory is only created once the status callback has returned
+			ppu.check_state();
+			*size = 0;
+			return CELL_OK;
 		}
 
+		cellGame.error("cellGameDataGetSizeKB(): Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
 		return CELL_GAMEDATA_ERROR_FAILURE;
 	}
 
@@ -1111,6 +1130,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
+	// The status callback may ask for the size of this directory through cellGameDataGetSizeKB()
+	g_fxo->get<game_data_check>().set_dir(dir);
+
 	lv2_sleep(5000, &ppu);
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
@@ -1327,7 +1349,9 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 	auto remove_gd = [&]() -> error_code
 	{
-		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
+		const std::string_view boot_dir = fmt::trim_back_sv(Emu.GetDir(), fs::delim);
+
+		if (Emu.GetCat() == "GD" && boot_dir.substr(boot_dir.find_last_of(fs::delim) + 1) == vfs::escape(name))
 		{
 			// Boot patch cannot delete its own directory
 			return CELL_GAME_ERROR_NOTSUPPORTED;

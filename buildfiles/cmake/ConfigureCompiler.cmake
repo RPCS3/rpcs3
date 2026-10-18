@@ -1,5 +1,9 @@
 # Check and configure compiler options for RPCS3
 
+if(USE_ARM_LSE2)
+	add_compile_definitions(ARM_FEATURE_LSE2=1)
+endif()
+
 if(MSVC)
 	add_compile_options(/Zc:throwingNew- /constexpr:steps16777216)
 	add_compile_definitions(

@@ -752,9 +752,10 @@ void rsx_debugger::GetBuffers() const
 		}
 
 		// PS3 buffer size (for memory validation)
-		const u32 src_mem_size = pitch * (height - 1) + width * bpp;
+		const u32 src_width_in_bytes = width * bpp;
+		const u32 src_mem_size = pitch * (height - 1) + src_width_in_bytes;
 
-		if ((height > 1 && pitch < width * bpp) || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
+		if ((height > 1 && pitch < src_width_in_bytes) || !src_mem_size || !vm::check_addr(rsx_buffer_addr, vm::page_readable, src_mem_size))
 		{
 			panel->showImage(QImage());
 			continue;
@@ -779,8 +780,9 @@ void rsx_debugger::GetBuffers() const
 		const auto rsx_buffer = vm::get_super_ptr<const u8>(rsx_buffer_addr);
 		panel->cache.resize(std::max<usz>(panel->cache.size(), width * height * 16));
 		const auto buffer = panel->cache.data();
+		const u32 dst_pitch = width * dst_bpp;
 
-		if (dst_bpp == bpp && pitch == width * bpp)
+		if (dst_bpp == bpp && pitch == dst_pitch)
 		{
 			std::memcpy(buffer, rsx_buffer, src_mem_size);
 		}
@@ -788,8 +790,7 @@ void rsx_debugger::GetBuffers() const
 		{
 			for (u32 y = 0; y < height; y++)
 			{
-				const usz line_start = y * pitch;
-				std::memcpy(buffer + y * width * dst_bpp, rsx_buffer + line_start, width * bpp);
+				std::memcpy(buffer + y * dst_pitch, rsx_buffer + y * pitch, src_width_in_bytes);
 			}
 		}
 
@@ -799,11 +800,11 @@ void rsx_debugger::GetBuffers() const
 		{
 			for (u32 y = 0; y < height; y++)
 			{
-				u8* line = buffer + y * pitch * 2;
+				u8* line = buffer + y * dst_pitch * 2;
 
-				for (u32 x = 0; x < std::max(pitch, 1u) - 1; x += 2)
+				for (u32 x = 0; x < std::max(dst_pitch, 1u) - 1; x += 2)
 				{
-					const u32 rev_x = pitch - 2 - x;
+					const u32 rev_x = dst_pitch - 2 - x;
 
 					const uint8_t* src = line + rev_x;
 					uint8_t* dst = line + rev_x * 2;

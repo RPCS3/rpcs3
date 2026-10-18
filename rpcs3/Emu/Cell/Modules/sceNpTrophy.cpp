@@ -1226,10 +1226,14 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 
 	ensure(tropusr);
 
-	const u32 count_ = tropusr->GetTrophiesCount();
+	u32 count_ = tropusr->GetTrophiesCount();
 	*count = count_;
+
 	if (count_ > 128)
-		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+	{
+		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected! (count=%d)", count_);
+		count_ = 128;
+	}
 
 	// Needs hw testing
 	*flags = {};

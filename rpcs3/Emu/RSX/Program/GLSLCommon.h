@@ -23,6 +23,7 @@ namespace rsx
 		MSAA_WRITE_ENABLE_BIT        = 9,
 		FRAG_DEPTH_24_BIT            = 10,
 		FRAG_DEPTH_FLOAT_BIT         = 11,
+		DEPTH_CLAMP_ENABLE_BIT       = 24,
 
 		// Data
 		ALPHA_FUNC_OFFSET            = 12,
@@ -51,6 +52,7 @@ namespace rsx
 
 		void enable_framebuffer_INT() { value |= (1u << ROP_control_bits::INT_FRAMEBUFFER_BIT); }
 		void enable_MSAA_writes() { value |= (1u << ROP_control_bits::MSAA_WRITE_ENABLE_BIT); }
+		void enable_depth_clamp() { value |= (1u << ROP_control_bits::DEPTH_CLAMP_ENABLE_BIT); }
 
 		void set_alpha_test_func(uint func) { value |= (func << ROP_control_bits::ALPHA_FUNC_OFFSET); }
 		void set_msaa_control(uint ctrl) { value |= (ctrl << ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET); }
@@ -82,6 +84,7 @@ namespace glsl
 	void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true);
 	void insert_rop_init(std::ostream& OS, u32 mrt_buffers_count);
 	void insert_rop(std::ostream& OS, const shader_properties& props);
+	void insert_fragment_epilogue(std::ostream& OS, const shader_properties& props);
 	void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props);
 	std::string getFunctionImpl(FUNCTION f);
 	void insert_subheader_block(std::ostream& OS);

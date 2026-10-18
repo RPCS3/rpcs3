@@ -337,14 +337,18 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 		{
 			const int num_axes = SDL_GetNumJoystickAxes(joystick);
 			const int num_buttons = SDL_GetNumJoystickButtons(joystick);
+			const SDL_JoystickType joystick_type = SDL_GetJoystickType(joystick);
 
 			// The DJ Hero Turntable (VID 0x12BA, PID 0x0140) coincidentally matches the
 			// DS3 axis/button counts (16 axes, 11 buttons) but is NOT a pressure-sensitive
 			// DS3. Routing its face buttons through the pressure axes drops the green (Cross)
 			// and blue (Square) deck buttons, so exclude it and read its buttons digitally.
+			// Guitars and drums have this problem too
 			const bool is_dj_hero_turntable = info.vid == 0x12BA && info.pid == 0x0140;
+			const bool is_guitar = joystick_type == SDL_JOYSTICK_TYPE_GUITAR;
+			const bool is_drums = joystick_type == SDL_JOYSTICK_TYPE_DRUM_KIT;
 
-			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11 && !is_dj_hero_turntable;
+			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11 && !is_dj_hero_turntable && !is_guitar && !is_drums;
 
 			sdl_log.notice("DS3 device %d has %d axis and %d buttons (has_pressure_buttons=%d)", id, num_axes, num_buttons, info.is_ds3_with_pressure_buttons);
 
@@ -498,13 +502,20 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 			dev->sdl.gamepad = nullptr;
 		}
 
-		// Try to reconnect
+		// Try to reconnect every now and then.
+		const steady_clock::time_point now = steady_clock::now();
+		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - dev->last_reconnect_attempt).count();
+
+		if (elapsed_ms < 1000)
+			return connection::disconnected;
+
+		dev->last_reconnect_attempt = now;
 
 		int count = 0;
 		SDL_JoystickID* gamepads = SDL_GetGamepads(&count);
 		for (int i = 0; i < count; i++)
 		{
-			// Get game pad
+			// Get game pad (open/close is ref-counted, so we need to close after use)
 			SDL_Gamepad* gamepad = SDL_OpenGamepad(gamepads[i]);
 			if (!gamepad)
 			{
@@ -513,15 +524,10 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 
 			// Find out if we already know this controller
 			std::shared_ptr<SDLDevice> sdl_device = get_device_by_gamepad(gamepad);
-			if (!sdl_device)
-			{
-				// Close the game pad if we don't know it.
-				SDL_CloseGamepad(gamepad);
-				continue;
-			}
+			SDL_CloseGamepad(gamepad);
 
 			// Re-attach the controller if the device matches the current one
-			if (sdl_device.get() == dev)
+			if (sdl_device && sdl_device.get() == dev)
 			{
 				if (SDLDevice::sdl_info info = get_sdl_info(gamepads[i]); info.gamepad)
 				{

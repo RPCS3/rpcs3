@@ -1,0 +1,51 @@
+name: Label PRs
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+
+jobs:
+  Label_PRs:
+    name: Label from title and linked issues
+    runs-on: ubuntu-latest
+    if: github.repository == 'RPCS3/rpcs3'
+    permissions:
+      issues: read
+      pull-requests: write
+    steps:
+      - name: Add labels from title and linked issues
+        uses: actions/github-script@v9
+        with:
+          retries: 3
+          script: |
+            const AREAS = [
+              'Build and CI', 'CLI', 'Filesystem', 'GUI', 'Input', 'ISO', 'Localization', 'Overlay', 'Render: Vulkan', 'RSX', 'Savestates',
+            ];
+
+            const {repository: {pullRequest: pull}} = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    labels(first: 100) { nodes { name } }
+                    closingIssuesReferences(first: 50) { nodes { labels(first: 100) { nodes { name } } } }
+                    timelineItems(itemTypes: [UNLABELED_EVENT], last: 100) { nodes { ... on UnlabeledEvent { label { name } } } }
+                  }
+                }
+              }`, {...context.repo, number: context.issue.number});
+
+            if (pull.labels.nodes.some(x => AREAS.includes(x.name)))
+              return;
+
+            // Skip labels a maintainer removed
+            const removed = pull.timelineItems.nodes.map(x => x.label.name);
+            const fromTitle = /^rsx\b/i.test(context.payload.pull_request.title) ? ['RSX'] : [];
+            const fromIssues = pull.closingIssuesReferences.nodes.flatMap(i => i.labels.nodes.map(x => x.name));
+            const labels = [...new Set([...fromTitle, ...fromIssues])]
+              .filter(name => AREAS.includes(name) && !removed.includes(name));
+
+            if (labels.length > 0) {
+              console.log(`Adding labels: ${labels.join(', ')}`);
+              await github.rest.issues.addLabels({...context.repo, issue_number: context.issue.number, labels});
+            }

@@ -17,7 +17,8 @@ public:
 	microphone_creator();
 	QString get_none() const;
 	std::string set_device(u32 num, const QString& text);
-	void parse_devices(std::string_view list);
+	static std::array<std::string, 4> parse_device_selection(std::string_view list);
+	void update_device_selection(std::string_view list);
 	void refresh_list();
 	const QStringList& get_microphone_list() const;
 	const std::array<std::string, 4>& get_selection_list() const;

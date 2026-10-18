@@ -76,7 +76,8 @@ public:
 
 		for (const auto& n : get_nodes())
 		{
-			init_button(static_cast<cfg_pad_btn<T>*>(n));
+			if (auto* pbtn = dynamic_cast<cfg_pad_btn<T>*>(n))
+				init_button(pbtn);
 		}
 	}
 
@@ -108,9 +109,6 @@ public:
 			if (max_value == 1023) return value & 0x03FF;
 			return static_cast<u16>(std::clamp(1023.0f * (static_cast<f32>(std::min(value, max_value)) / ensure(max_value)), 0.0f, 1023.0f));
 		}
-
-	private:
-
 	};
 
 	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(const input_value&, bool&)>& func) const

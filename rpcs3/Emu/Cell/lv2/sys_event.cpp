@@ -4,10 +4,12 @@
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "sys_process.h"
 
 #include "util/asm.hpp"
@@ -180,6 +182,12 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		}
 
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
+
+		if (const u32 delay = g_cfg.core.ppu_event_wakeup_delay; delay && cpu_thread::get_current<spu_thread>())
+		{
+			// measured about 19us from the SPU mailbox write to the PPU receive return on real hardware
+			ppu.event_wakeup_time = get_system_time() + delay;
+		}
 
 		awake(&ppu);
 
@@ -585,6 +593,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		else
 		{
 			ppu.state.wait(state);
+		}
+	}
+
+	if (const u64 wakeup_time = std::exchange(ppu.event_wakeup_time, 0))
+	{
+		if (const u64 current = get_system_time(); current < wakeup_time)
+		{
+			thread_ctrl::wait_for_accurate(wakeup_time - current);
 		}
 	}
 
