@@ -455,6 +455,7 @@ std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx
 	else
 		resources->vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
+	resources->surface_cache.set_context(ctx);
 	resources->texture_cache.set_context(ctx);
 	resources->texture_cache.initialize();
 
@@ -463,14 +464,15 @@ std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx
 
 void GLGSRender::on_bind_context(rsx::context* ctx)
 {
-	m_rtts.set_context(ctx);
 	m_vertex_layout.set_context(ctx);
 	m_shader_interpreter.set_context(ctx);
 }
 
 void GLGSRender::on_release_context_resources(rsx::context* ctx)
 {
-	res(ctx)->texture_cache.destroy();
+	const auto resources = res(ctx);
+	resources->surface_cache.destroy();
+	resources->texture_cache.destroy();
 }
 
 void GLGSRender::on_unbind_context(rsx::context* ctx)
@@ -499,7 +501,6 @@ void GLGSRender::on_shutdown()
 	gl::destroy_pipe_compiler();
 
 	m_prog_buffer.clear();
-	m_rtts.destroy();
 
 	m_host_dma_ctrl.reset();
 	m_host_gpu_context_data.reset();
@@ -667,7 +668,7 @@ void GLGSRender::clear()
 	bool update_color = false, update_z = false;
 	const rsx::surface_depth_format2 surface_depth_format = info.depth_format;
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
@@ -729,7 +730,7 @@ void GLGSRender::clear()
 	if (const auto colormask = info.color_mask)
 	{
 		clear_cmd.clear_color.mask = colormask;
-		clear_cmd.clear_color.attachment_count = static_cast<u8>(m_rtts.m_bound_render_target_ids.size());
+		clear_cmd.clear_color.attachment_count = static_cast<u8>(res()->surface_cache.m_bound_render_target_ids.size());
 		clear_cmd.clear_color.r = info.color_r;
 		clear_cmd.clear_color.g = info.color_g;
 		clear_cmd.clear_color.b = info.color_b;
@@ -738,9 +739,9 @@ void GLGSRender::clear()
 
 		if (!full_frame)
 		{
-			for (const auto& index : m_rtts.m_bound_render_target_ids)
+			for (const auto& index : res()->surface_cache.m_bound_render_target_ids)
 			{
-				m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
+				res()->surface_cache.m_bound_render_targets[index].second->write_barrier(cmd);
 			}
 		}
 
@@ -749,7 +750,7 @@ void GLGSRender::clear()
 
 	if (update_color || update_z)
 	{
-		m_rtts.on_write({ update_color, update_color, update_color, update_color }, update_z);
+		res()->surface_cache.on_write({ update_color, update_color, update_color, update_color }, update_z);
 	}
 
 	if (!full_frame)
@@ -1304,7 +1305,7 @@ gl::work_item& GLGSRender::post_flush_request(rsx::context* ctx, u32 address, gl
 bool GLGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
 	gl::command_context cmd{ gl_state };
-	if (res()->texture_cache.blit(cmd, src, dst, interpolate, m_rtts))
+	if (res()->texture_cache.blit(cmd, src, dst, interpolate, res()->surface_cache))
 	{
 		m_samplers_dirty.store(true);
 		return true;
@@ -1320,7 +1321,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	{
 		u32 addr = rsx::get_address(RSX(m_ctx)->tiles[tile].offset, RSX(m_ctx)->tiles[tile].location);
 		RSX(m_ctx)->on_notify_pre_memory_unmapped(addr, RSX(m_ctx)->tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
-		m_rtts.invalidate_surface_address(addr, false);
+		res()->surface_cache.invalidate_surface_address(addr, false);
 	}
 
 	{
@@ -1392,7 +1393,7 @@ void GLGSRender::on_guest_texture_read()
 void GLGSRender::write_barrier(u32 address, u32 range)
 {
 	ensure(RSX(m_ctx)->is_current_thread());
-	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
+	res()->surface_cache.invalidate_range(utils::address_range32::start_length(address, range));
 }
 
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)

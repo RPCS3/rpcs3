@@ -85,7 +85,7 @@ void GLGSRender::update_draw_state()
 	gl_state.enable(GL_SCISSOR_TEST);
 	gl_state.enable(blend.dither_enabled, GL_DITHER);
 
-	if (m_rtts.m_bound_depth_stencil.first)
+	if (res()->surface_cache.m_bound_depth_stencil.first)
 	{
 		// Z-buffer is active.
 		gl_state.depth_mask(depth_stencil.depth_write_enabled);
@@ -167,10 +167,10 @@ void GLGSRender::update_draw_state()
 		}
 	}
 
-	if (m_rtts.get_color_surface_count())
+	if (res()->surface_cache.get_color_surface_count())
 	{
 		// Color buffer is active
-		for (int index = 0; index < m_rtts.get_color_surface_count(); ++index)
+		for (int index = 0; index < res()->surface_cache.get_color_surface_count(); ++index)
 		{
 			const auto& color_mask = blend.color_mask[index];
 			gl_state.color_maski(index, color_mask.r, color_mask.g, color_mask.b, color_mask.a);
@@ -262,7 +262,7 @@ void GLGSRender::update_draw_state()
 		const auto poly_offset_scale = raster.poly_offset_scale;
 		auto poly_offset_bias = raster.poly_offset_bias;
 
-		if (auto ds = m_rtts.m_bound_depth_stencil.second;
+		if (auto ds = res()->surface_cache.m_bound_depth_stencil.second;
 			ds && ds->get_internal_format() == gl::texture::internal_format::depth24_stencil8)
 		{
 			// Check details in VKDraw.cpp about behaviour of RSX vs desktop D24X8 implementations
@@ -334,7 +334,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 
 		if (!m_samplers_dirty &&
 			!(m_ctx->textures.fragment_textures_dirty & (1u << i)) &&
-			!res()->texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
+			!res()->texture_cache.test_if_descriptor_expired(cmd, res()->surface_cache, sampler_state, tex))
 		{
 			continue;
 		}
@@ -347,7 +347,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			continue;
 		}
 
-		*sampler_state = res()->texture_cache.upload_texture(cmd, tex, m_rtts);
+		*sampler_state = res()->texture_cache.upload_texture(cmd, tex, res()->surface_cache);
 		if (!sampler_state->validate())
 		{
 			continue;
@@ -467,7 +467,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 
 		if (!m_samplers_dirty &&
 			!(m_ctx->textures.vertex_textures_dirty & (1u << i)) &&
-			!res()->texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
+			!res()->texture_cache.test_if_descriptor_expired(cmd, res()->surface_cache, sampler_state, tex))
 		{
 			continue;
 		}
@@ -480,7 +480,7 @@ rsx::flags32_t GLGSRender::load_texture_env()
 			continue;
 		}
 
-		*sampler_state = res()->texture_cache.upload_texture(cmd, REGS(m_ctx)->vertex_textures[i], m_rtts);
+		*sampler_state = res()->texture_cache.upload_texture(cmd, REGS(m_ctx)->vertex_textures[i], res()->surface_cache);
 
 		if (!sampler_state->validate())
 		{
@@ -678,10 +678,10 @@ void GLGSRender::bind_texture_env()
 
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
-		ensure(m_rtts.m_bound_depth_stencil.first, "Invalid FBO setup");
+		ensure(res()->surface_cache.m_bound_depth_stencil.first, "Invalid FBO setup");
 		gl::insert_texture_barrier();
 
-		auto view = m_rtts.m_bound_depth_stencil.second->get_view(rsx::default_remap_vector, gl::image_aspect::depth);
+		auto view = res()->surface_cache.m_bound_depth_stencil.second->get_view(rsx::default_remap_vector, gl::image_aspect::depth);
 		view->bind(cmd, GL_TEMP_IMAGE_SLOT(0));
 	}
 }
@@ -911,7 +911,7 @@ bool GLGSRender::end_draw()
 	{
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
-		// m_rtts.on_write(); - breaks games for obvious reasons
+		// res()->surface_cache.on_write(); - breaks games for obvious reasons
 		return false;
 	}
 
@@ -924,12 +924,12 @@ bool GLGSRender::end_draw()
 	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	gl::command_context cmd{ gl_state };
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil))
 	{
 		ds->write_barrier(cmd);
 	}
 
-	for (auto &rtt : m_rtts.m_bound_render_targets)
+	for (auto &rtt : res()->surface_cache.m_bound_render_targets)
 	{
 		if (auto surface = std::get<1>(rtt))
 		{
@@ -959,7 +959,7 @@ bool GLGSRender::end_draw()
 	}
 	while (draw_call.next());
 
-	m_rtts.on_write(m_ctx->fb.layout.color_write_enabled, m_ctx->fb.layout.zeta_write_enabled);
+	res()->surface_cache.on_write(m_ctx->fb.layout.color_write_enabled, m_ctx->fb.layout.zeta_write_enabled);
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();

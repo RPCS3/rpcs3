@@ -285,7 +285,7 @@ rsx::flags32_t VKGSRender::load_texture_env()
 	bool check_for_cyclic_refs = false;
 	auto check_surface_cache_sampler_valid = [&](auto descriptor, const auto& tex)
 	{
-		if (!res()->texture_cache.test_if_descriptor_expired(*m_current_command_buffer, m_rtts, descriptor, tex))
+		if (!res()->texture_cache.test_if_descriptor_expired(*m_current_command_buffer, res()->surface_cache, descriptor, tex))
 		{
 			check_for_cyclic_refs |= descriptor->is_cyclic_reference;
 			return true;
@@ -334,7 +334,7 @@ rsx::flags32_t VKGSRender::load_texture_env()
 			continue;
 		}
 
-		*sampler_state = res()->texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+		*sampler_state = res()->texture_cache.upload_texture(*m_current_command_buffer, tex, res()->surface_cache);
 		if (!sampler_state->validate())
 		{
 			continue;
@@ -566,7 +566,7 @@ rsx::flags32_t VKGSRender::load_texture_env()
 			continue;
 		}
 
-		*sampler_state = res()->texture_cache.upload_texture(*m_current_command_buffer, tex, m_rtts);
+		*sampler_state = res()->texture_cache.upload_texture(*m_current_command_buffer, tex, res()->surface_cache);
 		if (!sampler_state->validate())
 		{
 			continue;
@@ -625,7 +625,7 @@ rsx::flags32_t VKGSRender::load_texture_env()
 	{
 		// Transition our FBO to a loop-friendly format.
 		// We can also convert it into an input attachment, but for now this is easier.
-		auto ds = ensure(m_rtts.m_bound_depth_stencil.second, "Invalid FS export configuration.");
+		auto ds = ensure(res()->surface_cache.m_bound_depth_stencil.second, "Invalid FS export configuration.");
 		ds->texture_barrier(*m_current_command_buffer);
 
 		check_for_cyclic_refs = true;
@@ -796,7 +796,7 @@ bool VKGSRender::bind_texture_env()
 
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
-		auto ds = ensure(m_rtts.m_bound_depth_stencil.second);
+		auto ds = ensure(res()->surface_cache.m_bound_depth_stencil.second);
 		auto view = ds->get_view(rsx::default_remap_vector, VK_IMAGE_ASPECT_DEPTH_BIT);
 		m_program->bind_uniform({ *view, vk::null_sampler() }, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_depth_input_location);
 	}
@@ -1302,7 +1302,7 @@ bool VKGSRender::end_draw()
 	{
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
-		// m_rtts.on_write(); - breaks games for obvious reasons
+		// res()->surface_cache.on_write(); - breaks games for obvious reasons
 		return false;
 	}
 
@@ -1311,7 +1311,7 @@ bool VKGSRender::end_draw()
 	m_ctx->stats.setup_time += m_profiler.duration();
 
 	// Apply write memory barriers
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil))
 	{
 		ds->write_barrier(*m_current_command_buffer);
 
@@ -1328,7 +1328,7 @@ bool VKGSRender::end_draw()
 		}
 	}
 
-	for (auto &rtt : m_rtts.m_bound_render_targets)
+	for (auto &rtt : res()->surface_cache.m_bound_render_targets)
 	{
 		if (auto surface = std::get<1>(rtt))
 		{
@@ -1401,7 +1401,7 @@ bool VKGSRender::end_draw()
 		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
 	}
 
-	m_rtts.on_write(m_ctx->fb.layout.color_write_enabled, m_ctx->fb.layout.zeta_write_enabled);
+	res()->surface_cache.on_write(m_ctx->fb.layout.color_write_enabled, m_ctx->fb.layout.zeta_write_enabled);
 
 	return true;
 }
