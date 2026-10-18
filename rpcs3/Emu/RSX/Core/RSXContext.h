@@ -41,6 +41,9 @@ namespace rsx
 		frame_statistics_t stats{};
 		frame_skip_state frame_skip;
 
+		// Last draw timestamp as a monotonic tag. Mostly used to invalidate caches.
+		u64 ROP_sync_timestamp = 0;
+
 		// Display buffers registered by the lv2 driver. Per-context.
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{ 0 };
