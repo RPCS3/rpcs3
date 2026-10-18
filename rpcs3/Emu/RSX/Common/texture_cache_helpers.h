@@ -162,6 +162,7 @@ namespace rsx
 		}
 
 		static inline blit_target_properties get_optimal_blit_target_properties(
+			const rsx::context* ctx,
 			bool src_is_render_target,
 			address_range32 dst_range,
 			u32 dst_pitch,
@@ -174,10 +175,9 @@ namespace rsx
 			{
 				// Check if this is a blit to the output buffer
 				// TODO: This can be used to implement reference tracking to possibly avoid downscaling
-				const auto renderer = rsx::get_current_renderer();
-				for (u32 i = 0; i < renderer->get_context()->display_buffers_count; ++i)
+				for (u32 i = 0; i < ctx->display_buffers_count; ++i)
 				{
-					const auto& buffer = renderer->get_context()->display_buffers[i];
+					const auto& buffer = ctx->display_buffers[i];
 
 					if (!buffer.valid())
 					{
