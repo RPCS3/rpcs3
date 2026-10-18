@@ -118,9 +118,9 @@ struct cfg_root : cfg::node
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
 
 #if defined(HAVE_VULKAN)
-		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan };
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan, true };
 #else
-		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl, true };
 #endif
 
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720p };
@@ -192,7 +192,7 @@ struct cfg_root : cfg::node
 		{
 			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
 
-			cfg::string adapter{ this, "Adapter" };
+			cfg::string adapter{ this, "Adapter", "", true };
 			cfg::_enum<vk_exclusive_fs_mode> exclusive_fullscreen_mode{ this, "Exclusive Fullscreen Mode", vk_exclusive_fs_mode::unspecified};
 			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming", false };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };

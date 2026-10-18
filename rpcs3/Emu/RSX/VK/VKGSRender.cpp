@@ -30,6 +30,15 @@ namespace vk
 {
 	VkCompareOp get_compare_func(rsx::comparison_function op, bool reverse_direction = false);
 
+	void on_device_lost()
+	{
+		// Raise backend intr to replace the renderer
+		if (const auto rsxthr = rsx::get_current_renderer())
+		{
+			rsxthr->raise_backend_interrupt();
+		}
+	}
+
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format)
 	{
 		const VkComponentMapping o_rgb = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_ONE };
@@ -458,6 +467,8 @@ VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept 
 	}
 
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
+	m_device->set_error_handler(vk::on_device_lost);
+
 	vk::set_current_renderer(m_swapchain->get_device());
 	vk::init();
 
@@ -755,7 +766,16 @@ VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept 
 		};
 
 		// Run only if async compute can be used.
-		g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler, m_async_compute_dependency_info);
+		if (auto scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>())
+		{
+			// FIXME: This is really, really dumb.
+			// FXO does not support reinit. Maybe don't use it to hold sensitive things.
+			scheduler->reset(g_cfg.video.vk.asynchronous_scheduler, m_async_compute_dependency_info);
+		}
+		else
+		{
+			g_fxo->init<vk::AsyncTaskScheduler>(g_cfg.video.vk.asynchronous_scheduler, m_async_compute_dependency_info);
+		}
 	}
 
 	if (m_config.supports_host_gpu_labels)
@@ -878,6 +898,21 @@ VKGSRender::~VKGSRender()
 	if (m_display_handle)
 		XCloseDisplay(m_display_handle);
 #endif
+}
+
+std::string VKGSRender::logical_id() const
+{
+	return "Vulkan | " + m_device->gpu().get_name();
+}
+
+std::string VKGSRender::configured_logical_id() const
+{
+	if (g_cfg.video.renderer != video_renderer::vulkan)
+	{
+		return "";
+	}
+
+	return "Vulkan | " + g_cfg.video.vk.adapter.to_string();
 }
 
 bool VKGSRender::on_access_violation(rsx::context* ctx, u32 address, bool is_writing)
@@ -1293,6 +1328,13 @@ std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx
 	resources->texture_cache.initialize(*m_device, m_device->get_graphics_queue(), m_texture_upload_buffer_ring_info);
 
 	return resources;
+}
+
+rsx::device_status VKGSRender::check_device_status() const
+{
+	return (m_device && m_device->is_lost())
+		? rsx::device_status::lost
+		: rsx::device_status::ok;
 }
 
 void VKGSRender::on_bind_context(rsx::context* ctx)
