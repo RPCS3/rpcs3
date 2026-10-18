@@ -301,6 +301,10 @@ public:
 	// Misc
 	bool is_current_program_interpreted() const override;
 
+	// Identifiers
+	std::string logical_id() const override;
+	std::string configured_logical_id() const override;
+
 protected:
 	void clear() override;
 	void begin_draw() override;
@@ -314,6 +318,7 @@ protected:
 	void on_init() override;
 	void on_shutdown() override;
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
+	rsx::device_status check_device_status() const override;
 	void on_bind_context(rsx::context* ctx) override;
 	void on_unbind_context(rsx::context* ctx) override;
 	void on_release_context_resources(rsx::context* ctx) override;

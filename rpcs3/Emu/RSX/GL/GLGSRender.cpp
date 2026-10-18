@@ -63,6 +63,13 @@ GLGSRender::~GLGSRender()
 	}
 }
 
+std::string GLGSRender::configured_logical_id() const
+{
+	return (g_cfg.video.renderer == video_renderer::opengl)
+		? "OpenGL"
+		: "";
+}
+
 extern CellGcmContextData current_context;
 
 void GLGSRender::set_viewport()

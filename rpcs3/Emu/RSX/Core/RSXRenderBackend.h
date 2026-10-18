@@ -47,6 +47,12 @@ namespace rsx
 		bool supports_framebufferless_rendering; // Can rasterize without any attachments bound (e.g for occlusion queries)
 	};
 
+	enum class device_status
+	{
+		ok,
+		lost,
+	};
+
 	// Host renderer interface. Translates common state into work for the host accelerator.
 	// Backends are just graphics accelerator plugins. A backend never calls back up into rsx::thread.
 	class render_backend
@@ -68,6 +74,7 @@ namespace rsx
 		// Backend lifecycle management.
 		virtual void on_init() {}
 		virtual void on_shutdown() {}
+		virtual device_status check_device_status() const { return device_status::ok; }
 
 		// Create per-context resources.
 		virtual std::unique_ptr<context_resources> create_context_resources(context* ctx) = 0;
@@ -141,6 +148,10 @@ namespace rsx
 		// Inspection
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
 		virtual bool is_current_program_interpreted() const { return false; }
+
+		// Identifier
+		virtual std::string logical_id() const { return ""; };              // My current logical ID
+		virtual std::string configured_logical_id() const { return ""; }    // Decode the logical ID as configured
 
 	protected:
 		// Context switch notifications.

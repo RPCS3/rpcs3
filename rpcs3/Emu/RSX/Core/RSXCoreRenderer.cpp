@@ -410,7 +410,16 @@ namespace rsx
 			resolve_programs();
 			resolve_pipeline_state();
 
-			if (RSX(m_ctx)->renderer()->end_draw())
+			const auto renderer = RSX(m_ctx)->renderer();
+			const bool ended = renderer->end_draw();
+
+			if (renderer->check_device_status() != device_status::ok)
+			{
+				m_draw_lost = true;
+				return;
+			}
+
+			if (ended)
 			{
 				// The backend has seen this draw's change set. If the draw was not executed, changes keep accumulating.
 				m_ctx->draw_state.dirty.clear();
@@ -422,6 +431,21 @@ namespace rsx
 		}
 
 		post_draw_hook();
+	}
+
+	void core_renderer::on_renderer_changed()
+	{
+		if (!m_ctx->in_begin_end)
+		{
+			return;
+		}
+
+		begin();
+
+		if (std::exchange(m_draw_lost, false))
+		{
+			end();
+		}
 	}
 
 	void core_renderer::resolve_programs()
