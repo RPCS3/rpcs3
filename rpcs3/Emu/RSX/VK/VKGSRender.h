@@ -41,6 +41,7 @@ namespace vk
 	{
 		std::unique_ptr<vk::vertex_cache> vertex_cache;
 		vk::texture_cache texture_cache;
+		vk::surface_cache surface_cache;
 	};
 }
 
@@ -69,7 +70,6 @@ private:
 	const vs_binding_table_t* m_vs_binding_table = nullptr;
 	const fs_binding_table_t* m_fs_binding_table = nullptr;
 
-	vk::surface_cache m_rtts;
 
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
