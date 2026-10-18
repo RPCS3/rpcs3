@@ -2766,6 +2766,84 @@ public:
 				if (need_check || (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe))
 				{
 					check_state(baddr);
+
+					// Improve MFC command shuffling for specific short loops
+					bool is_self_jump = false;
+
+					for (u32 pred : bb.preds)
+					{
+						if (pred == baddr)
+						{
+							// If this block is a target of a backward branch (possibly loop), emit a check
+							is_self_jump = true;
+							break;
+						}
+					}
+
+					// They must contain a load, but not a astore
+					bool contains_store = false;
+					bool contains_load = false;
+					bool contains_floating = false;
+
+					if (is_self_jump && m_bbs.at(baddr).size < 16)
+					{
+						for (u32 iaddr = baddr, counter = 0; counter < m_bbs.at(baddr).size; iaddr += 4, counter++)
+						{
+							const u32 op = std::bit_cast<be_t<u32>>(func.data[(iaddr - start) / 4]);
+							const auto itype = g_spu_itype.decode(op);
+
+							if (itype & spu_itype::memory)
+							{
+								if (itype & spu_itype::zregmod)
+								{
+									contains_store = true;
+								}
+								else
+								{
+									contains_load = true;
+								}
+							}
+							else if (itype & spu_itype::floating)
+							{
+								contains_floating = true;
+							}
+						}
+					}
+
+					if (is_self_jump && !contains_store && !contains_floating && contains_load && m_bbs.at(baddr).size < 12 && g_cfg.core.mfc_transfers_shuffling)
+					{
+						const auto spu_work_limted = [](spu_thread* _this)
+						{
+							if (_this->interrupts_enabled)
+							{
+								// Undo changes
+								_this->mfc_queued_ops_timeout++;
+								return;
+							}
+
+							const bool work_left = _this->do_mfc();
+
+							if (work_left)
+							{
+								_this->mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
+							}
+						};
+
+						const auto mfc_ops = spu_ptr(&spu_thread::mfc_queued_ops_timeout);
+						const auto label_next = BasicBlock::Create(m_context, "ShuffleNext2", m_function);
+						const auto label_mfc_check = BasicBlock::Create(m_context, "MfcCheck2", m_function);
+						const auto label_mfc_ops = BasicBlock::Create(m_context, "MfcOps2", m_function);
+						const auto old_mfc_timeout = spu_context_attr(m_ir->CreateLoad(get_type<u64>(), mfc_ops));
+						m_ir->CreateCondBr(m_ir->CreateIsNull(old_mfc_timeout), label_next, label_mfc_check);
+						m_ir->SetInsertPoint(label_mfc_check);
+						const auto store_timeout = m_ir->CreateSub(old_mfc_timeout, m_ir->getInt64(1));
+						m_ir->CreateStore(store_timeout, mfc_ops);
+						m_ir->CreateCondBr(m_ir->CreateIsNull(store_timeout), label_mfc_ops, label_next);
+						m_ir->SetInsertPoint(label_mfc_ops);
+						call("spu_work_limited", +spu_work_limted, m_thread);
+						m_ir->CreateBr(label_next);
+						m_ir->SetInsertPoint(label_next);
+					}
 				}
 
 				const bool is_reduced_loop = m_inst_attrs[(baddr - start) / 4] == inst_attr::reduced_loop;
