@@ -5501,11 +5501,37 @@ public:
 				m_ir->SetInsertPoint(fail);
 
 				// Get MFC slot, redirect to invalid memory address
-				const auto slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
+				llvm::Value* slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
 				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
 				const auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
 				const auto ptr1 = _ptr(m_memptr, 0xffdeadf0);
-				const auto pmfc = m_ir->CreateSelect(m_ir->CreateICmpULT(slot, m_ir->getInt32(16)), ptr0, ptr1);
+				auto mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+
+				if (g_cfg.core.mfc_transfers_shuffling)
+				{
+					auto exec_mfc = [](spu_thread* _this)
+					{
+						_this->do_mfc(false);
+					};
+
+					const auto mfc_next = llvm::BasicBlock::Create(m_context, "MfcQueueNext", m_function);
+					const auto mfc_work = llvm::BasicBlock::Create(m_context, "MfcQueueWork", m_function);
+
+					m_ir->CreateCondBr(mfc_not_full, mfc_next, mfc_work);
+					m_ir->SetInsertPoint(mfc_work);
+					call("spu_mfc", +exec_mfc, m_thread);
+					const auto updated_slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
+					const auto old_slot = slot;
+					m_ir->CreateBr(mfc_next);
+					m_ir->SetInsertPoint(mfc_next);
+					const auto slot_phi = m_ir->CreatePHI(get_type<u32>(), 2);
+					slot_phi->addIncoming(updated_slot, mfc_work);
+					slot_phi->addIncoming(old_slot, fail);
+					slot = slot_phi;
+					mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+				}
+
+				const auto pmfc = m_ir->CreateSelect(mfc_not_full, ptr0, ptr1);
 				m_ir->CreateStore(ci, _ptr(pmfc, &spu_mfc_cmd::cmd));
 
 				switch (u64 cmd = ci->getZExtValue())
