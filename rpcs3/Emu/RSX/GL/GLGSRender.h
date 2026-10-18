@@ -97,8 +97,6 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 	gl::shader_interpreter m_shader_interpreter;
 
-
-
 	gl::buffer_view m_persistent_stream_view;
 	gl::buffer_view m_volatile_stream_view;
 	std::unique_ptr<gl::texture> m_gl_persistent_stream_buffer;
@@ -175,6 +173,10 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 public:
 	GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept;
 	virtual ~GLGSRender();
+
+	// Identifiers
+	std::string logical_id() const override { return "OpenGL"; }
+	std::string configured_logical_id() const override;
 
 private:
 	// Return element to draw and in case of indexed draw index type and offset in index buffer

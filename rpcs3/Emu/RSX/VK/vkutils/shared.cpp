@@ -6,11 +6,32 @@
 #include <signal.h>
 #endif
 
+extern u64 get_system_time();
+
 namespace vk
 {
 	extern void print_debug_markers();
 
-	std::string retrieve_device_fault_info()
+	// Track the timestamp of the last GPU reset if any.
+	static atomic_t<u64> s_last_device_reset = 0ull;
+	constexpr u64 c_min_time_between_resets_us = 10 * 1000'000ull;
+
+	static bool can_device_recover()
+	{
+		// Avoid endless reset loop
+		const u64 now = get_system_time();
+		const u64 prev = s_last_device_reset.exchange(now);
+
+		if (prev && (now - prev) < c_min_time_between_resets_us)
+		{
+			return false;
+		}
+
+		s_last_device_reset = now;
+		return true;
+	}
+
+	static std::string retrieve_device_fault_info()
 	{
 		if (!g_render_device || !g_render_device->get_extended_device_fault_support())
 		{
@@ -199,10 +220,16 @@ namespace vk
 		{
 		default:
 		case 0:
-			print_debug_markers();
+			if (!g_render_device->device_lost()) break;
 
+			print_debug_markers();
 			if (!message.empty()) message += "\n\n";
-			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
+
+			if (!can_device_recover())
+				fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
+
+			rsx_log.error("%sVulkan device lost, the renderer will be replaced: %s%s", message, error_message, src_loc);
+			break;
 		case 1:
 			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc);
 			break;

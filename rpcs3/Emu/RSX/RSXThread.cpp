@@ -729,6 +729,7 @@ namespace rsx
 		const auto create_renderer = [this]()
 		{
 			m_renderer = make_render_backend(g_cfg.video.renderer, m_ctx, &m_display_out);
+			m_renderer_info = m_renderer->logical_id();
 		};
 
 		if (!_ar)
@@ -1042,6 +1043,60 @@ namespace rsx
 		m_renderer->on_shutdown();
 	}
 
+	void thread::reset_renderer(bool device_lost)
+	{
+		const std::string luid = m_renderer->configured_logical_id();
+		rsx_log.warning("Replacing the renderer (%s -> %s)%s",
+			m_renderer_info, 
+			luid,
+			device_lost ? " after a device loss" : "");
+
+		// Offloader jobs can reference backend memory
+		while (!g_fxo->get<rsx::dma_manager>().sync())
+		{
+			do_local_task(rsx::FIFO::state::lock_wait);
+		}
+
+		if (!device_lost)
+		{
+			// The device still works: finish any pending work
+			if (m_ctx->cond_render.hw_cond_active)
+			{
+				end_conditional_rendering();
+			}
+
+			zcull_ctrl->sync(this);
+		}
+
+		// Queries still in flight complete as "always visible"
+		zcull_ctrl->set_provider(nullptr);
+
+		release_backend_resources();
+		m_renderer->on_shutdown();
+		m_renderer.reset();
+
+		m_renderer = make_render_backend(g_cfg.video.renderer, m_ctx, &m_display_out);
+		m_renderer_info = m_renderer->logical_id();
+		m_renderer->on_init();
+		create_backend_resources();
+
+		// The new backend has seen nothing yet
+		for_each_context([](context* ctx)
+		{
+			ctx->graphics_state.set(pipeline_state::all_dirty);
+			ctx->draw_state.dirty.set(draw_state_t::group::all);
+			ctx->draw_state.pending.set(draw_state_t::group::all);
+			ctx->textures.fragment_textures_dirty = (1u << limits::fragment_textures_count) - 1;
+			ctx->textures.vertex_textures_dirty = (1u << limits::vertex_textures_count) - 1;
+		});
+
+		zcull_ctrl->set_provider(m_renderer->occlusion_queries());
+
+		m_core.on_renderer_changed();
+
+		rsx_log.success("Renderer replaced");
+	}
+
 	void thread::create_backend_resources()
 	{
 		for_each_context([this](context* ctx)
@@ -1104,6 +1159,17 @@ namespace rsx
 
 	void thread::do_local_task(FIFO::state state)
 	{
+		// Check if we need to replace the backend
+		if (state != FIFO::state::lock_wait)
+		{
+			if (const bool device_lost = m_renderer->check_device_status() != device_status::ok;
+				device_lost || m_renderer_switch_requested)
+			{
+				m_renderer_switch_requested = false;
+				reset_renderer(device_lost);
+			}
+		}
+
 		if (!m_renderer->on_local_task(state))
 		{
 			// The backend is busy and cannot service the rest of the task right now
@@ -1996,4 +2062,11 @@ namespace rsx
 		m_ctx->stats = {};
 		m_profiler.enabled = !!g_cfg.video.debug_overlay;
 	}
+
+	void thread::request_renderer_update()
+	{
+		m_renderer_switch_requested = true;
+		raise_backend_interrupt();
+	}
+
 } // namespace rsx

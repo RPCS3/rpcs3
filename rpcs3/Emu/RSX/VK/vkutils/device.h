@@ -5,6 +5,8 @@
 #include "pipeline_binding_table.h"
 #include "memory.h"
 
+#include <util/atomic.hpp>
+
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -154,6 +156,10 @@ namespace vk
 		u32 m_present_queue_family = 0;
 		u32 m_transfer_queue_family = 0;
 
+		// GPU reset and recovery
+		mutable atomic_t<bool> m_is_lost = false;
+		std::function<void()> m_error_handler{};
+
 		void dump_debug_info(
 			const std::vector<const char*>& requested_extensions,
 			const VkPhysicalDeviceFeatures& requested_features) const;
@@ -205,6 +211,10 @@ namespace vk
 		u32 get_transfer_queue_family() const { return m_transfer_queue_family; }
 
 		mem_allocator_base* get_allocator() const { return m_allocator.get(); }
+
+		bool device_lost() const;  // Returns true if the device was valid before the call.
+		bool is_lost() const { return m_is_lost; }
+		void set_error_handler(std::function<void()> callback) { m_error_handler = callback; }
 
 		operator VkDevice() const { return dev; }
 	};

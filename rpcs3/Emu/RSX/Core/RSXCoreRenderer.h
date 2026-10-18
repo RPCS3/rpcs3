@@ -36,11 +36,17 @@ namespace rsx
 		// Resolves the program state again from the new descriptors. The backend keeps the programs it has bound.
 		void refresh_program_state();
 
+		// Renderer configuration has changed. Replace the backend.
+		void on_renderer_changed();
+
 	private:
 		context* m_ctx = nullptr;
 
 		// GRAPH unit: framebuffer and program resolution
 		graph_engine m_graph;
+
+		// Partial draw clause completion before device lost event
+		bool m_draw_lost = false;
 
 		bool should_skip_draw() const;
 		void decode_draw_state();

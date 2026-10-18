@@ -106,6 +106,10 @@ namespace rsx
 		// Host renderer. Created with the thread and destroyed with it.
 		std::unique_ptr<render_backend> m_renderer;
 
+		// Renderer config. Can indicate that we should replace the current one.
+		std::string m_renderer_info{};
+		bool m_renderer_switch_requested = false;
+
 		// Host thread running cpu_task, recorded when it starts
 		atomic_t<thread_base*> m_host_thread = nullptr;
 
@@ -191,6 +195,8 @@ namespace rsx
 		}
 
 		render_backend* renderer() const { return m_renderer.get(); }
+		void request_renderer_update();
+
 		core_renderer& core() { return m_core; }
 		display_output& display() { return m_display_out; }
 		display_engine& display_ctrl() { return m_display; }
@@ -290,6 +296,9 @@ namespace rsx
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 
+		// id
+		std::string_view renderer_info() const { return m_renderer_info; }
+
 	private:
 		shared_mutex m_mtx_task;
 
@@ -298,6 +307,9 @@ namespace rsx
 		// Render backend resources of every context
 		void create_backend_resources();
 		void release_backend_resources();
+
+		// Destroy and rebuild the backend renderer.
+		void reset_renderer(bool device_lost);
 
 	public:
 

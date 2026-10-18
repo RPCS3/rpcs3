@@ -48,6 +48,9 @@ namespace vk
 		AsyncTaskScheduler(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency);
 		~AsyncTaskScheduler();
 
+		// Reuse the scheduler with a new renderer.
+		void reset(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency);
+
 		command_buffer* get_current();
 		event* get_primary_sync_label();
 		semaphore* get_sema();
