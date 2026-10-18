@@ -166,7 +166,7 @@ void screenshot_manager_dialog::reload()
 			m_combo_game_filter->addItem(text, dirname);
 		}
 		const int new_index = m_combo_game_filter->findData(old_filter);
-		m_combo_game_filter->setCurrentIndex(new_index >= 0 ? new_index : 0);
+		m_combo_game_filter->setCurrentIndex(std::max(0, new_index));
 		m_combo_game_filter->blockSignals(false);
 	});
 

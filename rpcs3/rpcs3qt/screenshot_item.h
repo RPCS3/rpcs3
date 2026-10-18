@@ -18,17 +18,16 @@ public:
 	void polish_style() override;
 
 private:
+	void show_context_menu(const QPoint& global_pos);
+	void delete_screenshot();
+
 	QLabel* m_label{};
 	QString m_icon_path;
 	QSize m_icon_size;
 	std::unique_ptr<QThread> m_thread;
 
-	void show_context_menu(const QPoint& global_pos);
-	void delete_screenshot();
-
 protected:
 	void paintEvent(QPaintEvent* event) override;
-	void mousePressEvent(QMouseEvent* ev) override;
 	void mouseDoubleClickEvent(QMouseEvent* ev) override;
 	void contextMenuEvent(QContextMenuEvent* ev) override;
 	void keyPressEvent(QKeyEvent* ev) override;

@@ -31,11 +31,8 @@ screenshot_item::screenshot_item(QWidget* parent, QSize icon_size, const QString
 		{
 			thread_base::set_name("Screenshot item");
 
-			const QPixmap src_icon(m_icon_path);
-			if (src_icon.isNull())
-			{
-				return;
-			}
+			const QPixmap src_icon = QPixmap(m_icon_path);
+			if (src_icon.isNull()) return;
 
 			const QPixmap pixmap = gui::utils::get_aligned_pixmap(src_icon, m_icon_size, 1.0, Qt::SmoothTransformation, gui::utils::align_h::center, gui::utils::align_v::center);
 			Q_EMIT signal_icon_update(pixmap);
@@ -99,29 +96,11 @@ void screenshot_item::update_icon(const QPixmap& pixmap)
 	}
 }
 
-void screenshot_item::mousePressEvent(QMouseEvent* ev)
-{
-	flow_widget_item::mousePressEvent(ev);
-
-	if (!ev)
-	{
-		return;
-	}
-
-	if (ev->button() == Qt::LeftButton)
-	{
-		setFocus();
-	}
-}
-
 void screenshot_item::mouseDoubleClickEvent(QMouseEvent* ev)
 {
 	flow_widget_item::mouseDoubleClickEvent(ev);
 
-	if (!ev)
-	{
-		return;
-	}
+	if (!ev) return;
 
 	if (ev->button() == Qt::LeftButton)
 	{
@@ -136,7 +115,6 @@ void screenshot_item::contextMenuEvent(QContextMenuEvent* ev)
 		return;
 	}
 
-	setFocus();
 	show_context_menu(ev->globalPos());
 }
 
