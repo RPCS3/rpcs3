@@ -235,7 +235,8 @@ namespace rsx
 
 	void display_engine::flip(const display_flip_info_t& info)
 	{
-		const bool presented = m_pump->renderer()->present_frame(info);
+		auto renderer = m_pump->renderer();
+		const bool presented = renderer->present_frame(info);
 
 		m_pump->get_context()->eng_interrupt_mask.clear(rsx::display_interrupt);
 
@@ -266,7 +267,13 @@ namespace rsx
 
 		if (presented)
 		{
-			m_pump->renderer()->post_present();
+			renderer->post_present();
+		}
+
+		// Check for display config change
+		if (m_pump->renderer_info() != renderer->configured_logical_id())
+		{
+			m_pump->request_renderer_update();
 		}
 	}
 
