@@ -1,23 +1,24 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
 #include "overlay_user_list_dialog.h"
-#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/System.h"
+#include "Emu/NP/np_avatar.h"
+#include "Emu/Cell/Modules/sceNp.h"
 
 namespace rsx
 {
 	namespace overlays
 	{
-		user_list_dialog::user_list_entry::user_list_entry(std::string_view username, std::string_view user_id, const std::string& avatar_path)
+		user_list_dialog::user_list_entry::user_list_entry(std::string_view username, std::string_view user_id, const std::vector<u8>& avatar_png)
 		{
 			std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 			image->set_size(160, 110);
 			image->set_padding(36, 36, 11, 11); // Square image, 88x88
 
-			if (fs::exists(avatar_path))
+			if (!avatar_png.empty())
 			{
-				icon_data = std::make_unique<image_info>(avatar_path);
+				icon_data = std::make_unique<image_info>(avatar_png);
 				static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 			}
 			else
@@ -203,10 +204,10 @@ namespace rsx
 						selected_index = static_cast<s32>(entries.size());
 					}
 
-					// Let's assume there are 26 avatar pngs (like in my installation)
-					const std::string avatar_path = g_cfg_vfs.get_dev_flash() + fmt::format("vsh/resource/explore/user/%03d.png", id % 26);
+					// The avatar chosen in the User Manager, or the default VSH user icon
+					const std::vector<u8> avatar_png = np::avatar::get_user_image(user_id, SCE_NP_AVATAR_SIZE_LARGE);
 					const std::string username = file.to_string();
-					std::unique_ptr<overlay_element> entry = std::make_unique<user_list_entry>(username, user_id, avatar_path);
+					std::unique_ptr<overlay_element> entry = std::make_unique<user_list_entry>(username, user_id, avatar_png);
 					entries.emplace_back(std::move(entry));
 					m_entry_ids.emplace_back(id);
 				}

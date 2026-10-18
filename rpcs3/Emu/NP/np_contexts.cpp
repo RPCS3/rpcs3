@@ -197,6 +197,10 @@ bool destroy_lookup_transaction_context(s32 ctx_id)
 {
 	return idm::remove<lookup_transaction_ctx>(static_cast<u32>(ctx_id));
 }
+shared_ptr<lookup_transaction_ctx> get_lookup_transaction_context(s32 ctx_id)
+{
+	return idm::get_unlocked<lookup_transaction_ctx>(static_cast<u32>(ctx_id));
+}
 
 commerce2_ctx::commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
 {

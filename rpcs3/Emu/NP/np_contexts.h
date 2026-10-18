@@ -238,9 +238,11 @@ struct lookup_transaction_ctx
 	SAVESTATE_INIT_POS(29);
 
 	s32 lt_ctx = 0;
+	atomic_t<s32> result = 0;
 };
 s32 create_lookup_transaction_context(s32 lt_ctx);
 bool destroy_lookup_transaction_context(s32 ctx_id);
+shared_ptr<lookup_transaction_ctx> get_lookup_transaction_context(s32 ctx_id);
 
 struct commerce2_ctx
 {

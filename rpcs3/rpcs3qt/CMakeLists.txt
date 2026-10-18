@@ -3,6 +3,7 @@ add_library(rpcs3_ui STATIC
     anaglyph_settings_dialog.cpp
     auto_pause_settings_dialog.cpp
     auto_scroll_label.cpp
+    avatar_selection_dialog.cpp
     basic_mouse_settings_dialog.cpp
     breakpoint_handler.cpp
     breakpoint_list.cpp

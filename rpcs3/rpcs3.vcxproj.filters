@@ -768,10 +768,19 @@
     <ClCompile Include="rpcs3qt\screenshot_manager_dialog.cpp">
       <Filter>Gui\screenshot manager</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\avatar_selection_dialog.cpp">
+      <Filter>Gui\user accounts</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_avatar_selection_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_avatar_selection_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\sound_effect_manager_dialog.cpp">
@@ -1797,6 +1806,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_manager_dialog.h">
       <Filter>Gui\screenshot manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\avatar_selection_dialog.h">
+      <Filter>Gui\user accounts</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
