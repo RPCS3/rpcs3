@@ -5469,6 +5469,18 @@ void spu_thread::set_interrupt_status(bool enable)
 		// Detect enabling interrupts with events masked
 		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
+			const spu_decoder_type decoder = g_cfg.core.spu_decoder;
+
+			if (decoder != spu_decoder_type::_static && decoder != spu_decoder_type::dynamic && decoder != spu_decoder_type::llvm)
+			{
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use [%s] SPU decoder", mask, spu_decoder_type::llvm);
+			}
+
+			if (!g_cfg.core.mfc_transfers_shuffling)
+			{
+				fmt::throw_exception("Enable \"Delay Each Odd MFC comman in advanced\" tab.");
+			}
+
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
 
 			// Process interrupts in cpu_work()
@@ -6541,6 +6553,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			{
 				spu_runtime::g_escape(this);
 			}
+		}
+
+		if (!mfc_queued_ops_timeout && interrupts_enabled && value & SPU_EVENT_TM && g_cfg.core.mfc_transfers_shuffling)
+		{
+			mfc_queued_ops_timeout = utils::aligned_div<u32>(g_cfg.core.mfc_shuffling_instructions, 10);
 		}
 
 		return true;
