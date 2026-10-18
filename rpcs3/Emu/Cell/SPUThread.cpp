@@ -2917,6 +2917,11 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 
 bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 {
+	if (args.size == 0)
+	{
+		return true;
+	}
+
 	perf_meter<"MFC_LIST"_u64> perf0;
 
 	// Amount of elements to fetch in one go
