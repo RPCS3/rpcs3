@@ -212,8 +212,6 @@ namespace rsx
 
 		bool send_event(u64, u64, u64);
 
-		u64 ROP_sync_timestamp = 0;
-
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 

@@ -446,7 +446,7 @@ void GLGSRender::on_init()
 	}
 }
 
-std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* /*ctx*/)
+std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* ctx)
 {
 	auto resources = std::make_unique<gl::context_resources>();
 
@@ -455,6 +455,7 @@ std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx
 	else
 		resources->vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
+	resources->texture_cache.set_context(ctx);
 	resources->texture_cache.initialize();
 
 	return resources;

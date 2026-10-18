@@ -687,7 +687,7 @@ namespace rsx
 
 		m_ctx->graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
-		RSX(m_ctx)->ROP_sync_timestamp = rsx::get_shared_tag();
+		m_ctx->ROP_sync_timestamp = rsx::get_shared_tag();
 
 		RSX(m_ctx)->m_draw_processor.clear_push_buffers();
 
