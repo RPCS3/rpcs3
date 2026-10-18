@@ -4987,12 +4987,12 @@ bool spu_thread::process_mfc_cmd()
 
 					mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
 				}
+			}
 
-				if (g_cfg.core.mfc_transfers_shuffling < mfc_size + 1)
-				{
-					// Cannot be postponed anymore
-					do_mfc_now = true;
-				}
+			if (g_cfg.core.mfc_transfers_shuffling < mfc_size + 1)
+			{
+				// Cannot be postponed anymore
+				do_mfc_now = true;
 			}
 
 			mfc_queue[mfc_size++] = ch_mfc_cmd;

@@ -61,7 +61,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_prof{ this, "SPU Profiler", false };
 		cfg::_bool ppu_prof{ this, "PPU Profiler", false };
 		cfg::uint<0, 16> mfc_transfers_shuffling{ this, "MFC Commands Shuffling Limit", 0 };
-		cfg::uint<5, 5000> mfc_shuffling_instructions{ this, "MFC Shuffling Instructions Decrementer", 100, true };
+		cfg::uint<5, 400> mfc_shuffling_instructions{ this, "MFC Shuffle Instructions Decrementer", 30, true };
 		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
 		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "SPU XFloat Accuracy", xfloat_accuracy::approximate, false };
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
