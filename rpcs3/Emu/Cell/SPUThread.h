@@ -689,13 +689,12 @@ public:
 	u32 mfc_barrier = -1;
 	u32 mfc_fence = -1;
 
-	// Timestamp of the first postponed command (transfers shuffling related)
-	u64 mfc_last_timestamp = 0;
-
 	// MFC proxy command data
 	spu_mfc_cmd mfc_prxy_cmd{};
 	shared_mutex mfc_prxy_mtx;
 	atomic_t<u32> mfc_prxy_mask = 0;
+
+	u64 mfc_queued_ops_timeout = 0;
 
 	// Tracks writes to MFC proxy command data
 	union

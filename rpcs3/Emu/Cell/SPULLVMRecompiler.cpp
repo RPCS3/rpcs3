@@ -1809,6 +1809,45 @@ public:
 		u32 check_iterations = 0;
 		m_ir->SetInsertPoint(label_test);
 
+		if (g_cfg.core.mfc_transfers_shuffling)
+		{
+			const auto spu_work = [](spu_thread* _this)
+			{
+				bool work_left = _this->do_mfc();
+
+				if (_this->interrupts_enabled)
+				{
+					_this->get_events(SPU_EVENT_TM);
+					work_left = true;
+				}
+
+				if (work_left)
+				{
+					_this->mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
+				}
+
+				if (_this->check_mfc_interrupts(_this->pc))
+				{
+					spu_runtime::g_escape(_this);
+				}
+			};
+
+			const auto mfc_ops = spu_ptr(&spu_thread::mfc_queued_ops_timeout);
+			const auto label_next = BasicBlock::Create(m_context, "ShuffleNext", m_function);
+			const auto label_mfc_check = BasicBlock::Create(m_context, "MfcCheck", m_function);
+			const auto label_mfc_ops = BasicBlock::Create(m_context, "MfcOps", m_function);
+			const auto old_mfc_timeout = spu_context_attr(m_ir->CreateLoad(get_type<u64>(), mfc_ops));
+			m_ir->CreateCondBr(m_ir->CreateIsNull(old_mfc_timeout), label_next, label_mfc_check);
+			m_ir->SetInsertPoint(label_mfc_check);
+			const auto store_timeout = m_ir->CreateSub(old_mfc_timeout, m_ir->getInt64(1));
+			m_ir->CreateStore(store_timeout, mfc_ops);
+			m_ir->CreateCondBr(m_ir->CreateIsNull(store_timeout), label_mfc_ops, label_next);
+			m_ir->SetInsertPoint(label_mfc_ops);
+			call("spu_work", +spu_work, m_thread);
+			m_ir->CreateBr(label_next);
+			m_ir->SetInsertPoint(label_next);
+		}
+
 		// Set block hash for profiling (if enabled)
 		if ((g_cfg.core.spu_prof || g_cfg.core.spu_debug) && g_cfg.core.spu_verification)
 			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr(&spu_thread::block_hash));
@@ -3731,7 +3770,7 @@ public:
 										}
 									}
 
-									spu_log.trace("Postponed r%u store from block 0x%x (single)", i, block_q[bi].first);
+									spu_log.warning("Postponed r%u store from block 0x%x (single)", i, block_q[bi].first);
 								}
 								else
 								{
@@ -3772,7 +3811,7 @@ public:
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
 
-										spu_log.trace("Postponed r%u store from block 0x%x (multiple)", i, block_q[bi].first);
+										spu_log.warning("Postponed r%u store from block 0x%x (multiple)", i, block_q[bi].first);
 									}
 
 									ins = edge->getTerminator();
@@ -4680,6 +4719,30 @@ public:
 		}
 		case MFC_RdTagStat:
 		{
+			if (g_cfg.core.mfc_transfers_shuffling)
+			{
+				// Execute shuffled MFC commands before reading (see spu_thread::get_ch_value)
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fall_rdch = llvm::BasicBlock::Create(m_context, "", m_function);;
+				const auto llvm_rdch = llvm::BasicBlock::Create(m_context, "", m_function);;
+				m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size))), fall_rdch, llvm_rdch, m_md_unlikely);
+				m_ir->SetInsertPoint(llvm_rdch);
+				const auto get_rdch_val = get_rdch(op, ::offset32(&spu_thread::ch_tag_stat), false);
+				const auto after_block = m_ir->GetInsertBlock();
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(fall_rdch);
+				ensure_gpr_stores();
+				update_pc();
+				const auto fall_val = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(MFC_RdTagStat));
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(next);
+				const auto phi_ch_val = m_ir->CreatePHI(get_type<u32>(), 2);
+				phi_ch_val->addIncoming(get_rdch_val, after_block);
+				phi_ch_val->addIncoming(fall_val, fall_rdch);
+				res.value = phi_ch_val;
+				break;
+			}
+
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_tag_stat), false);
 			break;
 		}
@@ -5188,7 +5251,7 @@ public:
 					break;
 				}
 
-				bool must_use_cpp_functions = !!g_cfg.core.spu_accurate_dma;
+				bool must_use_cpp_functions = !!g_cfg.core.spu_accurate_dma || !!g_cfg.core.mfc_transfers_shuffling;
 
 				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); g_cfg.core.rsx_fifo_accuracy || g_cfg.video.strict_rendering_mode || /*!g_use_rtm*/ true)
 				{
