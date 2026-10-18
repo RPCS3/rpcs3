@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "avatar_selection_dialog.h"
+#include "qt_utils.h"
 
 #include "Emu/NP/np_avatar.h"
 #include "Emu/Cell/Modules/sceNp.h"
@@ -106,8 +107,7 @@ avatar_selection_dialog::avatar_selection_dialog(const std::string& user_id, QWi
 
 avatar_selection_dialog::~avatar_selection_dialog()
 {
-	m_watcher.cancel();
-	m_watcher.waitForFinished();
+	gui::utils::stop_future_watcher(m_watcher, true);
 }
 
 QPixmap avatar_selection_dialog::get_user_avatar(const std::string& user_id, int size)
