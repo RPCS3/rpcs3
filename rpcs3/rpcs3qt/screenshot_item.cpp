@@ -23,6 +23,7 @@ screenshot_item::screenshot_item(QWidget* parent, QSize icon_size, const QString
 {
 	setObjectName("screenshot_item");
 	setFocusPolicy(Qt::StrongFocus);
+	setAttribute(Qt::WA_Hover); // We need to enable the hover attribute to ensure that hover events are handled.
 	setToolTip(icon_path);
 
 	cb_on_first_visibility = [this]()
@@ -43,15 +44,13 @@ screenshot_item::screenshot_item(QWidget* parent, QSize icon_size, const QString
 	m_label = new QLabel(this);
 	m_label->setObjectName("screenshot_item_label");
 	m_label->setAttribute(Qt::WA_TransparentForMouseEvents);
+	m_label->setScaledContents(true);
 	m_label->setPixmap(placeholder);
-	m_label->setFixedSize(m_icon_size);
 
 	QVBoxLayout* layout = new QVBoxLayout(this);
 	layout->setContentsMargins(3, 3, 3, 3);
 	layout->setAlignment(Qt::AlignCenter);
 	layout->addWidget(m_label);
-
-	setFixedSize(m_icon_size + QSize(6, 6));
 
 	connect(this, &screenshot_item::signal_icon_update, this, &screenshot_item::update_icon, Qt::ConnectionType::QueuedConnection);
 }
@@ -68,24 +67,6 @@ void screenshot_item::polish_style()
 {
 	flow_widget_item::polish_style();
 	update();
-}
-
-void screenshot_item::paintEvent(QPaintEvent* event)
-{
-	flow_widget_item::paintEvent(event);
-
-	if (selected || hasFocus())
-	{
-		QPainter painter(this);
-		painter.fillRect(rect(), palette().color(QPalette::Highlight));
-	}
-	else if (m_hover)
-	{
-		QPainter painter(this);
-		QColor hover_color = palette().color(QPalette::Highlight);
-		hover_color.setAlpha(80);
-		painter.fillRect(rect(), hover_color);
-	}
 }
 
 void screenshot_item::update_icon(const QPixmap& pixmap)
