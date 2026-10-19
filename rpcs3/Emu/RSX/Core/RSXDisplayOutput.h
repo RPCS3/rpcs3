@@ -1,6 +1,7 @@
 #pragma once
 
 #include <util/types.hpp>
+#include "Emu/system_config_types.h"
 
 class GSFrameBase;
 
@@ -28,6 +29,9 @@ namespace rsx
 
 		// The RSX thread has finished. Hides the window unless it is kept for the next run.
 		void on_exit();
+
+		// Notification event when the renderer has changed. Ensures that the open window can support the requested renderer.
+		void prepare_game_window(video_renderer type);
 
 		// Refresh rate of the display the window is on.
 		f64 refresh_rate() const;
