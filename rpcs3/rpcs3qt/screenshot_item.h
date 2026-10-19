@@ -27,7 +27,6 @@ private:
 	std::unique_ptr<QThread> m_thread;
 
 protected:
-	void paintEvent(QPaintEvent* event) override;
 	void mouseDoubleClickEvent(QMouseEvent* ev) override;
 	void contextMenuEvent(QContextMenuEvent* ev) override;
 	void keyPressEvent(QKeyEvent* ev) override;
