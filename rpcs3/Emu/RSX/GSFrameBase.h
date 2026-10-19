@@ -14,6 +14,11 @@ public:
 
 	virtual void close() = 0;
 	virtual void reset() = 0;
+
+	// Workaround. At this time, OpenGL window management is handled by QT.
+	// That means we cannot bind an OpenGL context to an existing window, so one has to be specially created for it.
+	virtual bool supports_opengl() const = 0;
+
 	virtual bool shown() = 0;
 	virtual void hide() = 0;
 	virtual void show() = 0;

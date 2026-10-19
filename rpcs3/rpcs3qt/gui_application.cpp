@@ -838,7 +838,17 @@ void gui_application::create_callbacks()
 			m_game_window = nullptr;
 		}
 	};
+
 	g_emu_callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
+	g_emu_callbacks.replace_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
+	{
+		// Close and reopen the game window
+		g_emu_callbacks.close_gs_frame();
+		auto frame = get_gs_frame();
+		attach_input_to_game_window();
+		return frame;
+	};
+
 	g_emu_callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	g_emu_callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	g_emu_callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
@@ -859,6 +869,7 @@ void gui_application::create_callbacks()
 			OnEnableDiscEject(enabled);
 		});
 	};
+
 	g_emu_callbacks.enable_disc_insert = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()

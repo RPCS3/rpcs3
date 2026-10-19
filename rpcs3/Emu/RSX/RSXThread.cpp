@@ -1075,6 +1075,9 @@ namespace rsx
 		m_renderer->on_shutdown();
 		m_renderer.reset();
 
+		// Prep the game window for the incoming renderer.
+		m_display_out.prepare_game_window(g_cfg.video.renderer);
+
 		m_renderer = make_render_backend(g_cfg.video.renderer, m_ctx, &m_display_out);
 		m_renderer_info = m_renderer->logical_id();
 		m_renderer->on_init();

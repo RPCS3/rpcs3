@@ -44,6 +44,9 @@ public:
 
 	mouse_gyro_handler& get_mouse_gyro() { return m_mouse_gyro; }
 
+	// Re-attach input to new window in case the game window was replaced.
+	void set_target_window(void* window);
+
 protected:
 	void Init();
 	void InitLddPad(u32 handle, const u32* port_status);

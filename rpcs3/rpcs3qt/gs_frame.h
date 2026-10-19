@@ -84,6 +84,9 @@ public:
 
 	void update_title(double fps = 0.0) override;
 
+	// Properties
+	bool supports_opengl() const override { return false; }
+
 protected:
 	video_renderer m_renderer;
 	Visibility m_startup_visibility = Visibility::Hidden;
