@@ -4,6 +4,7 @@
 #include "category.h"
 
 #include "Emu/System.h"
+#include "Utilities/File.h"
 
 #include <QCheckBox>
 #include <QCoreApplication>
@@ -621,17 +622,17 @@ QStringList gui_settings::GetStylesheetEntries() const
 	QStringList res = gui::utils::get_dir_entries(QDir(GetSettingsDir()), name_filter);
 #if !defined(_WIN32)
 	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
+	res.append(gui::utils::get_dir_entries(QString::fromStdString(fs::get_resources_dir()) + "/GuiConfigs/", name_filter));
 #ifdef __APPLE__
-	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/", name_filter));
 #else
-	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/", name_filter));
 #ifdef DATADIR
 	const QString data_dir = (DATADIR);
 	res.append(gui::utils::get_dir_entries(data_dir + "/GuiConfigs/", name_filter));
 #endif
 #endif
 	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/GuiConfigs/", name_filter));
-	res.append(gui::utils::get_dir_entries(platformStylesheetDir, name_filter));
 	res.removeDuplicates();
 #endif
 	res.sort();

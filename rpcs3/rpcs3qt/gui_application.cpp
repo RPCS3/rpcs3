@@ -1312,6 +1312,7 @@ void gui_application::OnChangeStyleSheetRequest()
 		locs.push_back(m_gui_settings->GetSettingsDir());
 
 #if !defined(_WIN32)
+		locs.push_back(QString::fromStdString(fs::get_resources_dir()) + "/GuiConfigs/");
 #ifdef __APPLE__
 		locs.push_back(QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/");
 #else

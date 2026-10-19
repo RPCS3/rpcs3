@@ -607,10 +607,8 @@ void main_window::BootTest()
 
 #ifdef _WIN32
 	const QString path_tests = QString::fromStdString(fs::get_config_dir()) + "/test/";
-#elif defined(__linux__)
-	const QString path_tests = QCoreApplication::applicationDirPath() + "/../share/rpcs3/test/";
 #else
-	const QString path_tests = QCoreApplication::applicationDirPath() + "/../Resources/test/";
+	const QString path_tests = QString::fromStdString(fs::get_resources_dir()) + "/test/";
 #endif
 
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_tests, tr(

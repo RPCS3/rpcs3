@@ -639,11 +639,21 @@ namespace fs
 		}
 	};
 
-	// Get executable path
+	// Get executable path (points to the appimage on linux or the app bundle on macos)
 	std::string get_executable_path();
 
-	// Get executable containing directory
+	// Get directory containing executable
 	std::string get_executable_dir();
+
+	// Get real executable path (points to the binary inside the appimage on linux or app bundle on macos)
+	const std::string& get_real_executable_path();
+
+	// Get directory containing real executable
+	const std::string& get_real_executable_dir();
+
+#ifndef _WIN32
+	const std::string& get_resources_dir();
+#endif
 
 	// Get configuration directory. Set get_config_subdirectory to true to get the nested config dir on windows.
 	const std::string& get_config_dir(bool get_config_subdirectory = false);

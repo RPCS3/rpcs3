@@ -175,6 +175,10 @@ static fs::error to_error(DWORD e)
 #include <sys/mount.h>
 #endif
 
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/sysctl.h>
+#endif
+
 static fs::error to_error(int e)
 {
 	switch (e)
@@ -2455,7 +2459,7 @@ std::string fs::get_executable_path()
 		GetModuleFileNameW(nullptr, buffer.data(), size);
 		return wchar_to_utf8(buffer.data());
 #elif defined(__APPLE__)
-		char bin_path[PATH_MAX];
+		char bin_path[PATH_MAX]{};
 		uint32_t bin_path_size = sizeof(bin_path);
 		if (_NSGetExecutablePath(bin_path, &bin_path_size) != 0)
 		{
@@ -2474,7 +2478,7 @@ std::string fs::get_executable_path()
 
 		std::cout << "No AppImage path found, checking for executable" << std::endl;
 
-		char exe_path[PATH_MAX];
+		char exe_path[PATH_MAX]{};
 		const ssize_t len = ::readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
 
 		if (len == -1)
@@ -2502,7 +2506,7 @@ std::string fs::get_executable_dir()
 	// Use magic static
 	static const std::string s_exe_dir = []
 	{
-		std::string exe_path = get_executable_path();
+		const std::string exe_path = get_executable_path();
 		if (exe_path.empty())
 		{
 			return exe_path;
@@ -2514,6 +2518,100 @@ std::string fs::get_executable_dir()
 	return s_exe_dir;
 #endif
 }
+
+const std::string& fs::get_real_executable_path()
+{
+	static const std::string s_dir = []
+	{
+#ifdef _WIN32
+		return fs::get_executable_path();
+#else
+		char exe_path[PATH_MAX]{};
+#if defined(__APPLE__)
+		u32 bufsize = PATH_MAX;
+		if (_NSGetExecutablePath(exe_path, &bufsize) != 0)
+		{
+			return std::string{};
+		}
+#elif defined(KERN_PROC_PATHNAME)
+		usz bufsize = PATH_MAX;
+		int mib[] = {
+			CTL_KERN,
+#if defined(__NetBSD__)
+			KERN_PROC_ARGS,
+			-1,
+			KERN_PROC_PATHNAME,
+#else
+			KERN_PROC,
+			KERN_PROC_PATHNAME,
+			-1,
+#endif
+		};
+		if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), exe_path, &bufsize, NULL, 0) < 0)
+		{
+			return std::string{};
+		}
+#else
+#if defined(__linux__)
+		const ssize_t len = ::readlink("/proc/self/exe", exe_path, PATH_MAX - 1);
+#elif defined(__sun)
+		const ssize_t len = ::readlink("/proc/self/path/a.out", exe_path, PATH_MAX - 1);
+#else
+		const ssize_t len = ::readlink("/proc/curproc/file", exe_path, PATH_MAX - 1);
+#endif
+		if (len < 0)
+		{
+			return std::string{};
+		}
+
+		exe_path[len] = '\0';
+#endif
+		return std::string(exe_path);
+#endif
+	}();
+
+	return s_dir;
+}
+
+const std::string& fs::get_real_executable_dir()
+{
+	// Use magic static
+	static const std::string s_exe_dir = []
+	{
+		const std::string exe_path = get_real_executable_path();
+		if (exe_path.empty())
+		{
+			return exe_path;
+		}
+
+		return get_parent_dir(exe_path) + "/";
+	}();
+
+	return s_exe_dir;
+}
+
+#ifndef _WIN32
+const std::string& fs::get_resources_dir()
+{
+	static const std::string s_dir = []
+	{
+		const std::string exe_dir = fs::get_real_executable_dir();
+		if (exe_dir.empty())
+		{
+			return std::string{};
+		}
+
+#ifdef __APPLE__
+		return exe_dir + "../Resources/";
+#else
+		return exe_dir + "../share/rpcs3/";
+#endif
+
+	}();
+
+	return s_dir;
+}
+#endif
 
 const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirectory)
 {
