@@ -74,6 +74,7 @@ public:
 		const QString audio_format              = tr("Determines the sound format of the emulation.\nConfigure this setting if you want to switch between stereo and surround sound.\nChanging these values requires a restart of the game.\nThe manual setting will use your selected formats while the automatic setting will let the game choose from all available formats.");
 		const QString audio_channel_layout      = tr("Determines the sound format of RPCS3.\nUse 'Auto' to let RPCS3 decide the best format based on the audio device and the emulated audio format.");
 		const QString master_volume             = tr("Controls the overall volume of the emulation.\nValues above 100% might reduce the audio quality.");
+		const QString voice_chat_mic_volume     = tr("Controls the volume of your microphone as heard by other players in voice chat.\nValues above 100% might cause clipping.");
 		const QString enable_buffering          = tr("Enables audio buffering, which reduces crackle/stutter but increases audio latency.");
 		const QString audio_buffer_duration     = tr("Target buffer duration in milliseconds.\nHigher values make the buffering algorithm's job easier, but may introduce noticeable audio latency.");
 		const QString enable_time_stretching    = tr("Enables time stretching - requires buffering to be enabled.\nReduces crackle/stutter further, but may cause a very noticeable reduction in audio quality on slower CPUs.");
@@ -277,6 +278,7 @@ public:
 		const QString derive_mac_from_psid = tr("Derive the MAC address from the PSID.");
 		const QString psn_country   = tr("Changes the RPCN country.");
 		const QString enable_clans  = tr("Enable connection to the Clans server.\nOnly affects games supporting the Clans feature.");
+		const QString enable_voice_chat = tr("Enable in-game voice chat with other players over RPCN.\nYour microphone is taken from the Audio tab. Without a microphone you can still hear other players.\nOnly affects games supporting voice chat. Players can be muted in the home menu.");
 
 		// system
 

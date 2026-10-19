@@ -1231,6 +1231,9 @@
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_sidebar_page.cpp">
       <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_voice_chat.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -2651,6 +2654,9 @@
       <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_sidebar_page.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_voice_chat.h">
       <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp">

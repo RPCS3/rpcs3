@@ -1730,6 +1730,11 @@ namespace np
 		return np_cache.get_npid(room_id, member_id);
 	}
 
+	std::optional<u16> np_handler::local_get_memberid(u64 room_id, const SceNpId& npid)
+	{
+		return np_cache.get_memberid(room_id, npid);
+	}
+
 	std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> np_handler::local_get_room_password(SceNpMatching2RoomId room_id)
 	{
 		return np_cache.get_password(room_id);

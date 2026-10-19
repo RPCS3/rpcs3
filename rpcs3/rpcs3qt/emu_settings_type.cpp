@@ -167,6 +167,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AudioDevice,             get_cfg_location(local_cfg.audio.audio_device) },
 	{ emu_settings_type::AudioChannelLayout,      get_cfg_location(local_cfg.audio.channel_layout) },
 	{ emu_settings_type::MasterVolume,            get_cfg_location(local_cfg.audio.volume) },
+	{ emu_settings_type::VoiceChatMicVolume,      get_cfg_location(local_cfg.audio.voice_chat_mic_volume) },
 	{ emu_settings_type::EnableBuffering,         get_cfg_location(local_cfg.audio.enable_buffering) },
 	{ emu_settings_type::AudioBufferDuration,     get_cfg_location(local_cfg.audio.desired_buffer_duration) },
 	{ emu_settings_type::EnableTimeStretching,    get_cfg_location(local_cfg.audio.enable_time_stretching) },
@@ -233,6 +234,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DeriveMacFromPsid, get_cfg_location(local_cfg.net.derive_mac_from_psid) },
 	{ emu_settings_type::PSNCountry,     get_cfg_location(local_cfg.net.country) },
 	{ emu_settings_type::EnableClans,    get_cfg_location(local_cfg.net.clans_enabled) },
+	{ emu_settings_type::EnableVoiceChat, get_cfg_location(local_cfg.net.voice_chat_enabled) },
 
 	// System
 	{ emu_settings_type::LicenseArea,           get_cfg_location(local_cfg.sys.license_area) },

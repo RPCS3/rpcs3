@@ -234,6 +234,7 @@ namespace np
 
 		// Local functions
 		std::pair<error_code, std::optional<SceNpId>> local_get_npid(u64 room_id, u16 member_id);
+		std::optional<u16> local_get_memberid(u64 room_id, const SceNpId& npid);
 		std::pair<error_code, std::optional<SceNpMatching2RoomSlotInfo>> local_get_room_slots(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::optional<SceNpMatching2SessionPassword>> local_get_room_password(SceNpMatching2RoomId room_id);
 		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method);

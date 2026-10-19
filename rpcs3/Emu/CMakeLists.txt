@@ -525,6 +525,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/HomeMenu/overlay_home_menu_settings.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_savestate.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_sidebar_page.cpp
+    RSX/Overlays/HomeMenu/overlay_home_menu_voice_chat.cpp
     RSX/Overlays/BigPicture/overlay_big_picture.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_game_details.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_game_grid.cpp

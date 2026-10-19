@@ -281,6 +281,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
+		cfg::_int<0, 200> voice_chat_mic_volume{ this, "Voice Chat Microphone Volume", 100, true };
 		cfg::_enum<music_handler> music{ this, "Music Handler", music_handler::qt };
 	} audio{ this };
 
@@ -354,6 +355,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 		cfg::string country{this, "PSN Country", "us"};
 		cfg::_bool clans_enabled{this, "Clans Enabled", false};
+		cfg::_bool voice_chat_enabled{this, "Voice Chat Enabled", false, true};
 	} net{this};
 
 	struct node_savestate : cfg::node
