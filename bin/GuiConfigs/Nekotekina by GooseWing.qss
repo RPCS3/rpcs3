@@ -499,5 +499,13 @@ QWidget#trophy_notification_frame {
 	color: #ffd785;
 }
 
+/* Screenshot Manager */
+#screenshot_flow_widget #flow_widget_content { background: transparent; }
+#screenshot_item { background: transparent; }
+#screenshot_item[selected=\"true\"] { background: #615c51; }
+#screenshot_item:focus { background: #4d4940; }
+#screenshot_item:hover { background: #615c51; }
+#screenshot_item:hover:focus { background: #4d4940; }
+
 /* Richtext link color */
 QLabel#richtext_link_color { color: #87cefa; }

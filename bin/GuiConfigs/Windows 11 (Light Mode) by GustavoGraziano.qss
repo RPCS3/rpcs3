@@ -6,9 +6,6 @@
 */
 
 
-
-
-
 /* ----- GLOBAL QWIDGET ----- */
 
 /* RESET */
@@ -978,6 +975,15 @@ QMainWindow QHeaderView::section:last {
 }
 
 
+/* Screenshot Manager */
+#screenshot_flow_widget #flow_widget_content { background: transparent; }
+#screenshot_item { background: transparent; }
+#screenshot_item[selected=\"true\"] { background: #CCE8FF; }
+#screenshot_item:focus { background: #CCE8FF; }
+#screenshot_item:hover { background: #E5F3FF; }
+#screenshot_item:hover:focus { background: #CCE8FF; }
+
+
 /* LOG TAB */
 QTabBar#tab_bar_log::tab {
     text-transform: uppercase;
@@ -1051,16 +1057,10 @@ QLabel#log_stack {
 }
 
 
-
-
-
 /* ----- SETTINGS DIALOG ----- */
 QDialog#settings_dialog QTabWidget::pane {
     margin-left: -8px;
 }
-
-
-
 
 
 /* ----- PAD SETTINGS DIALOG ----- */
@@ -1080,9 +1080,6 @@ QGroupBox#gb_l1, QGroupBox#gb_select, QGroupBox#gb_start, QGroupBox#gb_r1, QGrou
     color: #1B1B1B;
     padding: 20px 0;
 }
-
-
-
 
 
 /* PATCH MANAGER DIALOG */

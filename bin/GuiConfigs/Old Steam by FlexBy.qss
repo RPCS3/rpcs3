@@ -1056,6 +1056,40 @@ QDockWidget::close-button:pressed {
 }
 
 /* ========================================================================== */
+/* Screenshot Manager                                                         */
+/* ========================================================================== */
+
+#screenshot_flow_widget #flow_widget_content {
+    background: transparent;
+}
+
+#screenshot_item {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 0px;
+}
+
+#screenshot_item:hover,
+#screenshot_item[hover="true"] {
+    background-color: #4d5a46;
+    border-color: #66745d;
+}
+
+#screenshot_item[selected="true"] {
+    background-color: #958831;
+    border-top: 1px solid #889576;
+    border-left: 1px solid #889576;
+    border-right: 1px solid #30382c;
+    border-bottom: 1px solid #30382c;
+}
+
+#screenshot_item:focus,
+#screenshot_item[focus="true"] {
+    background-color: #596b4c;
+    border: 1px solid #b7bf7a;
+}
+
+/* ========================================================================== */
 /* LOG / TTY                                                                  */
 /* ========================================================================== */
 
