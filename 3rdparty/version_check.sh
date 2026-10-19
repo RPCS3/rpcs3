@@ -4,8 +4,9 @@ verbose=0
 git_verbose=0
 max_jobs=16
 
-lockfile="$(pwd)/version_check.lock"
-resultfile="$(pwd)/version_check_results.txt"
+resultdir="$(mktemp -d)"
+resultfile="$resultdir/version_check_results.txt"
+trap 'rm -rf "$resultdir"' EXIT
 
 if [ "$1" = "-v" ]; then
     verbose=1
@@ -46,10 +47,10 @@ check_tags()
     local latest_tag=$(git_call describe --tags "$tag_list")
     local highest_tag=$(git_call tag -l | sort -V | tail -n1)
 
-    if [ -n "$latest_tag" ] || [ -n "$highest_tag" ]; then
+    # Get the current tag
+    local current_tag=$(git_call describe --tags --abbrev=0)
 
-        # Get the current tag
-        local current_tag=$(git_call describe --tags --abbrev=0)
+    if [ -n "$latest_tag" ] || [ -n "$highest_tag" ]; then
 
         if [ -n "$current_tag" ]; then
 
@@ -68,11 +69,7 @@ check_tags()
                     echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag"
                 fi
 
-                # Critical section guarded by flock
-                (
-                    flock 200
-                    echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag" >> "$resultfile"
-                ) 200>"$lockfile"
+                echo "$path -> latest: $latest_tag, highest: $highest_tag, current: $current_tag" > "$resultdir/${path//\//_}.txt"
             fi
 
         elif [ "$verbose" -eq 1 ]; then
@@ -114,6 +111,9 @@ done
 # Wait for all background jobs to finish
 wait
 
+# Merge all job results
+cat "$resultdir"/*.txt > "$resultfile" 2>/dev/null || : > "$resultfile"
+
 # Print results
 echo -e "\n\nResult:\n"
 
@@ -134,7 +134,3 @@ while read -r line; do
     right=$(echo "$right" | sed 's/^[[:space:]]*//')
     printf "%-${max_len}s -> %s\n" "$left" "$right"
 done < "$resultfile"
-
-# Remove tmp files
-rm -f "$resultfile"
-rm -f "$lockfile"
