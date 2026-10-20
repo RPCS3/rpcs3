@@ -67,7 +67,6 @@ private:
 
 		s16 min_hue = 0;
 		s16 max_hue = 0;
-		f32 saturation_threshold = 0.0f;
 
 		void calculate_values();
 	};

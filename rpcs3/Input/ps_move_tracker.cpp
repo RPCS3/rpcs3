@@ -101,8 +101,6 @@ void ps_move_tracker<DiagnosticsEnabled>::ps_move_config::calculate_values()
 	{
 		min_hue %= 360;
 	}
-
-	saturation_threshold = saturation_threshold_u8 / 255.0f;
 }
 
 template <bool DiagnosticsEnabled>
