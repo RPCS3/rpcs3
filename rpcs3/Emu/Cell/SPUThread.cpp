@@ -1641,18 +1641,20 @@ void spu_thread::cpu_work()
 		current_bp_pc = umax;
 	}
 
-	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
+	u32 shuffle_count = g_cfg.core.mfc_transfers_shuffling;
 
-	if (u32 shuffle_count = g_cfg.core.mfc_transfers_shuffling)
+	if (shuffle_count)
 	{
 		// If either MFC size exceeds limit or timeout has been reached execute pending MFC commands
-		if (mfc_size > shuffle_count || (timeout && get_system_time() - mfc_last_timestamp >= timeout))
+		if (!mfc_queued_ops_timeout)
 		{
 			work_left = do_mfc(false, false);
+			mfc_queued_ops_timeout = work_left ? g_cfg.core.mfc_shuffling_instructions : 0;
 		}
 		else
 		{
 			work_left = mfc_size != 0; // TODO: Optimize
+			mfc_queued_ops_timeout--;
 		}
 	}
 
@@ -2087,7 +2089,7 @@ void spu_thread::push_in_mbox(u32 value)
 		ch_in_mbox.notify();
 	}
 
-	if (push_state.old_count < push_state.count)
+	if (push_state.old_count == 0)
 	{
 		set_events(SPU_EVENT_MB);
 
@@ -2915,6 +2917,11 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 
 bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 {
+	if (args.size == 0)
+	{
+		return true;
+	}
+
 	perf_meter<"MFC_LIST"_u64> perf0;
 
 	// Amount of elements to fetch in one go
@@ -3976,7 +3983,7 @@ bool spu_thread::do_mfc(bool can_escape, bool must_finish)
 		{
 			// Exit early, not all pending commands have to be executed at a single iteration
 			// Update last timestamp so the next MFC timeout check will use the current time
-			mfc_last_timestamp = get_system_time();
+			mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
 			return true;
 		}
 	}
@@ -4314,7 +4321,7 @@ bool spu_thread::process_mfc_cmd()
 	while (mfc_size >= 16) [[unlikely]]
 	{
 		// Reset MFC timestamp in the case of full queue
-		mfc_last_timestamp = 0;
+		mfc_queued_ops_timeout = 0;
 
 		if (test_stopped())
 		{
@@ -4962,6 +4969,8 @@ bool spu_thread::process_mfc_cmd()
 	{
 		if (ch_mfc_cmd.size <= 0x4000) [[likely]]
 		{
+			bool do_mfc_now = false;
+
 			if (do_dma_check(ch_mfc_cmd)) [[likely]]
 			{
 				if (!g_cfg.core.mfc_transfers_shuffling)
@@ -4974,8 +4983,21 @@ bool spu_thread::process_mfc_cmd()
 					return true;
 				}
 
-				if (!state.test_and_set(cpu_flag::pending))
-					mfc_last_timestamp = get_system_time();
+				if (!mfc_queued_ops_timeout)
+				{
+					if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
+					{
+						state += cpu_flag::pending;
+					}
+
+					mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
+				}
+			}
+
+			if (g_cfg.core.mfc_transfers_shuffling < mfc_size + 1)
+			{
+				// Cannot be postponed anymore
+				do_mfc_now = true;
 			}
 
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
@@ -4984,6 +5006,12 @@ bool spu_thread::process_mfc_cmd()
 			if (ch_mfc_cmd.cmd & MFC_BARRIER_MASK)
 			{
 				mfc_barrier |= std::rotl<u32>(1, ch_mfc_cmd.tag);
+			}
+
+			if (do_mfc_now)
+			{
+				do_mfc();
+				mfc_queued_ops_timeout = 0;
 			}
 
 			return true;
@@ -5015,6 +5043,8 @@ bool spu_thread::process_mfc_cmd()
 			//	std::memcpy(dump.data, _ptr<u8>(ch_mfc_cmd.eah & 0x3fff0), std::min<u32>(ch_mfc_cmd.size, 128));
 			//}
 
+			bool do_mfc_now = false;
+
 			if (do_dma_check(cmd)) [[likely]]
 			{
 				if (!g_cfg.core.mfc_transfers_shuffling)
@@ -5026,8 +5056,21 @@ bool spu_thread::process_mfc_cmd()
 				}
 				else
 				{
-					if (!state.test_and_set(cpu_flag::pending))
-						mfc_last_timestamp = get_system_time();
+					if (!mfc_queued_ops_timeout)
+					{
+						if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
+						{
+							state += cpu_flag::pending;
+						}
+
+						mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
+					}
+
+					if (g_cfg.core.mfc_transfers_shuffling < mfc_size + 1)
+					{
+						// Cannot be postponed anymore
+						do_mfc_now = true;
+					}
 				}
 			}
 
@@ -5037,6 +5080,12 @@ bool spu_thread::process_mfc_cmd()
 			if (cmd.cmd & MFC_BARRIER_MASK)
 			{
 				mfc_barrier |= std::rotl<u32>(1, cmd.tag);
+			}
+
+			if (do_mfc_now)
+			{
+				do_mfc();
+				mfc_queued_ops_timeout = 0;
 			}
 
 			if (check_mfc_interrupts(pc + 4))
@@ -5425,9 +5474,16 @@ void spu_thread::set_interrupt_status(bool enable)
 		// Detect enabling interrupts with events masked
 		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
-			if (g_cfg.core.spu_decoder != spu_decoder_type::_static && g_cfg.core.spu_decoder != spu_decoder_type::dynamic)
+			const spu_decoder_type decoder = g_cfg.core.spu_decoder;
+
+			if (decoder != spu_decoder_type::_static && decoder != spu_decoder_type::dynamic && decoder != spu_decoder_type::llvm)
 			{
-				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use [%s] SPU decoder", mask, spu_decoder_type::dynamic);
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use [%s] SPU decoder", mask, spu_decoder_type::llvm);
+			}
+
+			if (!g_cfg.core.mfc_transfers_shuffling)
+			{
+				fmt::throw_exception("Enable \"Delay Each Odd MFC comman in advanced\" tab.");
 			}
 
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
@@ -5568,8 +5624,16 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	case MFC_RdTagStat:
 	{
-		if (state & cpu_flag::pending)
+		// May be more accurate but causes crashing on MFC commands postponing
+		// if (u32 out; ch_tag_stat.try_read(out))
+		// {
+		// 	ch_tag_stat.set_value(0, false);
+		// 	return out;
+		// }
+
+		if (state & cpu_flag::pending || mfc_queued_ops_timeout)
 		{
+			mfc_queued_ops_timeout = 0;
 			do_mfc();
 		}
 
@@ -6494,6 +6558,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			{
 				spu_runtime::g_escape(this);
 			}
+		}
+
+		if (!mfc_queued_ops_timeout && interrupts_enabled && value & SPU_EVENT_TM && g_cfg.core.mfc_transfers_shuffling)
+		{
+			mfc_queued_ops_timeout = utils::aligned_div<u32>(g_cfg.core.mfc_shuffling_instructions, 10);
 		}
 
 		return true;

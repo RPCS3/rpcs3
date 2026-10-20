@@ -25,7 +25,7 @@ screenshot_manager_dialog::screenshot_manager_dialog(const std::vector<game_info
 
 	m_icon_size = QSize(160, 90);
 	m_flow_widget = new flow_widget(this);
-	m_flow_widget->setObjectName("flow_widget");
+	m_flow_widget->setObjectName("screenshot_flow_widget");
 
 	m_placeholder = QPixmap(m_icon_size);
 	m_placeholder.fill(Qt::gray);

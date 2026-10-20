@@ -1809,6 +1809,45 @@ public:
 		u32 check_iterations = 0;
 		m_ir->SetInsertPoint(label_test);
 
+		if (g_cfg.core.mfc_transfers_shuffling)
+		{
+			const auto spu_work = [](spu_thread* _this)
+			{
+				bool work_left = _this->do_mfc();
+
+				if (_this->interrupts_enabled)
+				{
+					_this->get_events(SPU_EVENT_TM);
+					work_left = true;
+				}
+
+				if (work_left)
+				{
+					_this->mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
+				}
+
+				if (_this->check_mfc_interrupts(_this->pc))
+				{
+					spu_runtime::g_escape(_this);
+				}
+			};
+
+			const auto mfc_ops = spu_ptr(&spu_thread::mfc_queued_ops_timeout);
+			const auto label_next = BasicBlock::Create(m_context, "ShuffleNext", m_function);
+			const auto label_mfc_check = BasicBlock::Create(m_context, "MfcCheck", m_function);
+			const auto label_mfc_ops = BasicBlock::Create(m_context, "MfcOps", m_function);
+			const auto old_mfc_timeout = spu_context_attr(m_ir->CreateLoad(get_type<u64>(), mfc_ops));
+			m_ir->CreateCondBr(m_ir->CreateIsNull(old_mfc_timeout), label_next, label_mfc_check);
+			m_ir->SetInsertPoint(label_mfc_check);
+			const auto store_timeout = m_ir->CreateSub(old_mfc_timeout, m_ir->getInt64(1));
+			m_ir->CreateStore(store_timeout, mfc_ops);
+			m_ir->CreateCondBr(m_ir->CreateIsNull(store_timeout), label_mfc_ops, label_next);
+			m_ir->SetInsertPoint(label_mfc_ops);
+			call("spu_work", +spu_work, m_thread);
+			m_ir->CreateBr(label_next);
+			m_ir->SetInsertPoint(label_next);
+		}
+
 		// Set block hash for profiling (if enabled)
 		if ((g_cfg.core.spu_prof || g_cfg.core.spu_debug) && g_cfg.core.spu_verification)
 			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr(&spu_thread::block_hash));
@@ -2727,6 +2766,84 @@ public:
 				if (need_check || (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe))
 				{
 					check_state(baddr);
+
+					// Improve MFC command shuffling for specific short loops
+					bool is_self_jump = false;
+
+					for (u32 pred : bb.preds)
+					{
+						if (pred == baddr)
+						{
+							// If this block is a target of a backward branch (possibly loop), emit a check
+							is_self_jump = true;
+							break;
+						}
+					}
+
+					// They must contain a load, but not a astore
+					bool contains_store = false;
+					bool contains_load = false;
+					bool contains_floating = false;
+
+					if (is_self_jump && m_bbs.at(baddr).size < 16)
+					{
+						for (u32 iaddr = baddr, counter = 0; counter < m_bbs.at(baddr).size; iaddr += 4, counter++)
+						{
+							const u32 op = std::bit_cast<be_t<u32>>(func.data[(iaddr - start) / 4]);
+							const auto itype = g_spu_itype.decode(op);
+
+							if (itype & spu_itype::memory)
+							{
+								if (itype & spu_itype::zregmod)
+								{
+									contains_store = true;
+								}
+								else
+								{
+									contains_load = true;
+								}
+							}
+							else if (itype & spu_itype::floating)
+							{
+								contains_floating = true;
+							}
+						}
+					}
+
+					if (is_self_jump && !contains_store && !contains_floating && contains_load && m_bbs.at(baddr).size < 12 && g_cfg.core.mfc_transfers_shuffling)
+					{
+						const auto spu_work_limted = [](spu_thread* _this)
+						{
+							if (_this->interrupts_enabled)
+							{
+								// Undo changes
+								_this->mfc_queued_ops_timeout++;
+								return;
+							}
+
+							const bool work_left = _this->do_mfc();
+
+							if (work_left)
+							{
+								_this->mfc_queued_ops_timeout = g_cfg.core.mfc_shuffling_instructions;
+							}
+						};
+
+						const auto mfc_ops = spu_ptr(&spu_thread::mfc_queued_ops_timeout);
+						const auto label_next = BasicBlock::Create(m_context, "ShuffleNext2", m_function);
+						const auto label_mfc_check = BasicBlock::Create(m_context, "MfcCheck2", m_function);
+						const auto label_mfc_ops = BasicBlock::Create(m_context, "MfcOps2", m_function);
+						const auto old_mfc_timeout = spu_context_attr(m_ir->CreateLoad(get_type<u64>(), mfc_ops));
+						m_ir->CreateCondBr(m_ir->CreateIsNull(old_mfc_timeout), label_next, label_mfc_check);
+						m_ir->SetInsertPoint(label_mfc_check);
+						const auto store_timeout = m_ir->CreateSub(old_mfc_timeout, m_ir->getInt64(1));
+						m_ir->CreateStore(store_timeout, mfc_ops);
+						m_ir->CreateCondBr(m_ir->CreateIsNull(store_timeout), label_mfc_ops, label_next);
+						m_ir->SetInsertPoint(label_mfc_ops);
+						call("spu_work_limited", +spu_work_limted, m_thread);
+						m_ir->CreateBr(label_next);
+						m_ir->SetInsertPoint(label_next);
+					}
 				}
 
 				const bool is_reduced_loop = m_inst_attrs[(baddr - start) / 4] == inst_attr::reduced_loop;
@@ -3731,7 +3848,7 @@ public:
 										}
 									}
 
-									spu_log.trace("Postponed r%u store from block 0x%x (single)", i, block_q[bi].first);
+									spu_log.warning("Postponed r%u store from block 0x%x (single)", i, block_q[bi].first);
 								}
 								else
 								{
@@ -3772,7 +3889,7 @@ public:
 										pdt.recalculate(*m_function);
 										dt.recalculate(*m_function);
 
-										spu_log.trace("Postponed r%u store from block 0x%x (multiple)", i, block_q[bi].first);
+										spu_log.warning("Postponed r%u store from block 0x%x (multiple)", i, block_q[bi].first);
 									}
 
 									ins = edge->getTerminator();
@@ -4680,6 +4797,30 @@ public:
 		}
 		case MFC_RdTagStat:
 		{
+			if (g_cfg.core.mfc_transfers_shuffling)
+			{
+				// Execute shuffled MFC commands before reading (see spu_thread::get_ch_value)
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fall_rdch = llvm::BasicBlock::Create(m_context, "", m_function);;
+				const auto llvm_rdch = llvm::BasicBlock::Create(m_context, "", m_function);;
+				m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size))), fall_rdch, llvm_rdch, m_md_unlikely);
+				m_ir->SetInsertPoint(llvm_rdch);
+				const auto get_rdch_val = get_rdch(op, ::offset32(&spu_thread::ch_tag_stat), false);
+				const auto after_block = m_ir->GetInsertBlock();
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(fall_rdch);
+				ensure_gpr_stores();
+				update_pc();
+				const auto fall_val = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(MFC_RdTagStat));
+				m_ir->CreateBr(next);
+				m_ir->SetInsertPoint(next);
+				const auto phi_ch_val = m_ir->CreatePHI(get_type<u32>(), 2);
+				phi_ch_val->addIncoming(get_rdch_val, after_block);
+				phi_ch_val->addIncoming(fall_val, fall_rdch);
+				res.value = phi_ch_val;
+				break;
+			}
+
 			res.value = get_rdch(op, ::offset32(&spu_thread::ch_tag_stat), false);
 			break;
 		}
@@ -5188,7 +5329,7 @@ public:
 					break;
 				}
 
-				bool must_use_cpp_functions = !!g_cfg.core.spu_accurate_dma;
+				bool must_use_cpp_functions = !!g_cfg.core.spu_accurate_dma || !!g_cfg.core.mfc_transfers_shuffling;
 
 				if (u64 cmdh = ci->getZExtValue() & ~(MFC_BARRIER_MASK | MFC_FENCE_MASK | MFC_RESULT_MASK); g_cfg.core.rsx_fifo_accuracy || g_cfg.video.strict_rendering_mode || /*!g_use_rtm*/ true)
 				{
@@ -5438,11 +5579,37 @@ public:
 				m_ir->SetInsertPoint(fail);
 
 				// Get MFC slot, redirect to invalid memory address
-				const auto slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
+				llvm::Value* slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
 				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
 				const auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
 				const auto ptr1 = _ptr(m_memptr, 0xffdeadf0);
-				const auto pmfc = m_ir->CreateSelect(m_ir->CreateICmpULT(slot, m_ir->getInt32(16)), ptr0, ptr1);
+				auto mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+
+				if (g_cfg.core.mfc_transfers_shuffling)
+				{
+					auto exec_mfc = [](spu_thread* _this)
+					{
+						_this->do_mfc(false);
+					};
+
+					const auto mfc_next = llvm::BasicBlock::Create(m_context, "MfcQueueNext", m_function);
+					const auto mfc_work = llvm::BasicBlock::Create(m_context, "MfcQueueWork", m_function);
+
+					m_ir->CreateCondBr(mfc_not_full, mfc_next, mfc_work);
+					m_ir->SetInsertPoint(mfc_work);
+					call("spu_mfc", +exec_mfc, m_thread);
+					const auto updated_slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
+					const auto old_slot = slot;
+					m_ir->CreateBr(mfc_next);
+					m_ir->SetInsertPoint(mfc_next);
+					const auto slot_phi = m_ir->CreatePHI(get_type<u32>(), 2);
+					slot_phi->addIncoming(updated_slot, mfc_work);
+					slot_phi->addIncoming(old_slot, fail);
+					slot = slot_phi;
+					mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+				}
+
+				const auto pmfc = m_ir->CreateSelect(mfc_not_full, ptr0, ptr1);
 				m_ir->CreateStore(ci, _ptr(pmfc, &spu_mfc_cmd::cmd));
 
 				switch (u64 cmd = ci->getZExtValue())

@@ -13,7 +13,7 @@
 #include "Emu/Cell/Modules/sceNpTus.h"
 #include "Utilities/Thread.h"
 
-// Used By Score and Tus
+// Used By Score, Lookup and Tus
 struct generic_async_transaction_context
 {
 	~generic_async_transaction_context();
@@ -28,13 +28,13 @@ struct generic_async_transaction_context
 	mutable shared_mutex mutex;
 	std::condition_variable_any wake_cond, completion_cond;
 	std::optional<error_code> result;
-	SceNpCommunicationId communicationId;
-	SceNpCommunicationPassphrase passphrase;
-	u64 timeout;
+	SceNpCommunicationId communicationId{};
+	SceNpCommunicationPassphrase passphrase{};
+	u64 timeout = 0;
 
 	std::thread thread;
 
-	u32 idm_id;
+	u32 idm_id = 0;
 };
 
 struct tdata_invalid
@@ -45,12 +45,12 @@ struct tdata_invalid
 
 struct tdata_get_board_infos
 {
-	vm::ptr<SceNpScoreBoardInfo> boardInfo;
+	vm::ptr<SceNpScoreBoardInfo> boardInfo{};
 };
 
 struct tdata_record_score
 {
-	vm::ptr<SceNpScoreRankNumber> tmpRank;
+	vm::ptr<SceNpScoreRankNumber> tmpRank{};
 };
 
 struct tdata_record_score_data
@@ -61,23 +61,23 @@ struct tdata_record_score_data
 
 struct tdata_get_score_data
 {
-	vm::ptr<u32> totalSize;
+	vm::ptr<u32> totalSize{};
 	u32 recvSize = 0;
-	vm::ptr<void> score_data;
+	vm::ptr<void> score_data{};
 	u32 game_data_size = 0;
 	std::vector<u8> game_data;
 };
 
 struct tdata_get_score_generic
 {
-	vm::ptr<void> rankArray;
+	vm::ptr<void> rankArray{};
 	u32 rankArraySize = 0;
-	vm::ptr<SceNpScoreComment> commentArray;
-	vm::ptr<void> infoArray;
+	vm::ptr<SceNpScoreComment> commentArray{};
+	vm::ptr<void> infoArray{};
 	u32 infoArraySize = 0;
 	u32 arrayNum = 0;
-	vm::ptr<CellRtcTick> lastSortDate;
-	vm::ptr<SceNpScoreRankNumber> totalRecord;
+	vm::ptr<CellRtcTick> lastSortDate{};
+	vm::ptr<SceNpScoreRankNumber> totalRecord{};
 	bool player_rank_data = false;
 	bool deprecated = false;
 };
@@ -86,33 +86,43 @@ struct tdata_get_score_generic
 
 struct tdata_tus_get_variables_generic
 {
-	vm::ptr<SceNpTusVariable> variableArray;
-	s32 arrayNum;
+	vm::ptr<SceNpTusVariable> variableArray{};
+	s32 arrayNum = 0;
 };
 
 struct tdata_tus_get_variable_generic
 {
-	vm::ptr<SceNpTusVariable> outVariable;
+	vm::ptr<SceNpTusVariable> outVariable{};
 };
 
 struct tdata_tus_set_data
 {
-	u32 tus_data_size;
-	std::vector<u8> tus_data;
+	u32 tus_data_size = 0;
+	std::vector<u8> tus_data{};
 };
 
 struct tdata_tus_get_data
 {
 	u32 recvSize = 0;
-	vm::ptr<SceNpTusDataStatus> dataStatus;
-	vm::ptr<void> data;
+	vm::ptr<SceNpTusDataStatus> dataStatus{};
+	vm::ptr<void> data{};
 	std::vector<u8> tus_data;
 };
 
 struct tdata_tus_get_datastatus_generic
 {
-	vm::ptr<SceNpTusDataStatus> statusArray;
-	s32 arrayNum;
+	vm::ptr<SceNpTusDataStatus> statusArray{};
+	s32 arrayNum = 0;
+};
+
+struct tdata_tss
+{
+	s32 slot_id = 0;
+	vm::ptr<void> data{};
+	vm::ptr<u32> contentLength{};
+	u32 maxSize = 0;
+	vm::ptr<SceNpTssDataStatus> dataStatus{};
+	vm::ptr<SceNpTssGetDataOptParam> option{};
 };
 
 // TUS related
@@ -142,7 +152,7 @@ struct tus_transaction_ctx : public generic_async_transaction_context
 	static const u32 id_count = SCE_NP_TUS_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(51);
 
-	std::variant<tdata_invalid, tdata_tus_get_variables_generic, tdata_tus_get_variable_generic, tdata_tus_set_data, tdata_tus_get_data, tdata_tus_get_datastatus_generic> tdata;
+	std::variant<tdata_invalid, tdata_tus_get_variables_generic, tdata_tus_get_variable_generic, tdata_tus_set_data, tdata_tus_get_data, tdata_tus_get_datastatus_generic, tdata_tss> tdata;
 };
 
 s32 create_tus_transaction_context(const shared_ptr<tus_ctx>& tus);
@@ -222,25 +232,24 @@ struct lookup_title_ctx
 	static const u32 id_count = SCE_NP_LOOKUP_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(28);
 
+	u64 timeout = 60'000'000; // 60 seconds
 	SceNpCommunicationId communicationId{};
-	SceNpCommunicationPassphrase passphrase{};
 };
 s32 create_lookup_title_context(vm::cptr<SceNpCommunicationId> communicationId);
 bool destroy_lookup_title_context(s32 ctx_id);
 
-struct lookup_transaction_ctx
+struct lookup_transaction_ctx : public generic_async_transaction_context
 {
-	lookup_transaction_ctx(s32 lt_ctx);
+	lookup_transaction_ctx(const shared_ptr<lookup_title_ctx>& lt_ctx);
 
 	static const u32 id_base  = 0x4001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = SCE_NP_LOOKUP_MAX_CTX_NUM;
 	SAVESTATE_INIT_POS(29);
 
-	s32 lt_ctx = 0;
-	atomic_t<s32> result = 0;
+	std::variant<tdata_invalid, tdata_tss> tdata;
 };
-s32 create_lookup_transaction_context(s32 lt_ctx);
+s32 create_lookup_transaction_context(const shared_ptr<lookup_title_ctx>& lt_ctx);
 bool destroy_lookup_transaction_context(s32 ctx_id);
 shared_ptr<lookup_transaction_ctx> get_lookup_transaction_context(s32 ctx_id);
 

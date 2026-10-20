@@ -183,12 +183,7 @@ namespace np::avatar
 			return {};
 		}
 
-		std::string path = selection_file.to_string();
-
-		while (!path.empty() && (path.back() == '\n' || path.back() == '\r' || path.back() == ' '))
-		{
-			path.pop_back();
-		}
+		const std::string path = std::string(fmt::trim_back_sv(selection_file.to_string(), "\n\r "));
 
 		if (path.empty())
 		{
@@ -220,12 +215,7 @@ namespace np::avatar
 			return true;
 		}
 
-		std::string stored_path = path;
-
-		if (stored_path.starts_with(user_dir))
-		{
-			stored_path = stored_path.substr(user_dir.size());
-		}
+		const std::string stored_path = path.starts_with(user_dir) ? path.substr(user_dir.size()) : path;
 
 		if (!fs::write_file(selection_path, fs::rewrite, stored_path))
 		{

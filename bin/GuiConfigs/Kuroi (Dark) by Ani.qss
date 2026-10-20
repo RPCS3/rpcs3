@@ -390,5 +390,13 @@ QTreeView::branch:open:has-children:has-siblings:hover {
 	background-color: #4c4b4b;
 }
 
+/* Screenshot Manager */
+#screenshot_flow_widget #flow_widget_content { background: transparent; }
+#screenshot_item { background: transparent; }
+#screenshot_item[selected=\"true\"] { background: #3d3d3d; }
+#screenshot_item:focus { background: #4c4b4b; }
+#screenshot_item:hover { background: #3d3d3d; }
+#screenshot_item:hover:focus { background: #4c4b4b; }
+
 /* Richtext link color */
 QLabel#richtext_link_color { color: #87cefa; }
