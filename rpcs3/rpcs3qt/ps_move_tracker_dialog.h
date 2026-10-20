@@ -65,6 +65,16 @@ private:
 	std::vector<u8> m_image_data_frozen;
 	std::vector<u8> m_image_data;
 	std::array<u32, 360> m_hues{};
+
+	// Measured sphere color of the selected device
+	struct measured_color
+	{
+		bool valid = false;
+		f32 hue = 0.0f;
+		f32 saturation = 0.0f;
+		f32 value = 0.0f;
+	};
+	measured_color m_measured_color{};
 	static constexpr s32 width = 640;
 	static constexpr s32 height = 480;
 	s32 m_format = 0;

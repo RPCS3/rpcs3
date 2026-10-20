@@ -14,6 +14,15 @@ struct ps_move_info
 	f32 y_pos = 0.0f;       // Y position (0-1)
 };
 
+// The color of the sphere as seen by the camera. It is measured while the sphere is tracked.
+struct ps_move_sphere_color
+{
+	bool valid = false;
+	f32 hue = 0.0f;        // Degrees (0-360)
+	f32 saturation = 0.0f; // 0-255
+	f32 value = 0.0f;      // 0-255
+};
+
 template <bool DiagnosticsEnabled = false>
 class ps_move_tracker
 {
@@ -43,6 +52,7 @@ public:
 	void set_draw_overlays(bool enabled = false) { m_draw_overlays = enabled; }
 
 	const std::array<ps_move_info, CELL_GEM_MAX_NUM>& info() { return m_info; }
+	const ps_move_sphere_color& sphere_color(u32 index) const { return ::at32(m_sphere_colors, index); }
 	const std::array<u32, 360>& hues() { return m_hues; }
 	const std::vector<u8>& rgba() { return m_image_rgba; }
 	const std::vector<u8>& rgba_contours() { return m_image_rgba_contours; }
@@ -52,6 +62,9 @@ public:
 
 	static std::tuple<u8, u8, u8> hsv_to_rgb(u16 hue, f32 saturation, f32 value);
 	static std::tuple<s16, f32, f32> rgb_to_hsv(f32 r, f32 g, f32 b);
+
+	// Allowed hue difference to the measured sphere color in degrees
+	static constexpr f32 sphere_hue_range = 16.0f;
 
 private:
 	struct ps_move_config
@@ -66,16 +79,6 @@ private:
 		s16 max_hue = 0;
 
 		void calculate_values();
-	};
-
-	// The color of the sphere as seen by the camera. It is measured while the sphere is tracked.
-	struct sphere_color
-	{
-		bool valid = false;
-		f32 hue = 0.0f;        // Degrees (0-360)
-		f32 saturation = 0.0f; // 0-255
-		f32 value = 0.0f;      // 0-255
-		std::chrono::steady_clock::time_point last_update {};
 	};
 
 	void set_valid(ps_move_info& info, u32 index, bool valid);
@@ -118,7 +121,8 @@ private:
 	std::array<u32, 360> m_hues{};
 	std::array<ps_move_info, CELL_GEM_MAX_NUM> m_info{};
 	std::array<ps_move_config, CELL_GEM_MAX_NUM> m_config{};
-	std::array<sphere_color, CELL_GEM_MAX_NUM> m_sphere_colors{};
+	std::array<ps_move_sphere_color, CELL_GEM_MAX_NUM> m_sphere_colors{};
+	std::array<std::chrono::steady_clock::time_point, CELL_GEM_MAX_NUM> m_sphere_color_updates{};
 	std::array<blob_detector, CELL_GEM_MAX_NUM> m_blob_detectors{};
 
 	std::array<std::unique_ptr<named_thread<std::function<void()>>>, CELL_GEM_MAX_NUM> m_workers{};

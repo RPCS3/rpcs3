@@ -323,8 +323,7 @@ static constexpr f32 min_sphere_radius = 5.0f;
 // Minimum brightness of the sphere
 static constexpr u8 min_sphere_value = 150;
 
-// Allowed differences to the measured sphere color
-static constexpr f32 sphere_hue_range = 16.0f;
+// Allowed differences to the measured sphere color (see also sphere_hue_range)
 static constexpr s32 sphere_saturation_range = 85;
 static constexpr s32 sphere_value_range = 85;
 
@@ -403,7 +402,7 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_spher
 	}
 
 	const ps_move_config& config = ::at32(m_config, index);
-	const sphere_color& color = ::at32(m_sphere_colors, index);
+	const ps_move_sphere_color& color = ::at32(m_sphere_colors, index);
 	const std::vector<u8>& image_hsv = m_image_hsv;
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 
@@ -463,11 +462,12 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_spher
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::update_sphere_color(u32 index, const blob_detector::blob& b)
 {
-	sphere_color& color = ::at32(m_sphere_colors, index);
+	ps_move_sphere_color& color = ::at32(m_sphere_colors, index);
+	std::chrono::steady_clock::time_point& last_update = ::at32(m_sphere_color_updates, index);
 
 	// Don't update the color too often. This prevents it from slowly drifting towards the background.
 	const auto now = std::chrono::steady_clock::now();
-	if (color.valid && now - color.last_update < std::chrono::seconds(1))
+	if (color.valid && now - last_update < std::chrono::seconds(1))
 	{
 		return;
 	}
@@ -541,7 +541,7 @@ void ps_move_tracker<DiagnosticsEnabled>::update_sphere_color(u32 index, const b
 		color.value = (color.value + value) * 0.5f;
 	}
 
-	color.last_update = now;
+	last_update = now;
 }
 
 template <bool DiagnosticsEnabled>
@@ -557,7 +557,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	// Only use the measured sphere color while the sphere is tracked. A lost sphere has to be found with the configured color.
-	sphere_color& color = ::at32(m_sphere_colors, index);
+	ps_move_sphere_color& color = ::at32(m_sphere_colors, index);
 
 	if (!info.valid)
 	{
