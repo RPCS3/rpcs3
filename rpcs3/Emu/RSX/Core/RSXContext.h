@@ -33,7 +33,6 @@ namespace rsx
 
 		// Pipeline state
 		bitmask_t<pipeline_state> graphics_state;
-		atomic_bitmask_t<eng_interrupt_reason> eng_interrupt_mask;
 		bool in_begin_end = false;
 
 		// Decoded pipeline state for the backend

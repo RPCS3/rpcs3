@@ -137,6 +137,9 @@ namespace rsx
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
 
+		// Device-level interrupt, not context-local. It can be raised from any thread.
+		atomic_bitmask_t<eng_interrupt_reason> eng_interrupt_mask;
+
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
@@ -214,7 +217,7 @@ namespace rsx
 		display_engine& display_ctrl() { return m_display; }
 
 		// Callable from any thread. Asks the RSX thread to run the backend's part of the local task (render_backend::on_local_task) soon.
-		inline void raise_backend_interrupt() { m_ctx->eng_interrupt_mask |= rsx::backend_interrupt; }
+		inline void raise_backend_interrupt() { eng_interrupt_mask |= rsx::backend_interrupt; }
 
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;

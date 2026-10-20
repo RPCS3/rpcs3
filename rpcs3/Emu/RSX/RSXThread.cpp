@@ -1000,7 +1000,7 @@ namespace rsx
 			// Update sub-units every 64 cycles. The local handler is invoked for other functions externally on-demand anyway.
 			// This avoids expensive calls to check timestamps which involves reading some values from TLS storage on windows.
 			// If something is going on in the backend that requires an update, set the interrupt bit explicitly.
-			if ((m_cycles_counter++ & 63) == 0 || m_ctx->eng_interrupt_mask)
+			if ((m_cycles_counter++ & 63) == 0 || eng_interrupt_mask)
 			{
 				// Execute backend-local tasks first
 				do_local_task(performance_counters.state);
@@ -1254,7 +1254,7 @@ namespace rsx
 			return;
 		}
 
-		m_ctx->eng_interrupt_mask.clear(rsx::backend_interrupt);
+		eng_interrupt_mask.clear(rsx::backend_interrupt);
 
 		// NOTE: This has to be executed immediately
 		// Delaying this operation can cause desync due to the delay in firing the flip event
@@ -1272,7 +1272,7 @@ namespace rsx
 				}
 			}
 
-			if (m_ctx->eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
+			if (eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
 			{
 				if (const u64 get_put = new_get_put.exchange(u64{umax});
 					get_put != umax)
@@ -1285,11 +1285,11 @@ namespace rsx
 					sync_point_request.release(true);
 				}
 
-				m_ctx->eng_interrupt_mask.clear(rsx::dma_control_interrupt);
+				eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
 		}
 
-		if (m_ctx->eng_interrupt_mask & rsx::pipe_flush_interrupt)
+		if (eng_interrupt_mask & rsx::pipe_flush_interrupt)
 		{
 			sync();
 		}
@@ -1479,7 +1479,7 @@ namespace rsx
 
 	void thread::sync()
 	{
-		m_ctx->eng_interrupt_mask.clear(rsx::pipe_flush_interrupt);
+		eng_interrupt_mask.clear(rsx::pipe_flush_interrupt);
 
 		mm_flush();
 
@@ -1908,7 +1908,7 @@ namespace rsx
 				m_invalidated_memory_range = unmap_range;
 			}
 
-			m_ctx->eng_interrupt_mask |= rsx::memory_config_interrupt;
+			eng_interrupt_mask |= rsx::memory_config_interrupt;
 		}
 	}
 
@@ -1924,7 +1924,7 @@ namespace rsx
 	void thread::handle_invalidated_memory_range()
 	{
 		AUDIT(!m_mtx_task.is_free());
-		m_ctx->eng_interrupt_mask.clear(rsx::memory_config_interrupt);
+		eng_interrupt_mask.clear(rsx::memory_config_interrupt);
 
 		if (!m_invalidated_memory_range.valid())
 		{
