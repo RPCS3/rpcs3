@@ -812,7 +812,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		std::vector<std::string> prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
 
 		// if prefix_list is empty game wants to check all savedata
-		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD))
+		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD || operation == SAVEDATA_OP_FIXED_DELETE))
 		{
 			cellSaveData.notice("savedata_op(): dirNamePrefix is empty. Listing all entries. operation=%d", operation);
 			prefix_list = {""};
@@ -1178,9 +1178,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 		}
 
-		const auto delete_save = [&]()
+		const auto delete_save = [&](const SaveDataEntry& entry)
 		{
-			const SaveDataEntry& entry = ::at32(save_entries, selected);
 			strcpy_trunc(doneGet->dirName, entry.dirName);
 			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 			doneGet->excResult     = CELL_OK;
@@ -1303,7 +1302,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (operation == SAVEDATA_OP_LIST_DELETE)
 			{
-				delete_save();
+				delete_save(::at32(save_entries, selected));
 
 				if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 				{
@@ -1382,6 +1381,19 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				}
 			}
 
+			if (selected == -1)
+			{
+				save_entry.dirName = dirStr;
+				save_entry.escaped = vfs::escape(save_entry.dirName);
+
+				// The save to delete does not have to be in the list, but it has to exist
+				if (operation == SAVEDATA_OP_FIXED_DELETE && !fs::is_dir(base_dir + save_entry.escaped))
+				{
+					cellSaveData.warning("savedata_op(): fixedSet->dirName '%s' does not exist", dirStr);
+					return CELL_SAVEDATA_ERROR_NODATA;
+				}
+			}
+
 			switch (fixedSet->option)
 			{
 			case CELL_SAVEDATA_OPTION_NONE:
@@ -1394,7 +1406,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				std::string message;
 
-				if (selected == -1)
+				if (selected == -1 && operation == SAVEDATA_OP_FIXED_DELETE)
+				{
+					message = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE, dirStr.c_str());
+				}
+				else if (selected == -1)
 				{
 					message = get_localized_string(localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION);
 				}
@@ -1439,15 +1455,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "81 (option=0x%x)", fixedSet->option};
 			}
 
-			if (selected == -1)
-			{
-				save_entry.dirName = dirStr;
-				save_entry.escaped = vfs::escape(save_entry.dirName);
-			}
-
 			if (operation == SAVEDATA_OP_FIXED_DELETE)
 			{
-				delete_save();
+				delete_save(selected == -1 ? save_entry : ::at32(save_entries, selected));
 
 				if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 				{
