@@ -370,6 +370,7 @@ namespace rpcn
 		bool tus_get_multiuser_data_status(u32 req_id, SceNpCommunicationId& communication_id, const std::vector<SceNpOnlineId>& targetNpIdArray, SceNpTusSlotId slotId, s32 arrayNum, bool vuser);
 		bool tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum);
 		bool tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
+		bool get_tss(u32 req_id, const SceNpCommunicationId& communication_id, s32 slot_id, u64 timestamp);
 		bool send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data);
 		bool unlock_trophy(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp);
 		std::vector<std::pair<s32, s64>> sync_trophies(const SceNpCommunicationId& communication_id, const std::vector<std::pair<s32, s64>>& local_unlocked);

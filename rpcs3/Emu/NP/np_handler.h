@@ -37,6 +37,7 @@ namespace np
 		SCORE = 0x3334,
 		TUS = 0x3335,
 		GUI = 0x3336,
+		LOOKUP = 0x3337,
 	};
 
 	struct ticket_data
@@ -231,6 +232,8 @@ namespace np
 		void tus_get_multiuser_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, std::vector<SceNpOnlineId> targetNpIdArray, SceNpTusSlotId slotId, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool vuser, bool async);
 		void tus_get_friends_data_status(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTusSlotId slotId, s32 includeSelf, s32 sortType, vm::ptr<SceNpTusDataStatus> statusArray, s32 arrayNum, bool async);
 		void tus_delete_multislot_data(shared_ptr<tus_transaction_ctx>& trans_ctx, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser, bool async);
+		void tus_get_tss(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option, bool async);
+		void lookup_get_tss(shared_ptr<lookup_transaction_ctx>& trans_ctx, vm::ptr<void> data, u32 maxSize, vm::ptr<u32> contentLength, bool async);
 
 		// Local functions
 		std::pair<error_code, std::optional<SceNpId>> local_get_npid(u64 room_id, u16 member_id);
@@ -361,6 +364,7 @@ namespace np
 		void reply_tus_get_multiuser_data_status(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_tus_get_friends_data_status(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_tus_delete_multislot_data(u32 req_id, rpcn::ErrorType error);
+		void reply_get_tss(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_create_room_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_join_room_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_leave_room_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
@@ -379,6 +383,8 @@ namespace np
 		void handle_TusVarResponse(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void handle_TusVariable(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void handle_TusDataStatusResponse(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		template <typename T>
+		void handle_reply_get_tss(u32 req_id, const std::vector<u8>& data, u64 timestamp, bool cond_fail);
 
 		struct callback_info
 		{
@@ -466,6 +472,11 @@ namespace np
 		u32 get_req_id(REQUEST_ID_HIGH int_req)
 		{
 			return ((static_cast<u16>(int_req) << 16) | match2_low_reqid_cnt.fetch_add(1));
+		}
+
+		REQUEST_ID_HIGH get_req_type(u32 req_id)
+		{
+			return static_cast<REQUEST_ID_HIGH>(req_id >> 16);
 		}
 
 		u32 get_event_key()
