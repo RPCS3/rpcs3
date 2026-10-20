@@ -3,6 +3,8 @@
 #include "Emu/Cell/Modules/cellGem.h"
 #include "blob_detector.h"
 
+#include <chrono>
+
 struct ps_move_info
 {
 	bool valid = false;     // The tracking result
@@ -66,10 +68,24 @@ private:
 		void calculate_values();
 	};
 
+	// The color of the sphere as seen by the camera. It is measured while the sphere is tracked.
+	struct sphere_color
+	{
+		bool valid = false;
+		f32 hue = 0.0f;        // Degrees (0-360)
+		f32 saturation = 0.0f; // 0-255
+		f32 value = 0.0f;      // 0-255
+		std::chrono::steady_clock::time_point last_update {};
+	};
+
 	void set_valid(ps_move_info& info, u32 index, bool valid);
 
-	// Creates the binary image of all pixels that match the hue, saturation and value of the given device
-	void filter_image(u32 index);
+	// Creates the binary image of all pixels that match the hue, saturation and value of the given device.
+	// If use_sphere_color is true, the pixels also have to be similar to the measured sphere color.
+	void filter_image(u32 index, bool use_sphere_color);
+
+	// Measures the color of the sphere and blends it into the sphere color of the given device
+	void update_sphere_color(u32 index, const blob_detector::blob& b);
 
 	void draw_sphere_size_range(f32 result_radius);
 
@@ -102,6 +118,7 @@ private:
 	std::array<u32, 360> m_hues{};
 	std::array<ps_move_info, CELL_GEM_MAX_NUM> m_info{};
 	std::array<ps_move_config, CELL_GEM_MAX_NUM> m_config{};
+	std::array<sphere_color, CELL_GEM_MAX_NUM> m_sphere_colors{};
 	std::array<blob_detector, CELL_GEM_MAX_NUM> m_blob_detectors{};
 
 	std::array<std::unique_ptr<named_thread<std::function<void()>>>, CELL_GEM_MAX_NUM> m_workers{};
