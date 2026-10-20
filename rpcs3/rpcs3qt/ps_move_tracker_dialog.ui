@@ -216,6 +216,19 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QPushButton" name="calibrateButton">
+                <property name="toolTip">
+                 <string>Lets the sphere blink and measures its hue and thresholds as seen by the camera.
+The calibrated hue is used instead of the configured hue until the color of the sphere changes.
+The thresholds are replaced by the calibrated thresholds.
+Hold the PS Move still in front of the camera.</string>
+                </property>
+                <property name="text">
+                 <string>Calibrate</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>

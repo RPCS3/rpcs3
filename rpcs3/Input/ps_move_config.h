@@ -15,6 +15,9 @@ struct cfg_ps_move final : cfg::node
 	cfg::uint<0, 359> hue{ this, "Hue", 0, true };
 	cfg::uint<0, 180> hue_threshold{ this, "Hue Threshold", 10, true };
 	cfg::uint<0, 255> saturation_threshold{ this, "Saturation Threshold", 10, true };
+	cfg::uint<0, 255> value_threshold{ this, "Value Threshold", 150, true };
+	cfg::_bool hue_calibrated{ this, "Hue Calibrated", false, true }; // The calibrated hue is valid for the current color
+	cfg::uint<0, 359> calibrated_hue{ this, "Calibrated Hue", 0, true }; // The hue of the sphere as seen by the camera
 };
 
 struct cfg_ps_moves final : cfg::node

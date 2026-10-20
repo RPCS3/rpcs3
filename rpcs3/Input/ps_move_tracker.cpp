@@ -135,6 +135,18 @@ void ps_move_tracker<DiagnosticsEnabled>::set_saturation_threshold(u32 index, u8
 }
 
 template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::set_value_threshold(u32 index, u8 threshold)
+{
+	ps_move_config& config = ::at32(m_config, index);
+
+	if (config.value_threshold_u8 == threshold)
+		return;
+
+	::at32(m_sphere_colors, index).valid = false;
+	config.value_threshold_u8 = threshold;
+}
+
+template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::init_worker(u32 index)
 {
 	auto& worker = ::at32(m_workers, index);
@@ -320,9 +332,6 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 static constexpr u32 min_blob_area = 30;
 static constexpr f32 min_sphere_radius = 5.0f;
 
-// Minimum brightness of the sphere
-static constexpr u8 min_sphere_value = 150;
-
 // Allowed differences to the measured sphere color (see also sphere_hue_range)
 static constexpr s32 sphere_saturation_range = 85;
 static constexpr s32 sphere_value_range = 85;
@@ -425,7 +434,16 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_spher
 	for (u32 i = 0; i < hue_allowed.size(); i++)
 	{
 		const u16 hue = static_cast<u16>(i * 2);
-		bool allowed = !has_hue_threshold || (wrapped_hue ? (hue >= config.min_hue || hue <= config.max_hue) : (hue >= config.min_hue && hue <= config.max_hue));
+		bool allowed = true;
+
+		if (!has_hue_threshold)
+		{
+			// Any hue is allowed
+		}
+		else
+		{
+			allowed = wrapped_hue ? (hue >= config.min_hue || hue <= config.max_hue) : (hue >= config.min_hue && hue <= config.max_hue);
+		}
 
 		if (allowed && use_sphere_color)
 		{
@@ -435,12 +453,13 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_spher
 		hue_allowed[i] = allowed;
 	}
 
-	// Drop dark and colorless pixels. The measured sphere color can only make the ranges smaller.
+	// Drop dark and colorless pixels
 	s32 min_saturation = config.saturation_threshold_u8;
 	s32 max_saturation = 255;
-	s32 min_value = min_sphere_value;
+	s32 min_value = config.value_threshold_u8;
 	s32 max_value = 255;
 
+	// The measured sphere color can only make the ranges smaller
 	if (use_sphere_color)
 	{
 		min_saturation = std::max(min_saturation, static_cast<s32>(color.saturation) - sphere_saturation_range);
@@ -920,6 +939,227 @@ std::tuple<s16, f32, f32> ps_move_tracker<DiagnosticsEnabled>::rgb_to_hsv(f32 r,
 	}
 
 	return { hue, saturation, cmax };
+}
+
+ps_move_calibration_result ps_move_calibrate_sphere(const std::vector<std::vector<u8>>& images_on, const std::vector<std::vector<u8>>& images_off, u32 width, u32 height, ps_move_tracker_calibration& calibration)
+{
+	calibration = {};
+	ps_move_sphere_color& color = calibration.color;
+
+	const usz size = usz{width} * height;
+
+	if (!size || images_on.empty() || images_on.size() != images_off.size())
+	{
+		return ps_move_calibration_result::invalid_images;
+	}
+
+	for (usz i = 0; i < images_on.size(); i++)
+	{
+		if (images_on[i].size() != size * 4 || images_off[i].size() != size * 4)
+		{
+			return ps_move_calibration_result::invalid_images;
+		}
+	}
+
+	// Only keep pixels that changed in every blink. This removes the background and things that only moved once.
+	constexpr s32 min_difference = 30;
+	std::vector<u8> mask(size, 255);
+
+	for (usz i = 0; i < images_on.size(); i++)
+	{
+		const u8* on = images_on[i].data();
+		const u8* off = images_off[i].data();
+
+		for (usz pixel = 0; pixel < size; pixel++, on += 4, off += 4)
+		{
+			if (!mask[pixel])
+				continue;
+
+			const s32 difference = std::max({ std::abs(on[0] - off[0]), std::abs(on[1] - off[1]), std::abs(on[2] - off[2]) });
+
+			if (difference < min_difference)
+			{
+				mask[pixel] = 0;
+			}
+		}
+	}
+
+	// Find the largest blinking area
+	blob_detector detector;
+	detector.open(mask, width, height);
+	detector.detect(mask, width, height, true);
+
+	const blob_detector::blob* sphere = nullptr;
+
+	for (const blob_detector::blob& b : detector.blobs())
+	{
+		if (!sphere || b.area > sphere->area)
+		{
+			sphere = &b;
+		}
+	}
+
+	constexpr u32 min_sphere_area = 50;
+
+	if (!sphere || sphere->area < min_sphere_area)
+	{
+		return ps_move_calibration_result::not_found;
+	}
+
+	if (sphere->fill_ratio() < 0.5f)
+	{
+		return ps_move_calibration_result::not_round;
+	}
+
+	// Average the color of the sphere while the LED was on.
+	// The hue is circular, so we average it as a direction. It is weighted by the saturation, so overexposed (white) pixels don't distort it.
+	const std::vector<u32>& labels = detector.labels();
+	f64 sum_cos = 0.0;
+	f64 sum_sin = 0.0;
+	f64 sum_saturation = 0.0;
+	f64 sum_value = 0.0;
+	u64 count = 0;
+
+	for (const std::vector<u8>& image : images_on)
+	{
+		for (u32 y = sphere->min_y; y <= sphere->max_y; y++)
+		{
+			for (u32 x = sphere->min_x; x <= sphere->max_x; x++)
+			{
+				const u32 pixel = y * width + x;
+
+				// Ignore filled holes
+				if (labels[pixel] != sphere->label || !mask[pixel])
+					continue;
+
+				const u8* rgba = &image[pixel * 4];
+				const auto [hue, saturation, value] = ps_move_tracker<false>::rgb_to_hsv(rgba[0] / 255.0f, rgba[1] / 255.0f, rgba[2] / 255.0f);
+				const f64 angle = hue * std::numbers::pi / 180.0;
+
+				sum_cos += saturation * std::cos(angle);
+				sum_sin += saturation * std::sin(angle);
+				sum_saturation += saturation;
+				sum_value += value;
+				count++;
+			}
+		}
+	}
+
+	if (!count || (sum_cos == 0.0 && sum_sin == 0.0))
+	{
+		return ps_move_calibration_result::not_found;
+	}
+
+	f32 hue = static_cast<f32>(std::atan2(sum_sin, sum_cos) * 180.0 / std::numbers::pi);
+	if (hue < 0.0f) hue += 360.0f;
+
+	// Measure how much the colored part of the sphere varies, so the thresholds include most of it.
+	// Pixels with little color (e.g. an overexposed center) are ignored. The tracker fills those holes anyway.
+	constexpr u8 min_colored_saturation = 64;
+	std::array<u64, 181> hue_distances {};
+	std::array<u64, 256> saturations {};
+	std::array<u64, 256> values {};
+	u64 colored_count = 0;
+
+	for (const std::vector<u8>& image : images_on)
+	{
+		for (u32 y = sphere->min_y; y <= sphere->max_y; y++)
+		{
+			for (u32 x = sphere->min_x; x <= sphere->max_x; x++)
+			{
+				const u32 pixel = y * width + x;
+
+				if (labels[pixel] != sphere->label || !mask[pixel])
+					continue;
+
+				const u8* rgba = &image[pixel * 4];
+				const auto [pixel_hue, pixel_saturation, pixel_value] = ps_move_tracker<false>::rgb_to_hsv(rgba[0] / 255.0f, rgba[1] / 255.0f, rgba[2] / 255.0f);
+				const u8 saturation = static_cast<u8>(std::clamp(pixel_saturation * 255.0f, 0.0f, 255.0f));
+
+				if (saturation < min_colored_saturation)
+					continue;
+
+				const u32 hue_distance = static_cast<u32>(std::lround(std::abs(std::remainder(pixel_hue - hue, 360.0f))));
+
+				hue_distances[std::min(hue_distance, 180u)]++;
+				saturations[saturation]++;
+				values[static_cast<u8>(std::clamp(pixel_value * 255.0f, 0.0f, 255.0f))]++;
+				colored_count++;
+			}
+		}
+	}
+
+	if (colored_count < min_sphere_area)
+	{
+		return ps_move_calibration_result::no_color;
+	}
+
+	// Returns the smallest value that is larger than or equal to the given fraction of all samples
+	const auto percentile = [colored_count](const auto& histogram, f64 fraction) -> s32
+	{
+		const u64 target = static_cast<u64>(std::ceil(colored_count * fraction));
+		u64 sum = 0;
+
+		for (usz i = 0; i < histogram.size(); i++)
+		{
+			sum += histogram[i];
+
+			if (sum >= target)
+			{
+				return static_cast<s32>(i);
+			}
+		}
+
+		return static_cast<s32>(histogram.size() - 1);
+	};
+
+	// Include 90% of the colored sphere pixels plus a small margin
+	calibration.hue_threshold = std::clamp(percentile(hue_distances, 0.9) + 4.0f, 8.0f, 60.0f);
+	calibration.min_saturation = static_cast<u8>(std::clamp(percentile(saturations, 0.1) - 10, s32{min_colored_saturation} / 2, 255));
+	calibration.min_value = static_cast<u8>(std::clamp(percentile(values, 0.1) - 10, 64, 255));
+
+	color.hue = hue;
+	color.saturation = static_cast<f32>(sum_saturation / count * 255.0);
+	color.value = static_cast<f32>(sum_value / count * 255.0);
+	color.valid = true;
+
+	// Check how much of the background would also match. Ignore the area around the sphere, because it may be lit by the sphere.
+	const u32 margin = std::max(sphere->max_x - sphere->min_x, sphere->max_y - sphere->min_y) / 2 + 1;
+	const u32 ignore_min_x = sphere->min_x > margin ? sphere->min_x - margin : 0;
+	const u32 ignore_min_y = sphere->min_y > margin ? sphere->min_y - margin : 0;
+	const u32 ignore_max_x = sphere->max_x + margin;
+	const u32 ignore_max_y = sphere->max_y + margin;
+
+	u64 background_count = 0;
+	u64 background_matches = 0;
+
+	for (const std::vector<u8>& image : images_on)
+	{
+		for (u32 y = 0; y < height; y++)
+		{
+			for (u32 x = 0; x < width; x++)
+			{
+				if (x >= ignore_min_x && x <= ignore_max_x && y >= ignore_min_y && y <= ignore_max_y)
+					continue;
+
+				const u8* rgba = &image[(y * width + x) * 4];
+				const auto [pixel_hue, pixel_saturation, pixel_value] = ps_move_tracker<false>::rgb_to_hsv(rgba[0] / 255.0f, rgba[1] / 255.0f, rgba[2] / 255.0f);
+
+				background_count++;
+
+				if (pixel_saturation * 255.0f >= calibration.min_saturation &&
+				    pixel_value * 255.0f >= calibration.min_value &&
+				    std::abs(std::remainder(pixel_hue - hue, 360.0f)) <= calibration.hue_threshold)
+				{
+					background_matches++;
+				}
+			}
+		}
+	}
+
+	calibration.background_ratio = background_count ? static_cast<f32>(static_cast<f64>(background_matches) / background_count) : 0.0f;
+
+	return ps_move_calibration_result::ok;
 }
 
 template class ps_move_tracker<false>;
