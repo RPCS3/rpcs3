@@ -623,9 +623,15 @@ void ps_move_tracker_dialog::process_camera_frame()
 
 	QImage image = QImage(result->data(), width, height, bytes_per_line, format, nullptr, nullptr).copy();
 
+	const ps_move_sphere_color& sphere_color = m_ps_move_tracker->sphere_color(index);
+
 	std::lock_guard lock(m_image_mutex);
 	m_image = std::move(image);
 	m_hues = m_ps_move_tracker->hues();
+	m_measured_color.valid = sphere_color.valid;
+	m_measured_color.hue = sphere_color.hue;
+	m_measured_color.saturation = sphere_color.saturation;
+	m_measured_color.value = sphere_color.value;
 }
 
 QPixmap ps_move_tracker_dialog::get_histogram(bool ignore_zero, int width) const
@@ -666,11 +672,62 @@ QPixmap ps_move_tracker_dialog::get_histogram(bool ignore_zero, int width) const
 		return std::pair<int, int>(x0, x1);
 	};
 
+	// Paint the hue range of the measured sphere color
+	if (m_measured_color.valid)
+	{
+		const f32 range = ps_move_tracker<true>::sphere_hue_range;
+		const f32 min_measured_hue = m_measured_color.hue - range;
+		const int range_width = std::max(1, static_cast<int>((range * 2.0f + 1.0f) * pixelsPerHue));
+		const QColor range_color(100, 200, 100, 120);
+
+		painter.fillRect(static_cast<int>(min_measured_hue * pixelsPerHue), 0, range_width, histo.height(), range_color);
+
+		// Wrap around
+		if (min_measured_hue < 0.0f)
+		{
+			painter.fillRect(static_cast<int>((min_measured_hue + 360.0f) * pixelsPerHue), 0, range_width, histo.height(), range_color);
+		}
+		else if (min_measured_hue + range * 2.0f >= 360.0f)
+		{
+			painter.fillRect(static_cast<int>((min_measured_hue - 360.0f) * pixelsPerHue), 0, range_width, histo.height(), range_color);
+		}
+	}
+
 	// Paint target hue
 	const auto [r, g, b] = ps_move_tracker<true>::hsv_to_rgb(hue, 1.0f, 1.0f);
 	const auto [x0, x1] = get_hue_bar_x(hue);
 	painter.setPen(QColor(r, g, b));
 	painter.drawLine(x0, 0, x1, histo.height() - 1);
+
+	// Paint measured hue and a sample of the measured color. This is done last, so the histogram doesn't cover the text.
+	const auto paint_measured_color = [&]()
+	{
+		constexpr int swatch_size = 16;
+		const QRect swatch(4, 4, swatch_size, swatch_size);
+		QString text;
+
+		if (m_measured_color.valid)
+		{
+			const u16 measured_hue = static_cast<u16>(std::lround(m_measured_color.hue) % 360);
+			const auto [mr, mg, mb] = ps_move_tracker<true>::hsv_to_rgb(measured_hue, m_measured_color.saturation / 255.0f, m_measured_color.value / 255.0f);
+			const QColor measured_color(mr, mg, mb);
+			const auto [mx0, mx1] = get_hue_bar_x(measured_hue);
+
+			painter.setPen(QPen(Qt::darkGreen, 1, Qt::DashLine));
+			painter.drawLine(mx0, 0, mx0, histo.height() - 1);
+
+			painter.fillRect(swatch, measured_color);
+			text = tr("Measured: H=%0 S=%1 V=%2").arg(measured_hue).arg(static_cast<int>(m_measured_color.saturation)).arg(static_cast<int>(m_measured_color.value));
+		}
+		else
+		{
+			text = tr("Measured: -");
+		}
+
+		painter.setPen(Qt::black);
+		painter.drawRect(swatch);
+		painter.drawText(swatch.right() + 6, swatch.top(), width, swatch_size, Qt::AlignLeft | Qt::AlignVCenter, text);
+	};
 
 	// Paint histogram
 	painter.setPen(Qt::black);
@@ -681,7 +738,10 @@ QPixmap ps_move_tracker_dialog::get_histogram(bool ignore_zero, int width) const
 	const u32 max_value = max_elem != m_hues.end() ? *max_elem : 0u;
 
 	if (!max_value)
+	{
+		paint_measured_color();
 		return histo;
+	}
 
 	for (int i = zero_offset; i < static_cast<int>(m_hues.size()); i++)
 	{
@@ -691,6 +751,8 @@ QPixmap ps_move_tracker_dialog::get_histogram(bool ignore_zero, int width) const
 		const auto [x0, x1] = get_hue_bar_x(i);
 		painter.drawLine(x0, height - 1, x1, height - bar_height);
 	}
+
+	paint_measured_color();
 
 	return histo;
 }
