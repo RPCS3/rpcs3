@@ -473,6 +473,14 @@ void GLGSRender::on_bind_context(rsx::context* ctx)
 {
 	m_vertex_layout.set_context(ctx);
 	m_shader_interpreter.set_context(ctx);
+
+	// The scaling can have changed while this context was not bound
+	if (const auto resources = res(ctx);
+		resources && resources->surface_cache.scaling_config() != RSX(ctx)->resolution_scaling_config)
+	{
+		gl::command_context cmd{ gl_state };
+		resources->surface_cache.sync_scaling_config(cmd, RSX(ctx)->resolution_scaling_config);
+	}
 }
 
 void GLGSRender::on_release_context_resources(rsx::context* ctx)
@@ -488,6 +496,16 @@ void GLGSRender::on_unbind_context(rsx::context* ctx)
 	{
 		resources->vertex_cache->purge();
 	}
+
+	// Every cached framebuffer has this context's surfaces attached
+	m_draw_fbo = nullptr;
+
+	for (auto& fbo : m_framebuffer_cache)
+	{
+		fbo.remove();
+	}
+
+	m_framebuffer_cache.clear();
 }
 
 void GLGSRender::on_shutdown()
