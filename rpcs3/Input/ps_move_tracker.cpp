@@ -268,6 +268,8 @@ void ps_move_tracker<DiagnosticsEnabled>::convert_image(s32 output_format)
 	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
 	{
 		m_image_binary[index].resize(size);
+		m_image_overexposed[index].resize(size);
+		m_image_enclosed[index].resize(size);
 	}
 
 	m_vc_attr.output_format = CellGemVideoConvertFormatEnum{output_format};
@@ -331,6 +333,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 
 static constexpr u32 min_blob_area = 30;
 static constexpr f32 min_sphere_radius = 5.0f;
+
+// Pixels that are at least this bright are considered overexposed. The center of a bright sphere is white, so it has no usable color.
+static constexpr u8 min_overexposed_value = 230;
 
 // Round blobs that are stretched at least this much (major / minor axis) are considered blurred
 static constexpr f32 min_blurred_elongation = 1.15f;
@@ -414,14 +419,14 @@ void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radi
 }
 
 template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_sphere_color)
+bool ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_sphere_color)
 {
 	const u32 width = m_width;
 	const u32 height = m_height;
 
 	if (width == 0 || height == 0)
 	{
-		return;
+		return false;
 	}
 
 	const ps_move_config& config = ::at32(m_config, index);
@@ -472,10 +477,14 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_spher
 		max_value = std::min(max_value, static_cast<s32>(color.value) + sphere_value_range);
 	}
 
+	std::vector<u8>& image_overexposed = ::at32(m_image_overexposed, index);
+	bool has_overexposed_pixels = false;
+
 	for (u32 y = 0; y < height; y++)
 	{
 		const u8* src = &image_hsv[y * width * 3];
 		u8* dst = &image_binary[y * width];
+		u8* overexposed = &image_overexposed[y * width];
 
 		for (u32 x = 0; x < width; x++, src += 3)
 		{
@@ -487,9 +496,15 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_spher
 				saturation >= min_saturation && saturation <= max_saturation &&
 				value >= min_value && value <= max_value;
 
+			const bool is_overexposed = !matches && value >= min_overexposed_value;
+
 			dst[x] = matches ? 255 : 0;
+			overexposed[x] = is_overexposed ? 255 : 0;
+			has_overexposed_pixels |= is_overexposed;
 		}
 	}
+
+	return has_overexposed_pixels;
 }
 
 template <bool DiagnosticsEnabled>
@@ -508,14 +523,15 @@ void ps_move_tracker<DiagnosticsEnabled>::update_sphere_color(u32 index, const b
 	const blob_detector& detector = ::at32(m_blob_detectors, index);
 	const std::vector<u32>& labels = detector.labels();
 	const std::vector<u8>& image_binary = ::at32(m_image_binary, index);
+	const std::vector<u8>& image_overexposed = ::at32(m_image_overexposed, index);
 	const u32 width = m_width;
 
-	if (labels.size() != image_binary.size() || m_image_hsv.size() != image_binary.size() * 3 || b.max_x >= width || b.max_y >= m_height)
+	if (labels.size() != image_binary.size() || image_overexposed.size() != image_binary.size() || m_image_hsv.size() != image_binary.size() * 3 || b.max_x >= width || b.max_y >= m_height)
 	{
 		return;
 	}
 
-	// Average the color of all pixels that passed the filter. Filled holes (e.g. overexposed centers) are ignored.
+	// Average the color of all pixels that passed the filter. Filled holes and overexposed pixels (e.g. white centers) are ignored.
 	// The hue is circular, so we average it as a direction.
 	f64 sum_cos = 0.0;
 	f64 sum_sin = 0.0;
@@ -529,7 +545,7 @@ void ps_move_tracker<DiagnosticsEnabled>::update_sphere_color(u32 index, const b
 		{
 			const u32 pixel = y * width + x;
 
-			if (labels[pixel] != b.label || !image_binary[pixel])
+			if (labels[pixel] != b.label || !image_binary[pixel] || image_overexposed[pixel])
 			{
 				continue;
 			}
@@ -598,10 +614,31 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	// Filter image
-	filter_image(index, color.valid);
+	const bool has_overexposed_pixels = filter_image(index, color.valid);
 
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 	blob_detector& detector = ::at32(m_blob_detectors, index);
+
+	// The center of a bright sphere is overexposed (white), so it doesn't match the color and only a colored ring is left.
+	// Add the overexposed pixels that are enclosed by colored pixels. Overexposed areas that are not enclosed (e.g. windows or monitors) are ignored.
+	// The colored pixels are grown by one pixel first, so small gaps in the ring don't connect the center to the outside.
+	if (has_overexposed_pixels)
+	{
+		const std::vector<u8>& image_overexposed = ::at32(m_image_overexposed, index);
+		std::vector<u8>& image_enclosed = ::at32(m_image_enclosed, index);
+
+		image_enclosed = image_binary;
+		detector.dilate(image_enclosed, width, height);
+		detector.find_enclosed(image_enclosed, width, height);
+
+		for (usz i = 0; i < image_binary.size(); i++)
+		{
+			if (image_overexposed[i] && image_enclosed[i])
+			{
+				image_binary[i] = 255;
+			}
+		}
+	}
 
 	// Remove noise and thin lines. This also separates the sphere from background objects that only touch it with a thin bridge.
 	detector.open(image_binary, width, height);

@@ -224,6 +224,39 @@ namespace blob
 		EXPECT_EQ(detector.blobs()[0].area, 80u * 80u);
 	}
 
+	TEST(BlobDetector, DilateAndFindEnclosed)
+	{
+		blob_detector detector;
+		test_image image(100, 100);
+
+		// Ring with a gap of one pixel
+		image.disk(50.0f, 50.0f, 30.0f);
+		image.disk(50.0f, 50.0f, 25.0f, 0);
+		image.rect(50, 70, 50, 82, 0);
+
+		// The center is connected to the outside through the gap
+		std::vector<u8> enclosed = image.pixels;
+		detector.find_enclosed(enclosed, image.width, image.height);
+		EXPECT_EQ(enclosed[50 * 100 + 50], 0);
+
+		// The dilation closes the gap
+		enclosed = image.pixels;
+		detector.dilate(enclosed, image.width, image.height);
+		EXPECT_EQ(enclosed[75 * 100 + 50], 255);
+		EXPECT_EQ(enclosed[50 * 100 + 50], 0);
+
+		detector.find_enclosed(enclosed, image.width, image.height);
+		EXPECT_EQ(enclosed[50 * 100 + 50], 255); // Center
+		EXPECT_EQ(enclosed[50 * 100 + 78], 0);   // Barrier
+		EXPECT_EQ(enclosed[5 * 100 + 5], 0);     // Outside
+
+		// Invalid input is ignored
+		std::vector<u8> invalid(10, 255);
+		detector.dilate(invalid, 100, 100);
+		detector.find_enclosed(invalid, 100, 100);
+		EXPECT_EQ(invalid, std::vector<u8>(10, 255));
+	}
+
 	TEST(BlobDetector, MomentEllipse)
 	{
 		blob_detector detector;

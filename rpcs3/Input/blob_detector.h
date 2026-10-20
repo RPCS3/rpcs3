@@ -96,6 +96,14 @@ public:
 	// Morphological opening with a 3x3 square (erode, then dilate). Removes noise and thin lines and splits blobs that are connected by thin bridges.
 	void open(std::vector<u8>& binary, u32 width, u32 height);
 
+	// Morphological dilation with a 3x3 square. Grows the foreground by one pixel and closes small gaps.
+	void dilate(std::vector<u8>& binary, u32 width, u32 height);
+
+	// Replaces a mask of barrier pixels (anything but 0) with a mask of all pixels that are enclosed by the barrier (255).
+	// A pixel is enclosed if it can't be reached from the image border without crossing a barrier pixel (4-connectivity).
+	// The barrier pixels themselves are not part of the result.
+	void find_enclosed(std::vector<u8>& mask, u32 width, u32 height);
+
 	// Calculates the smallest circle that contains all points (Welzl's algorithm). The points will be reordered.
 	static void min_enclosing_circle(std::vector<point>& points, f32& center_x, f32& center_y, f32& radius);
 

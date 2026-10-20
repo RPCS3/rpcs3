@@ -474,6 +474,89 @@ void blob_detector::open(std::vector<u8>& binary, u32 width, u32 height)
 	morphology_3x3<false>(binary.data(), m_temp.data(), width, height);
 }
 
+void blob_detector::dilate(std::vector<u8>& binary, u32 width, u32 height)
+{
+	const usz size = usz{width} * height;
+
+	if (binary.size() != size || !size || size > u32{umax})
+	{
+		return;
+	}
+
+	m_temp.resize(size);
+
+	// Normalize the foreground to 255, so we can use max
+	for (u8& value : binary)
+	{
+		value = value ? 255 : 0;
+	}
+
+	morphology_3x3<false>(binary.data(), m_temp.data(), width, height);
+}
+
+void blob_detector::find_enclosed(std::vector<u8>& mask, u32 width, u32 height)
+{
+	const usz size = usz{width} * height;
+
+	if (mask.size() != size || !size || size > u32{umax})
+	{
+		return;
+	}
+
+	constexpr u8 unreached = 1; // Not reached from the border yet
+	constexpr u8 barrier = 2;  
+	constexpr u8 outside = 0;    // Reached from the border
+
+	for (u8& value : mask)
+	{
+		value = value ? barrier : unreached;
+	}
+
+	// Flood fill from the image border
+	m_stack.clear();
+
+	const auto push = [&](u32 index)
+	{
+		if (mask[index] == unreached)
+		{
+			mask[index] = outside;
+			m_stack.push_back(index);
+		}
+	};
+
+	for (u32 x = 0; x < width; x++)
+	{
+		push(x);
+		push((height - 1) * width + x);
+	}
+
+	for (u32 y = 0; y < height; y++)
+	{
+		push(y * width);
+		push(y * width + width - 1);
+	}
+
+	while (!m_stack.empty())
+	{
+		const u32 index = m_stack.back();
+		m_stack.pop_back();
+
+		const u32 x = index % width;
+		const u32 y = index / width;
+
+		if (x > 0) push(index - 1);
+		if (x + 1 < width) push(index + 1);
+		if (y > 0) push(index - width);
+		if (y + 1 < height) push(index + width);
+	}
+
+	// Everything that wasn't reached is enclosed
+	for (u8& value : mask)
+	{
+		value = (value == unreached) ? 255 : 0;
+	}
+}
+
 void blob_detector::detect(const std::vector<u8>& binary, u32 width, u32 height, bool fill_holes, u32 min_circle_area)
 {
 	m_blobs.clear();
