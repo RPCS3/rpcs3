@@ -266,14 +266,6 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	update_min_radius(true);
 	update_max_radius(true);
 
-	if constexpr (!g_ps_move_tracking_supported)
-	{
-		QTimer::singleShot(1000, this, [this]()
-		{
-			QMessageBox::warning(this, QObject::tr("Tracking not supported!"), QObject::tr("The PS Move tracking is not yet supported on this operating system."));
-		});
-	}
-
 	ui->imageLabel->installEventFilter(this);
 }
 
@@ -562,8 +554,8 @@ void ps_move_tracker_dialog::process_camera_frame()
 
 		m_ps_move_tracker->set_active(i, index == i);
 		m_ps_move_tracker->set_hue(i, config->hue);
-		m_ps_move_tracker->set_hue_threshold(i, config->hue_threshold);
-		m_ps_move_tracker->set_saturation_threshold(i, config->saturation_threshold);
+		m_ps_move_tracker->set_hue_threshold(i, static_cast<u8>(config->hue_threshold.get()));
+		m_ps_move_tracker->set_saturation_threshold(i, static_cast<u8>(config->saturation_threshold.get()));
 	}
 
 	m_ps_move_tracker->set_image_data(m_frame_frozen ? m_image_data_frozen.data() : m_image_data.data(), m_image_data.size(), width, height, m_camera_handler->format());

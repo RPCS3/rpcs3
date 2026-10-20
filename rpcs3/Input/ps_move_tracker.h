@@ -1,12 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/Modules/cellGem.h"
-
-#ifdef HAVE_OPENCV
-	constexpr bool g_ps_move_tracking_supported = true;
-#else
-	constexpr bool g_ps_move_tracking_supported = false;
-#endif
+#include "blob_detector.h"
 
 struct ps_move_info
 {
@@ -35,8 +30,8 @@ public:
 	
 	void set_active(u32 index, bool active);
 	void set_hue(u32 index, u16 hue);
-	void set_hue_threshold(u32 index, u16 threshold);
-	void set_saturation_threshold(u32 index, u16 threshold);
+	void set_hue_threshold(u32 index, u8 threshold);
+	void set_saturation_threshold(u32 index, u8 threshold);
 
 	void set_min_radius(f32 radius) { m_min_radius = radius; }
 	void set_max_radius(f32 radius) { m_max_radius = radius; }
@@ -62,8 +57,8 @@ private:
 		bool active = false;
 
 		u16 hue = 0;
-		u16 hue_threshold = 0;
-		u16 saturation_threshold_u8 = 0;
+		u8 hue_threshold = 0;
+		u8 saturation_threshold_u8 = 0;
 
 		s16 min_hue = 0;
 		s16 max_hue = 0;
@@ -72,6 +67,9 @@ private:
 	};
 
 	void set_valid(ps_move_info& info, u32 index, bool valid);
+
+	// Creates the binary image of all pixels that match the hue, saturation and value of the given device
+	void filter_image(u32 index);
 
 	void draw_sphere_size_range(f32 result_radius);
 
@@ -104,6 +102,7 @@ private:
 	std::array<u32, 360> m_hues{};
 	std::array<ps_move_info, CELL_GEM_MAX_NUM> m_info{};
 	std::array<ps_move_config, CELL_GEM_MAX_NUM> m_config{};
+	std::array<blob_detector, CELL_GEM_MAX_NUM> m_blob_detectors{};
 
 	std::array<std::unique_ptr<named_thread<std::function<void()>>>, CELL_GEM_MAX_NUM> m_workers{};
 	std::array<atomic_t<u32>, CELL_GEM_MAX_NUM> m_wake_up_workers{};
