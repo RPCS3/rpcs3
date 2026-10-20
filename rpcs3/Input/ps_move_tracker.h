@@ -23,6 +23,29 @@ struct ps_move_sphere_color
 	f32 value = 0.0f;      // 0-255
 };
 
+// The result of a calibration: the color of the sphere as seen by the camera and the thresholds that include most of the sphere
+struct ps_move_tracker_calibration
+{
+	ps_move_sphere_color color {};
+	f32 hue_threshold = 0.0f;    // Allowed hue difference in degrees
+	u8 min_saturation = 0;       // 0-255
+	u8 min_value = 0;            // 0-255
+	f32 background_ratio = 0.0f; // Fraction of the background pixels that match the thresholds (0-1)
+};
+
+enum class ps_move_calibration_result
+{
+	ok,
+	invalid_images, // No images or images with the wrong size
+	not_found,      // Nothing blinked
+	not_round,      // The blinking area is not round (e.g. the controller moved)
+	no_color,       // The sphere has almost no color (e.g. it is overexposed)
+};
+
+// Calibrates the sphere from RGBA images that were taken while the LED was blinking.
+// images_on[i] and images_off[i] are images with the LED turned on and off. Only pixels that changed in every pair are used.
+ps_move_calibration_result ps_move_calibrate_sphere(const std::vector<std::vector<u8>>& images_on, const std::vector<std::vector<u8>>& images_off, u32 width, u32 height, ps_move_tracker_calibration& calibration);
+
 template <bool DiagnosticsEnabled = false>
 class ps_move_tracker
 {
@@ -43,6 +66,7 @@ public:
 	void set_hue(u32 index, u16 hue);
 	void set_hue_threshold(u32 index, u8 threshold);
 	void set_saturation_threshold(u32 index, u8 threshold);
+	void set_value_threshold(u32 index, u8 threshold);
 
 	void set_min_radius(f32 radius) { m_min_radius = radius; }
 	void set_max_radius(f32 radius) { m_max_radius = radius; }
@@ -74,6 +98,7 @@ private:
 		u16 hue = 0;
 		u8 hue_threshold = 0;
 		u8 saturation_threshold_u8 = 0;
+		u8 value_threshold_u8 = 150;
 
 		s16 min_hue = 0;
 		s16 max_hue = 0;
