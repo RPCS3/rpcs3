@@ -1341,6 +1341,13 @@ void VKGSRender::on_bind_context(rsx::context* ctx)
 {
 	m_vertex_layout.set_context(ctx);
 	m_shader_interpreter.set_context(ctx);
+
+	// The scaling can have changed while this context was not bound
+	if (const auto resources = res(ctx);
+		resources && resources->surface_cache.scaling_config() != RSX(ctx)->resolution_scaling_config)
+	{
+		resources->surface_cache.sync_scaling_config(*m_current_command_buffer, RSX(ctx)->resolution_scaling_config);
+	}
 }
 
 void VKGSRender::on_release_context_resources(rsx::context* ctx)
@@ -1360,6 +1367,18 @@ void VKGSRender::on_unbind_context(rsx::context* ctx)
 	if (const auto resources = res(ctx))
 	{
 		resources->vertex_cache->purge();
+	}
+
+	// The render pass and the framebuffer use this context's surfaces
+	if (vk::is_renderpass_open(*m_current_command_buffer))
+	{
+		close_render_pass();
+	}
+
+	if (m_draw_fbo)
+	{
+		m_draw_fbo->release();
+		m_draw_fbo = nullptr;
 	}
 }
 
