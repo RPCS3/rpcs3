@@ -63,6 +63,25 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64
 		return CELL_EINVAL;
 	}
 
+	if (flag & 0xF4)
+	{
+		return CELL_EINVAL;
+	}
+
+	switch (flag & SYS_MEMORY_PAGE_SIZE_MASK)
+	{
+	case SYS_MEMORY_PAGE_SIZE_1M:
+	case SYS_MEMORY_PAGE_SIZE_64K:
+	case 0:
+	{
+		break;
+	}
+	default:
+	{
+		return CELL_EINVAL;
+	}
+	}
+
 	const auto idm_ct = idm::get_unlocked<lv2_memory_container>(cid);
 
 	const auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? &g_fxo->get<lv2_memory_container>() : idm_ct.get();
