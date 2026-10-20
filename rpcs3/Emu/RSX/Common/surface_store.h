@@ -63,6 +63,9 @@ namespace rsx
 		// Context this cache belongs to
 		rsx::context* m_ctx = nullptr;
 
+		// Resolution scaling the surfaces were last synced to
+		rsx::surface_scaling_config_t m_scaling_config{};
+
 		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
 
 	public:
@@ -1712,8 +1715,15 @@ namespace rsx
 			}
 		}
 
+		const rsx::surface_scaling_config_t& scaling_config() const
+		{
+			return m_scaling_config;
+		}
+
 		void sync_scaling_config(command_list_type cmd, const rsx::surface_scaling_config_t& active_config)
 		{
+			m_scaling_config = active_config;
+
 			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
 			{
 				std::vector<surface_type> surfaces_to_clone;
