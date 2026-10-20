@@ -39,7 +39,7 @@ private:
 	void reset_camera();
 	void process_camera_frame();
 
-	QPixmap get_histogram(const std::array<u32, 360>& hues, bool ignore_zero, u32 index) const;
+	QPixmap get_histogram(bool ignore_zero, int width) const;
 
 	enum class view_mode
 	{
@@ -77,8 +77,7 @@ private:
 	atomic_t<bool> m_draw_contours = true;
 	atomic_t<bool> m_draw_overlays = true;
 
-	QPixmap m_image;
-	QPixmap m_histogram;
+	QImage m_image;
 
 	// Thread control
 	QTimer* m_update_timer = nullptr;
