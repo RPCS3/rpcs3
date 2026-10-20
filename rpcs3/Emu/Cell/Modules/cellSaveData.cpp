@@ -1415,7 +1415,29 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				if (selected == -1 && operation == SAVEDATA_OP_FIXED_DELETE)
 				{
-					message = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE, dirStr.c_str());
+					// Read the information of the save to delete as for a listed entry
+					const std::string dir_path = base_dir + save_entry.escaped;
+					const psf::registry psf = psf::load_object(dir_path + "/PARAM.SFO");
+					save_entry.title    = psf::get_string(psf, "TITLE");
+					save_entry.subtitle = psf::get_string(psf, "SUB_TITLE");
+					save_entry.details  = psf::get_string(psf, "DETAIL");
+
+					if (fs::stat_t dir_info{}; fs::get_stat(dir_path, dir_info))
+					{
+						save_entry.mtime = dir_info.mtime;
+					}
+
+					for (const auto& entry : fs::dir(dir_path))
+					{
+						if (entry.is_directory || check_filename(vfs::unescape(entry.name), false, true))
+						{
+							continue;
+						}
+
+						save_entry.size += entry.size;
+					}
+
+					message = get_confirmation_message(operation, save_entry);
 				}
 				else if (selected == -1)
 				{
