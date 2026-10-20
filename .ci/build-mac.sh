@@ -9,8 +9,12 @@ AVVER="${COMM_TAG}-${COMM_COUNT}"
 export LVER="${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}"
 echo "AVVER=$AVVER" >> .ci/ci-vars.env
 
-# Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
-sudo port install "clang-$LLVM_COMPILER_VER"
+# Setup MacPorts
+wget https://github.com/macports/macports-base/releases/download/v2.12.6/MacPorts-2.12.6-15-Sequoia.pkg
+sudo installer -pkg MacPorts-2.12.6-15-Sequoia.pkg -target /
+# shellcheck disable=SC1090
+. ~/.bash_profile
+sudo port install abseil ccache "clang-$LLVM_COMPILER_VER" gtest opencv4 sdl3 vulkan-headers vulkan-loader MoltenVK
 
 export CXX=clang++
 export CC=clang
@@ -79,6 +83,9 @@ cmake .. \
 ninja; build_status=$?;
 
 cd ..
+
+# Hackfix for MacPorts cache saves ( dbus and tar don't get along ): )
+sudo port -f uninstall dbus
 
 # If it compiled succesfully let's deploy.
 if [ "$build_status" -eq 0 ]; then
