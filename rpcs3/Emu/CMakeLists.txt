@@ -141,6 +141,7 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/IRD.cpp
     ../Loader/IRD_validation.cpp
     ../Loader/ISO.cpp
+    ../Loader/CHD.cpp
     ../Loader/iso_cache.cpp
     ../Loader/content_validation.cpp
     ../Loader/TROPUSR.cpp
@@ -717,6 +718,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::yaml-cpp
         3rdparty::zlib
         3rdparty::zstd
+        3rdparty::chdr
         3rdparty::libcurl
 )
 

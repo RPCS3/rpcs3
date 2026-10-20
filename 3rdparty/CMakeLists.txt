@@ -386,3 +386,6 @@ add_library(3rdparty::rtmidi ALIAS rtmidi)
 add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
 add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)
+
+# Private CHD integration: shares the existing compression targets.
+add_subdirectory(libchdr EXCLUDE_FROM_ALL)
