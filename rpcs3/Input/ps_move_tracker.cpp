@@ -332,6 +332,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 static constexpr u32 min_blob_area = 30;
 static constexpr f32 min_sphere_radius = 5.0f;
 
+// Round blobs that are stretched at least this much (major / minor axis) are considered blurred
+static constexpr f32 min_blurred_elongation = 1.15f;
+
 // Allowed differences to the measured sphere color (see also sphere_hue_range)
 static constexpr s32 sphere_saturation_range = 85;
 static constexpr s32 sphere_value_range = 85;
@@ -376,7 +379,8 @@ struct sphere_candidate
 	f32 y = 0.0f;
 	f32 radius = 0.0f;
 	f32 score = 0.0f;
-	bool is_circle = false; // The blob itself is round
+	bool is_circle = false;  // The blob itself is round
+	bool is_blurred = false; // The sphere is blurred by movement, so its radius is not reliable
 	candidate_status status = candidate_status::rejected_shape;
 };
 
@@ -633,6 +637,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 			candidate.y = b.center_y;
 			candidate.radius = b.radius;
 			candidate.is_circle = true;
+
+			// A slightly blurred sphere can still be round enough. Its enclosing circle includes a part of the blur.
+			candidate.is_blurred = has_last_position && b.minor_axis > 0.0f && b.major_axis / b.minor_axis >= min_blurred_elongation;
 		}
 		else if (has_last_position &&
 		         b.area >= min_blob_area &&
@@ -652,6 +659,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 				candidate.x = capsule.center_x;
 				candidate.y = capsule.center_y;
 				candidate.radius = capsule.radius;
+				candidate.is_blurred = true;
 				weight = 0.75f;
 			}
 			else if (similar_size && detector.is_round_bulge(b, circle))
@@ -805,6 +813,13 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 
 	f32 sphere_radius_pixels = best_candidate.radius;
 	f32 x_pos = std::clamp(best_candidate.x, 0.0f, static_cast<f32>(width));
+
+	// The radius of a blurred sphere is not reliable. The edges of the blur are darker, so the blur looks thinner than the sphere,
+	// and the enclosing circle of a slightly blurred sphere includes a part of the blur. Keep the last radius (and distance) instead.
+	if (best_candidate.is_blurred && has_last_position)
+	{
+		sphere_radius_pixels = last_radius;
+	}
 	f32 y_pos = std::clamp(best_candidate.y, 0.0f, static_cast<f32>(height));
 
 	// Only set new values if the new shape and position are relatively similar to the old ones.
@@ -843,7 +858,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	// Measure the color of the sphere, but only in clean frames: a complete round sphere with a stable size
-	if (has_last_position && best_candidate.is_circle &&
+	if (has_last_position && best_candidate.is_circle && !best_candidate.is_blurred &&
 	    best_candidate.blob->fill_ratio() > 0.8f &&
 	    best_candidate.radius > 6.0f &&
 	    std::abs(best_candidate.radius - last_radius) < last_radius * 0.2f)
