@@ -542,7 +542,7 @@ void GLGSRender::post_present()
 		.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
 	};
 
-	if (res() && active_res_scaling_config != RSX(m_ctx)->resolution_scaling_config)
+	if (res() && active_res_scaling_config != res()->surface_cache.scaling_config())
 	{
 		res()->surface_cache.sync_scaling_config(cmd, active_res_scaling_config);
 		RSX(m_ctx)->resolution_scaling_config = active_res_scaling_config;
