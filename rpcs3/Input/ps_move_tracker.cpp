@@ -351,6 +351,15 @@ static bool is_on_movement_path(const blob_detector::capsule& capsule, f32 last_
 	return side_distance <= last_radius * 2.0f && axis_distance <= capsule.half_length * 4.0f + last_radius * 2.0f;
 }
 
+// Why a blob was or wasn't chosen. Only used for diagnostics. Higher values are drawn on top.
+enum class candidate_status
+{
+	rejected_shape,  // Not round and no fallback matched
+	rejected_radius, // Round, but outside of the configured radius range
+	candidate,       // Valid candidate, but another one had a better score
+	best,            // The chosen sphere
+};
+
 struct sphere_candidate
 {
 	const blob_detector::blob* blob = nullptr;
@@ -359,6 +368,7 @@ struct sphere_candidate
 	f32 radius = 0.0f;
 	f32 score = 0.0f;
 	bool is_circle = false; // The blob itself is round
+	candidate_status status = candidate_status::rejected_shape;
 };
 
 template <bool DiagnosticsEnabled>
@@ -638,20 +648,31 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 
 		if (candidate.radius <= 0.0f)
 		{
-			// Remove all non-circular blobs from the binary image
 			if constexpr (DiagnosticsEnabled)
 			{
+				// Remove all non-circular blobs from the binary image
 				if (m_filter_small_contours)
 				{
 					detector.fill_blob(image_binary, b, 0);
 				}
+
+				candidates.push_back(candidate);
 			}
 			continue;
 		}
 
 		// Filter radius
 		if (candidate.radius < min_radius || candidate.radius > max_radius)
+		{
+			if constexpr (DiagnosticsEnabled)
+			{
+				candidate.status = candidate_status::rejected_radius;
+				candidates.push_back(candidate);
+			}
 			continue;
+		}
+
+		candidate.status = candidate_status::candidate;
 
 		// Larger spheres are more likely to be the real one, but the distance to the last position is more important
 		candidate.score = weight * candidate.radius * candidate.radius;
@@ -674,14 +695,92 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		}
 	}
 
+	// Draws the blobs and the circles of the candidates into the diagnostics image
+	const auto draw_diagnostics = [&](f32 result_radius)
+	{
+		if constexpr (DiagnosticsEnabled)
+		{
+			if (!m_draw_contours && !m_draw_overlays) [[likely]]
+				return;
+
+			draw_sphere_size_range(result_radius);
+
+			// Protect the destination image from race conditions
+			std::lock_guard lock(m_mutex);
+
+			if (!m_show_all_contours) [[likely]]
+			{
+				candidates.clear();
+
+				if (best_candidate.blob)
+				{
+					candidates.push_back(best_candidate);
+				}
+			}
+
+			for (sphere_candidate& candidate : candidates)
+			{
+				if (candidate.blob == best_candidate.blob)
+				{
+					candidate.status = candidate_status::best;
+				}
+			}
+
+			// Draw the best candidate last, so it is on top
+			std::stable_sort(candidates.begin(), candidates.end(), [](const sphere_candidate& l, const sphere_candidate& r) { return l.status < r.status; });
+
+			struct status_colors
+			{
+				std::array<u8, 4> contour;
+				std::array<u8, 4> circle;
+			};
+
+			const auto get_colors = [](candidate_status status) -> status_colors
+			{
+				switch (status)
+				{
+				case candidate_status::rejected_shape: return { { 128, 128, 128, 255 }, { 128, 128, 128, 255 } };
+				case candidate_status::rejected_radius: return { { 255, 255, 0, 255 }, { 255, 255, 128, 255 } };
+				case candidate_status::candidate: return { { 255, 140, 0, 255 }, { 255, 200, 100, 255 } };
+				case candidate_status::best: break;
+				}
+				return { { 255, 0, 0, 255 }, { 0, 255, 0, 255 } };
+			};
+
+			static constexpr std::array<u8, 4> center_color = { 0, 0, 255, 255 };
+
+			// Draw contours
+			if (m_draw_contours)
+			{
+				for (const sphere_candidate& candidate : candidates)
+				{
+					detector.fill_blob_rgba(m_image_rgba_contours, *candidate.blob, get_colors(candidate.status).contour);
+				}
+			}
+
+			// Draw overlays. Blobs that were rejected because of their shape have no circle.
+			if (m_draw_overlays)
+			{
+				for (const sphere_candidate& candidate : candidates)
+				{
+					if (candidate.radius <= 0.0f)
+						continue;
+
+					const s32 x = static_cast<s32>(std::lround(candidate.x));
+					const s32 y = static_cast<s32>(std::lround(candidate.y));
+
+					rgba_draw::circle(m_image_rgba_contours, width, height, candidate.x, candidate.y, static_cast<s32>(candidate.radius), get_colors(candidate.status).circle, false);
+					rgba_draw::line(m_image_rgba_contours, width, height, x - 2, y, x + 2, y, center_color);
+					rgba_draw::line(m_image_rgba_contours, width, height, x, y - 2, x, y + 2, center_color);
+				}
+			}
+		}
+	};
+
 	if (!best_candidate.blob)
 	{
 		set_valid(info, index, false);
-
-		if constexpr (DiagnosticsEnabled)
-		{
-			draw_sphere_size_range(0.0f);
-		}
+		draw_diagnostics(0.0f);
 		return;
 	}
 
@@ -734,49 +833,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	set_valid(info, index, true);
-
-	if constexpr (!DiagnosticsEnabled)
-		return;
-
-	if (!m_draw_contours && !m_draw_overlays) [[likely]]
-		return;
-
-	draw_sphere_size_range(info.radius);
-
-	// Protect the destination image from race conditions
-	std::lock_guard lock(m_mutex);
-
-	if (!m_show_all_contours) [[likely]]
-	{
-		candidates = { best_candidate };
-	}
-
-	static constexpr std::array<u8, 4> contour_color = { 255, 0, 0, 255 };
-	static constexpr std::array<u8, 4> circle_color = { 0, 255, 0, 255 };
-	static constexpr std::array<u8, 4> center_color = { 0, 0, 255, 255 };
-
-	// Draw contours
-	if (m_draw_contours)
-	{
-		for (const sphere_candidate& candidate : candidates)
-		{
-			detector.fill_blob_rgba(m_image_rgba_contours, *candidate.blob, contour_color);
-		}
-	}
-
-	// Draw overlays
-	if (m_draw_overlays)
-	{
-		for (const sphere_candidate& candidate : candidates)
-		{
-			const s32 x = static_cast<s32>(std::lround(candidate.x));
-			const s32 y = static_cast<s32>(std::lround(candidate.y));
-
-			rgba_draw::circle(m_image_rgba_contours, width, height, candidate.x, candidate.y, static_cast<s32>(candidate.radius), circle_color, false);
-			rgba_draw::line(m_image_rgba_contours, width, height, x - 2, y, x + 2, y, center_color);
-			rgba_draw::line(m_image_rgba_contours, width, height, x, y - 2, x, y + 2, center_color);
-		}
-	}
+	draw_diagnostics(info.radius);
 }
 
 template <bool DiagnosticsEnabled>
