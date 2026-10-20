@@ -713,7 +713,7 @@ namespace rsx
 		m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
 		m_ctx->ROP_sync_timestamp = rsx::get_shared_tag();
 
-		RSX(m_ctx)->m_draw_processor.clear_push_buffers();
+		m_ctx->draw_processor.clear_push_buffers();
 
 		RSX(m_ctx)->zcull_ctrl->on_draw();
 

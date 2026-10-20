@@ -633,12 +633,12 @@ namespace rsx
 
 		ar(*REGS(m_ctx));
 
-		for (auto& v : m_draw_processor.m_vertex_push_buffers)
+		for (auto& v : m_ctx->draw_processor.m_vertex_push_buffers)
 		{
 			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
 		}
 
-		ar(m_draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, m_ctx->fb.zcull_surface_active, m_ctx->fb.surface_info, m_ctx->fb.depth_surface_info, m_ctx->fb.layout);
+		ar(m_ctx->draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, m_ctx->fb.zcull_surface_active, m_ctx->fb.surface_info, m_ctx->fb.depth_surface_info, m_ctx->fb.layout);
 		ar(dma_address, iomap_table, restore_point, tiles, zculls, m_ctx->display_buffers, m_ctx->display_buffers_count, m_ctx->current_display_buffer);
 		ar(enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
@@ -687,6 +687,10 @@ namespace rsx
 	thread::thread(utils::serial* _ar)
 		: cpu_thread(0x5555'5555)
 	{
+		// Context 0 must be the first thing created.
+		m_contexts.emplace(0, std::make_unique<context>(0, this));
+		bind_context(0);
+
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
 			rsx::mm_flush(address);
@@ -702,11 +706,6 @@ namespace rsx
 
 		g_user_asked_for_frame_capture = false;
 
-		m_primary_ctx = std::make_unique<context>(0, this);
-		m_ctx = m_primary_ctx.get();
-
-		m_draw_processor.init(m_ctx);
-		m_core.init(m_ctx);
 		m_display.init(this, &m_display_out);
 
 		// The ZCULL unit belongs to the thread. The renderer only provides the host queries.
@@ -790,22 +789,22 @@ namespace rsx
 
 	void thread::begin()
 	{
-		m_core.begin();
+		m_ctx->core.begin();
 	}
 
 	void thread::end()
 	{
-		m_core.end();
+		m_ctx->core.end();
 	}
 
 	void thread::discard_draw()
 	{
-		m_core.discard_draw();
+		m_ctx->core.discard_draw();
 	}
 
 	void thread::clear_surface(u32 arg)
 	{
-		m_core.clear(arg);
+		m_ctx->core.clear(arg);
 	}
 
 	u64 thread::get_cycles()
@@ -1086,16 +1085,12 @@ namespace rsx
 		// The new backend has seen nothing yet
 		for_each_context([](context* ctx)
 		{
-			ctx->graphics_state.set(pipeline_state::all_dirty);
-			ctx->draw_state.dirty.set(draw_state_t::group::all);
-			ctx->draw_state.pending.set(draw_state_t::group::all);
-			ctx->textures.fragment_textures_dirty = (1u << limits::fragment_textures_count) - 1;
-			ctx->textures.vertex_textures_dirty = (1u << limits::vertex_textures_count) - 1;
+			ctx->mark_all_dirty();
 		});
 
 		zcull_ctrl->set_provider(m_renderer->occlusion_queries());
 
-		m_core.on_renderer_changed();
+		m_ctx->core.on_renderer_changed();
 
 		rsx_log.success("Renderer replaced");
 	}
@@ -1112,14 +1107,94 @@ namespace rsx
 	{
 		for_each_context([this](context* ctx)
 		{
-			if (!ctx->resources)
-			{
-				return;
-			}
-
-			m_renderer->on_release_context_resources(ctx);
-			ctx->resources.reset();
+			release_context_resources(ctx);
 		});
+	}
+
+	void thread::release_context_resources(context* ctx)
+	{
+		if (!ctx->resources)
+		{
+			return;
+		}
+
+		m_renderer->on_release_context_resources(ctx);
+		ctx->resources.reset();
+	}
+
+	void thread::lock_context_table()
+	{
+		ensure(is_current_thread());
+
+		while (!m_contexts_lock.try_lock())
+		{
+			do_local_task(rsx::FIFO::state::lock_wait);
+		}
+	}
+
+	context* thread::create_context()
+	{
+		auto ctx = std::make_unique<context>(m_next_ctx_id++, this);
+		if (is_initialized)
+		{
+			// Workaround to allow creating ctx 0 before init completes.
+			// Otherwise created with the others when the renderer starts
+			ctx->resources = m_renderer->create_context_resources(ctx.get());
+		}
+
+		context* result = ctx.get();
+
+		lock_context_table();
+		m_contexts.emplace(result->id(), std::move(ctx));
+		m_contexts_lock.unlock();
+
+		rsx_log.notice("Created context %u", result->id());
+		return result;
+	}
+
+	void thread::destroy_context(u32 id)
+	{
+		// The primary context lives as long as the thread
+		ensure(id != 0);
+
+		// Check that id is valid and does not point to the current context
+		const auto found = m_contexts.find(id);
+		ensure(found != m_contexts.end());
+		ensure(found->second.get() != m_ctx);
+
+		// Its caches can still protect pages: release them while faults can still find the context.
+		// NOTE: Do not do this under the lock. The release itself can fault on this thread.
+		release_context_resources(found->second.get());
+
+		lock_context_table();
+		m_contexts.erase(found);
+		m_contexts_lock.unlock();
+
+		rsx_log.notice("Destroyed context %u", id);
+	}
+
+	void thread::bind_context(u32 id)
+	{
+		const auto found = m_contexts.find(id);
+		ensure(found != m_contexts.end());
+
+		context* ctx = found->second.get();
+		if (ctx == m_ctx)
+		{
+			return;
+		}
+
+		// A draw cannot span contexts
+		ensure(!m_ctx || !m_ctx->in_begin_end);
+		if (m_renderer)
+		{
+			m_renderer->bind_context(ctx);
+		}
+
+		m_ctx = ctx;
+
+		// The backend's bound state belonged to the previous context
+		ctx->mark_all_dirty();
 	}
 
 	u64 thread::timestamp()
@@ -1247,22 +1322,22 @@ namespace rsx
 
 	std::array<u32, 4> thread::get_color_surface_addresses() const
 	{
-		return m_core.graph().get_color_surface_addresses();
+		return m_ctx->core.graph().get_color_surface_addresses();
 	}
 
 	u32 thread::get_zeta_surface_address() const
 	{
-		return m_core.graph().get_zeta_surface_address();
+		return m_ctx->core.graph().get_zeta_surface_address();
 	}
 
 	void thread::on_framebuffer_options_changed(u32 opt)
 	{
-		m_core.graph().on_framebuffer_options_changed(opt);
+		m_ctx->core.graph().on_framebuffer_options_changed(opt);
 	}
 
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
-		return m_core.graph().invalidate_fragment_program(dst_dma, dst_offset, size);
+		return m_ctx->core.graph().invalidate_fragment_program(dst_dma, dst_offset, size);
 	}
 
 	void thread::reset()

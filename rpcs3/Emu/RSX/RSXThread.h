@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <deque>
+#include <map>
 
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
@@ -99,8 +100,13 @@ namespace rsx
 		// Profiler
 		rsx::profiling_timer m_profiler;
 
-		// Context
-		std::unique_ptr<context> m_primary_ctx;
+		// Contexts hashmap.
+		// NOTE: The primary context is id 0 and lives as long as the thread. There is always at least one logical context available.
+		std::map<u32, std::unique_ptr<context>> m_contexts;
+		shared_mutex m_contexts_lock;
+		u32 m_next_ctx_id = 1;
+
+		// Our currently bound context
 		context* m_ctx = nullptr;
 
 		// Host renderer. Created with the thread and destroyed with it.
@@ -118,12 +124,6 @@ namespace rsx
 
 		// Flip, vblank and frame pacing
 		display_engine m_display;
-
-		// Draw call management
-		draw_command_processor m_draw_processor;
-
-		// Backend-agnostic renderer core
-		core_renderer m_core;
 
 	public:
 		atomic_t<u64> new_get_put = u64{umax};
@@ -172,8 +172,8 @@ namespace rsx
 		void capture_frame(const std::string& name) const;
 		const backend_configuration& get_backend_config() const { return m_renderer->config(); }
 
-		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
-		draw_command_processor* draw_processor() { return &m_draw_processor; }
+		const draw_command_processor* draw_processor() const { return &m_ctx->draw_processor; }
+		draw_command_processor* draw_processor() { return &m_ctx->draw_processor; }
 		reports::ZCULL_control& zcull() { return *zcull_ctrl; }
 		overlays::display_manager* overlay_manager() const { return m_overlay_manager; }
 
@@ -187,17 +187,29 @@ namespace rsx
 
 		context* get_context() const { return m_ctx; }
 
-		// Every live context. Only the primary context exists for now.
+		// Every live context. Callable from any thread.
 		template <typename F>
 		void for_each_context(F&& func)
 		{
-			func(m_primary_ctx.get());
+			reader_lock lock(m_contexts_lock);
+
+			for (const auto& [id, ctx] : m_contexts)
+			{
+				func(ctx.get());
+			}
 		}
+
+		// RSX thread only. Contexts other than the primary one.
+		context* create_context();
+		void destroy_context(u32 id);
+
+		// RSX thread only, and must be outside a draw. The renderer and every engine work on the given context from now on.
+		void bind_context(u32 id);
 
 		render_backend* renderer() const { return m_renderer.get(); }
 		void request_renderer_update();
 
-		core_renderer& core() { return m_core; }
+		core_renderer& core() { return m_ctx->core; }
 		display_output& display() { return m_display_out; }
 		display_engine& display_ctrl() { return m_display; }
 
@@ -307,13 +319,17 @@ namespace rsx
 		// Render backend resources of every context
 		void create_backend_resources();
 		void release_backend_resources();
+		void release_context_resources(context* ctx);
+
+		// Fault handling requires a walk of the HT, so we must lock it to find the culprit.
+		void lock_context_table();
 
 		// Destroy and rebuild the backend renderer.
 		void reset_renderer(bool device_lost);
 
 	public:
 
-		draw_command_processor& GRAPH_frontend() { return m_draw_processor; }
+		draw_command_processor& GRAPH_frontend() { return m_ctx->draw_processor; }
 
 		/**
 		 * Notify that a section of memory has been mapped

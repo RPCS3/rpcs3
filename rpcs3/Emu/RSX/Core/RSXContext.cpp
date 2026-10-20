@@ -12,12 +12,19 @@ namespace rsx
 		register_state = m_owned_register_state.get();
 		register_state->init();
 
-		textures.fragment_textures_dirty = (1u << limits::fragment_textures_count) - 1;
-		textures.vertex_textures_dirty = (1u << limits::vertex_textures_count) - 1;
+		core.init(this);
+		draw_processor.init(this);
 
+		mark_all_dirty();
+	}
+
+	void context::mark_all_dirty()
+	{
 		graphics_state.set(pipeline_state::all_dirty);
 		draw_state.dirty.set(draw_state_t::group::all);
 		draw_state.pending.set(draw_state_t::group::all);
+		textures.fragment_textures_dirty = (1u << limits::fragment_textures_count) - 1;
+		textures.vertex_textures_dirty = (1u << limits::vertex_textures_count) - 1;
 	}
 
 	context::~context() = default;
