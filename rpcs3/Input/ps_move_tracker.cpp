@@ -100,6 +100,11 @@ template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_hue(u32 index, u16 hue)
 {
 	ps_move_config& config = ::at32(m_config, index);
+
+	if (config.hue == hue)
+		return;
+
+	::at32(m_sphere_colors, index).valid = false;
 	config.hue = hue;
 	config.calculate_values();
 }
@@ -108,6 +113,11 @@ template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_hue_threshold(u32 index, u8 threshold)
 {
 	ps_move_config& config = ::at32(m_config, index);
+
+	if (config.hue_threshold == threshold)
+		return;
+
+	::at32(m_sphere_colors, index).valid = false;
 	config.hue_threshold = threshold;
 	config.calculate_values();
 }
@@ -116,6 +126,11 @@ template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_saturation_threshold(u32 index, u8 threshold)
 {
 	ps_move_config& config = ::at32(m_config, index);
+
+	if (config.saturation_threshold_u8 == threshold)
+		return;
+
+	::at32(m_sphere_colors, index).valid = false;
 	config.saturation_threshold_u8 = threshold;
 }
 
@@ -204,6 +219,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_image()
 			info.valid = false;
 			m_fail_count[index] = 0;
 			m_shape_fail_count[index] = 0;
+			m_sphere_colors[index].valid = false;
 		}
 	}
 
@@ -304,6 +320,14 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 static constexpr u32 min_blob_area = 30;
 static constexpr f32 min_sphere_radius = 5.0f;
 
+// Minimum brightness of the sphere
+static constexpr u8 min_sphere_value = 150;
+
+// Allowed differences to the measured sphere color
+static constexpr f32 sphere_hue_range = 16.0f;
+static constexpr s32 sphere_saturation_range = 85;
+static constexpr s32 sphere_value_range = 85;
+
 static bool is_circular_blob(const blob_detector::blob& b)
 {
 	// A disk has a fill ratio of about 1. Squares (0.64), half disks and 2:1 ellipses (0.5) are rejected.
@@ -335,6 +359,7 @@ struct sphere_candidate
 	f32 y = 0.0f;
 	f32 radius = 0.0f;
 	f32 score = 0.0f;
+	bool is_circle = false; // The blob itself is round
 };
 
 template <bool DiagnosticsEnabled>
@@ -367,7 +392,7 @@ void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radi
 }
 
 template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index)
+void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index, bool use_sphere_color)
 {
 	const u32 width = m_width;
 	const u32 height = m_height;
@@ -378,11 +403,42 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index)
 	}
 
 	const ps_move_config& config = ::at32(m_config, index);
+	const sphere_color& color = ::at32(m_sphere_colors, index);
 	const std::vector<u8>& image_hsv = m_image_hsv;
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 
 	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
 	const bool has_hue_threshold = config.hue_threshold < 180; // with hue threshold 180 min and max are the same value
+
+	// Precalculate which hues are allowed. The HSV image stores the hue divided by 2.
+	thread_local std::array<bool, 256> hue_allowed {};
+
+	for (u32 i = 0; i < hue_allowed.size(); i++)
+	{
+		const u16 hue = static_cast<u16>(i * 2);
+		bool allowed = !has_hue_threshold || (wrapped_hue ? (hue >= config.min_hue || hue <= config.max_hue) : (hue >= config.min_hue && hue <= config.max_hue));
+
+		if (allowed && use_sphere_color)
+		{
+			allowed = std::abs(std::remainder(hue - color.hue, 360.0f)) <= sphere_hue_range;
+		}
+
+		hue_allowed[i] = allowed;
+	}
+
+	// Drop dark and colorless pixels. The measured sphere color can only make the ranges smaller.
+	s32 min_saturation = config.saturation_threshold_u8;
+	s32 max_saturation = 255;
+	s32 min_value = min_sphere_value;
+	s32 max_value = 255;
+
+	if (use_sphere_color)
+	{
+		min_saturation = std::max(min_saturation, static_cast<s32>(color.saturation) - sphere_saturation_range);
+		max_saturation = std::min(max_saturation, static_cast<s32>(color.saturation) + sphere_saturation_range);
+		min_value = std::max(min_value, static_cast<s32>(color.value) - sphere_value_range);
+		max_value = std::min(max_value, static_cast<s32>(color.value) + sphere_value_range);
+	}
 
 	for (u32 y = 0; y < height; y++)
 	{
@@ -391,23 +447,101 @@ void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index)
 
 		for (u32 x = 0; x < width; x++, src += 3)
 		{
-			const u16 hue = src[0] * 2;
+			const u8 hue = src[0];
 			const u8 saturation = src[1];
 			const u8 value = src[2];
 
-			// Simply drop dark and colorless pixels as well as pixels that don't match our hue
-			if ((has_hue_threshold && (wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue))) ||
-				saturation < config.saturation_threshold_u8 ||
-				value < 150)
-			{
-				dst[x] = 0;
-			}
-			else
-			{
-				dst[x] = 255;
-			}
+			const bool matches = hue_allowed[hue] &&
+				saturation >= min_saturation && saturation <= max_saturation &&
+				value >= min_value && value <= max_value;
+
+			dst[x] = matches ? 255 : 0;
 		}
 	}
+}
+
+template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::update_sphere_color(u32 index, const blob_detector::blob& b)
+{
+	sphere_color& color = ::at32(m_sphere_colors, index);
+
+	// Don't update the color too often. This prevents it from slowly drifting towards the background.
+	const auto now = std::chrono::steady_clock::now();
+	if (color.valid && now - color.last_update < std::chrono::seconds(1))
+	{
+		return;
+	}
+
+	const blob_detector& detector = ::at32(m_blob_detectors, index);
+	const std::vector<u32>& labels = detector.labels();
+	const std::vector<u8>& image_binary = ::at32(m_image_binary, index);
+	const u32 width = m_width;
+
+	if (labels.size() != image_binary.size() || m_image_hsv.size() != image_binary.size() * 3 || b.max_x >= width || b.max_y >= m_height)
+	{
+		return;
+	}
+
+	// Average the color of all pixels that passed the filter. Filled holes (e.g. overexposed centers) are ignored.
+	// The hue is circular, so we average it as a direction.
+	f64 sum_cos = 0.0;
+	f64 sum_sin = 0.0;
+	f64 sum_saturation = 0.0;
+	f64 sum_value = 0.0;
+	u32 count = 0;
+
+	for (u32 y = b.min_y; y <= b.max_y; y++)
+	{
+		for (u32 x = b.min_x; x <= b.max_x; x++)
+		{
+			const u32 pixel = y * width + x;
+
+			if (labels[pixel] != b.label || !image_binary[pixel])
+			{
+				continue;
+			}
+
+			const u8* hsv = &m_image_hsv[pixel * 3];
+			const f64 angle = hsv[0] * 2.0 * std::numbers::pi / 180.0;
+
+			sum_cos += std::cos(angle);
+			sum_sin += std::sin(angle);
+			sum_saturation += hsv[1];
+			sum_value += hsv[2];
+			count++;
+		}
+	}
+
+	if (count < min_blob_area)
+	{
+		return;
+	}
+
+	f32 hue = static_cast<f32>(std::atan2(sum_sin, sum_cos) * 180.0 / std::numbers::pi);
+	if (hue < 0.0f) hue += 360.0f;
+
+	const f32 saturation = static_cast<f32>(sum_saturation / count);
+	const f32 value = static_cast<f32>(sum_value / count);
+
+	if (!color.valid)
+	{
+		color.hue = hue;
+		color.saturation = saturation;
+		color.value = value;
+		color.valid = true;
+	}
+	else
+	{
+		// Blend the new color into the old one. Use the shortest way around the hue circle.
+		color.hue += std::remainder(hue - color.hue, 360.0f) * 0.5f;
+		if (color.hue < 0.0f) color.hue += 360.0f;
+		if (color.hue >= 360.0f) color.hue -= 360.0f;
+
+		color.saturation = (color.saturation + saturation) * 0.5f;
+		color.value = (color.value + value) * 0.5f;
+	}
+
+	color.last_update = now;
 }
 
 template <bool DiagnosticsEnabled>
@@ -422,8 +556,16 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		return;
 	}
 
+	// Only use the measured sphere color while the sphere is tracked. A lost sphere has to be found with the configured color.
+	sphere_color& color = ::at32(m_sphere_colors, index);
+
+	if (!info.valid)
+	{
+		color.valid = false;
+	}
+
 	// Filter image
-	filter_image(index);
+	filter_image(index, color.valid);
 
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 	blob_detector& detector = ::at32(m_blob_detectors, index);
@@ -441,6 +583,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const bool has_last_position = info.valid && info.radius > 0.0f;
 	const f32 last_x = info.x_pos * width;
 	const f32 last_y = info.y_pos * height;
+	const f32 last_radius = info.radius;
 	const f32 search_radius = info.radius * 2.0f;
 
 	// The inscribed circle has to be similar to the last sphere
@@ -460,6 +603,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 			candidate.x = b.center_x;
 			candidate.y = b.center_y;
 			candidate.radius = b.radius;
+			candidate.is_circle = true;
 		}
 		else if (has_last_position &&
 		         b.area >= min_blob_area &&
@@ -541,38 +685,52 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		return;
 	}
 
-	// Calculate distance from sphere to camera
-	const f32 sphere_radius_pixels = best_candidate.radius;
-	constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
-	constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
-	const f32 image_width_pixels = static_cast<f32>(width);
-	const f32 focal_length_pixels = (focal_length_mm * image_width_pixels) / sensor_width_mm;
-	const f32 distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
-
-	const u32 x_pos = std::clamp(static_cast<u32>(best_candidate.x), 0u, width);
-	const u32 y_pos = std::clamp(static_cast<u32>(best_candidate.y), 0u, height);
+	f32 sphere_radius_pixels = best_candidate.radius;
+	f32 x_pos = std::clamp(best_candidate.x, 0.0f, static_cast<f32>(width));
+	f32 y_pos = std::clamp(best_candidate.y, 0.0f, static_cast<f32>(height));
 
 	// Only set new values if the new shape and position are relatively similar to the old ones.
-	const auto distance_squared = [](int x1, int y1, int x2, int y2)
-	{
-		const int dx = x2 - x1;
-		const int dy = y2 - y1;
-		return dx * dx + dy * dy;
-	};
-	const f32 max_distance = info.radius * 8.0f;
-	const f32 max_distance_squared = max_distance * max_distance;
-	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
-	                           distance_squared(static_cast<s32>(info.x_pos * width), static_cast<s32>(info.y_pos * height), x_pos, y_pos) < max_distance_squared;
+	const f32 move_x = x_pos - last_x;
+	const f32 move_y = y_pos - last_y;
+	const f32 move_distance = std::sqrt(move_x * move_x + move_y * move_y);
+	const bool shape_matches = std::abs(last_radius - sphere_radius_pixels) < (last_radius * 2) &&
+	                           move_distance < last_radius * 8.0f;
 	const bool reacquired = !info.valid || info.radius <= 0.0f;
 
 	if (reacquired || shape_matches || ++m_shape_fail_count[index] >= 3)
 	{
-		info.distance_mm = distance_mm;
+		if (!reacquired)
+		{
+			// Adaptive smoothing: small changes are smoothed strongly to reduce jitter, large changes are applied almost immediately.
+			const f32 radius_factor = std::min(std::abs(sphere_radius_pixels - last_radius) / 4.0f + 0.15f, 1.0f);
+			sphere_radius_pixels = last_radius + (sphere_radius_pixels - last_radius) * radius_factor;
+
+			const f32 position_factor = std::min(move_distance / 7.0f + 0.15f, 1.0f);
+			x_pos = last_x + move_x * position_factor;
+			y_pos = last_y + move_y * position_factor;
+		}
+
+		// Calculate distance from sphere to camera
+		constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
+		constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
+		const f32 image_width_pixels = static_cast<f32>(width);
+		const f32 focal_length_pixels = (focal_length_mm * image_width_pixels) / sensor_width_mm;
+
+		info.distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
 		info.radius = sphere_radius_pixels;
 		info.x_pos = std::clamp(x_pos / static_cast<f32>(width), 0.0f, 1.0f);
 		info.y_pos = std::clamp(y_pos / static_cast<f32>(height), 0.0f, 1.0f);
 
 		m_shape_fail_count[index] = 0; // Reset fail count
+	}
+
+	// Measure the color of the sphere, but only in clean frames: a complete round sphere with a stable size
+	if (has_last_position && best_candidate.is_circle &&
+	    best_candidate.blob->fill_ratio() > 0.8f &&
+	    best_candidate.radius > 6.0f &&
+	    std::abs(best_candidate.radius - last_radius) < last_radius * 0.2f)
+	{
+		update_sphere_color(index, *best_candidate.blob);
 	}
 
 	set_valid(info, index, true);
