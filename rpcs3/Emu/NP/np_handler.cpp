@@ -1206,6 +1206,7 @@ namespace np
 					case rpcn::CommandType::GetRoomInfoGUI: reply_get_room_info_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetTss: reply_get_tss(req_id, error, reply_data); break;
 					default: fmt::throw_exception("Unknown reply(%d) received!", command); break;
 					}
 				}
