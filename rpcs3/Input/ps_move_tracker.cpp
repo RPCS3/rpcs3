@@ -335,6 +335,9 @@ void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radi
 	if constexpr (!DiagnosticsEnabled) return;
 	if (!m_draw_overlays) return;
 
+	// Protect the destination image from race conditions
+	std::lock_guard lock(m_mutex);
+
 	// Map memory
 	cv::Mat rgba(cv::Size(m_width, m_height), CV_8UC4, m_image_rgba_contours.data(), 0);
 
@@ -550,6 +553,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		return;
 
 	draw_sphere_size_range(info.radius);
+
+	// Protect the destination image from race conditions
+	std::lock_guard lock(m_mutex);
 
 	// Map memory
 	cv::Mat rgba(cv::Size(width, height), CV_8UC4, m_image_rgba_contours.data(), 0);

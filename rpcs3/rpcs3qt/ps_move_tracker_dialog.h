@@ -39,7 +39,7 @@ private:
 	void reset_camera();
 	void process_camera_frame();
 
-	QPixmap get_histogram(const std::array<u32, 360>& hues, bool ignore_zero) const;
+	QPixmap get_histogram(const std::array<u32, 360>& hues, bool ignore_zero, u32 index) const;
 
 	enum class view_mode
 	{
@@ -51,7 +51,7 @@ private:
 		binary,
 		contours
 	};
-	view_mode m_view_mode = view_mode::contours;
+	atomic_t<view_mode> m_view_mode = view_mode::contours;
 
 	enum class histo_mode
 	{
@@ -69,13 +69,13 @@ private:
 	static constexpr s32 height = 480;
 	s32 m_format = 0;
 	u64 m_frame_number = 0;
-	u32 m_index = 0;
-	bool m_filter_small_contours = true;
-	bool m_freeze_frame = false;
+	atomic_t<u32> m_index = 0;
+	atomic_t<bool> m_filter_small_contours = true;
+	atomic_t<bool> m_freeze_frame = false;
 	bool m_frame_frozen = false;
-	bool m_show_all_contours = false;
-	bool m_draw_contours = true;
-	bool m_draw_overlays = true;
+	atomic_t<bool> m_show_all_contours = false;
+	atomic_t<bool> m_draw_contours = true;
+	atomic_t<bool> m_draw_overlays = true;
 
 	QPixmap m_image;
 	QPixmap m_histogram;
