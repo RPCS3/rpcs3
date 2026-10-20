@@ -89,6 +89,8 @@ private:
 	bool m_draw_contours = false;
 	bool m_draw_overlays = false;
 
+	std::mutex m_mutex;
+
 	std::vector<u8> m_image_data;
 	std::vector<u8> m_image_rgba;
 	std::vector<u8> m_image_rgba_contours;
