@@ -839,59 +839,41 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (entry.name.starts_with(prefix))
 				{
-					// Count the amount of matches and the amount of listed directories
+					// Count the amount of matches
 					if (!listGet->dirNum++) // total number of directories
 					{
 						// Clear buf exactly to bufSize only if dirNum becomes non-zero (regardless of dirListNum)
 						std::memset(setBuf->buf.get_ptr(), 0, setBuf->bufSize);
 					}
 
-					if (listGet->dirListNum < setBuf->dirListMax)
+					// PSF parameters
+					const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
+
+					if (psf.empty())
 					{
-						listGet->dirListNum++; // number of directories in list
-
-						// PSF parameters
-						const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
-
-						if (psf.empty())
-						{
-							break;
-						}
-
-						SaveDataEntry save_entry2 {};
-						save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
-						save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
-						save_entry2.title     = psf::get_string(psf, "TITLE");
-						save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
-						save_entry2.details   = psf::get_string(psf, "DETAIL");
-
-						if (!is_valid_dir_name(save_entry2.dirName))
-						{
-							cellSaveData.error("Savedata '%s' has an invalid SAVEDATA_DIRECTORY entry ('%s')", entry.name, save_entry2.dirName);
-							break;
-						}
-
-						for (const auto& entry2 : fs::dir(base_dir + entry.name))
-						{
-							if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
-							{
-								continue;
-							}
-
-							save_entry2.size += entry2.size;
-						}
-
-						save_entry2.atime = entry.atime;
-						save_entry2.mtime = entry.mtime;
-						save_entry2.ctime = entry.ctime;
-						if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
-							save_entry2.iconBuf = icon.to_vector<uchar>();
-						save_entry2.isNew = false;
-
-						save_entry2.escaped = std::move(entry.name);
-						save_entries.emplace_back(save_entry2);
+						break;
 					}
 
+					SaveDataEntry save_entry2 {};
+					save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+					save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
+					save_entry2.title     = psf::get_string(psf, "TITLE");
+					save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
+					save_entry2.details   = psf::get_string(psf, "DETAIL");
+
+					if (!is_valid_dir_name(save_entry2.dirName))
+					{
+						cellSaveData.error("Savedata '%s' has an invalid SAVEDATA_DIRECTORY entry ('%s')", entry.name, save_entry2.dirName);
+						break;
+					}
+
+					save_entry2.atime = entry.atime;
+					save_entry2.mtime = entry.mtime;
+					save_entry2.ctime = entry.ctime;
+					save_entry2.isNew = false;
+
+					save_entry2.escaped = std::move(entry.name);
+					save_entries.emplace_back(std::move(save_entry2));
 					break;
 				}
 			}
@@ -931,10 +913,35 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return true;
 			};
 
+			// The list holds the first dirListMax entries in sort order
+			const auto list_end = save_entries.begin() + std::min<usz>(save_entries.size(), setBuf->dirListMax);
+
 			if (setList->sortOrder == CELL_SAVEDATA_SORTORDER_ASCENT)
-				std::sort(save_entries.begin(), save_entries.end(), comp);
+				std::partial_sort(save_entries.begin(), list_end, save_entries.end(), comp);
 			else
-				std::sort(save_entries.rbegin(), save_entries.rend(), comp);
+				std::partial_sort(save_entries.begin(), list_end, save_entries.end(), [&comp](const SaveDataEntry& entry1, const SaveDataEntry& entry2) { return comp(entry2, entry1); });
+
+			save_entries.erase(list_end, save_entries.end());
+		}
+
+		listGet->dirListNum = std::min<u32>(listGet->dirNum, setBuf->dirListMax); // number of directories in list
+
+		for (auto& entry : save_entries)
+		{
+			const std::string dir_path = base_dir + entry.escaped;
+
+			for (const auto& entry2 : fs::dir(dir_path))
+			{
+				if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
+				{
+					continue;
+				}
+
+				entry.size += entry2.size;
+			}
+
+			if (fs::file icon{dir_path + "/ICON0.PNG"})
+				entry.iconBuf = icon.to_vector<uchar>();
 		}
 
 		// Fill the listGet->dirList array
