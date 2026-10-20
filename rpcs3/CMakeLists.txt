@@ -67,7 +67,6 @@ if (NOT ANDROID)
             3rdparty::wolfssl
             3rdparty::libcurl
             3rdparty::zlib
-            3rdparty::opencv
             3rdparty::fusion)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -184,6 +183,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test.cpp
             tests/test_address_range.cpp
             tests/test_bit_set.cpp
+            tests/test_blob_detector.cpp
             tests/test_cctype.cpp
             tests/test_dmux_pamf.cpp
             tests/test_fmt.cpp

@@ -8,7 +8,7 @@ git config --global --add safe.directory '*'
 
 # Pull all the submodules except some
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/libsdl-org/ && !/curl/ && !/zlib/ { print $3 }' .gitmodules)
+git submodule -q update --init $(awk '/path/ && !/llvm/ && !/libsdl-org/ && !/curl/ && !/zlib/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
 
@@ -36,7 +36,6 @@ cmake ..                                               \
     -DUSE_SDL=ON                                       \
     -DUSE_SYSTEM_SDL=ON                                \
     -DUSE_SYSTEM_FFMPEG=ON                             \
-    -DUSE_SYSTEM_OPENCV=ON                             \
     -DUSE_DISCORD_RPC=ON                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \
     -DLLVM_DIR=/opt/llvm/lib/cmake/llvm                \

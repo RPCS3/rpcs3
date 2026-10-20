@@ -4,14 +4,7 @@
 #include "ps_move_tracker.h"
 
 #include <cmath>
-
-#ifdef HAVE_OPENCV
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#if CV_VERSION_MAJOR >= 5
-#include <opencv2/geometry.hpp>
-#endif
-#endif
+#include <numbers>
 
 LOG_CHANNEL(ps_move);
 
@@ -112,7 +105,7 @@ void ps_move_tracker<DiagnosticsEnabled>::set_hue(u32 index, u16 hue)
 }
 
 template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::set_hue_threshold(u32 index, u16 threshold)
+void ps_move_tracker<DiagnosticsEnabled>::set_hue_threshold(u32 index, u8 threshold)
 {
 	ps_move_config& config = ::at32(m_config, index);
 	config.hue_threshold = threshold;
@@ -120,11 +113,10 @@ void ps_move_tracker<DiagnosticsEnabled>::set_hue_threshold(u32 index, u16 thres
 }
 
 template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::set_saturation_threshold(u32 index, u16 threshold)
+void ps_move_tracker<DiagnosticsEnabled>::set_saturation_threshold(u32 index, u8 threshold)
 {
 	ps_move_config& config = ::at32(m_config, index);
 	config.saturation_threshold_u8 = threshold;
-	config.calculate_values();
 }
 
 template <bool DiagnosticsEnabled>
@@ -309,23 +301,41 @@ void ps_move_tracker<DiagnosticsEnabled>::process_hues()
 	}
 }
 
-#ifdef HAVE_OPENCV
-static bool is_circular_contour(const std::vector<cv::Point>& contour, f32& area)
+static constexpr u32 min_blob_area = 30;
+static constexpr f32 min_sphere_radius = 5.0f;
+
+static bool is_circular_blob(const blob_detector::blob& b)
 {
-	std::vector<cv::Point> approx;
-	cv::approxPolyDP(contour, approx, 0.01 * cv::arcLength(contour, true), true);
-	if (approx.size() < 8ULL) return false;
+	// A disk has a fill ratio of about 1. Squares (0.64), half disks and 2:1 ellipses (0.5) are rejected.
+	constexpr f32 min_fill_ratio = 0.7f;
 
-	area = static_cast<f32>(cv::contourArea(contour));
-	if (area < 30.0f) return false;
-
-	cv::Point2f center;
-	f32 radius;
-	cv::minEnclosingCircle(contour, center, radius);
-	if (radius < 5.0f) return false;
+	if (b.area < min_blob_area) return false;
+	if (b.radius < min_sphere_radius) return false;
+	if (b.fill_ratio() < min_fill_ratio) return false;
 
 	return true;
 }
+
+// Checks if the last position is close to the line of movement of a sphere that was blurred into a capsule.
+// The sphere usually moves further between two frames than during the exposure, so the last position may be behind the end of the capsule.
+static bool is_on_movement_path(const blob_detector::capsule& capsule, f32 last_x, f32 last_y, f32 last_radius)
+{
+	const f32 dx = last_x - capsule.center_x;
+	const f32 dy = last_y - capsule.center_y;
+	const f32 axis_distance = std::abs(dx * capsule.dir_x + dy * capsule.dir_y);
+	const f32 side_distance = std::abs(dx * capsule.dir_y - dy * capsule.dir_x);
+
+	return side_distance <= last_radius * 2.0f && axis_distance <= capsule.half_length * 4.0f + last_radius * 2.0f;
+}
+
+struct sphere_candidate
+{
+	const blob_detector::blob* blob = nullptr;
+	f32 x = 0.0f;
+	f32 y = 0.0f;
+	f32 radius = 0.0f;
+	f32 score = 0.0f;
+};
 
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radius)
@@ -336,25 +346,67 @@ void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radi
 	// Protect the destination image from race conditions
 	std::lock_guard lock(m_mutex);
 
-	// Map memory
-	cv::Mat rgba(cv::Size(m_width, m_height), CV_8UC4, m_image_rgba_contours.data(), 0);
-
 	// Draw result, min and max radius
 	const f32 min_radius = m_min_radius * m_width;
 	const f32 max_radius = m_max_radius * m_width;
 	const f32 min_radius_clamped = std::max(0.0f, std::min(min_radius, max_radius));
-	const cv::Point2f center = cv::Point2f(m_width - 1 - max_radius, max_radius);
+	const f32 center_x = m_width - 1 - max_radius;
+	const f32 center_y = max_radius;
 	if (result_radius > 0.0f)
 	{
-		cv::circle(rgba, center, static_cast<int>(result_radius), cv::Scalar(255, 0, 0, 255), cv::FILLED);
+		rgba_draw::circle(m_image_rgba_contours, m_width, m_height, center_x, center_y, static_cast<s32>(result_radius), { 255, 0, 0, 255 }, true);
 	}
 	if (min_radius_clamped > 0.0f && min_radius_clamped <= max_radius)
 	{
-		cv::circle(rgba, center, static_cast<int>(min_radius_clamped), cv::Scalar(0, 0, 0, 255), cv::FILLED);
+		rgba_draw::circle(m_image_rgba_contours, m_width, m_height, center_x, center_y, static_cast<s32>(min_radius_clamped), { 0, 0, 0, 255 }, true);
 	}
 	if (max_radius > min_radius_clamped)
 	{
-		cv::circle(rgba, center, static_cast<int>(max_radius), cv::Scalar(0, 0, 0, 255), 1);
+		rgba_draw::circle(m_image_rgba_contours, m_width, m_height, center_x, center_y, static_cast<s32>(max_radius), { 0, 0, 0, 255 }, false);
+	}
+}
+
+template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::filter_image(u32 index)
+{
+	const u32 width = m_width;
+	const u32 height = m_height;
+
+	if (width == 0 || height == 0)
+	{
+		return;
+	}
+
+	const ps_move_config& config = ::at32(m_config, index);
+	const std::vector<u8>& image_hsv = m_image_hsv;
+	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
+
+	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
+	const bool has_hue_threshold = config.hue_threshold < 180; // with hue threshold 180 min and max are the same value
+
+	for (u32 y = 0; y < height; y++)
+	{
+		const u8* src = &image_hsv[y * width * 3];
+		u8* dst = &image_binary[y * width];
+
+		for (u32 x = 0; x < width; x++, src += 3)
+		{
+			const u16 hue = src[0] * 2;
+			const u8 saturation = src[1];
+			const u8 value = src[2];
+
+			// Simply drop dark and colorless pixels as well as pixels that don't match our hue
+			if ((has_hue_threshold && (wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue))) ||
+				saturation < config.saturation_threshold_u8 ||
+				value < 150)
+			{
+				dst[x] = 0;
+			}
+			else
+			{
+				dst[x] = 255;
+			}
+		}
 	}
 }
 
@@ -370,134 +422,115 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		return;
 	}
 
-	const ps_move_config& config = ::at32(m_config, index);
-	const std::vector<u8>& image_hsv = m_image_hsv;
-	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
-
-	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
-	const bool has_hue_threshold = config.hue_threshold < 180; // with hue threshold 180 min and max are the same value
-
-	// Map memory
-	cv::Mat binary(cv::Size(width, height), CV_8UC1, image_binary.data(), 0);
-
 	// Filter image
-	for (u32 y = 0; y < height; y++)
-	{
-		const u8* src = &image_hsv[y * width * 3];
-		u8* dst = &image_binary[y * width];
+	filter_image(index);
 
-		for (u32 x = 0; x < width; x++, src += 3)
-		{
-			const u16 hue = src[0] * 2;
-			const u8 saturation = src[1];
-			const u8 value = src[2];
+	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
+	blob_detector& detector = ::at32(m_blob_detectors, index);
 
-			// Simply drop dark and colorless pixels as well as pixels that don't match our hue
-			if ((has_hue_threshold && (wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue))) ||
-				saturation < config.saturation_threshold_u8 || saturation > 200 ||
-				value < 150)
-			{
-				dst[x] = 0;
-			}
-			else
-			{
-				dst[x] = 255;
-			}
-		}
-	}
+	// Remove noise and thin lines. This also separates the sphere from background objects that only touch it with a thin bridge.
+	detector.open(image_binary, width, height);
 
-	// Remove all small outer contours
-	if (m_filter_small_contours)
-	{
-		std::vector<std::vector<cv::Point>> contours;
-		cv::findContours(binary, contours, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE);
-		for (auto it = contours.begin(); it != contours.end();)
-		{
-			f32 area;
-			if (is_circular_contour(*it, area))
-			{
-				it = contours.erase(it);
-				continue;
-			}
-			it++;
-		}
-		if (!contours.empty())
-		{
-			cv::drawContours(binary, contours, -1, 0, cv::FILLED);
-		}
-	}
-
-	// Find best contour
-	std::vector<std::vector<cv::Point>> all_contours;
-	cv::findContours(binary, all_contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-
-	if (all_contours.empty())
-	{
-		set_valid(info, index, false);
-
-		if constexpr (DiagnosticsEnabled)
-		{
-			draw_sphere_size_range(0.0f);
-		}
-		return;
-	}
-
-	std::vector<std::vector<cv::Point>> contours;
-	std::vector<cv::Point2f> centers;
-	std::vector<f32> radii;
-
-	if constexpr (DiagnosticsEnabled)
-	{
-		contours.reserve(all_contours.size());
-		centers.reserve(all_contours.size());
-		radii.reserve(all_contours.size());
-	}
+	// Find all blobs. Holes are filled, so overexposed sphere centers don't split the sphere into a ring.
+	detector.detect(image_binary, width, height, true, min_blob_area);
 
 	const f32 min_radius = m_min_radius * width;
 	const f32 max_radius = m_max_radius * width;
 
-	usz best_index = umax;
-	f32 best_area = 0.0f;
-	f32 best_radius = 0.0f;
-	cv::Point2f best_center {};
+	// Prefer candidates near the last known position
+	const bool has_last_position = info.valid && info.radius > 0.0f;
+	const f32 last_x = info.x_pos * width;
+	const f32 last_y = info.y_pos * height;
+	const f32 search_radius = info.radius * 2.0f;
 
-	for (usz i = 0; i < all_contours.size(); i++)
+	// The inscribed circle has to be similar to the last sphere
+	const f32 min_inscribed_radius = std::max(min_sphere_radius, info.radius * 0.5f);
+	const f32 max_inscribed_radius = info.radius * 1.5f;
+
+	std::vector<sphere_candidate> candidates;
+	sphere_candidate best_candidate {};
+
+	for (const blob_detector::blob& b : detector.blobs())
 	{
-		const std::vector<cv::Point>& contour = all_contours[i];
-		f32 area;
-		if (!is_circular_contour(contour, area))
-			continue;
+		sphere_candidate candidate { .blob = &b };
+		f32 weight = 1.0f;
 
-		// Get center and radius
-		cv::Point2f center;
-		f32 radius;
-		cv::minEnclosingCircle(contour, center, radius);
+		if (is_circular_blob(b))
+		{
+			candidate.x = b.center_x;
+			candidate.y = b.center_y;
+			candidate.radius = b.radius;
+		}
+		else if (has_last_position &&
+		         b.area >= min_blob_area &&
+		         b.max_x - b.min_x + 1 >= 2.0f * min_inscribed_radius &&
+		         b.max_y - b.min_y + 1 >= 2.0f * min_inscribed_radius &&
+		         b.area >= std::numbers::pi_v<f32> * min_inscribed_radius * min_inscribed_radius)
+		{
+			// The blob is not round. This is only used to keep tracking a sphere of similar size. A new sphere has to be found as a real circle.
+			// The cheap checks above make sure that we only calculate the inscribed circle if the blob is large enough to contain it.
+			const blob_detector::inscribed_circle circle = detector.find_inscribed_circle(b);
+			const bool similar_size = circle.radius >= min_inscribed_radius && circle.radius <= max_inscribed_radius;
+			blob_detector::capsule capsule {};
+
+			if (similar_size && blob_detector::fit_capsule(b, circle, capsule) && is_on_movement_path(capsule, last_x, last_y, info.radius))
+			{
+				// The sphere is blurred by fast movement. The center of the capsule is the average position during the exposure.
+				candidate.x = capsule.center_x;
+				candidate.y = capsule.center_y;
+				candidate.radius = capsule.radius;
+				weight = 0.75f;
+			}
+			else if (similar_size && detector.is_round_bulge(b, circle))
+			{
+				// The blob contains a round bulge. This happens if the sphere touches a background object with a similar color.
+				// Use the largest circle that fits inside the blob, but prefer real circles.
+				candidate.x = circle.center_x;
+				candidate.y = circle.center_y;
+				candidate.radius = circle.radius;
+				weight = 0.5f;
+			}
+		}
+
+		if (candidate.radius <= 0.0f)
+		{
+			// Remove all non-circular blobs from the binary image
+			if constexpr (DiagnosticsEnabled)
+			{
+				if (m_filter_small_contours)
+				{
+					detector.fill_blob(image_binary, b, 0);
+				}
+			}
+			continue;
+		}
 
 		// Filter radius
-		if (radius < min_radius || radius > max_radius)
+		if (candidate.radius < min_radius || candidate.radius > max_radius)
 			continue;
+
+		// Larger spheres are more likely to be the real one, but the distance to the last position is more important
+		candidate.score = weight * candidate.radius * candidate.radius;
+
+		if (has_last_position)
+		{
+			const f32 dx = (candidate.x - last_x) / search_radius;
+			const f32 dy = (candidate.y - last_y) / search_radius;
+			candidate.score /= 1.0f + dx * dx + dy * dy;
+		}
 
 		if constexpr (DiagnosticsEnabled)
 		{
-			contours.push_back(std::move(all_contours[i]));
-			centers.push_back(center);
-			radii.push_back(radius);
+			candidates.push_back(candidate);
 		}
 
-		if (area > best_area)
+		if (!best_candidate.blob || candidate.score > best_candidate.score)
 		{
-			best_area = area;
-			best_center = center;
-			best_radius = radius;
-
-			if constexpr (DiagnosticsEnabled)
-			{
-				best_index = contours.size() - 1;
-			}
+			best_candidate = candidate;
 		}
 	}
 
-	if (best_area <= 0.0f)
+	if (!best_candidate.blob)
 	{
 		set_valid(info, index, false);
 
@@ -509,15 +542,15 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	// Calculate distance from sphere to camera
-	const f32 sphere_radius_pixels = best_radius;
+	const f32 sphere_radius_pixels = best_candidate.radius;
 	constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
 	constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
 	const f32 image_width_pixels = static_cast<f32>(width);
 	const f32 focal_length_pixels = (focal_length_mm * image_width_pixels) / sensor_width_mm;
 	const f32 distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
 
-	const u32 x_pos = std::clamp(static_cast<u32>(best_center.x), 0u, width);
-	const u32 y_pos = std::clamp(static_cast<u32>(best_center.y), 0u, height);
+	const u32 x_pos = std::clamp(static_cast<u32>(best_candidate.x), 0u, width);
+	const u32 y_pos = std::clamp(static_cast<u32>(best_candidate.y), 0u, height);
 
 	// Only set new values if the new shape and position are relatively similar to the old ones.
 	const auto distance_squared = [](int x1, int y1, int x2, int y2)
@@ -555,52 +588,38 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	// Protect the destination image from race conditions
 	std::lock_guard lock(m_mutex);
 
-	// Map memory
-	cv::Mat rgba(cv::Size(width, height), CV_8UC4, m_image_rgba_contours.data(), 0);
-
 	if (!m_show_all_contours) [[likely]]
 	{
-		std::vector<cv::Point> contour = std::move(contours[best_index]);
-		contours = { std::move(contour) };
-		centers = { best_center };
-		radii = { best_radius };
+		candidates = { best_candidate };
 	}
 
-	static const cv::Scalar contour_color(255, 0, 0, 255);
-	static const cv::Scalar circle_color(0, 255, 0, 255);
-	static const cv::Scalar center_color(0, 0, 255, 255);
+	static constexpr std::array<u8, 4> contour_color = { 255, 0, 0, 255 };
+	static constexpr std::array<u8, 4> circle_color = { 0, 255, 0, 255 };
+	static constexpr std::array<u8, 4> center_color = { 0, 0, 255, 255 };
 
 	// Draw contours
 	if (m_draw_contours)
 	{
-		cv::drawContours(rgba, contours, -1, contour_color, cv::FILLED);
+		for (const sphere_candidate& candidate : candidates)
+		{
+			detector.fill_blob_rgba(m_image_rgba_contours, *candidate.blob, contour_color);
+		}
 	}
 
 	// Draw overlays
 	if (m_draw_overlays)
 	{
-		for (usz i = 0; i < centers.size(); i++)
+		for (const sphere_candidate& candidate : candidates)
 		{
-			const cv::Point2f& center = centers[i];
-			const f32 radius = radii[i];
+			const s32 x = static_cast<s32>(std::lround(candidate.x));
+			const s32 y = static_cast<s32>(std::lround(candidate.y));
 
-			cv::circle(rgba, center, static_cast<int>(radius), circle_color, 1);
-			cv::line(rgba, center + cv::Point2f(-2.0f, 0.0f), center + cv::Point2f(2.0f, 0.0f), center_color, 1);
-			cv::line(rgba, center + cv::Point2f(0.0f, -2.0f), center + cv::Point2f(0.0f, 2.0f), center_color, 1);
+			rgba_draw::circle(m_image_rgba_contours, width, height, candidate.x, candidate.y, static_cast<s32>(candidate.radius), circle_color, false);
+			rgba_draw::line(m_image_rgba_contours, width, height, x - 2, y, x + 2, y, center_color);
+			rgba_draw::line(m_image_rgba_contours, width, height, x, y - 2, x, y + 2, center_color);
 		}
 	}
 }
-#else
-template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u32 index)
-{
-	ensure(index < m_config.size());
-
-	info.valid = false;
-
-	ps_move.error("The tracker is not implemented for this operating system.");
-}
-#endif
 
 template <bool DiagnosticsEnabled>
 std::tuple<u8, u8, u8> ps_move_tracker<DiagnosticsEnabled>::hsv_to_rgb(u16 hue, f32 saturation, f32 value)
