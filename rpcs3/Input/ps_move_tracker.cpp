@@ -213,6 +213,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_image()
 			ps_move_info& info = m_info[index];
 			info.valid = false;
 			m_fail_count[index] = 0;
+			m_shape_fail_count[index] = 0;
 		}
 	}
 
@@ -513,9 +514,6 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const f32 focal_length_pixels = (focal_length_mm * image_width_pixels) / sensor_width_mm;
 	const f32 distance_mm = (focal_length_pixels * CELL_GEM_SPHERE_RADIUS_MM) / sphere_radius_pixels;
 
-	// Set results
-	set_valid(info, index, true);
-
 	const u32 x_pos = std::clamp(static_cast<u32>(best_center.x), 0u, width);
 	const u32 y_pos = std::clamp(static_cast<u32>(best_center.y), 0u, height);
 
@@ -530,8 +528,9 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const f32 max_distance_squared = max_distance * max_distance;
 	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
 	                           distance_squared(static_cast<s32>(info.x_pos * width), static_cast<s32>(info.y_pos * height), x_pos, y_pos) < max_distance_squared;
+	const bool reacquired = !info.valid || info.radius <= 0.0f;
 
-	if (shape_matches || ++m_shape_fail_count[index] >= 3)
+	if (reacquired || shape_matches || ++m_shape_fail_count[index] >= 3)
 	{
 		info.distance_mm = distance_mm;
 		info.radius = sphere_radius_pixels;
@@ -540,6 +539,8 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 
 		m_shape_fail_count[index] = 0; // Reset fail count
 	}
+
+	set_valid(info, index, true);
 
 	if constexpr (!DiagnosticsEnabled)
 		return;
