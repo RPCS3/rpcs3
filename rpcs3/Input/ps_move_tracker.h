@@ -110,7 +110,8 @@ private:
 
 	// Creates the binary image of all pixels that match the hue, saturation and value of the given device.
 	// If use_sphere_color is true, the pixels also have to be similar to the measured sphere color.
-	void filter_image(u32 index, bool use_sphere_color);
+	// Also creates a mask of overexposed pixels that don't match. Returns true if there are any.
+	bool filter_image(u32 index, bool use_sphere_color);
 
 	// Measures the color of the sphere and blends it into the sphere color of the given device
 	void update_sphere_color(u32 index, const blob_detector::blob& b);
@@ -140,6 +141,8 @@ private:
 
 	std::array<std::vector<u8>, CELL_GEM_MAX_NUM> m_image_hue_filtered{};
 	std::array<std::vector<u8>, CELL_GEM_MAX_NUM> m_image_binary{};
+	std::array<std::vector<u8>, CELL_GEM_MAX_NUM> m_image_overexposed{}; // Overexposed pixels that didn't pass the filter
+	std::array<std::vector<u8>, CELL_GEM_MAX_NUM> m_image_enclosed{};    // Pixels that are enclosed by pixels that passed the filter
 	std::array<u32, CELL_GEM_MAX_NUM> m_fail_count{};
 	std::array<u32, CELL_GEM_MAX_NUM> m_shape_fail_count{};
 
