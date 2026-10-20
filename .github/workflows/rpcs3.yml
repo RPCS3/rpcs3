@@ -534,7 +534,6 @@ jobs:
             mingw-w64-clang-${{ matrix.arch }}-ninja
             mingw-w64-clang-${{ matrix.arch }}-llvm
             mingw-w64-clang-${{ matrix.arch }}-ffmpeg
-            mingw-w64-clang-${{ matrix.arch }}-opencv
             mingw-w64-clang-${{ matrix.arch }}-iconv
             mingw-w64-clang-${{ matrix.arch }}-glew
             mingw-w64-clang-${{ matrix.arch }}-vulkan

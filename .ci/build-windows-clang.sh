@@ -8,7 +8,7 @@ MSYS2="${2:-clang64}"
 # Pull all the submodules except some
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init $(awk '/path/ && !/llvm/ && !/opencv/ && !/ffmpeg/ && !/curl/ && !/FAudio/ && !/zlib/ { print $3 }' .gitmodules)
+git submodule -q update --init $(awk '/path/ && !/llvm/ && !/ffmpeg/ && !/curl/ && !/FAudio/ && !/zlib/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
 
@@ -42,7 +42,6 @@ cmake ..                                               \
     -DUSE_SDL=ON                                       \
     -DUSE_SYSTEM_SDL=OFF                               \
     -DUSE_SYSTEM_FFMPEG=ON                             \
-    -DUSE_SYSTEM_OPENCV=ON                             \
     -DUSE_SYSTEM_OPENAL=OFF                            \
     -DUSE_DISCORD_RPC=ON                               \
     -DOpenGL_GL_PREFERENCE=LEGACY                      \

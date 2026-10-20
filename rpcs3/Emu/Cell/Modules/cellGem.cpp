@@ -1707,8 +1707,8 @@ public:
 
 				m_tracker.set_active(gem_num, controller.enabled_tracking && controller.status == CELL_GEM_STATUS_READY);
 				m_tracker.set_hue(gem_num, g_cfg.io.allow_move_hue_set_by_game ? controller.hue : config->hue);
-				m_tracker.set_hue_threshold(gem_num, config->hue_threshold);
-				m_tracker.set_saturation_threshold(gem_num, config->saturation_threshold);
+				m_tracker.set_hue_threshold(gem_num, static_cast<u8>(config->hue_threshold.get()));
+				m_tracker.set_saturation_threshold(gem_num, static_cast<u8>(config->saturation_threshold.get()));
 			}
 
 			m_tracker.set_min_radius(static_cast<f32>(g_cfg_move.min_radius) / 100.0f);
