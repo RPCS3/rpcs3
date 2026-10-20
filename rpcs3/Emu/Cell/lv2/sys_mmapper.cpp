@@ -228,6 +228,28 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 		alignment = 0x10000000;
 	}
 
+	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	{
+	case SYS_MEMORY_PAGE_SIZE_1M:
+	case SYS_MEMORY_PAGE_SIZE_64K:
+	case 0:
+	{
+		break;
+	}
+	default:
+	{
+		return CELL_EINVAL;
+	}
+	}
+
+	if (flags & SYS_MEMORY_ACCESS_RIGHT_MASK && flags & SYS_MEMORY_PAGE_FAULT_NOTIFICATION_SPU_ALLOW)
+	{
+		if ((flags & (SYS_MEMORY_ACCESS_RIGHT_RAW_SPU | SYS_MEMORY_ACCESS_RIGHT_SPU_THR)) == 0)
+		{
+			return CELL_EINVAL;
+		}
+	}
+
 	switch (alignment)
 	{
 	case 0x10000000:
