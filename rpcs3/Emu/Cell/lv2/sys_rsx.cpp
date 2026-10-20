@@ -129,7 +129,7 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 		}
 
 		// Schedule FIFO interrupt to deal with this immediately
-		render->get_context()->eng_interrupt_mask |= rsx::dma_control_interrupt;
+		render->eng_interrupt_mask |= rsx::dma_control_interrupt;
 	}
 
 	if (auto cpu = cpu_thread::get_current())
