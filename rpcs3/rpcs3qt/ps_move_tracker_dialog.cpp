@@ -80,7 +80,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	ui->viewCombo->addItem(tr("HSV Value"), static_cast<int>(view_mode::hsv_value));
 	ui->viewCombo->addItem(tr("Binary"), static_cast<int>(view_mode::binary));
 	ui->viewCombo->addItem(tr("Contours"), static_cast<int>(view_mode::contours));
-	ui->viewCombo->setCurrentIndex(ui->viewCombo->findData(static_cast<int>(m_view_mode)));
+	ui->viewCombo->setCurrentIndex(ui->viewCombo->findData(static_cast<int>(m_view_mode.load())));
 
 	connect(ui->viewCombo, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
@@ -210,7 +210,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	{
 		ui->comboSelectDevice->addItem(tr("PS Move #%0").arg(index + 1), index);
 	}
-	ui->comboSelectDevice->setCurrentIndex(ui->comboSelectDevice->findData(m_index));
+	ui->comboSelectDevice->setCurrentIndex(ui->comboSelectDevice->findData(m_index.load()));
 
 	connect(ui->comboSelectDevice, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
@@ -335,7 +335,7 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 				g /= count;
 				b /= count;
 
-				ps_move.notice("Selected new color with mouse click (r=%f, b=%f, g=%f)", r, g, b);
+				ps_move.notice("Selected new color with mouse click (r=%f, g=%f, b=%f)", r, g, b);
 
 				cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 				const auto [hue, saturation, value] = ps_move_tracker<true>::rgb_to_hsv(r, g, b);
@@ -531,9 +531,11 @@ void ps_move_tracker_dialog::process_camera_frame()
 
 	m_frame_number = frame_number;
 
-	if (m_frame_frozen != m_freeze_frame)
+	const bool freeze_frame = m_freeze_frame;
+
+	if (m_frame_frozen != freeze_frame)
 	{
-		m_frame_frozen = m_freeze_frame;
+		m_frame_frozen = freeze_frame;
 
 		if (m_frame_frozen)
 		{
@@ -541,14 +543,16 @@ void ps_move_tracker_dialog::process_camera_frame()
 		}
 	}
 
-	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
-	{
-		const cfg_ps_move* config = g_cfg_move.move[index];
+	const u32 index = m_index;
 
-		m_ps_move_tracker->set_active(index, m_index == index);
-		m_ps_move_tracker->set_hue(index, config->hue);
-		m_ps_move_tracker->set_hue_threshold(index, config->hue_threshold);
-		m_ps_move_tracker->set_saturation_threshold(index, config->saturation_threshold);
+	for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
+	{
+		const cfg_ps_move* config = g_cfg_move.move[i];
+
+		m_ps_move_tracker->set_active(i, index == i);
+		m_ps_move_tracker->set_hue(i, config->hue);
+		m_ps_move_tracker->set_hue_threshold(i, config->hue_threshold);
+		m_ps_move_tracker->set_saturation_threshold(i, config->saturation_threshold);
 	}
 
 	m_ps_move_tracker->set_image_data(m_frame_frozen ? m_image_data_frozen.data() : m_image_data.data(), m_image_data.size(), width, height, m_camera_handler->format());
@@ -563,8 +567,9 @@ void ps_move_tracker_dialog::process_camera_frame()
 	const std::vector<u8>* result = nullptr;
 	QImage::Format format = QImage::Format::Format_Invalid;
 	qsizetype bytes_per_line = 0;
+	const view_mode _view_mode = m_view_mode;
 
-	switch (m_view_mode)
+	switch (_view_mode)
 	{
 	case view_mode::image:
 	{
@@ -584,13 +589,13 @@ void ps_move_tracker_dialog::process_camera_frame()
 	case view_mode::hsv_saturation:
 	case view_mode::hsv_value:
 	{
-		const u32 index = static_cast<u32>(m_view_mode) - static_cast<u32>(view_mode::hsv_hue);
+		const u32 value_index = static_cast<u32>(_view_mode) - static_cast<u32>(view_mode::hsv_hue);
 		const std::vector<u8>& hsv = m_ps_move_tracker->hsv();
 		static std::vector<u8> hsv_single;
 		hsv_single.resize(hsv.size() / 3);
 		for (usz i = 0; i < hsv_single.size(); i++)
 		{
-			hsv_single[i] = hsv[i * 3 + index];
+			hsv_single[i] = hsv[i * 3 + value_index];
 		}
 		result = &hsv_single;
 		format = QImage::Format::Format_Grayscale8;
@@ -599,7 +604,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	}
 	case view_mode::binary:
 	{
-		result = &m_ps_move_tracker->binary(m_index);
+		result = &m_ps_move_tracker->binary(index);
 		format = QImage::Format::Format_Grayscale8;
 		bytes_per_line = width;
 		break;
@@ -619,7 +624,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	{
 	case histo_mode::unfiltered_hues:
 	{
-		histogram = get_histogram(m_ps_move_tracker->hues(), false);
+		histogram = get_histogram(m_ps_move_tracker->hues(), false, index);
 		break;
 	}
 	}
@@ -631,7 +636,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	m_histogram = std::move(histogram);
 }
 
-QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, bool ignore_zero) const
+QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, bool ignore_zero, u32 index) const
 {
 	// Create image
 	const int width = ui->histogramLabel->width();
@@ -649,7 +654,7 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 	QPixmap histo = background;
 	QPainter painter(&histo);
 
-	const cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+	const cfg_ps_move* config = ::at32(g_cfg_move.move, index);
 	const u16 hue = config->hue;
 	const u16 hue_threshold = config->hue_threshold;
 	const int min_hue = hue - hue_threshold;
