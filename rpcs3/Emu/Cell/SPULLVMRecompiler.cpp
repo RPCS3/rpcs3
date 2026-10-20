@@ -5581,9 +5581,9 @@ public:
 				// Get MFC slot, redirect to invalid memory address
 				llvm::Value* slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
 				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
-				const auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
+				auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
 				const auto ptr1 = _ptr(m_memptr, 0xffdeadf0);
-				auto mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+				auto mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(g_cfg.core.mfc_transfers_shuffling != 0 ? std::min<u32>(+g_cfg.core.mfc_transfers_shuffling + 1, 16) : 16));
 
 				if (g_cfg.core.mfc_transfers_shuffling)
 				{
@@ -5607,6 +5607,9 @@ public:
 					slot_phi->addIncoming(old_slot, fail);
 					slot = slot_phi;
 					mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+
+					const auto off2 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
+					ptr0 = _ptr(m_thread, m_ir->CreateZExt(off2, get_type<u64>()));
 				}
 
 				const auto pmfc = m_ir->CreateSelect(mfc_not_full, ptr0, ptr1);
