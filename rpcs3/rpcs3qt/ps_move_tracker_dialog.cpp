@@ -233,11 +233,22 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	{
 		std::lock_guard lock(m_image_mutex);
 
-		if (m_image.isNull() || m_histogram.isNull())
+		if (m_image.isNull())
 			return;
 
-		ui->imageLabel->setPixmap(m_image);
-		ui->histogramLabel->setPixmap(m_histogram);
+		QPixmap histogram;
+
+		switch (m_histo_mode)
+		{
+		case histo_mode::unfiltered_hues:
+		{
+			histogram = get_histogram(false, width);
+			break;
+		}
+		}
+
+		ui->imageLabel->setPixmap(QPixmap::fromImage(m_image));
+		ui->histogramLabel->setPixmap(histogram);
 	});
 
 	reset_camera();
@@ -618,58 +629,42 @@ void ps_move_tracker_dialog::process_camera_frame()
 	}
 	}
 
-	QPixmap histogram;
-
-	switch (m_histo_mode)
-	{
-	case histo_mode::unfiltered_hues:
-	{
-		histogram = get_histogram(m_ps_move_tracker->hues(), false, index);
-		break;
-	}
-	}
-
-	const QImage image(result->data(), width, height, bytes_per_line, format, nullptr, nullptr);
+	QImage image = QImage(result->data(), width, height, bytes_per_line, format, nullptr, nullptr).copy();
 
 	std::lock_guard lock(m_image_mutex);
-	m_image = QPixmap::fromImage(image);
-	m_histogram = std::move(histogram);
+	m_image = std::move(image);
+	m_hues = m_ps_move_tracker->hues();
 }
 
-QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, bool ignore_zero, u32 index) const
+QPixmap ps_move_tracker_dialog::get_histogram(bool ignore_zero, int width) const
 {
 	// Create image
-	const int width = ui->histogramLabel->width();
 	const int height = ui->histogramLabel->height();
-	const f32 pixelsPerHue = width / static_cast<f32>(hues.size());
+	const f32 pixelsPerHue = width / static_cast<f32>(m_hues.size());
 
-	static QPixmap background = [&]()
-	{
-		// Paint background
-		QPixmap pxmap(width, height);
-		pxmap.fill(Qt::white);
-		return pxmap;
-	}();
+	// Paint background
+	QPixmap histo(width, height);
+	histo.fill(Qt::white);
 
-	QPixmap histo = background;
-	QPainter painter(&histo);
-
-	const cfg_ps_move* config = ::at32(g_cfg_move.move, index);
+	const cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 	const u16 hue = config->hue;
 	const u16 hue_threshold = config->hue_threshold;
 	const int min_hue = hue - hue_threshold;
 	const int max_hue = hue + hue_threshold;
 
 	// Paint hue threshold
-	painter.fillRect(min_hue, 0, hue_threshold * 2 + 1, histo.height(), Qt::lightGray);
+	QPainter painter(&histo);
+
+	const int hue_threshold_width = (hue_threshold * 2 + 1) * pixelsPerHue;
+	painter.fillRect(min_hue * pixelsPerHue, 0, hue_threshold_width, histo.height(), Qt::lightGray);
 
 	if (min_hue < 0)
 	{
-		painter.fillRect(min_hue + 360, 0, hue_threshold * 2 + 1, histo.height(), Qt::lightGray);
+		painter.fillRect((min_hue + 360) * pixelsPerHue, 0, hue_threshold_width, histo.height(), Qt::lightGray);
 	}
 	else if (max_hue >= 360)
 	{
-		painter.fillRect(0, 0, max_hue - 360, histo.height(), Qt::lightGray);
+		painter.fillRect(0, 0, (max_hue - 360 + 1) * pixelsPerHue, histo.height(), Qt::lightGray);
 	}
 
 	const auto get_hue_bar_x = [pixelsPerHue](u16 hue)
@@ -690,15 +685,15 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 
 	const u32 zero_offset = (ignore_zero ? 1 : 0);
 
-	const auto max_elem = std::max_element(hues.begin() + zero_offset, hues.end());
-	const u32 max_value = max_elem != hues.end() ? *max_elem : 0u;
+	const auto max_elem = std::max_element(m_hues.begin() + zero_offset, m_hues.end());
+	const u32 max_value = max_elem != m_hues.end() ? *max_elem : 0u;
 
 	if (!max_value)
 		return histo;
 
-	for (int i = zero_offset; i < static_cast<int>(hues.size()); i++)
+	for (int i = zero_offset; i < static_cast<int>(m_hues.size()); i++)
 	{
-		const int bar_height = (hues[i] / static_cast<float>(max_value)) * height;
+		const int bar_height = (m_hues[i] / static_cast<float>(max_value)) * height;
 		if (bar_height <= 0) continue;
 
 		const auto [x0, x1] = get_hue_bar_x(i);
