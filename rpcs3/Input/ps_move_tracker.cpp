@@ -374,6 +374,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 
 	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
+	const bool has_hue_threshold = config.hue_threshold < 180; // with hue threshold 180 min and max are the same value
 
 	// Map memory
 	cv::Mat binary(cv::Size(width, height), CV_8UC1, image_binary.data(), 0);
@@ -391,7 +392,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 			const u8 value = src[2];
 
 			// Simply drop dark and colorless pixels as well as pixels that don't match our hue
-			if ((wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue)) ||
+			if ((has_hue_threshold && (wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue))) ||
 				saturation < config.saturation_threshold_u8 || saturation > 200 ||
 				value < 150)
 			{
