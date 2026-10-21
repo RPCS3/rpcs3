@@ -1548,9 +1548,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		statGet->bind = 0;
-		statGet->fileNum = 0;
 		statGet->fileList.set(setBuf->buf.addr());
-		statGet->fileListNum = 0;
 		std::memset(statGet->reserved, 0, sizeof(statGet->reserved));
 
 		if (!save_entry.isNew)
@@ -1576,12 +1574,15 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue; // system files are not included in the file list
 				}
 
-				files_sorted.push_back(entry);
+				files_sorted.emplace_back(std::move(entry));
 			}
 		}
 
+		// fileNum and sizeKB only cover the files that fit in fileList
+		const auto list_end = files_sorted.begin() + std::min<usz>(files_sorted.size(), setBuf->fileListMax);
+
 		// clang-format off
-		std::sort(files_sorted.begin(), files_sorted.end(), [&](const fs::dir_entry& a, const fs::dir_entry& b) -> bool
+		std::partial_sort(files_sorted.begin(), list_end, files_sorted.end(), [&](const fs::dir_entry& a, const fs::dir_entry& b) -> bool
 		{
 			const auto a_it = std::find(blist.begin(), blist.end(), a.name);
 			const auto b_it = std::find(blist.begin(), blist.end(), b.name);
@@ -1596,50 +1597,46 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		});
 		// clang-format on
 
+		files_sorted.erase(list_end, files_sorted.end());
+
+		statGet->fileNum = ::size32(files_sorted);
+		statGet->fileListNum = statGet->fileNum;
+
 		for (auto&& entry : files_sorted)
 		{
+			size_bytes += utils::align(entry.size, 1024); // firmware rounds this value up
+
+			auto& file = *file_list++;
+
+			file.size = entry.size;
+			file.atime = entry.atime;
+			file.mtime = entry.mtime;
+			file.ctime = entry.ctime;
+			strcpy_trunc(file.fileName, entry.name);
+
+			if (entry.name == "ICON0.PNG")
 			{
-				statGet->fileNum++;
-
-				size_bytes += utils::align(entry.size, 1024); // firmware rounds this value up
-
-				if (statGet->fileListNum >= setBuf->fileListMax)
-					continue;
-
-				statGet->fileListNum++;
-
-				auto& file = *file_list++;
-
-				file.size = entry.size;
-				file.atime = entry.atime;
-				file.mtime = entry.mtime;
-				file.ctime = entry.ctime;
-				strcpy_trunc(file.fileName, entry.name);
-
-				if (entry.name == "ICON0.PNG")
-				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
-				}
-				else if (entry.name == "ICON1.PAM")
-				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
-				}
-				else if (entry.name == "PIC1.PNG")
-				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
-				}
-				else if (entry.name == "SND0.AT3")
-				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
-				}
-				else if (psf::get_integer(psf, "*" + entry.name)) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
-				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_SECUREFILE;
-				}
-				else
-				{
-					file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE;
-				}
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+			}
+			else if (entry.name == "ICON1.PAM")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+			}
+			else if (entry.name == "PIC1.PNG")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+			}
+			else if (entry.name == "SND0.AT3")
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+			}
+			else if (psf::get_integer(psf, "*" + entry.name)) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_SECUREFILE;
+			}
+			else
+			{
+				file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE;
 			}
 		}
 
