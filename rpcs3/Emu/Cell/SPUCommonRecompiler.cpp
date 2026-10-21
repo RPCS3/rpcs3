@@ -885,6 +885,9 @@ void spu_cache::initialize(bool build_existing_cache)
 	std::sort(func_list.begin(), func_list.end());
 	func_list.erase(std::unique(func_list.begin(), func_list.end()), func_list.end());
 
+	// Build the biggest programs first, so that they don't end up running alone at the end
+	std::stable_sort(func_list.begin(), func_list.end(), FN(x.data.size() > y.data.size()));
+
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
