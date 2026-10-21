@@ -1480,6 +1480,9 @@ namespace rsx
 					channel.restore_point = channel.get;
 				});
 
+				// lv2 freed one of several contexts
+				free_stale_contexts();
+
 				eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
 		}
@@ -1544,7 +1547,7 @@ namespace rsx
 		m_ctx->draw_state.pending.set(draw_state_t::group::all);
 	}
 
-	void thread::init(context* ctx, u32 ctrlAddress)
+	void thread::init_context(context* ctx, u32 ctrlAddress)
 	{
 		auto& channel = ctx->fifo;
 		channel.dma_address = ctrlAddress;
@@ -1558,12 +1561,73 @@ namespace rsx
 			fifo_ret_addr = channel.ret_addr;
 		}
 
-		m_display.set_flip_status(CELL_GCM_DISPLAY_FLIP_STATUS_DONE);
-
-		vm::write32(device_addr + 0x30, 1);
 		std::memset(ctx->display_buffers, 0, sizeof(ctx->display_buffers));
+	}
+
+	void thread::start_device()
+	{
+		m_display.set_flip_status(CELL_GCM_DISPLAY_FLIP_STATUS_DONE);
+		vm::write32(device_addr + 0x30, 1);
 
 		rsx_thread_running = true;
+	}
+
+	void thread::free_context(u32 id)
+	{
+		ensure(!is_current_thread());
+
+		ensure(find_context(id))->fw.free_requested = true;
+		eng_interrupt_mask |= rsx::dma_control_interrupt;
+
+		while (find_context(id) && !is_stopped())
+		{
+			thread_ctrl::wait_for(100);
+		}
+	}
+
+	void thread::free_stale_contexts()
+	{
+		rsx::simple_array<u32> freed;
+
+		for_each_context([&](context* ctx)
+		{
+			if (ctx->fw.free_requested)
+			{
+				freed.push_back(ctx->id());
+			}
+		});
+
+		for (const u32 id : freed)
+		{
+			if (m_ctx->id() == id)
+			{
+				// Its FIFO goes away mid-stream: drop the packet and any open draw
+				if (fifo_ctrl)
+				{
+					fifo_ctrl->abort();
+				}
+
+				if (std::exchange(m_ctx->in_begin_end, false) &&
+					!REGS(m_ctx)->current_draw_clause.empty())
+				{
+					discard_draw();
+				}
+
+				// Another context with a FIFO channel, otherwise RSX's own
+				u32 next = 0;
+				for_each_context([&](context* other)
+				{
+					if (!next && other->id() != id && other->fifo.ctrl && !other->fw.free_requested)
+					{
+						next = other->id();
+					}
+				});
+
+				bind_context(next);
+			}
+
+			destroy_context(id);
+		}
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
