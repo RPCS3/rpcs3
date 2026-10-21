@@ -1604,39 +1604,41 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		for (auto&& entry : files_sorted)
 		{
-			size_bytes += utils::align(entry.size, 1024); // firmware rounds this value up
+			{
+				size_bytes += utils::align(entry.size, 1024); // firmware rounds this value up
 
-			auto& file = *file_list++;
+				auto& file = *file_list++;
 
-			file.size = entry.size;
-			file.atime = entry.atime;
-			file.mtime = entry.mtime;
-			file.ctime = entry.ctime;
-			strcpy_trunc(file.fileName, entry.name);
+				file.size = entry.size;
+				file.atime = entry.atime;
+				file.mtime = entry.mtime;
+				file.ctime = entry.ctime;
+				strcpy_trunc(file.fileName, entry.name);
 
-			if (entry.name == "ICON0.PNG")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
-			}
-			else if (entry.name == "ICON1.PAM")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
-			}
-			else if (entry.name == "PIC1.PNG")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
-			}
-			else if (entry.name == "SND0.AT3")
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
-			}
-			else if (psf::get_integer(psf, "*" + entry.name)) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_SECUREFILE;
-			}
-			else
-			{
-				file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE;
+				if (entry.name == "ICON0.PNG")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON0;
+				}
+				else if (entry.name == "ICON1.PAM")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_ICON1;
+				}
+				else if (entry.name == "PIC1.PNG")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_PIC1;
+				}
+				else if (entry.name == "SND0.AT3")
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_CONTENT_SND0;
+				}
+				else if (psf::get_integer(psf, "*" + entry.name)) // let's put the list of protected files in PARAM.SFO (int param = 1 if protected)
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_SECUREFILE;
+				}
+				else
+				{
+					file.fileType = CELL_SAVEDATA_FILETYPE_NORMALFILE;
+				}
 			}
 		}
 
