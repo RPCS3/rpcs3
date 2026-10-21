@@ -2157,6 +2157,9 @@
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="rpcs3.manifest" />
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="rpcs3qt\about_dialog.ui">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
