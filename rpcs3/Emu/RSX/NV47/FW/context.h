@@ -46,9 +46,13 @@ namespace rsx
 		u32 rsx_event_port{ 0 };
 		u32 driver_info{ 0 };
 
-		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+		// Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+		atomic_t<u64> unsent_gcm_events = 0;
 
 		// GET/PUT update latch for lv2 update requests
 		atomic_t<u64> new_get_put = u64{ umax };
+
+		// sys_rsx_context_free requested this context be removed
+		atomic_t<bool> free_requested{ false };
 	};
 }

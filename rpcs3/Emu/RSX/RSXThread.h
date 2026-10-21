@@ -340,6 +340,9 @@ namespace rsx
 		// Serialize a context
 		void save_context(utils::serial& ar, context& ctx);
 
+		// Deferred handler to remove contexts that have been freed on the lv2 side.
+		void free_stale_contexts();
+
 		// FIFO channel switch. The puller runs only the current context's channel.
 		void save_fifo_channel(FIFO::channel_state& channel) const;
 		void load_fifo_channel(const FIFO::channel_state& channel);
@@ -384,7 +387,13 @@ namespace rsx
 		void reset();
 
 		// lv2 set up a context's FIFO channel
-		void init(context* ctx, u32 ctrlAddress);
+		void init_context(context* ctx, u32 ctrlAddress);
+
+		// lv2 allocated the first context with a FIFO channel: the device starts
+		void start_device();
+
+		// Called from lv2 to destroy a context
+		void free_context(u32 id);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		bool request_emu_flip(u32 buffer) { return m_display.request_emu_flip(buffer); }
