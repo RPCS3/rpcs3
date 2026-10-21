@@ -2007,6 +2007,9 @@
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Manifest Include="rpcs3.manifest" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss">
       <Filter>StyleSheets</Filter>
     </None>
