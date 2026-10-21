@@ -1037,6 +1037,10 @@ void spu_cache::initialize(bool build_existing_cache)
 		// Ensure some actions are performed on a single thread
 		const bool is_first_thread = func_i == 0;
 
+		// Get bounds
+		const u64 spu_llvm_lower_bound = g_cfg.core.spu_llvm_lower_bound;
+		const u64 spu_llvm_upper_bound = g_cfg.core.spu_llvm_upper_bound;
+
 		// Build functions
 		for (; func_i < func_list.size(); func_i = fnext++, (showing_progress ? g_progr_pdone : pending_progress) += build_existing_cache ? 1 : 0)
 		{
@@ -1051,26 +1055,30 @@ void spu_cache::initialize(bool build_existing_cache)
 			const u32 start = func.lower_bound;
 			const u32 size0 = ::size32(func.data);
 
-			be_t<u64> hash_start;
+			// Check hash if bounds are set
+			if (spu_llvm_lower_bound != 0 || spu_llvm_upper_bound != umax)
 			{
-				sha1_context ctx;
-				u8 output[20];
+				be_t<u64> hash_start;
+				{
+					sha1_context ctx;
+					u8 output[20];
 
-				sha1_starts(&ctx);
-				sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
-				sha1_finish(&ctx, output);
-				std::memcpy(&hash_start, output, sizeof(hash_start));
-			}
+					sha1_starts(&ctx);
+					sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
+					sha1_finish(&ctx, output);
+					std::memcpy(&hash_start, output, sizeof(hash_start));
+				}
 
-			// Check hash against allowed bounds
-			const bool inverse_bounds = g_cfg.core.spu_llvm_lower_bound > g_cfg.core.spu_llvm_upper_bound;
+				// Check hash against allowed bounds
+				const bool inverse_bounds = spu_llvm_lower_bound > spu_llvm_upper_bound;
 
-			if ((!inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound || hash_start > g_cfg.core.spu_llvm_upper_bound)) ||
-				(inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound && hash_start > g_cfg.core.spu_llvm_upper_bound)))
-			{
-				spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
-				result++;
-				continue;
+				if ((!inverse_bounds && (hash_start < spu_llvm_lower_bound || hash_start > spu_llvm_upper_bound)) ||
+					(inverse_bounds && (hash_start < spu_llvm_lower_bound && hash_start > spu_llvm_upper_bound)))
+				{
+					spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
+					result++;
+					continue;
+				}
 			}
 
 			// Initialize LS with function data only
