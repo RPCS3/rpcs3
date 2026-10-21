@@ -22,7 +22,7 @@ namespace rsx
 	};
 
 	// Firmware and low-level driver state: DMA control, IO mapping, tiling/zcull regions and device info.
-	struct fw_context
+	struct fw_device_state
 	{
 		RsxDmaControl* ctrl = nullptr;
 		u32 dma_address{ 0 };
@@ -33,14 +33,22 @@ namespace rsx
 
 		shared_mutex sys_rsx_mtx;
 		u32 device_addr{ 0 };
+		u32 local_mem_size{ 0 };
+
+		GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
+	};
+
+	// Per-context lv2 driver state, set up by sys_rsx
+	struct fw_context
+	{
 		u32 label_addr{ 0 };
 		u32 main_mem_size{ 0 };
-		u32 local_mem_size{ 0 };
 		u32 rsx_event_port{ 0 };
 		u32 driver_info{ 0 };
 
 		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
 
-		GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
+		// GET/PUT update latch for lv2 update requests
+		atomic_t<u64> new_get_put = u64{ umax };
 	};
 }

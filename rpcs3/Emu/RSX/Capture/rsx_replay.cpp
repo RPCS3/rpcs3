@@ -50,7 +50,7 @@ namespace rsx
 		if (sys_rsx_context_allocate(*this, contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
-		get_current_renderer()->main_mem_size = buffer_size;
+		get_current_renderer()->find_context(contextInfo->context_id)->fw.main_mem_size = buffer_size;
 
 		if (sys_rsx_context_iomap(*this, contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
@@ -193,6 +193,9 @@ namespace rsx
 
 			auto last_flip = render->display_ctrl().get_flip_index();
 
+			// The replayed context's FIFO
+			RsxDmaControl* const ctrl = render->find_context(context_id)->fifo.ctrl;
+
 			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
@@ -207,7 +210,7 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (thread_ctrl::state() != thread_state::aborting && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
+				while (thread_ctrl::state() != thread_state::aborting && !render->is_fifo_idle() && (ctrl->get != fifo_stops[stopIdx]))
 				{
 					if (Emu.IsPaused())
 						thread_ctrl::wait_for(10'000);
@@ -223,12 +226,12 @@ namespace rsx
 				if (stopIdx >= fifo_stops.size())
 					fmt::throw_exception("Capture Replay: StopIdx greater than size of fifo_stops");
 
-				render->ctrl->put = fifo_stops[stopIdx];
+				ctrl->put = fifo_stops[stopIdx];
 			}
 
 			// dump put to end of stops, which should have actual end
 			u32 end = fifo_stops.back();
-			render->ctrl->put = end;
+			ctrl->put = end;
 
 			while (!render->is_fifo_idle() && thread_ctrl::state() != thread_state::aborting)
 			{

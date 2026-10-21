@@ -41,7 +41,7 @@ namespace rsx
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay
-				if (addr != RSX(ctx)->label_addr + 0x10)
+				if (addr != ctx->fw.label_addr + 0x10)
 				{
 					//RSX(ctx)->flush_fifo();
 					RSX(ctx)->fifo_wake_delay(2);
@@ -127,7 +127,7 @@ namespace rsx
 			const u32 addr = get_address(offset, ctxt);
 
 			// TODO: Check if possible to write on reservations
-			if (RSX(ctx)->label_addr >> 28 != addr >> 28)
+			if (ctx->fw.label_addr >> 28 != addr >> 28)
 			{
 				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 				RSX(ctx)->recover_fifo();

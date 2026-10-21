@@ -16,7 +16,7 @@ namespace rsx
 			// Ensure atomic seq-cst memory ordering for FIFO GET updates
 			atomic_fence_seq_cst();
 
-			const bool is_flip_sema = (address == (RSX(ctx)->label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
+			const bool is_flip_sema = (address == (ctx->fw.label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
 			if (!is_flip_sema)
 			{
 				// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.

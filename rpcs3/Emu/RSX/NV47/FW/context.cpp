@@ -5,7 +5,7 @@
 
 namespace rsx
 {
-	GCM_tile_reference fw_context::get_tiled_memory_region(const utils::address_range32& range) const
+	GCM_tile_reference fw_device_state::get_tiled_memory_region(const utils::address_range32& range) const
 	{
 		if (rsx::get_location(range.start) != CELL_GCM_LOCATION_MAIN)
 		{

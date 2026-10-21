@@ -199,9 +199,11 @@ namespace rsx
 		{
 			if (!m_pump->isHLE)
 			{
-				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+				// The context that flipped gets the notification
+				context* ctx = m_pump->get_context();
+				sys_rsx_context_attribute(ctx->id(), 0xFEC, buffer, 0, 0, 0);
 
-				if (m_pump->unsent_gcm_events)
+				if (ctx->fw.unsent_gcm_events)
 				{
 					// TODO: A proper fix
 					return;
@@ -298,7 +300,21 @@ namespace rsx
 		}
 		else
 		{
-			sys_rsx_context_attribute(0x55555555, 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
+			// Broadcast vblank event to all context listeners.
+			rsx::simple_array<u32> lv2_ids;
+			m_pump->for_each_context([&](context* ctx)
+			{
+				if (ctx->fw.driver_info)
+				{
+					lv2_ids.push_back(ctx->id());
+				}
+			});
+
+			const u64 guest_time = get_guest_system_time(post_event_time);
+			for (const u32 id : lv2_ids)
+			{
+				sys_rsx_context_attribute(id, 0xFED, 1, guest_time, 0, 0);
+			}
 		}
 	}
 
@@ -319,7 +335,7 @@ namespace rsx
 			u64 local_vblank_count = 0;
 
 			// TODO: exit condition
-			while (!m_pump->is_stopped() && !m_pump->unsent_gcm_events && thread_ctrl::state() != thread_state::aborting)
+			while (!m_pump->is_stopped() && !m_pump->has_unsent_gcm_events() && thread_ctrl::state() != thread_state::aborting)
 			{
 				// Get current time
 				const u64 current = get_system_time();
