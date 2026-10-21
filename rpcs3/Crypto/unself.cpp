@@ -1274,7 +1274,7 @@ bool SELFDecrypter::DecryptData()
 	if ((sce_hdr.se_flags & 0x8000) == 0x8000)
 	{
 		usz data_buf_length = 0;
-		for (const auto& hdr : meta_shdr)
+		for (const MetadataSectionHeader& hdr : meta_shdr)
 		{
 			data_buf_length += ::narrow<u32>(hdr.data_size);
 		}
@@ -1282,7 +1282,7 @@ bool SELFDecrypter::DecryptData()
 		data_buf.resize(data_buf_length);
 		u32 data_buf_offset = 0;
 
-		for (const auto& hdr : meta_shdr)
+		for (const MetadataSectionHeader& hdr : meta_shdr)
 		{
 			self_f.seek(hdr.data_offset);
 			self_f.read(data_buf.data() + data_buf_offset, hdr.data_size);
@@ -1367,6 +1367,117 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 	else
 	{
 		WriteElf(e, elf64_hdr, shdr64_arr, phdr64_arr);
+	}
+
+	// Debug SELF: fill ELF data not covered by any program header or
+	// the section header table. Build a sorted list of regions that
+	// WriteElf already wrote (segments + SHDR table), then stream-
+	// copy the gaps from the SELF file. After each known region in
+	// the SELF the cursor advances to seg_ext.offset + seg_ext.size
+	// (for segments) or shdr_offset + table_size (for the SHDR
+	// table), so gap bytes are read from the correct position even
+	// when segments are compressed.
+	if ((sce_hdr.se_flags & 0x8000) == 0x8000 && m_ext_hdr.shdr_offset != 0)
+	{
+		const auto write_gap_data = [&](const auto& phdrs, const auto& shdrs, u64 e_shoff, u16 e_shnum, u16 e_shentsize)
+		{
+			struct region
+			{
+				u64 elf_off;
+				u64 elf_end;
+				u64 self_end;
+			};
+
+			std::vector<region> regions;
+
+			for (u32 i = 0; i < m_seg_ext_hdr.size(); ++i)
+			{
+				const auto& seg = m_seg_ext_hdr[i];
+
+				if (seg.offset < sce_hdr.se_hsize)
+				{
+					continue;
+				}
+
+				const auto& phdr = ::at32(phdrs, i);
+
+				regions.push_back({phdr.p_offset,
+					phdr.p_offset + phdr.p_filesz,
+					seg.offset + seg.size});
+			}
+
+			const u64 shdr_table_size = static_cast<u64>(e_shnum) * e_shentsize;
+			regions.push_back({e_shoff,
+				e_shoff + shdr_table_size,
+				m_ext_hdr.shdr_offset + shdr_table_size});
+
+			std::sort(regions.begin(), regions.end(),
+				[](const region& a, const region& b) { return a.elf_off < b.elf_off; });
+
+			const u64 self_size = self_f.size();
+			u64 elf_cursor = 0;
+			u64 self_cursor = sce_hdr.se_hsize;
+
+			for (const auto& r : regions)
+			{
+				if (elf_cursor < r.elf_off && self_cursor < self_size)
+				{
+					const u64 gap = r.elf_off - elf_cursor;
+					const u64 avail = std::min(gap, self_size - self_cursor);
+
+					if (avail > 0)
+					{
+						std::vector<u8> buf(avail);
+						self_f.seek(self_cursor);
+						self_f.read(buf.data(), buf.size());
+
+						e.seek(elf_cursor);
+						e.write(buf.data(), buf.size());
+					}
+				}
+
+				elf_cursor = r.elf_end;
+				self_cursor = r.self_end;
+			}
+
+			// Copy any trailing data after the last region (e.g. section
+			// data placed after the section header table).
+			// Compute the true end of the ELF file from section headers
+			// to avoid copying SELF trailing padding into the output.
+			u64 elf_file_end = e_shoff + static_cast<u64>(e_shnum) * e_shentsize;
+
+			for (const auto& shdr : shdrs)
+			{
+				if (shdr.sh_type != 8 /* SHT_NOBITS */ && shdr.sh_size > 0)
+				{
+					elf_file_end = std::max<u64>(elf_file_end, shdr.sh_offset + shdr.sh_size);
+				}
+			}
+
+			if (self_cursor < self_size && elf_cursor < elf_file_end)
+			{
+				const u64 remaining = std::min(elf_file_end - elf_cursor, self_size - self_cursor);
+
+				if (remaining > 0)
+				{
+					std::vector<u8> buf(remaining);
+					self_f.seek(self_cursor);
+					self_f.read(buf.data(), buf.size());
+
+					e.seek(elf_cursor);
+					e.write(buf.data(), buf.size());
+				}
+			}
+		};
+
+		if (isElf32)
+		{
+			write_gap_data(phdr32_arr, shdr32_arr, elf32_hdr.e_shoff, elf32_hdr.e_shnum, elf32_hdr.e_shentsize);
+		}
+		else
+		{
+			write_gap_data(phdr64_arr, shdr64_arr, elf64_hdr.e_shoff, elf64_hdr.e_shnum, elf64_hdr.e_shentsize);
+		}
 	}
 
 	return e;
