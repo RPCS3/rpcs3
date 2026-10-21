@@ -106,6 +106,9 @@ namespace rsx
 		shared_mutex m_contexts_lock;
 		u32 m_next_ctx_id = 1;
 
+		// Sheduling. Local-task ticks the bound context has run while another one was waiting
+		u32 m_ctx_quantum_ticks = 0;
+
 		// Our currently bound context
 		context* m_ctx = nullptr;
 
@@ -326,6 +329,25 @@ namespace rsx
 
 		// Fault handling requires a walk of the HT, so we must lock it to find the culprit.
 		void lock_context_table();
+
+		// Creates and registers a context with the given id
+		context* add_context(u32 id);
+
+		// Serialize a context
+		void save_context(utils::serial& ar, context& ctx);
+
+		// FIFO channel switch. The puller runs only the current context's channel.
+		void save_fifo_channel(FIFO::channel_state& channel) const;
+		void load_fifo_channel(const FIFO::channel_state& channel);
+
+		// Contexts switch outside a draw and between FIFO packets
+		bool can_switch_context() const;
+
+		// Round-robin over contexts with pending FIFO commands, when the bound one goes idle or uses up its quantum
+		void schedule_contexts();
+
+		// Scheduling quantum. Unit is in local-task ticks
+		static constexpr u32 context_quantum_ticks = 16;
 
 		// Destroy and rebuild the backend renderer.
 		void reset_renderer(bool device_lost);
