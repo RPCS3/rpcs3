@@ -1548,7 +1548,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		statGet->bind = 0;
+		statGet->fileNum = 0;
 		statGet->fileList.set(setBuf->buf.addr());
+		statGet->fileListNum = 0;
 		std::memset(statGet->reserved, 0, sizeof(statGet->reserved));
 
 		if (!save_entry.isNew)
@@ -1574,15 +1576,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue; // system files are not included in the file list
 				}
 
-				files_sorted.emplace_back(std::move(entry));
+				files_sorted.push_back(entry);
 			}
 		}
 
-		// fileNum and sizeKB only cover the files that fit in fileList
-		const auto list_end = files_sorted.begin() + std::min<usz>(files_sorted.size(), setBuf->fileListMax);
-
 		// clang-format off
-		std::partial_sort(files_sorted.begin(), list_end, files_sorted.end(), [&](const fs::dir_entry& a, const fs::dir_entry& b) -> bool
+		std::sort(files_sorted.begin(), files_sorted.end(), [&](const fs::dir_entry& a, const fs::dir_entry& b) -> bool
 		{
 			const auto a_it = std::find(blist.begin(), blist.end(), a.name);
 			const auto b_it = std::find(blist.begin(), blist.end(), b.name);
@@ -1597,15 +1596,23 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		});
 		// clang-format on
 
-		files_sorted.erase(list_end, files_sorted.end());
-
-		statGet->fileNum = ::size32(files_sorted);
-		statGet->fileListNum = statGet->fileNum;
+		// Up to SDK 2.6, or with fileListMax 0, fileNum and sizeKB only cover the files that fit in fileList
+		if ((g_ps3_process_info.sdk_ver <= 0x26FFFF || !setBuf->fileListMax) && files_sorted.size() > setBuf->fileListMax)
+		{
+			files_sorted.erase(files_sorted.begin() + setBuf->fileListMax, files_sorted.end());
+		}
 
 		for (auto&& entry : files_sorted)
 		{
 			{
+				statGet->fileNum++;
+
 				size_bytes += utils::align(entry.size, 1024); // firmware rounds this value up
+
+				if (statGet->fileListNum >= setBuf->fileListMax)
+					continue;
+
+				statGet->fileListNum++;
 
 				auto& file = *file_list++;
 
