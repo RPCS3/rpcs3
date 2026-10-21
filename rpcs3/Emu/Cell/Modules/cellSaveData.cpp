@@ -215,7 +215,7 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 	return 0;
 }
 
-// Size of a save as funcStat reports it when every file fits in fileList: game files rounded up to 1 KB each, plus 35 KB for the system files
+// Size of a save as funcStat reports it for the functions with userdata when every file fits in fileList: game files rounded up to 1 KB each, plus 35 KB for the system files
 static u64 get_save_data_size(const fs::dir& dir)
 {
 	u64 size = 0;
