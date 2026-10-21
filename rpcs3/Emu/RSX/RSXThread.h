@@ -62,8 +62,9 @@ namespace rsx
 		u64 timestamp;
 	};
 
-	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public fw_context
+	// Emulates the CTX microprocessor core and its ucode. It has no internal codename, envydocs just call it CTX and the ISA ctxprog.
+	// It's quite an advanced thing for what it is and gets custom ucode at startup to execute. Likely managed by lv1 using the hidden CTXCTL method registers.
+	class thread : public cpu_thread, public fw_device_state
 	{
 		friend class core_renderer;
 
@@ -104,7 +105,7 @@ namespace rsx
 		// NOTE: The primary context is id 0 and lives as long as the thread. There is always at least one logical context available.
 		std::map<u32, std::unique_ptr<context>> m_contexts;
 		shared_mutex m_contexts_lock;
-		u32 m_next_ctx_id = 1;
+		atomic_t<u32> m_context_count = 0;
 
 		// Sheduling. Local-task ticks the bound context has run while another one was waiting
 		u32 m_ctx_quantum_ticks = 0;
@@ -129,7 +130,6 @@ namespace rsx
 		display_engine m_display;
 
 	public:
-		atomic_t<u64> new_get_put = u64{umax};
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
@@ -186,9 +186,7 @@ namespace rsx
 		// Shared with the renderer: the core and the backend chain their timing checkpoints on it within a draw
 		rsx::profiling_timer& profiler() { return m_profiler; }
 
-		/**
-		 * Execute a backend local task queue
-		 */
+		// Execute a backend local task queue
 		void do_local_task(FIFO::state state);
 
 		context* get_context() const { return m_ctx; }
@@ -205,8 +203,13 @@ namespace rsx
 			}
 		}
 
-		// RSX thread only. Contexts other than the primary one.
-		context* create_context();
+		// Called from PPU thread (lv2). Host resources are made on the RSX thread when the context is first bound.
+		context* create_context(u32 id);
+
+		// Can be called from any thread. Returns nullptr if there is no such context.
+		context* find_context(u32 id);
+
+		// RSX thread only.
 		void destroy_context(u32 id);
 
 		// RSX thread only, and must be outside a draw. The renderer and every engine work on the given context from now on.
@@ -234,7 +237,11 @@ namespace rsx
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
 
-		bool send_event(u64, u64, u64);
+		// Sends to the context's lv2 event port
+		bool send_event(context* ctx, u64, u64, u64);
+
+		// Events an lv2 event queue could not take yet, on any context
+		bool has_unsent_gcm_events();
 
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
@@ -330,9 +337,6 @@ namespace rsx
 		// Fault handling requires a walk of the HT, so we must lock it to find the culprit.
 		void lock_context_table();
 
-		// Creates and registers a context with the given id
-		context* add_context(u32 id);
-
 		// Serialize a context
 		void save_context(utils::serial& ar, context& ctx);
 
@@ -378,7 +382,9 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(u32 ctrlAddress);
+
+		// lv2 set up a context's FIFO channel
+		void init(context* ctx, u32 ctrlAddress);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		bool request_emu_flip(u32 buffer) { return m_display.request_emu_flip(buffer); }

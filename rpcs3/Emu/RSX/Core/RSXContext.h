@@ -29,6 +29,9 @@ namespace rsx
 		rsx_state* register_state = nullptr;
 		core_renderer core{};
 
+		// lv2 driver state of this context
+		fw_context fw;
+
 		// Draw sequencing and the immediate-mode push buffers of this context
 		draw_command_processor draw_processor;
 
