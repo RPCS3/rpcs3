@@ -299,50 +299,6 @@ protected:
 	}
 
 public:
-
-	struct program_buffer_patch_entry
-	{
-		union
-		{
-			u32 hex_key;
-			f32 fp_key;
-		};
-
-		union
-		{
-			u32 hex_value;
-			f32 fp_value;
-		};
-
-		program_buffer_patch_entry() = default;
-
-		program_buffer_patch_entry(f32 key, f32 value)
-		{
-			fp_key = key;
-			fp_value = value;
-		}
-
-		program_buffer_patch_entry(u32 key, u32 value)
-		{
-			hex_key = key;
-			hex_value = value;
-		}
-
-		bool test_and_set(f32 value, f32* dst) const
-		{
-			u32 hex = std::bit_cast<u32>(value);
-			if ((hex & 0x7FFFFFFF) == (hex_key & 0x7FFFFFFF))
-			{
-				hex = (hex & ~0x7FFFFFF) | hex_value;
-				*dst = std::bit_cast<f32>(hex);
-				return true;
-			}
-
-			return false;
-		}
-	};
-
-public:
 	program_state_cache() = default;
 	~program_state_cache()
 	{}
