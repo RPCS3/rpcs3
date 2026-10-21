@@ -880,6 +880,11 @@ void spu_cache::initialize(bool build_existing_cache)
 
 	// Read cache
 	auto func_list = cache.get();
+
+	// Remove duplicates (the runtime treats equal programs as the same function anyway)
+	std::sort(func_list.begin(), func_list.end());
+	func_list.erase(std::unique(func_list.begin(), func_list.end()), func_list.end());
+
 	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
