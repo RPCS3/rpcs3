@@ -5651,6 +5651,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		return false;
 	}
 
+	// Compile the parts containing a symbol resolver first (only those have jit_bounds).
+	// They take by far the longest, so starting them last would leave a long single-threaded tail.
+	std::stable_partition(workload.begin(), workload.end(), FN(!!x.second.jit_bounds));
+
 	if (g_progr_ftotal_bits && file_size)
 	{
 		g_progr_fknown_bits += file_size;
