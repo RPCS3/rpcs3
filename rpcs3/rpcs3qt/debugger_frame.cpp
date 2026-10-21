@@ -688,7 +688,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				if (cpu->get_class() == thread_class::rsx)
 				{
-					if (u32 addr = static_cast<rsx::thread*>(cpu)->label_addr)
+					if (u32 addr = static_cast<rsx::thread*>(cpu)->get_context()->fw.label_addr)
 					{
 						// Memory viewer pointing to RSX semaphores
 						idm::make<memory_viewer_handle>(this, m_disasm, addr, make_check_cpu(nullptr));

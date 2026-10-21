@@ -153,7 +153,7 @@ namespace rsx
 		{
 			if (const u32 ea = render->iomap_table.get_addr(offset); ea != umax)
 			{
-				if (size_to_check <= 1 || (offset < render->main_mem_size && render->main_mem_size - offset >= size_to_check))
+				if (size_to_check <= 1 || (offset < render->get_context()->fw.main_mem_size && render->get_context()->fw.main_mem_size - offset >= size_to_check))
 				{
 					bool ok = true;
 
@@ -184,7 +184,7 @@ namespace rsx
 		{
 			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + ::offset32(&RsxReports::report) + offset;
+				return render->get_context()->fw.label_addr + ::offset32(&RsxReports::report) + offset;
 			}
 
 			msg = "Local RSX REPORT offset out of range!"sv;
@@ -231,7 +231,7 @@ namespace rsx
 		{
 			if (offset < sizeof(RsxReports::semaphore) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + offset;
+				return render->get_context()->fw.label_addr + offset;
 			}
 
 			msg = "DMA SEMAPHORE offset out of range!"sv;
@@ -633,8 +633,7 @@ namespace rsx
 
 		// Device
 		ar(iomap_table, tiles, zculls, enable_second_vhandler, requested_vsync);
-		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
-		ar(unsent_gcm_events);
+		ar(device_addr, local_mem_size);
 		m_display.save(ar);
 
 		// Contexts and FIFO channels
@@ -642,7 +641,9 @@ namespace rsx
 		{
 			// The current context's channel is live
 			save_fifo_channel(m_ctx->fifo);
-			ar(::size32(m_contexts), m_ctx->id(), m_next_ctx_id);
+
+			reader_lock lock(m_contexts_lock);
+			ar(::size32(m_contexts), m_ctx->id());
 
 			for (const auto& [id, ctx] : m_contexts)
 			{
@@ -665,12 +666,12 @@ namespace rsx
 		}
 
 		u32 count = 0, bound_id = 0;
-		ar(count, bound_id, m_next_ctx_id);
+		ar(count, bound_id);
 
 		for (u32 i = 0; i < count; i++)
 		{
 			const u32 id{ar};
-			context* ctx = id ? add_context(id) : m_contexts.at(0).get();
+			context* ctx = id ? create_context(id) : m_contexts.at(0).get();
 			save_context(ar, *ctx);
 		}
 
@@ -686,6 +687,25 @@ namespace rsx
 		restore_fifo_position = m_ctx->fifo.get;
 	}
 
+	context* thread::find_context(u32 id)
+	{
+		reader_lock lock(m_contexts_lock);
+
+		const auto found = m_contexts.find(id);
+		return found != m_contexts.end() ? found->second.get() : nullptr;
+	}
+
+	bool thread::has_unsent_gcm_events()
+	{
+		bool result = false;
+		for_each_context([&](context* ctx)
+		{
+			result |= !!ctx->fw.unsent_gcm_events;
+		});
+
+		return result;
+	}
+
 	void thread::save_context(utils::serial& ar, context& ctx)
 	{
 		ar(*ctx.register_state);
@@ -697,6 +717,7 @@ namespace rsx
 		ar(ctx.draw_processor.m_element_push_buffer, ctx.fb.zcull_surface_active, ctx.fb.surface_info, ctx.fb.depth_surface_info, ctx.fb.layout);
 		ar(ctx.display_buffers, ctx.display_buffers_count, ctx.current_display_buffer);
 		ar(ctx.in_begin_end, ctx.register_state->current_draw_clause);
+		ar(ctx.fw.label_addr, ctx.fw.main_mem_size, ctx.fw.rsx_event_port, ctx.fw.driver_info, ctx.fw.unsent_gcm_events);
 
 		auto& channel = ctx.fifo;
 		ar(channel.dma_address, channel.get, channel.ret_addr, channel.saved_ret_addr, channel.restore_point);
@@ -757,22 +778,39 @@ namespace rsx
 
 		m_ctx_quantum_ticks = 0;
 
-		// Next context after the bound one with commands waiting
-		auto it = m_contexts.upper_bound(m_ctx->id());
-
-		for (usz n = m_contexts.size() - 1; n; --n, ++it)
+		// Speedup - common case. One internal context (id=0) and one real one (usually 0x5555'5555)
+		if (m_ctx->id() != 0 && m_context_count <= 2) [[ likely ]]
 		{
-			if (it == m_contexts.end())
-			{
-				it = m_contexts.begin();
-			}
+			// Nothing to switch to
+			return;
+		}
 
-			if (const auto channel_ctrl = it->second->fifo.ctrl;
-				channel_ctrl && channel_ctrl->get != (channel_ctrl->put & ~3))
+		// Next context after the bound one with commands waiting
+		u32 next = umax;
+		{
+			reader_lock lock(m_contexts_lock);
+
+			// There'll only ever be at most 3 contexts in practice.
+			// One system (VSH), one game (GCM) and one internal one.
+			for (const auto& [ctx_id, ctx] : m_contexts)
 			{
-				bind_context(it->first);
-				return;
+				if (ctx_id == m_ctx->id())
+				{
+					continue;
+				}
+
+				if (const auto channel_ctrl = ctx->fifo.ctrl;
+					channel_ctrl && channel_ctrl->get != (channel_ctrl->put & ~3))
+				{
+					next = ctx_id;
+					break;
+				}
 			}
+		}
+
+		if (next != umax)
+		{
+			bind_context(next);
 		}
 	}
 
@@ -781,6 +819,7 @@ namespace rsx
 	{
 		// Context 0 must be the first thing created.
 		m_contexts.emplace(0, std::make_unique<context>(0, this));
+		m_context_count = 1;
 		bind_context(0);
 
 		g_access_violation_handler = [this](u32 address, bool is_writing)
@@ -991,8 +1030,6 @@ namespace rsx
 
 		performance_counters.state = FIFO::state::empty;
 
-		const u64 event_flags = unsent_gcm_events.exchange(0);
-
 		if (Emu.IsStarting())
 		{
 			Emu.CallFromMainThread([]
@@ -1020,6 +1057,22 @@ namespace rsx
 
 		performance_counters.state = FIFO::state::running;
 
+		if (!ctrl)
+		{
+			// Find any context that can be run
+			u32 ctx_id = umax;
+			for_each_context([&](context* ctx)
+			{
+				if (ctx_id == umax && ctx->fifo.ctrl)
+				{
+					ctx_id = ctx->id();
+				}
+			});
+
+			ensure(ctx_id != umax);
+			bind_context(ctx_id);
+		}
+
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
 
@@ -1036,9 +1089,19 @@ namespace rsx
 			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count, restore_fifo_position);
 		}
 
-		if (!send_event(0, event_flags, 0))
+		// Resend events an lv2 event queue could not take when the previous session stopped.
+		rsx::simple_array<context*> contexts;
+		for_each_context([&](context* ctx)
 		{
-			return;
+			contexts.push_back(ctx);
+		});
+
+		for (context* ctx : contexts)
+		{
+			if (!send_event(ctx, 0, ctx->fw.unsent_gcm_events.exchange(0), 0))
+			{
+				return;
+			}
 		}
 
 		m_display.start_vblank_thread();
@@ -1097,7 +1160,7 @@ namespace rsx
 				do_local_task(performance_counters.state);
 
 				// Give other contexts their turn
-				if (m_contexts.size() > 1) [[unlikely]]
+				if (m_context_count > 1) [[unlikely]]
 				{
 					schedule_contexts();
 				}
@@ -1221,38 +1284,32 @@ namespace rsx
 
 	void thread::lock_context_table()
 	{
-		ensure(is_current_thread());
+		if (!is_current_thread())
+		{
+			m_contexts_lock.lock();
+			return;
+		}
 
+		// RSX thread should still run management during lock wait to avoid deadlocks.
 		while (!m_contexts_lock.try_lock())
 		{
 			do_local_task(rsx::FIFO::state::lock_wait);
 		}
 	}
 
-	context* thread::create_context()
-	{
-		context* ctx = add_context(m_next_ctx_id++);
-
-		rsx_log.notice("Created context %u", ctx->id());
-		return ctx;
-	}
-
-	context* thread::add_context(u32 id)
+	context* thread::create_context(u32 id)
 	{
 		auto ctx = std::make_unique<context>(id, this);
-		if (is_initialized)
-		{
-			// Workaround to allow creating ctx 0 before init completes.
-			// Otherwise created with the others when the renderer starts
-			ctx->resources = m_renderer->create_context_resources(ctx.get());
-		}
-
 		context* result = ctx.get();
 
 		lock_context_table();
-		ensure(m_contexts.emplace(id, std::move(ctx)).second);
+		const bool inserted = m_contexts.emplace(id, std::move(ctx)).second;
+		m_context_count = ::size32(m_contexts);
 		m_contexts_lock.unlock();
 
+		ensure(inserted);
+
+		rsx_log.notice("Created context 0x%x", id);
 		return result;
 	}
 
@@ -1262,27 +1319,24 @@ namespace rsx
 		ensure(id != 0);
 
 		// Check that id is valid and does not point to the current context
-		const auto found = m_contexts.find(id);
-		ensure(found != m_contexts.end());
-		ensure(found->second.get() != m_ctx);
+		context* ctx = ensure(find_context(id));
+		ensure(ctx != m_ctx);
 
 		// Its caches can still protect pages: release them while faults can still find the context.
 		// NOTE: Do not do this under the lock. The release itself can fault on this thread.
-		release_context_resources(found->second.get());
+		release_context_resources(ctx);
 
 		lock_context_table();
-		m_contexts.erase(found);
+		m_contexts.erase(id);
+		m_context_count = ::size32(m_contexts);
 		m_contexts_lock.unlock();
 
-		rsx_log.notice("Destroyed context %u", id);
+		rsx_log.notice("Destroyed context 0x%x", id);
 	}
 
 	void thread::bind_context(u32 id)
 	{
-		const auto found = m_contexts.find(id);
-		ensure(found != m_contexts.end());
-
-		context* ctx = found->second.get();
+		context* ctx = ensure(find_context(id));
 		if (ctx == m_ctx)
 		{
 			return;
@@ -1304,6 +1358,12 @@ namespace rsx
 
 		if (m_renderer)
 		{
+			if (!ctx->resources && is_initialized)
+			{
+				// Created by lv2 on another thread
+				ctx->resources = m_renderer->create_context_resources(ctx);
+			}
+
 			m_renderer->bind_context(ctx);
 		}
 
@@ -1391,12 +1451,17 @@ namespace rsx
 
 			if (eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
 			{
-				if (const u64 get_put = new_get_put.exchange(u64{umax});
-					get_put != umax)
+				// lv2 updates the DMA control of one context at a time
+				for_each_context([&](context* ctx)
 				{
-					// FIXME: This next part is technically wrong/incorrect. lv2 will update DMA ctrl for a specific context by id
-					// Instead of a simple interrupt, we need a packet queue in case of back-to-back updates.
-					if (m_ctx->id() == 0)
+					const u64 get_put = ctx->fw.new_get_put.exchange(u64{umax});
+
+					if (get_put == umax)
+					{
+						return;
+					}
+
+					if (ctx == m_ctx)
 					{
 						vm::_ptr<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
 						fifo_ctrl->set_get(static_cast<u32>(get_put));
@@ -1404,16 +1469,16 @@ namespace rsx
 						fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 						last_known_code_start = static_cast<u32>(get_put);
 						sync_point_request.release(true);
+						return;
 					}
-					else
-					{
-						auto& channel = m_contexts.at(0)->fifo; // FIXME: Assumes all lv2 pushed updates target context0
-						vm::_ptr<atomic_be_t<u64>>(channel.dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
-						channel.get = static_cast<u32>(get_put);
-						channel.ret_addr = RSX_CALL_STACK_EMPTY;
-						channel.restore_point = channel.get;
-					}
-				}
+
+					// Not bound: its saved channel resumes from here
+					auto& channel = ctx->fifo;
+					vm::_ptr<atomic_be_t<u64>>(channel.dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
+					channel.get = static_cast<u32>(get_put);
+					channel.ret_addr = RSX_CALL_STACK_EMPTY;
+					channel.restore_point = channel.get;
+				});
 
 				eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
@@ -1479,15 +1544,24 @@ namespace rsx
 		m_ctx->draw_state.pending.set(draw_state_t::group::all);
 	}
 
-	void thread::init(u32 ctrlAddress)
+	void thread::init(context* ctx, u32 ctrlAddress)
 	{
-		dma_address = ctrlAddress;
-		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
+		auto& channel = ctx->fifo;
+		channel.dma_address = ctrlAddress;
+		channel.ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
+		channel.ret_addr = RSX_CALL_STACK_EMPTY;
+
+		if (ctx == m_ctx)
+		{
+			dma_address = channel.dma_address;
+			ctrl = channel.ctrl;
+			fifo_ret_addr = channel.ret_addr;
+		}
+
 		m_display.set_flip_status(CELL_GCM_DISPLAY_FLIP_STATUS_DONE);
-		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
 		vm::write32(device_addr + 0x30, 1);
-		std::memset(m_ctx->display_buffers, 0, sizeof(m_ctx->display_buffers));
+		std::memset(ctx->display_buffers, 0, sizeof(ctx->display_buffers));
 
 		rsx_thread_running = true;
 	}
@@ -2046,7 +2120,11 @@ namespace rsx
 	{
 		if (!isHLE)
 		{
-			send_event(0, event_data1, event_data2);
+			// Every lv2 context sees IO unmaps
+			for_each_context([&](context* ctx)
+			{
+				send_event(ctx, 0, event_data1, event_data2);
+			});
 		}
 	}
 

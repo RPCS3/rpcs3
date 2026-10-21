@@ -799,7 +799,7 @@ namespace rsx
 
 			const u32 addr = get_address(offset, REGS(ctx)->semaphore_context_dma_4097());
 
-			if (RSX(ctx)->label_addr >> 28 != addr >> 28)
+			if (ctx->fw.label_addr >> 28 != addr >> 28)
 			{
 				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
@@ -829,7 +829,7 @@ namespace rsx
 
 			const u32 addr = get_address(offset, REGS(ctx)->semaphore_context_dma_4097());
 
-			if (RSX(ctx)->label_addr >> 28 != addr >> 28)
+			if (ctx->fw.label_addr >> 28 != addr >> 28)
 			{
 				rsx_log.error("NV4097 semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
