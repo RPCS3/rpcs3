@@ -16,6 +16,11 @@ f32 blob_detector::blob::fill_ratio() const
 
 	// The radius goes through the centers of the boundary pixels, so we add half a pixel to cover the whole pixels.
 	const f32 r = radius + 0.5f;
+	if (r <= 0.0f)
+	{
+		return 0.0f;
+	}
+
 	return area / (std::numbers::pi_v<f32> * r * r);
 }
 
@@ -408,8 +413,15 @@ bool blob_detector::fit_capsule(const blob& b, const inscribed_circle& circle, c
 // 3x3 erosion (min) or dilation (max) in two separable passes.
 // Pixels outside of the image are ignored, so blobs that touch the image border don't shrink.
 template <bool Erode>
-static void morphology_3x3(u8* image, u8* temp, u32 width, u32 height)
+static void morphology_3x3(std::vector<u8>& binary, std::vector<u8>& temp, u32 width, u32 height)
 {
+	const usz size = usz{width} * height;
+
+	if (binary.size() != size || binary.size() != temp.size() || !size || size > u32{umax})
+	{
+		return;
+	}
+
 	const auto op = [](u8 a, u8 b) -> u8
 	{
 		if constexpr (Erode) return a < b ? a : b;
@@ -417,34 +429,35 @@ static void morphology_3x3(u8* image, u8* temp, u32 width, u32 height)
 	};
 
 	// Horizontal pass
-	for (u32 y = 0; y < height; y++)
+	const u8* src = binary.data();
+	u8* dst = temp.data();
+	if (width == 1)
 	{
-		const u8* src = image + y * width;
-		u8* dst = temp + y * width;
-
-		if (width == 1)
+		std::memcpy(dst, src, size);
+	}
+	else
+	{
+		for (u32 y = 0; y < height; y++, src += width, dst += width)
 		{
-			dst[0] = src[0];
-			continue;
+			dst[0] = op(src[0], src[1]);
+
+			for (u32 x = 1; x + 1 < width; x++)
+			{
+				dst[x] = op(op(src[x - 1], src[x]), src[x + 1]);
+			}
+
+			dst[width - 1] = op(src[width - 2], src[width - 1]);
 		}
-
-		dst[0] = op(src[0], src[1]);
-
-		for (u32 x = 1; x + 1 < width; x++)
-		{
-			dst[x] = op(op(src[x - 1], src[x]), src[x + 1]);
-		}
-
-		dst[width - 1] = op(src[width - 2], src[width - 1]);
 	}
 
 	// Vertical pass. Missing rows at the border are replaced by the current row.
-	for (u32 y = 0; y < height; y++)
+	src = temp.data();
+	dst = binary.data();
+	for (u32 y = 0; y < height; y++, dst += width)
 	{
-		const u8* above = temp + (y > 0 ? y - 1 : y) * width;
-		const u8* center = temp + y * width;
-		const u8* below = temp + (y + 1 < height ? y + 1 : y) * width;
-		u8* dst = image + y * width;
+		const u8* above = src + (y > 0 ? y - 1 : y) * width;
+		const u8* center = src + y * width;
+		const u8* below = src + (y + 1 < height ? y + 1 : y) * width;
 
 		for (u32 x = 0; x < width; x++)
 		{
@@ -470,8 +483,8 @@ void blob_detector::open(std::vector<u8>& binary, u32 width, u32 height)
 		value = value ? 255 : 0;
 	}
 
-	morphology_3x3<true>(binary.data(), m_temp.data(), width, height);
-	morphology_3x3<false>(binary.data(), m_temp.data(), width, height);
+	morphology_3x3<true>(binary, m_temp, width, height);
+	morphology_3x3<false>(binary, m_temp, width, height);
 }
 
 void blob_detector::dilate(std::vector<u8>& binary, u32 width, u32 height)
@@ -491,7 +504,7 @@ void blob_detector::dilate(std::vector<u8>& binary, u32 width, u32 height)
 		value = value ? 255 : 0;
 	}
 
-	morphology_3x3<false>(binary.data(), m_temp.data(), width, height);
+	morphology_3x3<false>(binary, m_temp, width, height);
 }
 
 void blob_detector::find_enclosed(std::vector<u8>& mask, u32 width, u32 height)
