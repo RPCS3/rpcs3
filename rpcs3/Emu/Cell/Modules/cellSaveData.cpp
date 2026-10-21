@@ -1644,7 +1644,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		statGet->sysSizeKB = 35; // always reported as 35 regardless of actual file sizes
-		statGet->sizeKB = !save_entry.isNew ? ::narrow<s32>((size_bytes / 1024) + statGet->sysSizeKB) : 0;
+		// The functions without userdata (flag 0x2 clear) leave sysSizeKB out
+		statGet->sizeKB = !save_entry.isNew ? ::narrow<s32>((size_bytes / 1024) + (unk_op_flags & 0x2 ? static_cast<s32>(statGet->sysSizeKB) : 0)) : 0;
 
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
@@ -2360,7 +2361,7 @@ error_code cellSaveDataListSave(ppu_thread& ppu, u32 version, PSetList setList, 
 	cellSaveData.warning("cellSaveDataListSave(version=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
 		version, setList, setBuf, funcList, funcStat, funcFile, container);
 
-	return savedata_op(ppu, SAVEDATA_OP_LIST_SAVE, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, vm::null, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_SAVE, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 0, vm::null, 0, vm::null);
 }
 
 error_code cellSaveDataListLoad(ppu_thread& ppu, u32 version, PSetList setList, PSetBuf setBuf, PFuncList funcList,
@@ -2369,7 +2370,7 @@ error_code cellSaveDataListLoad(ppu_thread& ppu, u32 version, PSetList setList, 
 	cellSaveData.warning("cellSaveDataListLoad(version=%d, setList=*0x%x, setBuf=*0x%x, funcList=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
 		version, setList, setBuf, funcList, funcStat, funcFile, container);
 
-	return savedata_op(ppu, SAVEDATA_OP_LIST_LOAD, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 2, vm::null, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_LOAD, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, funcList, vm::null, funcStat, funcFile, container, 0, vm::null, 0, vm::null);
 }
 
 error_code cellSaveDataFixedSave2(ppu_thread& ppu, u32 version, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed,
@@ -2396,7 +2397,7 @@ error_code cellSaveDataFixedSave(ppu_thread& ppu, u32 version, PSetList setList,
 	cellSaveData.warning("cellSaveDataFixedSave(version=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
 		version, setList, setBuf, funcFixed, funcStat, funcFile, container);
 
-	return savedata_op(ppu, SAVEDATA_OP_FIXED_SAVE, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, vm::null, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_SAVE, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, vm::null, 0, vm::null);
 }
 
 error_code cellSaveDataFixedLoad(ppu_thread& ppu, u32 version, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed,
@@ -2405,7 +2406,7 @@ error_code cellSaveDataFixedLoad(ppu_thread& ppu, u32 version, PSetList setList,
 	cellSaveData.warning("cellSaveDataFixedLoad(version=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
 		version, setList, setBuf, funcFixed, funcStat, funcFile, container);
 
-	return savedata_op(ppu, SAVEDATA_OP_FIXED_LOAD, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, vm::null, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_FIXED_LOAD, version, vm::null, CELL_SAVEDATA_ERRDIALOG_ALWAYS, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, vm::null, 0, vm::null);
 }
 
 error_code cellSaveDataAutoSave2(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, PSetBuf setBuf,
@@ -2432,7 +2433,7 @@ error_code cellSaveDataAutoSave(ppu_thread& ppu, u32 version, vm::cptr<char> dir
 	cellSaveData.warning("cellSaveDataAutoSave(version=%d, dirName=%s, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
 		version, dirName, errDialog, setBuf, funcStat, funcFile, container);
 
-	return savedata_op(ppu, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, vm::null, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_AUTO_SAVE, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 0, vm::null, 0, vm::null);
 }
 
 error_code cellSaveDataAutoLoad(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, PSetBuf setBuf,
@@ -2441,7 +2442,7 @@ error_code cellSaveDataAutoLoad(ppu_thread& ppu, u32 version, vm::cptr<char> dir
 	cellSaveData.warning("cellSaveDataAutoLoad(version=%d, dirName=%s, errDialog=%d, setBuf=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x)",
 		version, dirName, errDialog, setBuf, funcStat, funcFile, container);
 
-	return savedata_op(ppu, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 2, vm::null, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_AUTO_LOAD, version, dirName, errDialog, vm::null, setBuf, vm::null, vm::null, funcStat, funcFile, container, 0, vm::null, 0, vm::null);
 }
 
 error_code cellSaveDataListAutoSave(ppu_thread& ppu, u32 version, u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, PFuncStat funcStat, PFuncFile funcFile, u32 container, vm::ptr<void> userdata)
