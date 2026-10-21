@@ -1013,13 +1013,14 @@ namespace utils
 		{
 			m_paused = true;
 			m_flush = flush;
+			signal_work();
 
 			if (flush)
 			{
 				// Let's assume this will finish in a timely manner
 				while (m_flush && m_running)
 				{
-					std::this_thread::sleep_for(1us);
+					m_flush.wait(1, atomic_wait_timeout{1'000'000});
 				}
 			}
 		}
@@ -1032,13 +1033,14 @@ namespace utils
 		if (m_thread)
 		{
 			m_flush = flush;
+			signal_work();
 
 			if (flush)
 			{
 				// Let's assume this will finish in a timely manner
 				while (m_flush && m_running)
 				{
-					std::this_thread::sleep_for(1ms);
+					m_flush.wait(1, atomic_wait_timeout{1'000'000});
 				}
 			}
 
@@ -1050,17 +1052,19 @@ namespace utils
 		m_frames_to_encode.clear();
 		m_samples_to_encode.clear();
 		has_error = false;
-		m_flush = false;
 		m_paused = false;
 		m_running = false;
+		m_flush = 0;
+		m_flush.notify_all();
 	}
 
 	void video_encoder::resume()
 	{
 		media_log.notice("video_encoder: Resuming video encoder");
 
-		m_flush = false;
 		m_paused = false;
+		m_flush = 0;
+		m_flush.notify_all();
 	}
 
 	void video_encoder::encode()
@@ -1099,8 +1103,9 @@ namespace utils
 			scoped_av av;
 			av.kill_callback = [this]()
 			{
-				m_flush = false;
 				m_running = false;
+				m_flush = 0;
+				m_flush.notify_all();
 			};
 
 			// Let's list the encoders first
@@ -1536,6 +1541,8 @@ namespace utils
 
 			while ((thread_ctrl::state() != thread_state::aborting || m_flush) && !has_error)
 			{
+				const u32 work_signal = m_work_signal;
+
 				// Fetch video frame
 				encoder_frame frame_data;
 				bool got_frame = false;
@@ -1817,7 +1824,8 @@ namespace utils
 				{
 					if (m_flush)
 					{
-						m_flush = false;
+						m_flush = 0;
+						m_flush.notify_all();
 
 						if (!m_paused)
 						{
@@ -1826,9 +1834,7 @@ namespace utils
 						}
 					}
 
-					// We only actually pause after we process all frames
-					const u64 sleeptime_us = m_paused ? 10000 : 1;
-					thread_ctrl::wait_for(sleeptime_us);
+					thread_ctrl::wait_on(m_work_signal, work_signal, 10'000);
 					continue;
 				}
 			}
