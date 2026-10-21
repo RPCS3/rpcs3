@@ -58,7 +58,7 @@ namespace vm
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  6/*Multi-context: every context and its FIFO channel*/)
+	SERIALIZATION_VER(rsx, 10,                                  7/*Multi-context: every context, its FIFO channel and lv2 driver state*/)
 }
 
 namespace np
