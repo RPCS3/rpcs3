@@ -113,6 +113,13 @@ static rsx::context* _sys_rsx_get_lv2_context(rsx::thread* render, u32 context_i
 	return ctx && ctx->fw.driver_info ? ctx : nullptr;
 }
 
+static void _sys_rsx_close_event_queue(ppu_thread& ppu, u32 event_port, u32 queue_id)
+{
+	sys_event_port_disconnect(ppu, event_port);
+	sys_event_port_destroy(ppu, event_port);
+	sys_event_queue_destroy(ppu, queue_id, SYS_EVENT_QUEUE_DESTROY_FORCE);
+}
+
 static u64 _sys_rsx_get_timestamp()
 {
 	return get_timebased_time();
@@ -429,19 +436,22 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	std::lock_guard lock(render->sys_rsx_mtx);
 
-	// Contexts are guest-wide and outlive sys_rsx_context_free
-	rsx::context* ctx = render->find_context(sys_rsx_internal::first_context_id);
-
-	if (ctx && ctx->fifo.dma_address)
+	// The first context with a FIFO channel starts the device
+	bool first = true;
+	render->for_each_context([&](rsx::context* other)
 	{
-		// TODO: We currently do not support multiple contexts
-		fmt::throw_exception("sys_rsx_context_allocate was called twice");
+		first &= !other->fifo.dma_address;
+	});
+
+	// Lowest free id. Freed contexts are destroyed, so their ids come free again.
+	u32 id = sys_rsx_internal::first_context_id;
+
+	while (render->find_context(id))
+	{
+		id++;
 	}
 
-	if (!ctx)
-	{
-		ctx = render->create_context(sys_rsx_internal::first_context_id);
-	}
+	rsx::context* ctx = render->create_context(id);
 
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
 	const u32 dma_address = area ? area->alloc(0x300000) : 0;
@@ -519,7 +529,12 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	ctx->display_buffers_count = 0;
 	ctx->current_display_buffer = 0;
 	ctx->fw.label_addr = vm::cast(*lpar_reports);
-	render->init(ctx, dma_address);
+	render->init_context(ctx, dma_address);
+
+	if (first)
+	{
+		render->start_device();
+	}
 
 	*context_id = ctx->id();
 
@@ -542,14 +557,39 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	const auto ctx = _sys_rsx_get_lv2_context(render, context_id);
-
 	if (!ctx)
 	{
 		return CELL_EINVAL;
 	}
 
-	const u32 dma_address = std::exchange(ctx->fifo.dma_address, 0);
+	// The last context with a FIFO channel stops the device
+	bool last = true;
+	render->for_each_context([&](rsx::context* other)
+	{
+		last &= other == ctx || !other->fifo.dma_address;
+	});
 
+	if (!last)
+	{
+		const u32 channel_address = ctx->fifo.dma_address;
+		if (!channel_address)
+		{
+			return CELL_EINVAL;
+		}
+
+		const u32 event_port = ctx->fw.rsx_event_port;
+		const u32 queue_id = vm::_ptr<RsxDriverInfo>(ctx->fw.driver_info)->handler_queue;
+
+		fifo_lock.unlock();
+		render->free_context(context_id);
+
+		_sys_rsx_close_event_queue(ppu, event_port, queue_id);
+
+		ensure(vm::get(vm::rsx_context)->dealloc(channel_address));
+		return CELL_OK;
+	}
+
+	const u32 dma_address = std::exchange(ctx->fifo.dma_address, 0);
 	if (render->get_context() == ctx)
 	{
 		render->dma_address = 0;
@@ -562,26 +602,14 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 
 	g_fxo->get<rsx::vblank_thread>() = thread_state::finished;
 
-	const u32 queue_id = vm::_ptr<RsxDriverInfo>(ctx->fw.driver_info)->handler_queue;
-
 	render->state += cpu_flag::ret;
-
 	while (render->state & cpu_flag::ret)
 	{
 		thread_ctrl::wait_for(1000);
 	}
 
-	sys_event_port_disconnect(ppu, ctx->fw.rsx_event_port);
-	sys_event_port_destroy(ppu, ctx->fw.rsx_event_port);
-	sys_event_queue_destroy(ppu, queue_id, SYS_EVENT_QUEUE_DESTROY_FORCE);
-
-	ctx->fw.label_addr = 0;
-	ctx->fw.driver_info = 0;
-	ctx->fw.main_mem_size = 0;
-	ctx->fw.rsx_event_port = 0;
-	ctx->display_buffers_count = 0;
-	ctx->current_display_buffer = 0;
-	ctx->fifo.ctrl = nullptr;
+	const u32 event_port = ctx->fw.rsx_event_port;
+	const u32 queue_id = vm::_ptr<RsxDriverInfo>(ctx->fw.driver_info)->handler_queue;
 
 	if (render->get_context() == ctx)
 	{
@@ -590,6 +618,11 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 
 	render->rsx_thread_running = false;
 	render->serialized = false;
+
+	fifo_lock.unlock();
+	render->free_context(context_id);
+
+	_sys_rsx_close_event_queue(ppu, event_port, queue_id);
 
 	ensure(vm::get(vm::rsx_context)->dealloc(dma_address));
 
