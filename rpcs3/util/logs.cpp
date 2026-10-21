@@ -805,8 +805,19 @@ logs::file_listener::file_listener(const std::string& path, u64 max_size)
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, std::string_view prefix, std::string_view _text)
 {
-	/*constinit thread_local*/ std::string text;
-	text.reserve(50000);
+	thread_local bool tls_destroyed = false;
+
+	struct tls_buffer
+	{
+		std::string text;
+		tls_buffer() { text.reserve(50000); }
+		~tls_buffer() { tls_destroyed = true; }
+	};
+
+	thread_local tls_buffer tls;
+	std::string local_text;
+	std::string& text = tls_destroyed ? local_text : tls.text;
+	text.clear();
 
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg)
