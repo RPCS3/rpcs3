@@ -838,31 +838,36 @@ void kernel_explorer::update()
 			break;
 		}
 
-		const auto lv2_ctx = rsx->find_context(0x5555'5555);
-		const auto base = lv2_ctx ? lv2_ctx->fifo.dma_address : 0;
-
-		if (!base)
-		{
-			break;
-		}
-
-		const QString branch_name = "RSX Context 0x55555555";
-		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
-			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, +vm::_ref<RsxDriverInfo>(lv2_ctx->fw.driver_info).handlers)));
-
-		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
-		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
-		QTreeWidgetItem* db_tree = add_volatile_node(rsx_tree, tr("Display Buffers"));
-
+		// Safety - read the context data under lock to avoid potential UAF crashes
+		u32 base = 0;
+		u32 handlers = 0;
 		decltype(rsx->iomap_table) table;
 		decltype(rsx->get_context()->display_buffers) dbs;
 		decltype(rsx->zculls) zcs;
 		{
 			reader_lock lock(rsx->sys_rsx_mtx);
+
+			const auto lv2_ctx = rsx->find_context(0x5555'5555);
+			base = lv2_ctx ? lv2_ctx->fifo.dma_address : 0;
+
+			if (!base)
+			{
+				break;
+			}
+
+			handlers = vm::_ref<RsxDriverInfo>(lv2_ctx->fw.driver_info).handlers;
 			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
-			std::memcpy(&dbs, rsx->get_context()->display_buffers, sizeof(dbs));
+			std::memcpy(&dbs, lv2_ctx->display_buffers, sizeof(dbs));
 			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));
 		}
+
+		const QString branch_name = "RSX Context 0x55555555";
+		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
+			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, handlers)));
+
+		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
+		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
+		QTreeWidgetItem* db_tree = add_volatile_node(rsx_tree, tr("Display Buffers"));
 
 		for (u32 i = 0, size_block = 0, first_ea = 0, first_io = 0;;)
 		{
