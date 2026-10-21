@@ -1356,8 +1356,8 @@ void VKGSRender::on_release_context_resources(rsx::context* ctx)
 	vkDeviceWaitIdle(*m_device);
 
 	const auto resources = res(ctx);
+	resources->texture_cache.destroy(); // NOTE: Always destroy this first because surface cache owns some of the resources.
 	resources->surface_cache.destroy();
-	resources->texture_cache.destroy();
 
 	vk::get_resource_manager()->flush();
 }
