@@ -5,6 +5,7 @@
 #include "Emu/RSX/Common/bitfield.hpp"
 #include "Emu/RSX/NV47/FW/context.h"
 #include "Emu/RSX/NV47/HW/context.h"
+#include "Emu/RSX/RSXFIFO.h"
 #include "Emu/RSX/RSXZCULL.h"
 #include "RSXContextResources.h"
 #include "RSXCoreRenderer.h"
@@ -30,6 +31,9 @@ namespace rsx
 
 		// Draw sequencing and the immediate-mode push buffers of this context
 		draw_command_processor draw_processor;
+
+		// Virtual FIFO channel. Saved here while the context is not active.
+		FIFO::channel_state fifo{};
 
 		// Pipeline state
 		bitmask_t<pipeline_state> graphics_state;
