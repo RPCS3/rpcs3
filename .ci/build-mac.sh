@@ -10,16 +10,16 @@ export LVER="${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}"
 echo "AVVER=$AVVER" >> .ci/ci-vars.env
 
 # Due to issues with getting this running under MacPorts, I'm reluctantly going to let this depend on brew for now.
-git clone https://gitlab.freedesktop.org/mesa/mesa.git kosmickrisp; cd kosmickrisp
-brew install meson spirv-llvm-translator spirv-tools
-pip3 install mako packaging pyyaml --break-system-packages
-sudo port -f deactivate pkgconfig
-export PATH_OLD="$PATH"
-export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
-meson setup build --prefix=/opt/homebrew --buildtype=release -Dplatforms=macos -Dvulkan-drivers=kosmickrisp -Dgallium-drivers= -Dopengl=false -Dzstd=disabled
-ninja -C build; cd ../
-export PATH="$PATH_OLD"
-sudo port -f activate pkgconfig
+if [ "$(arch)" = "arm64" ]; then
+  git clone https://gitlab.freedesktop.org/mesa/mesa.git kosmickrisp; cd kosmickrisp
+  brew install meson spirv-llvm-translator spirv-tools
+  pip3 install mako packaging pyyaml --break-system-packages
+  export PATH_OLD="$PATH"
+  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+  meson setup build --prefix=/opt/homebrew --buildtype=release -Dplatforms=macos -Dvulkan-drivers=kosmickrisp -Dgallium-drivers= -Dopengl=false -Dzstd=disabled
+  ninja -C build; cd ../
+  export PATH="$PATH_OLD"
+fi
   
 # Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
 sudo port install "clang-$LLVM_COMPILER_VER"
@@ -65,9 +65,6 @@ export LLVM_DIR="/opt/local/libexec/llvm-$LLVM_COMPILER_VER"
 git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/libsdl-org/ && !/feralinteractive/ && !/curl/ && !/zlib/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
-# The below should be uncommented once bugs with Qt 6 QListWidgets when using the OS 26 visual style are resolved.
-# sudo xcode-select -switch /Applications/Xcode_26.3.app/Contents/Developer
-
 cmake .. \
     -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
     -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
