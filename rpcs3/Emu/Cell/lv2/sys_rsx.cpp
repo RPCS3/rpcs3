@@ -120,6 +120,29 @@ static void _sys_rsx_close_event_queue(ppu_thread& ppu, u32 event_port, u32 queu
 	sys_event_queue_destroy(ppu, queue_id, SYS_EVENT_QUEUE_DESTROY_FORCE);
 }
 
+// Every sys_rsx_context_* call holds sys_rsx_mtx so that a context cannot be freed while a call uses it.
+// Lock order: sys_rsx_mtx > rsx::reservation_lock > vm::writer_lock > rsx::eng_lock.
+static bool _sys_rsx_lock_context_calls(rsx::thread* render, std::unique_lock<shared_mutex>& lock)
+{
+	if (render->is_current_thread())
+	{
+		// RSX engine thread is exempt
+		return true;
+	}
+
+	while (!lock.try_lock())
+	{
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			return false;
+		}
+
+		thread_ctrl::wait_for(100);
+	}
+
+	return true;
+}
+
 static u64 _sys_rsx_get_timestamp()
 {
 	return get_timebased_time();
@@ -553,8 +576,8 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 
 	const auto render = rsx::get_current_renderer();
 
-	rsx::eng_lock fifo_lock(render);
 	std::scoped_lock lock(render->sys_rsx_mtx);
+	rsx::eng_lock fifo_lock(render);
 
 	const auto ctx = _sys_rsx_get_lv2_context(render, context_id);
 	if (!ctx)
@@ -650,6 +673,8 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 		return CELL_EINVAL;
 	}
 
+	std::scoped_lock lock(render->sys_rsx_mtx);
+
 	const auto ctx = _sys_rsx_get_lv2_context(render, context_id);
 
 	if (!ctx || ctx->fw.main_mem_size < io + size)
@@ -684,7 +709,6 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 	io >>= 20, ea >>= 20, size >>= 20;
 
 	rsx::eng_lock fifo_lock(render);
-	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	for (u32 i = 0; i < size; i++)
 	{
@@ -719,6 +743,8 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
 		return CELL_EINVAL;
 	}
 
+	std::scoped_lock lock(render->sys_rsx_mtx);
+
 	const auto ctx = _sys_rsx_get_lv2_context(render, context_id);
 
 	if (!ctx || ctx->fw.main_mem_size < io + size)
@@ -732,8 +758,6 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
 	}
 
 	vm::writer_lock rlock;
-
-	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	for (const u64 end = (io >>= 20) + (size >>= 20); io < end;)
 	{
@@ -771,6 +795,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	const auto render = rsx::get_current_renderer();
 
+	std::unique_lock lock(render->sys_rsx_mtx, std::defer_lock);
+	if (!_sys_rsx_lock_context_calls(render, lock))
+	{
+		// The calling thread is stopping
+		return CELL_EAGAIN;
+	}
+
 	const auto ctx = _sys_rsx_get_lv2_context(render, context_id);
 
 	if (!ctx)
@@ -792,7 +823,6 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 put = static_cast<u32>(a4);
 		const u64 get_put = put << 32 | get;
 
-		std::lock_guard lock(render->sys_rsx_mtx);
 		set_rsx_dmactl(render, ctx, get_put);
 		break;
 	}
@@ -884,8 +914,6 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		{
 			return LV1_ILLEGAL_PARAMETER_VALUE;
 		}
-
-		std::lock_guard lock(render->sys_rsx_mtx);
 
 		// Note: no error checking is being done
 
@@ -1022,8 +1050,6 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			ensure(a5 & (1 << 30));
 		}
 
-		std::lock_guard lock(render->sys_rsx_mtx);
-
 		// When tile is going to be unbound, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
 		if (tile.bound && !bound)
@@ -1097,8 +1123,6 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			ensure(a4 & (1ull << 32));
 			ensure((a6 & 0xFFFFFFFF) == 0u + ((0x2000 << 0) | (0x20 << 16)));
 		}
-
-		std::lock_guard lock(render->sys_rsx_mtx);
 
 		auto &zcull = render->zculls[a3];
 
@@ -1187,6 +1211,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	{
 		// NOTE: Hardware tests show that back-to-back user_cmd events execute in-order.
 		// The invocation is non-blocking but also very quick to fire.
+		if (!render->is_current_thread())
+		{
+			// RSX thread only (NV4097_SET_USER_COMMAND). It does not hold the lock, so the drain below does not block other calls.
+			return { CELL_EINVAL, "wrong thread" };
+		}
+
 		const auto intr_cause = static_cast<u32>(a4);
 		if (intr_cause != driverInfo.userCmdParam)
 		{
