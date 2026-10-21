@@ -486,8 +486,8 @@ void GLGSRender::on_bind_context(rsx::context* ctx)
 void GLGSRender::on_release_context_resources(rsx::context* ctx)
 {
 	const auto resources = res(ctx);
+	resources->texture_cache.destroy(); // NOTE: Always destroy this first because surface cache owns some of the resources.
 	resources->surface_cache.destroy();
-	resources->texture_cache.destroy();
 }
 
 void GLGSRender::on_unbind_context(rsx::context* ctx)
