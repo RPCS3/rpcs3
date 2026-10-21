@@ -58,6 +58,16 @@ namespace rsx
 			m_next_cmd_entry = m_fifo_pos + m_remaining_commands * 4;
 		}
 
+		void FIFO_control::set_channel(RsxDmaControl* ctrl)
+		{
+			invalidate_cache();
+
+			m_ctrl = ctrl;
+			m_memwatch_addr = 0;
+			m_memwatch_cmp = 0;
+			m_remaining_commands = 0;
+		}
+
 		void FIFO_control::inc_get(bool wait)
 		{
 			m_fifo_pos += 4;

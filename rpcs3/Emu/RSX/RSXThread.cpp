@@ -631,28 +631,26 @@ namespace rsx
 	{
 		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
 
-		ar(*REGS(m_ctx));
-
-		for (auto& v : m_ctx->draw_processor.m_vertex_push_buffers)
-		{
-			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
-		}
-
-		ar(m_ctx->draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, m_ctx->fb.zcull_surface_active, m_ctx->fb.surface_info, m_ctx->fb.depth_surface_info, m_ctx->fb.layout);
-		ar(dma_address, iomap_table, restore_point, tiles, zculls, m_ctx->display_buffers, m_ctx->display_buffers_count, m_ctx->current_display_buffer);
-		ar(enable_second_vhandler, requested_vsync);
+		// Device
+		ar(iomap_table, tiles, zculls, enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
-		ar(m_ctx->in_begin_end);
-		ar(m_ctx->display_buffers, m_ctx->display_buffers_count, m_ctx->current_display_buffer);
-		ar(unsent_gcm_events, REGS(m_ctx)->current_draw_clause);
+		ar(unsent_gcm_events);
+		m_display.save(ar);
 
-		if (ar.is_writing() || version >= 2)
-		{
-			m_display.save(ar);
-		}
-
+		// Contexts and FIFO channels
 		if (ar.is_writing())
 		{
+			// The current context's channel is live
+			save_fifo_channel(m_ctx->fifo);
+			ar(::size32(m_contexts), m_ctx->id(), m_next_ctx_id);
+
+			for (const auto& [id, ctx] : m_contexts)
+			{
+				ar(id);
+				save_context(ar, *ctx);
+			}
+
+			// The method the puller was executing, if it has to run again
 			if (fifo_ctrl && state & cpu_flag::again)
 			{
 				ar(fifo_ctrl->get_remaining_args_count() + 1);
@@ -663,23 +661,117 @@ namespace rsx
 				ar(u32{0});
 			}
 
-			ar(fifo_ctrl ? fifo_ctrl->get_pos() : 0);
+			return;
 		}
-		else
+
+		u32 count = 0, bound_id = 0;
+		ar(count, bound_id, m_next_ctx_id);
+
+		for (u32 i = 0; i < count; i++)
 		{
-			if (u32 count{ar})
+			const u32 id{ar};
+			context* ctx = id ? add_context(id) : m_contexts.at(0).get();
+			save_context(ar, *ctx);
+		}
+
+		if (u32 restore_count{ar})
+		{
+			restore_fifo_count = restore_count;
+			ar(restore_fifo_cmd);
+		}
+
+		// Nothing is bound to the renderer yet. Load the saved context's FIFO channel.
+		m_ctx = m_contexts.at(bound_id).get();
+		load_fifo_channel(m_ctx->fifo);
+		restore_fifo_position = m_ctx->fifo.get;
+	}
+
+	void thread::save_context(utils::serial& ar, context& ctx)
+	{
+		ar(*ctx.register_state);
+		for (auto& v : ctx.draw_processor.m_vertex_push_buffers)
+		{
+			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
+		}
+
+		ar(ctx.draw_processor.m_element_push_buffer, ctx.fb.zcull_surface_active, ctx.fb.surface_info, ctx.fb.depth_surface_info, ctx.fb.layout);
+		ar(ctx.display_buffers, ctx.display_buffers_count, ctx.current_display_buffer);
+		ar(ctx.in_begin_end, ctx.register_state->current_draw_clause);
+
+		auto& channel = ctx.fifo;
+		ar(channel.dma_address, channel.get, channel.ret_addr, channel.saved_ret_addr, channel.restore_point);
+
+		if (!ar.is_writing())
+		{
+			channel.ctrl = channel.dma_address ? vm::_ptr<RsxDmaControl>(channel.dma_address) : nullptr;
+		}
+	}
+
+	void thread::save_fifo_channel(FIFO::channel_state& channel) const
+	{
+		channel.ctrl = ctrl;
+		channel.dma_address = dma_address;
+		channel.get = fifo_ctrl ? fifo_ctrl->get_pos() : (ctrl ? u32{ctrl->get} : 0);
+		channel.ret_addr = fifo_ret_addr;
+		channel.saved_ret_addr = saved_fifo_ret;
+		channel.restore_point = restore_point;
+		channel.puller_state = performance_counters.state;
+		channel.flattener = m_flattener;
+	}
+
+	void thread::load_fifo_channel(const FIFO::channel_state& channel)
+	{
+		ctrl = channel.ctrl;
+		dma_address = channel.dma_address;
+		fifo_ret_addr = channel.ret_addr;
+		saved_fifo_ret = channel.saved_ret_addr;
+		restore_point = channel.restore_point;
+		performance_counters.state = channel.puller_state;
+		m_flattener = channel.flattener;
+
+		if (fifo_ctrl && ctrl)
+		{
+			fifo_ctrl->set_channel(ctrl);
+			fifo_ctrl->set_get(channel.get);
+		}
+	}
+
+	bool thread::can_switch_context() const
+	{
+		return !m_ctx->in_begin_end && (!fifo_ctrl || !fifo_ctrl->get_remaining_args_count());
+	}
+
+	void thread::schedule_contexts()
+	{
+		// Very basic round-robin scheduler.
+		if (performance_counters.state == FIFO::state::running &&
+			++m_ctx_quantum_ticks < context_quantum_ticks)
+		{
+			return;
+		}
+
+		if (!can_switch_context())
+		{
+			return;
+		}
+
+		m_ctx_quantum_ticks = 0;
+
+		// Next context after the bound one with commands waiting
+		auto it = m_contexts.upper_bound(m_ctx->id());
+
+		for (usz n = m_contexts.size() - 1; n; --n, ++it)
+		{
+			if (it == m_contexts.end())
 			{
-				restore_fifo_count = count;
-				ar(restore_fifo_cmd);
+				it = m_contexts.begin();
 			}
 
-			if (version >= 4)
+			if (const auto channel_ctrl = it->second->fifo.ctrl;
+				channel_ctrl && channel_ctrl->get != (channel_ctrl->put & ~3))
 			{
-				ar(restore_fifo_position);
-			}
-			else
-			{
-				restore_fifo_position = vm::_ptr<RsxDmaControl>(dma_address)->get;
+				bind_context(it->first);
+				return;
 			}
 		}
 	}
@@ -743,9 +835,8 @@ namespace rsx
 		serialized = true;
 		save(*_ar);
 
-		if (dma_address)
+		if (ctrl)
 		{
-			ctrl = vm::_ptr<RsxDmaControl>(dma_address);
 			rsx_thread_running = true;
 		}
 
@@ -1005,6 +1096,12 @@ namespace rsx
 				// Execute backend-local tasks first
 				do_local_task(performance_counters.state);
 
+				// Give other contexts their turn
+				if (m_contexts.size() > 1) [[unlikely]]
+				{
+					schedule_contexts();
+				}
+
 				// Update other sub-units
 				zcull_ctrl->update(this);
 
@@ -1134,7 +1231,15 @@ namespace rsx
 
 	context* thread::create_context()
 	{
-		auto ctx = std::make_unique<context>(m_next_ctx_id++, this);
+		context* ctx = add_context(m_next_ctx_id++);
+
+		rsx_log.notice("Created context %u", ctx->id());
+		return ctx;
+	}
+
+	context* thread::add_context(u32 id)
+	{
+		auto ctx = std::make_unique<context>(id, this);
 		if (is_initialized)
 		{
 			// Workaround to allow creating ctx 0 before init completes.
@@ -1145,10 +1250,9 @@ namespace rsx
 		context* result = ctx.get();
 
 		lock_context_table();
-		m_contexts.emplace(result->id(), std::move(ctx));
+		ensure(m_contexts.emplace(id, std::move(ctx)).second);
 		m_contexts_lock.unlock();
 
-		rsx_log.notice("Created context %u", result->id());
 		return result;
 	}
 
@@ -1184,14 +1288,27 @@ namespace rsx
 			return;
 		}
 
-		// A draw cannot span contexts
-		ensure(!m_ctx || !m_ctx->in_begin_end);
+		// A draw or a FIFO packet cannot span contexts
+		ensure(!m_ctx || can_switch_context());
+
+		if (m_ctx)
+		{
+			// Guest-visible GET catches up with the puller before the channel is put away
+			if (fifo_ctrl && ctrl)
+			{
+				fifo_ctrl->sync_get();
+			}
+
+			save_fifo_channel(m_ctx->fifo);
+		}
+
 		if (m_renderer)
 		{
 			m_renderer->bind_context(ctx);
 		}
 
 		m_ctx = ctx;
+		load_fifo_channel(ctx->fifo);
 
 		// The backend's bound state belonged to the previous context
 		ctx->mark_all_dirty();
@@ -1277,12 +1394,25 @@ namespace rsx
 				if (const u64 get_put = new_get_put.exchange(u64{umax});
 					get_put != umax)
 				{
-					vm::_ptr<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
-					fifo_ctrl->set_get(static_cast<u32>(get_put));
-					fifo_ctrl->abort();
-					fifo_ret_addr = RSX_CALL_STACK_EMPTY;
-					last_known_code_start = static_cast<u32>(get_put);
-					sync_point_request.release(true);
+					// FIXME: This next part is technically wrong/incorrect. lv2 will update DMA ctrl for a specific context by id
+					// Instead of a simple interrupt, we need a packet queue in case of back-to-back updates.
+					if (m_ctx->id() == 0)
+					{
+						vm::_ptr<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
+						fifo_ctrl->set_get(static_cast<u32>(get_put));
+						fifo_ctrl->abort();
+						fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+						last_known_code_start = static_cast<u32>(get_put);
+						sync_point_request.release(true);
+					}
+					else
+					{
+						auto& channel = m_contexts.at(0)->fifo; // FIXME: Assumes all lv2 pushed updates target context0
+						vm::_ptr<atomic_be_t<u64>>(channel.dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
+						channel.get = static_cast<u32>(get_put);
+						channel.ret_addr = RSX_CALL_STACK_EMPTY;
+						channel.restore_point = channel.get;
+					}
 				}
 
 				eng_interrupt_mask.clear(rsx::dma_control_interrupt);
@@ -1375,7 +1505,7 @@ namespace rsx
 
 			if (zeta_address)
 			{
-				//Find zeta address in bound zculls
+				// Find zeta address in bound zculls
 				for (const auto& zcull : zculls)
 				{
 					if (zcull.bound &&
