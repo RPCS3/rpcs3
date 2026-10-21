@@ -68,7 +68,7 @@ std::string SaveDataEntry::date() const
 std::string SaveDataEntry::data_size() const
 {
 	std::string metric = "KB";
-	u64 sz = utils::aligned_div(size, 1000);
+	u64 sz = utils::aligned_div(size, 1024);
 	if (sz > 1000)
 	{
 		metric = "MB";
@@ -213,6 +213,22 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 	}
 
 	return 0;
+}
+
+// Size of a save as funcStat reports it: game files rounded up to 1 KB each, plus 35 KB for the system files
+static u64 get_save_data_size(const fs::dir& dir)
+{
+	u64 size = 0;
+
+	for (const auto& entry : dir)
+	{
+		if (!entry.is_directory && !check_filename(vfs::unescape(entry.name), false, false))
+		{
+			size += utils::align(entry.size, 1024);
+		}
+	}
+
+	return size + 35 * 1024;
 }
 
 static bool is_valid_dir_name(const std::string& dir_name)
@@ -930,15 +946,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			const std::string dir_path = base_dir + entry.escaped;
 
-			for (const auto& entry2 : fs::dir(dir_path))
-			{
-				if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
-				{
-					continue;
-				}
-
-				entry.size += entry2.size;
-			}
+			entry.size = get_save_data_size(fs::dir(dir_path));
 
 			if (fs::file icon{dir_path + "/ICON0.PNG"})
 				entry.iconBuf = icon.to_vector<uchar>();
@@ -1196,17 +1204,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			const std::string del_path = base_dir + entry.escaped + "/";
 
 			const fs::dir _dir(del_path);
-			u64 size_bytes = 0;
 
-			for (auto&& file : _dir)
-			{
-				if (!file.is_directory)
-				{
-					size_bytes += utils::align(file.size, 1024);
-				}
-			}
-
-			doneGet->sizeKB = ::narrow<s32>(size_bytes / 1024);
+			doneGet->sizeKB = _dir ? ::narrow<s32>(get_save_data_size(_dir) / 1024) : 0;
 
 			if (_dir)
 			{
@@ -1427,15 +1426,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						save_entry.mtime = dir_info.mtime;
 					}
 
-					for (const auto& entry : fs::dir(dir_path))
-					{
-						if (entry.is_directory || check_filename(vfs::unescape(entry.name), false, true))
-						{
-							continue;
-						}
-
-						save_entry.size += entry.size;
-					}
+					save_entry.size = get_save_data_size(fs::dir(dir_path));
 
 					message = get_confirmation_message(operation, save_entry);
 				}
