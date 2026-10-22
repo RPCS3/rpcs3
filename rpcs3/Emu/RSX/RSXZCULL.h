@@ -31,6 +31,7 @@ namespace rsx
 	{
 		struct occlusion_query_info
 		{
+			u32 ctx_id;                          // The context whose draws the query counts
 			u32 slot_index;                      // Position in the unit's query pool. Providers key their host query objects by it.
 			u32 result;
 			u32 num_draws;
