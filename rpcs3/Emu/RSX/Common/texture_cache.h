@@ -3074,7 +3074,7 @@ namespace rsx
 
 			image_section_attributes_t attributes{};
 			texture_cache_search_options options{};
-			attributes.address = rsx::get_address(tex.offset(), tex.location());
+			attributes.address = rsx::get_address(m_ctx, tex.offset(), tex.location());
 			attributes.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();
@@ -3316,7 +3316,7 @@ namespace rsx
 			// Do direct upload from CPU as the last resort
 			m_texture_upload_misses_this_frame++;
 
-			const auto subresources_layout = get_subresources_layout(tex);
+			const auto subresources_layout = get_subresources_layout(m_ctx, tex);
 			const auto format_class = classify_format(attributes.gcm_format);
 
 			if (!tex_size)

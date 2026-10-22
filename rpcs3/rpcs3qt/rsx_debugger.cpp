@@ -1019,7 +1019,10 @@ void rsx_debugger::GetBuffers() const
 			pitch = textures[texture_addr].pitch();
 			tex_fmt_raw = textures[texture_addr].format();
 			tex_fmt = tex_fmt_raw & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN); // TOOD: Support these flags
-			texture_addr = rsx::get_address(textures[texture_addr].offset(), textures[texture_addr].location(), 1);
+			texture_addr = rsx::get_address(
+				rsx::get_current_renderer()->get_context(),
+				textures[texture_addr].offset(),
+				textures[texture_addr].location(), 1);
 		}
 	}
 
@@ -1286,7 +1289,7 @@ void rsx_debugger::GetFragmentProgram() const
 	}
 
 	const auto [program_offset, program_location] = rsx::get_method_registers().shader_program_address();
-	const auto address = rsx::get_address(program_offset, program_location, 4);
+	const auto address = rsx::get_address(render->get_context(), program_offset, program_location, 4);
 	if (!address)
 	{
 		m_fragment_disasm->clear();
