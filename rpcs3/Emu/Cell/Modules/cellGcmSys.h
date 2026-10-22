@@ -21,7 +21,8 @@ struct CellGcmOffsetTable
 
 struct gcm_config
 {
-	u32 lv2_context_id = 0;
+	u32 lv2_context_id = umax;
+
 	u32 zculls_addr = 0;
 	vm::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
 	u32 tiles_addr = 0;

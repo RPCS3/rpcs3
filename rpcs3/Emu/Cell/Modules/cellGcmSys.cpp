@@ -138,7 +138,22 @@ void InitOffsetTable()
 
 static inline rsx::context* _cellGcmGetContext()
 {
-	return rsx::get_current_renderer()->find_context(g_fxo->get<gcm_config>().lv2_context_id);
+	auto rsxthr = rsx::get_current_renderer();
+	auto current_ctx = rsxthr->get_context();
+	auto& context_id = g_fxo->get<gcm_config>().lv2_context_id;
+
+	// If uninitialized, use default guest ctx
+	if (context_id == umax) [[ unlikely ]]
+	{
+		context_id = current_ctx->id();
+	}
+
+	if (current_ctx->id() == context_id) [[ likely ]]
+	{
+		return current_ctx;
+	}
+
+	return rsxthr->find_context(context_id);
 }
 
 u32 cellGcmGetLabelAddress(u8 index)
