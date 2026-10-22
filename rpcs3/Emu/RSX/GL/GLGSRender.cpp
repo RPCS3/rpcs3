@@ -161,6 +161,8 @@ void GLGSRender::on_init()
 	// Update frame title after GL was initialized in order to show the proper GPU
 	m_frame->update_title();
 
+	gl::command_context::init();
+
 	const auto& gl_caps = gl::get_driver_caps();
 
 	std::vector<std::string> exception_reasons;
@@ -451,6 +453,13 @@ void GLGSRender::on_init()
 			m_shaders_cache->load(&dlg);
 		}
 	}
+}
+
+rsx::device_status GLGSRender::check_device_status() const
+{
+	return gl::command_context::is_lost()
+		? rsx::device_status::lost
+		: rsx::device_status::ok;
 }
 
 std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* ctx)

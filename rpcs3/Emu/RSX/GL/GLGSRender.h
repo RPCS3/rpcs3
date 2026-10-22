@@ -243,6 +243,7 @@ protected:
 
 	void on_init() override;
 	void on_shutdown() override;
+	rsx::device_status check_device_status() const override;
 	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
 	void on_bind_context(rsx::context* ctx) override;
 	void on_unbind_context(rsx::context* ctx) override;

@@ -19,6 +19,7 @@ gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& ap
 	m_format.setDepthBufferSize(0);
 	m_format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
 	m_format.setSwapInterval(0);
+	m_format.setOption(QSurfaceFormat::FormatOption::ResetNotification);
 	if (g_cfg.video.debug_output)
 	{
 		m_format.setOption(QSurfaceFormat::FormatOption::DebugContext);

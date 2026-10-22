@@ -453,6 +453,10 @@ namespace gl
 		driver_state* operator -> () {
 			return drv;
 		}
+
+		static void init();
+
+		static bool is_lost(bool poll = false);
 	};
 
 	void set_command_context(gl::command_context& ctx);
