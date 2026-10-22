@@ -281,10 +281,19 @@ namespace vk
 	std::string physical_device::get_name() const
 	{
 #ifdef __APPLE__
-		return std::string(props.deviceName) + (get_driver_vendor() == driver_vendor::KOSMICKRISP ? " (KosmicKrisp)" : " (MoltenVK)");
-#else
-		return props.deviceName;
+		// Both Apple drivers fail to include their names anywhere in the device name string, so we need to append the driver names here.
+		switch (get_driver_vendor())
+		{
+		case driver_vendor::KOSMICKRISP:
+			 return std::string(props.deviceName) + " (KosmicKrisp)";
+		case driver_vendor::MVK:
+			 return std::string(props.deviceName) + " (MoltenVK)";
+		default:
+			 break;
+		}
 #endif
+		// Return the raw device name otherwise.
+		return props.deviceName;
 	}
 
 	driver_vendor physical_device::get_driver_vendor() const
