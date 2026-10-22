@@ -136,9 +136,9 @@ void InitOffsetTable()
 // Data Retrieval
 //----------------------------------------------------------------------------
 
-static rsx::context* _cellGcmGetContext()
+static inline rsx::context* _cellGcmGetContext()
 {
-	return rsx::get_current_renderer()->find_context(0x5555'5555);
+	return rsx::get_current_renderer()->find_context(g_fxo->get<gcm_config>().lv2_context_id);
 }
 
 u32 cellGcmGetLabelAddress(u8 index)
@@ -335,7 +335,13 @@ error_code cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cul
 
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
-	if (auto err = sys_rsx_context_attribute(0x5555'5555, 0x301, index, u64{gcm_zcull.region} << 32 | gcm_zcull.size, u64{gcm_zcull.start} << 32 | gcm_zcull.offset, u64{gcm_zcull.status0} << 32 | gcm_zcull.status1))
+	if (auto err = sys_rsx_context_attribute(
+		gcm_cfg.lv2_context_id,
+		0x301,
+		index, 
+		u64{gcm_zcull.region} << 32 | gcm_zcull.size,
+		u64{gcm_zcull.start} << 32 | gcm_zcull.offset,
+		u64{gcm_zcull.status0} << 32 | gcm_zcull.status1))
 	{
 		return err;
 	}
@@ -431,7 +437,9 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	render->local_mem_size = gcm_cfg.local_size;
 
 	ensure(sys_rsx_device_map(ppu, vm::var<u64>{}, vm::null, 0x8) == CELL_OK);
-	ensure(sys_rsx_context_allocate(ppu, vm::var<u32>{}, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
+	const vm::var<u32> context_id;
+	ensure(sys_rsx_context_allocate(ppu, context_id, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
+	gcm_cfg.lv2_context_id = *context_id;
 
 	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
 	{
@@ -520,9 +528,9 @@ error_code cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	const auto render = rsx::get_current_renderer();
+	const auto ctx = _cellGcmGetContext();
 
-	auto buffers = render->get_context()->display_buffers;
+	auto buffers = ctx->display_buffers;
 
 	buffers[id].offset = offset;
 	buffers[id].pitch = pitch;
@@ -534,9 +542,9 @@ error_code cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 
 	gcm_cfg.gcm_buffers[id].width = width;
 	gcm_cfg.gcm_buffers[id].height = height;
 
-	if (id + 1u > render->get_context()->display_buffers_count)
+	if (id + 1u > ctx->display_buffers_count)
 	{
-		render->get_context()->display_buffers_count = id + 1;
+		ctx->display_buffers_count = id + 1;
 	}
 
 	return CELL_OK;
@@ -780,7 +788,13 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	// But take care anyway
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
-	if (!sys_rsx_context_attribute(0x5555'5555, 0x301, index, u64{gcm_zcull.region} << 32 | gcm_zcull.size, u64{gcm_zcull.start} << 32 | gcm_zcull.offset, u64{gcm_zcull.status0} << 32 | gcm_zcull.status1))
+	if (!sys_rsx_context_attribute(
+			gcm_cfg.lv2_context_id,
+			0x301,
+			index,
+			u64{gcm_zcull.region} << 32 | gcm_zcull.size,
+			u64{gcm_zcull.start} << 32 | gcm_zcull.offset,
+			u64{gcm_zcull.status0} << 32 | gcm_zcull.status1))
 	{
 		vm::_ptr<CellGcmZcullInfo>(gcm_cfg.zculls_addr)[index] = gcm_zcull;
 	}
@@ -836,7 +850,7 @@ error_code cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 {
 	cellGcmSys.warning("cellGcmGetCurrentDisplayBufferId(id=*0x%x)", id);
 
-	*id = ::narrow<u8>(rsx::get_current_renderer()->get_context()->current_display_buffer);
+	*id = ::narrow<u8>(_cellGcmGetContext()->current_display_buffer);
 
 	return CELL_OK;
 }
@@ -1039,7 +1053,7 @@ error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	if (auto error = sys_rsx_context_iomap(ppu, 0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
+	if (auto error = sys_rsx_context_iomap(ppu, g_fxo->get<gcm_config>().lv2_context_id, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
 	{
 		return error;
 	}
@@ -1162,7 +1176,7 @@ error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config& gcm_cfg, u32 io)
 {
 	if (u32 ea = gcm_cfg.offsetTable.eaAddress[io >>= 20], size = gcm_cfg.IoMapTable[ea]; size)
 	{
-		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io << 20, size << 20))
+		if (auto error = sys_rsx_context_iounmap(ppu, gcm_cfg.lv2_context_id, io << 20, size << 20))
 		{
 			return error;
 		}

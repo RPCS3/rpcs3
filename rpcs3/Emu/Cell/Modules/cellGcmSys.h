@@ -21,14 +21,15 @@ struct CellGcmOffsetTable
 
 struct gcm_config
 {
-	u32 zculls_addr;
+	u32 lv2_context_id = 0;
+	u32 zculls_addr = 0;
 	vm::ptr<CellGcmDisplayInfo> gcm_buffers = vm::null;
-	u32 tiles_addr;
-	u32 ctxt_addr;
+	u32 tiles_addr = 0;
+	u32 ctxt_addr = 0;
 
-	CellGcmConfig current_config;
-	CellGcmContextData current_context;
-	gcmInfo gcm_info;
+	CellGcmConfig current_config{};
+	CellGcmContextData current_context{};
+	gcmInfo gcm_info{};
 
 	CellGcmOffsetTable offsetTable{};
 	u16 IoMapTable[0xC00]{};
