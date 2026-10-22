@@ -163,6 +163,14 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 
 bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 {
+	// The frame boundary is where a GPU reset gets noticed
+	// TODO: What would a lost OpenGL context cost us? Can we reuse the gl_gs_frame window?
+	if (gl::command_context::is_lost(true))
+	{
+		RSX(m_ctx)->raise_backend_interrupt();
+		return false;
+	}
+
 	if (info.skip_frame)
 	{
 		m_frame->flip(m_context, true);
