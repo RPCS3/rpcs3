@@ -933,6 +933,10 @@ namespace rsx
 			luid,
 			device_lost ? " after a device loss" : "");
 
+		// We actually need to pause the game temporarily. Creating a new renderer instance also does some setup like loading the shader cache.
+		// To avoid the game carrying on in the background without the user being able to respond, just pause and unpause when done.
+		const bool we_paused = Emu.Pause(false, false);
+
 		// Offloader jobs can reference backend memory
 		while (!g_fxo->get<rsx::dma_manager>().sync())
 		{
@@ -979,6 +983,11 @@ namespace rsx
 		m_ctx->core.on_renderer_changed();
 
 		rsx_log.success("Renderer replaced");
+
+		if (we_paused)
+		{
+			Emu.Resume();
+		}
 	}
 
 	void thread::create_backend_resources()
