@@ -216,7 +216,7 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 		// Find the source image
 		gl::present_surface_info present_info
 		{
-			.address = rsx::get_address(display_buffer.offset, CELL_GCM_LOCATION_LOCAL),
+			.address = rsx::get_address(m_ctx, display_buffer.offset, CELL_GCM_LOCATION_LOCAL),
 			.format = av_format,
 			.width = buffer_width,
 			.height = buffer_height,
@@ -235,7 +235,7 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffer.offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
+				present_info.address = rsx::get_address(m_ctx, image_offset, CELL_GCM_LOCATION_LOCAL);
 				present_info.eye = 1;
 
 				image_to_flip2 = get_present_source(&present_info, avconfig);

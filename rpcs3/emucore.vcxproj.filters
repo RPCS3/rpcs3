@@ -2935,6 +2935,9 @@
     <ClInclude Include="Emu\RSX\Utils\image_utils.hpp">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\rsx_serde.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Utils\rsx_utils.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>

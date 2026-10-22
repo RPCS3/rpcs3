@@ -29,6 +29,7 @@
 #include "Overlays/overlay_manager.h"
 
 #include "Utilities/date_time.h"
+#include "Utils/rsx_serde.hpp"
 
 #include "util/asm.hpp"
 
@@ -49,244 +50,14 @@ rsx::frame_capture_data frame_capture;
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
 
-template <>
-bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
-{
-	ar(o.transform_program);
-
-	// Work around for old RSX captures.
-	// RSX capture and savestates both call this method.
-	// We do not want to grab transform constants if it is not savestate capture.
-	const bool is_savestate_capture = thread_ctrl::get_current() && thread_ctrl::get_name() == "Emu State Capture Thread";
-	if (GET_SERIALIZATION_VERSION(global_version) || is_savestate_capture)
-	{
-		ar(o.transform_constants);
-	}
-
-	return ar(o.registers);
-}
-
-template <>
-bool serialize<rsx::frame_capture_data>(utils::serial& ar, rsx::frame_capture_data& o)
-{
-	ar(o.magic, o.version, o.LE_format);
-
-	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != u32{std::endian::little == std::endian::native})
-	{
-		return false;
-	}
-
-	return ar(o.tile_map, o.memory_map, o.memory_data_map, o.display_buffers_map, o.replay_commands, o.reg_state);
-}
-
-template <>
-bool serialize<rsx::frame_capture_data::memory_block_data>(utils::serial& ar, rsx::frame_capture_data::memory_block_data& o)
-{
-	return ar(o.data);
-}
-
-template <>
-bool serialize<rsx::frame_capture_data::replay_command>(utils::serial& ar, rsx::frame_capture_data::replay_command& o)
-{
-	return ar(o.rsx_command, o.memory_state, o.tile_state, o.display_buffer_state);
-}
-
-template <>
-bool serialize<rsx::rsx_iomap_table>(utils::serial& ar, rsx::rsx_iomap_table& o)
-{
-	// We do not need more than that
-	ar(std::span(o.ea.data(), 512));
-
-	if (!ar.is_writing())
-	{
-		// Populate o.io
-		for (const atomic_t<u32>& ea_addr : o.ea)
-		{
-			const u32& addr = ea_addr.raw();
-
-			if (addr != umax)
-			{
-				o.io[addr >> 20].raw() = static_cast<u32>(&ea_addr - o.ea.data()) << 20;
-			}
-		}
-	}
-
-	return true;
-}
-
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
-
-	rsx_state& get_method_registers()
-	{
-		return *REGS(ensure(ensure(get_current_renderer())->get_context()));
-	}
 
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
 		, io(fill_array(-1))
 	{
-	}
-
-	u32 get_address(u32 offset, u32 location, u32 size_to_check, std::source_location src_loc)
-	{
-		const auto render = get_current_renderer();
-		std::string_view msg;
-
-		switch (location)
-		{
-		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
-		case CELL_GCM_LOCATION_LOCAL:
-		{
-			if (offset < render->local_mem_size && render->local_mem_size - offset >= size_to_check)
-			{
-				return rsx::constants::local_mem_base + offset;
-			}
-
-			msg = "Local RSX offset out of range!"sv;
-			break;
-		}
-
-		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
-		case CELL_GCM_LOCATION_MAIN:
-		{
-			if (const u32 ea = render->iomap_table.get_addr(offset); ea != umax)
-			{
-				if (size_to_check <= 1 || (offset < render->get_context()->fw.main_mem_size && render->get_context()->fw.main_mem_size - offset >= size_to_check))
-				{
-					bool ok = true;
-
-					for (u32 offs_index = 0x100000; offs_index < size_to_check + (offset & 0xfffff); offs_index += 0x100000)
-					{
-						// This check does not check continuity but rather that it's mapped at all
-						if (render->iomap_table.get_addr(offset + offs_index) == umax)
-						{
-							ok = false;
-						}
-					}
-
-					if (ok)
-					{
-						if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
-						{
-							return ea;
-						}
-					}
-				}
-			}
-
-			msg = "RSXIO memory not mapped!"sv;
-			break;
-		}
-
-		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL:
-		{
-			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
-			{
-				return render->get_context()->fw.label_addr + ::offset32(&RsxReports::report) + offset;
-			}
-
-			msg = "Local RSX REPORT offset out of range!"sv;
-			break;
-		}
-
-		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
-		{
-			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea != umax)
-			{
-				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
-				{
-					return ea;
-				}
-			}
-
-			msg = "RSXIO REPORT memory not mapped!"sv;
-			break;
-		}
-
-		// They are handled elsewhere for targeted methods, so it's unexpected for them to be passed here
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY1:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY2:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY3:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY4:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY5:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY6:
-		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY7:
-			msg = "CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFYx"sv; break;
-
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_1:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_2:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_3:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_4:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_5:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_6:
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_7:
-			msg = "CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_x"sv; break;
-
-		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW:
-		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R:
-		{
-			if (offset < sizeof(RsxReports::semaphore) /*&& (offset % 0x10) == 0*/)
-			{
-				return render->get_context()->fw.label_addr + offset;
-			}
-
-			msg = "DMA SEMAPHORE offset out of range!"sv;
-			break;
-		}
-
-		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-		{
-			if (offset < 0x100000 /*&& (offset % 0x10) == 0*/)
-			{
-				return render->device_addr + offset;
-			}
-
-			// TODO: What happens here? It could wrap around or access other segments of rsx internal memory etc
-			// Or can simply throw access violation error
-			msg = "DMA DEVICE offset out of range!"sv;
-			break;
-		}
-
-		default:
-		{
-			msg = "Invalid location!"sv;
-			break;
-		}
-		}
-
-		if (size_to_check)
-		{
-			// Allow failure if specified size
-			// This is to allow accurate recovery for failures
-			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc);
-			return 0;
-		}
-
-		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc);
-	}
-
-	extern void set_rsx_yield_flag() noexcept
-	{
-		if (auto rsx = get_current_renderer())
-		{
-			if (g_cfg.core.allow_rsx_cpu_preempt)
-			{
-				rsx->state += cpu_flag::yield;
-			}
-		}
-	}
-
-	extern void set_native_ui_flip()
-	{
-		if (auto rsxthr = rsx::get_current_renderer())
-		{
-			rsxthr->display_ctrl().request_native_ui_flip();
-		}
 	}
 
 	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count)
@@ -429,7 +200,7 @@ namespace rsx
 				}
 				else
 				{
-					const u32 address = (0 - index_size) & get_address(REGS(ctx)->index_array_address(), REGS(ctx)->index_array_location());
+					const u32 address = (0 - index_size) & get_address(ctx, REGS(ctx)->index_array_address(), REGS(ctx)->index_array_location());
 					re_evaluate(vm::get_super_ptr<std::byte>(address), u32{});
 				}
 			}
@@ -442,7 +213,7 @@ namespace rsx
 				}
 				else
 				{
-					const u32 address = (0 - index_size) & get_address(REGS(ctx)->index_array_address(), REGS(ctx)->index_array_location());
+					const u32 address = (0 - index_size) & get_address(ctx, REGS(ctx)->index_array_address(), REGS(ctx)->index_array_location());
 					re_evaluate(vm::get_super_ptr<std::byte>(address), u16{});
 				}
 			}
@@ -453,59 +224,6 @@ namespace rsx
 		ensure(_max_index >= _min_index);
 		vertex_range = { _min_index, (_max_index - _min_index) + 1 };
 		return vertex_range;
-	}
-
-	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
-	{
-		switch (type)
-		{
-		case vertex_base_type::s1:
-		case vertex_base_type::s32k:
-			switch (size)
-			{
-			case 1:
-			case 2:
-			case 4:
-				return sizeof(u16) * size;
-			case 3:
-				return sizeof(u16) * 4;
-			default:
-				break;
-			}
-			fmt::throw_exception("Wrong vector size");
-		case vertex_base_type::f: return sizeof(f32) * size;
-		case vertex_base_type::sf:
-			switch (size)
-			{
-			case 1:
-			case 2:
-			case 4:
-				return sizeof(f16) * size;
-			case 3:
-				return sizeof(f16) * 4;
-			default:
-				break;
-			}
-			fmt::throw_exception("Wrong vector size");
-		case vertex_base_type::ub:
-			switch (size)
-			{
-			case 1:
-			case 2:
-			case 4:
-				return sizeof(u8) * size;
-			case 3:
-				return sizeof(u8) * 4;
-			default:
-				break;
-			}
-			fmt::throw_exception("Wrong vector size");
-		case vertex_base_type::cmp: return 4;
-		case vertex_base_type::ub256: ensure(size == 4); return sizeof(u8) * 4;
-		default:
-			break;
-		}
-		fmt::throw_exception("Bad vertex data type (%d)!", static_cast<u8>(type));
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
@@ -1181,6 +899,11 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		if (m_surface_write_back_requested.exchange(false))
+		{
+			flush_guest_data();
+		}
+
 		// Retire the queued reports, then stop calling into the renderer's host queries
 		zcull_ctrl->sync(this);
 		zcull_ctrl->set_provider(nullptr);
@@ -1225,6 +948,9 @@ namespace rsx
 			}
 
 			zcull_ctrl->sync(this);
+
+			// The new renderer starts with empty caches
+			flush_guest_data();
 		}
 
 		// Queries still in flight complete as "always visible"
@@ -1324,6 +1050,7 @@ namespace rsx
 
 		// Its caches can still protect pages: release them while faults can still find the context.
 		// NOTE: Do not do this under the lock. The release itself can fault on this thread.
+		// flush_guest_data(ctx); // FIXME: This would require all contexts to flush their caches
 		release_context_resources(ctx);
 
 		lock_context_table();
@@ -1345,12 +1072,20 @@ namespace rsx
 		// A draw or a FIFO packet cannot span contexts
 		ensure(!m_ctx || can_switch_context());
 
+		// NOTE: RSX Idle time is device-level, not per-context
+		const u64 now = get_system_time();
+
 		if (m_ctx)
 		{
 			// Guest-visible GET catches up with the puller before the channel is put away
 			if (fifo_ctrl && ctrl)
 			{
 				fifo_ctrl->sync_get();
+			}
+
+			if (performance_counters.state != FIFO::state::running)
+			{
+				performance_counters.idle_time += now - performance_counters.FIFO_idle_timestamp;
 			}
 
 			save_fifo_channel(m_ctx->fifo);
@@ -1369,6 +1104,11 @@ namespace rsx
 
 		m_ctx = ctx;
 		load_fifo_channel(ctx->fifo);
+
+		if (performance_counters.state != FIFO::state::running)
+		{
+			performance_counters.FIFO_idle_timestamp = now;
+		}
 
 		// The backend's bound state belonged to the previous context
 		ctx->mark_all_dirty();
@@ -1439,6 +1179,12 @@ namespace rsx
 
 		if (state != FIFO::state::lock_wait)
 		{
+			if (!m_ctx->in_begin_end &&
+				m_surface_write_back_requested.exchange(false))
+			{
+				flush_guest_data();
+			}
+
 			if (!m_ctx->in_begin_end && atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
 				std::lock_guard lock(m_mtx_task);
@@ -1585,6 +1331,29 @@ namespace rsx
 		}
 	}
 
+	void thread::flush_guest_data(context* ctx)
+	{
+		// FIXME: This isn't quite right. We're supposed to request a surface cache global flush
+		m_renderer->on_invalidate_memory_range(ctx, utils::address_range32::start_end(0, umax), invalidation_cause::read);
+	}
+
+	void thread::flush_guest_data()
+	{
+		// GLobal flush. Should only be triggered by the main RSX thread.
+		ensure(is_current_thread());
+
+		rsx::simple_array<context*> contexts;
+		for_each_context([&](context* ctx)
+		{
+			contexts.push_back(ctx);
+		});
+
+		for (context* ctx : contexts)
+		{
+			flush_guest_data(ctx);
+		}
+	}
+
 	void thread::free_stale_contexts()
 	{
 		rsx::simple_array<u32> freed;
@@ -1650,7 +1419,7 @@ namespace rsx
 						rsx::to_surface_depth_format(zcull.zFormat) == m_ctx->fb.depth_surface_info.depth_format &&
 						rsx::to_surface_antialiasing(zcull.aaFormat) == REGS(m_ctx)->surface_antialias())
 					{
-						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
+						const u32 rsx_address = rsx::get_address(m_ctx, zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
 						{
 							m_ctx->fb.zcull_surface_active = true;
@@ -1773,9 +1542,10 @@ namespace rsx
 		m_renderer->on_sync_hint(hint, payload);
 	}
 
-	bool thread::is_fifo_idle() const
+	bool thread::is_fifo_idle(const context* ctx) const
 	{
-		return ctrl == nullptr || ctrl->get == (ctrl->put & ~3);
+		const auto channel = ctx->fifo.ctrl;
+		return !channel || channel->get == (channel->put & ~3);
 	}
 
 	void thread::flush_fifo()
@@ -2310,6 +2080,9 @@ namespace rsx
 		// Marks the end of a frame scope GPU-side
 		if (g_user_asked_for_frame_capture.exchange(false) && !capture_current_frame)
 		{
+			// The capture reads guest memory
+			request_guest_write_back();
+
 			capture_current_frame = true;
 			frame_debug.reset();
 			frame_capture.reset(*REGS(m_ctx));

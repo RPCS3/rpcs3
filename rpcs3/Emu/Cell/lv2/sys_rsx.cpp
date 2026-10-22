@@ -682,7 +682,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 		return CELL_EINVAL;
 	}
 
-	if (!render->is_fifo_idle())
+	if (!render->is_fifo_idle(ctx))
 	{
 		sys_rsx.warning("sys_rsx_context_iomap(): RSX is not idle while mapping io");
 	}
@@ -752,7 +752,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
 		return CELL_EINVAL;
 	}
 
-	if (!render->is_fifo_idle())
+	if (!render->is_fifo_idle(ctx))
 	{
 		sys_rsx.warning("sys_rsx_context_iounmap(): RSX is not idle while unmapping io");
 	}
@@ -1007,7 +1007,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		ensure(a3 < std::size(render->tiles));
 
-		if (!render->is_fifo_idle())
+		if (!render->is_fifo_idle(ctx))
 		{
 			sys_rsx.warning("sys_rsx_context_attribute(): RSX is not idle while setting tile");
 		}
@@ -1092,7 +1092,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			return LV1_ILLEGAL_PARAMETER_VALUE;
 		}
 
-		if (!render->is_fifo_idle())
+		if (!render->is_fifo_idle(ctx))
 		{
 			sys_rsx.warning("sys_rsx_context_attribute(): RSX is not idle while setting zcull");
 		}

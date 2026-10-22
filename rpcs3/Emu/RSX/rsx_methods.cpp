@@ -91,9 +91,9 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(context*, u32 /*reg*/, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
+				sys_rsx_context_attribute(ctx->id(), 0x102, index, arg, 0, 0);
 			}
 		};
 
@@ -104,7 +104,7 @@ namespace rsx
 			{
 				RSX(ctx)->display_ctrl().on_flip_queued();
 
-				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
+				sys_rsx_context_attribute(ctx->id(), 0x103, index, arg, 0, 0);
 			}
 		};
 	}

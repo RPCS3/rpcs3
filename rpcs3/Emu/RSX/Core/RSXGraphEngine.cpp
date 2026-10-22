@@ -163,10 +163,10 @@ namespace rsx
 		};
 		return
 		{
-			rsx::get_address(offset_color[0], context_dma_color[0]),
-			rsx::get_address(offset_color[1], context_dma_color[1]),
-			rsx::get_address(offset_color[2], context_dma_color[2]),
-			rsx::get_address(offset_color[3], context_dma_color[3]),
+			rsx::get_address(m_ctx, offset_color[0], context_dma_color[0]),
+			rsx::get_address(m_ctx, offset_color[1], context_dma_color[1]),
+			rsx::get_address(m_ctx, offset_color[2], context_dma_color[2]),
+			rsx::get_address(m_ctx, offset_color[3], context_dma_color[3]),
 		};
 	}
 
@@ -174,7 +174,7 @@ namespace rsx
 	{
 		u32 m_context_dma_z = REGS(m_ctx)->surface_z_dma();
 		u32 offset_zeta = REGS(m_ctx)->surface_z_offset();
-		return rsx::get_address(offset_zeta, m_context_dma_z);
+		return rsx::get_address(m_ctx, offset_zeta, m_context_dma_z);
 	}
 
 	void graph_engine::get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout)
@@ -997,7 +997,7 @@ namespace rsx
 		const auto [program_offset, program_location] = REGS(m_ctx)->shader_program_address();
 		const auto prev_textures_reference_mask = m_ctx->program.fp_metadata.referenced_textures_mask;
 
-		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
+		auto data_ptr = vm::base(rsx::get_address(m_ctx, program_offset, program_location));
 		m_ctx->program.fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
 		m_ctx->program.fragment_program.data = (static_cast<u8*>(data_ptr) + m_ctx->program.fp_metadata.program_start_offset);
