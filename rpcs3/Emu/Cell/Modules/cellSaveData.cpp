@@ -1596,6 +1596,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		});
 		// clang-format on
 
+		// Up to SDK 2.6, or with fileListMax 0, fileNum and sizeKB only cover the files that fit in fileList
+		if ((g_ps3_process_info.sdk_ver <= 0x26FFFF || !setBuf->fileListMax) && files_sorted.size() > setBuf->fileListMax)
+		{
+			files_sorted.erase(files_sorted.begin() + setBuf->fileListMax, files_sorted.end());
+		}
+
 		for (auto&& entry : files_sorted)
 		{
 			{
