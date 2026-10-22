@@ -192,7 +192,7 @@ namespace rsx
 						continue;
 					}
 
-					const auto buffer_range = address_range32::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
+					const auto buffer_range = address_range32::start_length(rsx::get_address(ctx, buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found

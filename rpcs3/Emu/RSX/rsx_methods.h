@@ -1362,10 +1362,6 @@ namespace rsx
 		}
 	};
 
-	// Register state of the context bound to the RSX thread. For out-of-thread tools (debugger UI) only.
-	// Everything running under rsx::thread must use REGS(ctx) instead.
-	rsx_state& get_method_registers();
-
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
 	extern std::array<u32, 0x10000 / 4> state_signals;
 

@@ -1075,7 +1075,7 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 				for (auto i = 0ull; i < texture_array.size(); ++i)
 				{
 					const auto& tex = texture_array[i];
-					const auto addr = rsx::get_address(tex.offset(), tex.location());
+					const auto addr = rsx::get_address(m_ctx, tex.offset(), tex.location());
 					exclusion_list.insert(addr);
 				}
 			};
@@ -1182,7 +1182,7 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	//TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(RSX(m_ctx)->tiles[tile].offset, RSX(m_ctx)->tiles[tile].location);
+		u32 addr = rsx::get_address(m_ctx, RSX(m_ctx)->tiles[tile].offset, RSX(m_ctx)->tiles[tile].location);
 		RSX(m_ctx)->on_notify_pre_memory_unmapped(addr, RSX(m_ctx)->tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
 		res()->surface_cache.invalidate_surface_address(addr, false);
 	}

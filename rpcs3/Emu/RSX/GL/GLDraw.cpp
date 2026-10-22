@@ -719,7 +719,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		{
 			info->vertex_range.second = 0;
 			const auto vertex_base_offset = REGS(m_ctx)->vertex_data_base_offset();
-			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info->base_offset), info->memory_location);
+			info->real_offset_address = rsx::get_address(m_ctx, rsx::get_vertex_offset_from_base(vertex_base_offset, info->base_offset), info->memory_location);
 		}
 	}
 	else

@@ -186,7 +186,7 @@ namespace rsx
 		for (auto& info : result.interleaved_blocks)
 		{
 			// Calculate real data address to be used during upload
-			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
+			info->real_offset_address = rsx::get_address(m_ctx, rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
 		}
 	}
 
@@ -234,7 +234,7 @@ namespace rsx
 		const u32 type_size = get_index_type_size(type);
 
 		// Force aligned indices as realhw
-		const u32 address = (0 - type_size) & get_address(REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location());
+		const u32 address = (0 - type_size) & get_address(m_ctx, REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location());
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();

@@ -96,8 +96,8 @@ namespace rsx
 				in_format == 1 && out_format == 1 &&
 				in_pitch + 0u == in_width_in_bytes &&
 				out_pitch + 0u == out_width_in_bytes;
-			const auto read_address = get_address(src_offset, src_dma);
-			const auto write_address = get_address(dst_offset, dst_dma);
+			const auto read_address = get_address(ctx, src_offset, src_dma);
+			const auto write_address = get_address(ctx, dst_offset, dst_dma);
 			const auto read_length = in_pitch * (line_count - 1) + in_width_in_bytes;
 			const auto write_length = out_pitch * (line_count - 1) + out_width_in_bytes;
 

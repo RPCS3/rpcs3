@@ -50,10 +50,10 @@ namespace rsx
 			REGS(ctx)->current_draw_clause.insert_command_barrier(type, arg0, arg1, index);
 		}
 
-		u32 get_report_data_impl([[maybe_unused]] rsx::context* ctx, u32 offset)
+		u32 get_report_data_impl(rsx::context* ctx, u32 offset)
 		{
 			blit_engine::context_dma report_dma = REGS(ctx)->context_dma_report();
-			return vm::cast(get_address(offset, static_cast<u32>(report_dma)));
+			return vm::cast(get_address(ctx, offset, static_cast<u32>(report_dma)));
 		}
 
 		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index)
