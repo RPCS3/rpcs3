@@ -52,10 +52,6 @@ namespace rsx
 		result_zcull_intr = 2
 	};
 
-	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
-
-	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
-
 	struct desync_fifo_cmd_info
 	{
 		u32 cmd;
@@ -143,7 +139,7 @@ namespace rsx
 		// Device-level interrupt, not context-local. It can be raised from any thread.
 		atomic_bitmask_t<eng_interrupt_reason> eng_interrupt_mask;
 
-		bool is_fifo_idle() const;
+		bool is_fifo_idle(const context* ctx) const;
 		void flush_fifo();
 
 		// Returns [count of found commands, PC of their start]
@@ -343,6 +339,11 @@ namespace rsx
 		// Deferred handler to remove contexts that have been freed on the lv2 side.
 		void free_stale_contexts();
 
+		// Host writeback handling
+		void flush_guest_data(context* ctx);
+		void flush_guest_data();
+		atomic_t<bool> m_surface_write_back_requested = false;
+
 		// FIFO channel switch. The puller runs only the current context's channel.
 		void save_fifo_channel(FIFO::channel_state& channel) const;
 		void load_fifo_channel(const FIFO::channel_state& channel);
@@ -394,6 +395,13 @@ namespace rsx
 
 		// Called from lv2 to destroy a context
 		void free_context(u32 id);
+
+		// Write back all host mem to guest mem, regardless of WCB/WDB settings.
+		void request_guest_write_back()
+		{
+			m_surface_write_back_requested = true;
+			raise_backend_interrupt();
+		}
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		bool request_emu_flip(u32 buffer) { return m_display.request_emu_flip(buffer); }

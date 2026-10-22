@@ -20,6 +20,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Utils/rsx_serde.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
@@ -3690,6 +3691,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
+		if (savestate)
+		{
+			// Implicit WCB callback. Ensures that resuming will show correct graphics.
+			rsx->request_guest_write_back();
+		}
+
 		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
 	}
 

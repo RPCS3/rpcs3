@@ -821,10 +821,10 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(
 }
 
 template<typename RsxTextureType>
-std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextureType &texture)
+std::vector<rsx::subresource_layout> get_subresources_layout_impl(const rsx::context* ctx, const RsxTextureType &texture)
 {
 	const auto [h, depth, layer] = get_height_depth_layer(texture);
-	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
+	const u32 texaddr = rsx::get_address(ctx, texture.offset(), texture.location());
 
 	return get_subresources_layout_impl(
 		vm::_ptr<const std::byte>(texaddr),
@@ -864,14 +864,14 @@ namespace rsx
 			(texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK;
 	}
 
-	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::fragment_texture& texture)
+	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::context* ctx, const rsx::fragment_texture& texture)
 	{
-		return get_subresources_layout_impl(texture);
+		return get_subresources_layout_impl(ctx, texture);
 	}
 
-	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::vertex_texture& texture)
+	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::context* ctx, const rsx::vertex_texture& texture)
 	{
-		return get_subresources_layout_impl(texture);
+		return get_subresources_layout_impl(ctx, texture);
 	}
 
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::image_section_attributes_t& attrs, rsx::texture_dimension_extended type)

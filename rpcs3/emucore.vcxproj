@@ -1115,6 +1115,7 @@
     <ClInclude Include="Emu\RSX\Utils\algorithm.hpp" />
     <ClInclude Include="Emu\RSX\Utils\color_utils.hpp" />
     <ClInclude Include="Emu\RSX\Utils\image_utils.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\rsx_serde.hpp" />
     <ClInclude Include="Emu\RSX\Utils\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Emu\perf_meter.hpp" />

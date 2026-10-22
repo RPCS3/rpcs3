@@ -24,7 +24,7 @@ namespace rsx
 		void semaphore_acquire(context* ctx, u32 /*reg*/, u32 arg)
 		{
 			RSX(ctx)->sync_point_request.release(true);
-			const u32 addr = get_address(REGS(ctx)->semaphore_offset_406e(), REGS(ctx)->semaphore_context_dma_406e());
+			const u32 addr = get_address(ctx, REGS(ctx)->semaphore_offset_406e(), REGS(ctx)->semaphore_context_dma_406e());
 
 			// Syncronization point, may be associated with memory changes without actually changing addresses
 			ctx->graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
@@ -124,7 +124,7 @@ namespace rsx
 				RSX(ctx)->sync_point_request.release(true);
 			}
 
-			const u32 addr = get_address(offset, ctxt);
+			const u32 addr = get_address(ctx, offset, ctxt);
 
 			// TODO: Check if possible to write on reservations
 			if (ctx->fw.label_addr >> 28 != addr >> 28)
