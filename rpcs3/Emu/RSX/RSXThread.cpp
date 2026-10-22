@@ -1088,6 +1088,12 @@ namespace rsx
 				performance_counters.idle_time += now - performance_counters.FIFO_idle_timestamp;
 			}
 
+			// Always stop conditional rendering when a context is getting swapped out
+			if (m_ctx->cond_render.hw_cond_active)
+			{
+				end_conditional_rendering();
+			}
+
 			save_fifo_channel(m_ctx->fifo);
 		}
 

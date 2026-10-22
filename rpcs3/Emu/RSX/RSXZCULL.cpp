@@ -292,6 +292,7 @@ namespace rsx
 					m_current_task = m_free_occlusion_pool.top();
 					m_free_occlusion_pool.pop();
 
+					m_current_task->ctx_id = ptimer->get_context()->id();
 					m_current_task->data_type = 0;
 					m_current_task->num_draws = 0;
 					m_current_task->result = 0;
@@ -472,7 +473,19 @@ namespace rsx
 				write(writer, ptimer->timestamp(), value);
 			}
 
-			if (writer->query && writer->query->sync_tag == ptimer->get_context()->cond_render.eval_sync_tag)
+			if (!writer->query)
+			{
+				return;
+			}
+
+			// Resolve which context this query is meant for.
+			context* owner = ptimer->get_context();
+			if (owner->id() != writer->query->ctx_id) [[unlikely]]
+			{
+				owner = ptimer->find_context(writer->query->ctx_id);
+			}
+
+			if (owner && writer->query->sync_tag == owner->cond_render.eval_sync_tag)
 			{
 				bool eval_failed;
 				if (!writer->forwarder) [[likely]]
@@ -488,7 +501,9 @@ namespace rsx
 					eval_failed = (vm::_ref<CellGcmReportData>(writer->sink).value == 0u);
 				}
 
-				ptimer->get_context()->cond_render.set_eval_result(ptimer, eval_failed);
+				// Only the bound context can have host conditional rendering active (bind_context ends it on the way out)
+				ensure(!owner->cond_render.hw_cond_active || owner == ptimer->get_context());
+				owner->cond_render.set_eval_result(ptimer, eval_failed);
 			}
 		}
 
