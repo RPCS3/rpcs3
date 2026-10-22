@@ -2,7 +2,6 @@ ports:
   - name: abseil
   - name: ccache
   - name: gtest
-  - name: opencv4
   - name: sdl3
   - name: vulkan-headers
   - name: vulkan-loader

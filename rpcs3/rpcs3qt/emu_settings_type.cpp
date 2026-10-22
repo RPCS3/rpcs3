@@ -53,12 +53,15 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccuratePPUNJ,              get_cfg_location(local_cfg.core.ppu_use_nj_bit) },
 	{ emu_settings_type::AccuratePPUVNAN,            get_cfg_location(local_cfg.core.ppu_set_vnan) },
 	{ emu_settings_type::AccuratePPUFPCC,            get_cfg_location(local_cfg.core.ppu_set_fpcc) },
+	{ emu_settings_type::AccuratePPUVEST,            get_cfg_location(local_cfg.core.ppu_set_vest) },
 	{ emu_settings_type::MaxPreemptCount,            get_cfg_location(local_cfg.core.max_cpu_preempt_count_per_frame) },
 	{ emu_settings_type::SPUProfiler,                get_cfg_location(local_cfg.core.spu_prof) },
 	{ emu_settings_type::DisableSpinOptimization,    get_cfg_location(local_cfg.core.spu_getllar_spin_optimization_disabled) },
 	{ emu_settings_type::EnabledSPUEventsBusyLoop,   get_cfg_location(local_cfg.core.spu_reservation_busy_waiting_enabled) },
 	{ emu_settings_type::PPUReservationPriorityOverSPUs, get_cfg_location(local_cfg.core.ppu_reservation_priority_over_spu) },
 	{ emu_settings_type::AccurateSpuReservations,    get_cfg_location(local_cfg.core.spu_accurate_reservations) },
+	{ emu_settings_type::AccurateSpuReservations,    get_cfg_location(local_cfg.core.spu_accurate_reservations) },
+	{ emu_settings_type::SPUMmioDelay,               get_cfg_location(local_cfg.core.spu_mmio_delay_enabled) },
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   get_cfg_location(local_cfg.video.renderer) },
@@ -106,6 +109,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VBlankRate,                 get_cfg_location(local_cfg.video.vblank_rate) },
 	{ emu_settings_type::VBlankNTSCFixup,            get_cfg_location(local_cfg.video.vblank_ntsc) },
 	{ emu_settings_type::DriverWakeUpDelay,          get_cfg_location(local_cfg.video.driver_wakeup_delay) },
+	{ emu_settings_type::PPUEventWakeUpDelay,        get_cfg_location(local_cfg.core.ppu_event_wakeup_delay) },
 	{ emu_settings_type::AllowHostGPULabels,         get_cfg_location(local_cfg.video.host_label_synchronization) },
 	{ emu_settings_type::DisableMSLFastMath,         get_cfg_location(local_cfg.video.disable_msl_fast_math) },
 	{ emu_settings_type::OutputScalingMode,          get_cfg_location(local_cfg.video.output_scaling) },

@@ -1454,7 +1454,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& path)
 
 		bool found = false;
 
-		// An empty component comes out of repeated delimiters (e.g. "PS3_GAME//PIC1.PNG"), which name the same node
+		// An empty component names the current node, as "." does (e.g. "dir//name" resolves as "dir/name")
 		if (path_component.empty() || path_component == ".")
 		{
 			found = true;
@@ -1942,7 +1942,20 @@ static std::string strip_device_prefix(std::string_view path, std::string_view f
 	path = fmt::trim_sv(path, fs::delim);
 
 	// The prefix on its own is the root of the image, the node retrieve() reaches through "."
-	return path.empty() ? "."s : std::string{path};
+	if (path.empty())
+	{
+		return "."s;
+	}
+
+	std::string result{path};
+
+	// Reduce each run of delimiters to a single one (e.g. "dir//name" becomes "dir/name")
+	result.erase(std::unique(result.begin(), result.end(), [delim = std::string_view{fs::delim}](char a, char b)
+	{
+		return delim.find(b) != umax && delim.find(a) != umax;
+	}), result.end());
+
+	return result;
 }
 
 bool iso_device::stat(const std::string& path, fs::stat_t& info)

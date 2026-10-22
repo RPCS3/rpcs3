@@ -254,6 +254,7 @@
      </widget>
      <addaction name="confPadsAct"/>
      <addaction name="menuMice"/>
+     <addaction name="confWiimoteAct"/>
      <addaction name="confCamerasAct"/>
      <addaction name="actionPS_Move_Tracker"/>
     </widget>
@@ -322,6 +323,7 @@
      <addaction name="confRPCNAct"/>
      <addaction name="confClansAct"/>
      <addaction name="confIPCAct"/>
+     <addaction name="confSkyIPCAct"/>
     </widget>
     <widget class="QMenu" name="menuPortals">
      <property name="title">
@@ -1430,6 +1432,14 @@
     <string>Configure IPC</string>
    </property>
   </action>
+  <action name="confSkyIPCAct">
+   <property name="text">
+    <string>Skylanders Portal IPC</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Skylanders Portal IPC</string>
+   </property>
+  </action>
   <action name="actionLog_Viewer">
    <property name="text">
     <string>Log Viewer</string>
@@ -1539,6 +1549,11 @@
   <action name="confGunCon3Act">
    <property name="text">
     <string>GunCon 3</string>
+   </property>
+  </action>
+  <action name="confWiimoteAct">
+   <property name="text">
+    <string>Wiimotes</string>
    </property>
   </action>
   <action name="confTopShotEliteAct">

@@ -67,7 +67,6 @@ if (NOT ANDROID)
             3rdparty::wolfssl
             3rdparty::libcurl
             3rdparty::zlib
-            3rdparty::opencv
             3rdparty::fusion)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -184,6 +183,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test.cpp
             tests/test_address_range.cpp
             tests/test_bit_set.cpp
+            tests/test_blob_detector.cpp
             tests/test_cctype.cpp
             tests/test_dmux_pamf.cpp
             tests/test_fmt.cpp
@@ -223,5 +223,16 @@ if(BUILD_RPCS3_TESTS)
             COMMAND ${CMAKE_CTEST_COMMAND} -j -VV --output-on-failure
             DEPENDS rpcs3_test
      )
+    endif()
+endif()
+
+# Udev rules, per platform
+if (BUNDLE_UDEV_RULES)
+    if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+        install(FILES ../config/udev/udev.rules
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/udev/rules.d/ RENAME 99-rpcs3.rules)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+        install(FILES ../config/udev/devd.conf
+            DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/devd/ RENAME rpcs3.conf)
     endif()
 endif()

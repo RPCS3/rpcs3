@@ -376,8 +376,15 @@ template <CellSysmoduleModuleID module_id>
 			}
 
 			const vm::var<u64> nread;
-			ensure(sys_fs_read(ppu, *file_descriptor, boot_flag, 8, nread) == CELL_OK && *nread == 8ull); // Not checked on LLE
-			ensure(sys_fs_close(ppu, *file_descriptor) == CELL_OK); // Not checked on LLE
+			const u32 fd = *file_descriptor;
+			ensure(sys_fs_read(ppu, fd, boot_flag, 8, nread) == CELL_OK); // Not checked on LLE
+			ensure(sys_fs_close(ppu, fd) == CELL_OK); // Not checked on LLE
+
+			if (*nread < 8)
+			{
+				 // Not checked on LLE
+				return true;
+			}
 
 			return !!read_from_ptr_unsafe<bf_t<u64, 4, 1>>(boot_flag.get_ptr(), 1);
 		}
