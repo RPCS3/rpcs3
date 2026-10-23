@@ -956,9 +956,21 @@ namespace rsx
 			// The new renderer starts with empty caches
 			flush_guest_data();
 		}
+		else
+		{
+			// The backend cannot be reached anymore. Its host conditional rendering is gone with it.
+			m_ctx->cond_render.hw_cond_active = false;
+		}
 
 		// Queries still in flight complete as "always visible"
 		zcull_ctrl->set_provider(nullptr);
+
+		// Pending evaluations use the old backend's queries and cannot be handed to the new one. They pass as well.
+		for_each_context([this](context* ctx)
+		{
+			if (ctx->cond_render.eval_pending())
+				ctx->cond_render.set_eval_result(this, false);
+		});
 
 		release_backend_resources();
 		m_renderer->on_shutdown();
