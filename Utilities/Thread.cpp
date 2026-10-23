@@ -101,6 +101,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 
 #ifdef __PROSPERO__
 #include <libre/heap.h>
+#include <libre/threads.h>
 #include <ps5platform/kernel.h>
 #include <ps5platform/libc.h>
 
@@ -111,8 +112,9 @@ void ps5_alloc_track_name(const char* name); // rpcs3/ps5/ps5_heap_track.cpp: th
 // key destructors, while its thread-local storage (emulated) is whole. Plain
 // pthread_exit ran them after emulated TLS had freed it: the PS3 home menu's
 // boot crashed in mspace_free from the platform's run_destructors, under
-// thread_base::finalize (PS5_RPCS3 0be3ada's backtrace)
-#define pthread_exit ps5_pthread_exit
+// thread_base::finalize (PS5_RPCS3 0be3ada's backtrace). The PS5 libre layer's
+// (libre/threads.h) runs them first
+#define pthread_exit libre_pthread_exit
 
 // PS5: a stack of its own for the fault handler, on each thread. Threads run on
 // 2 MiB stacks (the platform's pthread_create; 8 MiB on Linux), and a thread
