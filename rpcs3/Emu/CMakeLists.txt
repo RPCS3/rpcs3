@@ -73,7 +73,7 @@ if(PS5)
     endif()
     set_source_files_properties(../util/vm_native.cpp PROPERTIES HEADER_FILE_ONLY ON)
     target_sources(rpcs3_emu PRIVATE ../util/vm_native_ps5.cpp)
-    set_source_files_properties(../util/vm_native_ps5.cpp PROPERTIES INCLUDE_DIRECTORIES ${PS5_LIBRE_DIR}/include)
+    set_source_files_properties(../util/vm_native_ps5.cpp ../../Utilities/Thread.cpp PROPERTIES INCLUDE_DIRECTORIES ${PS5_LIBRE_DIR}/include)
 
     # PS5: Lossless Scaling's frame generation (RSX/VK/VKFrameGenLSFG.h), the
     # Eden/lsfg-vk compute chain as the Simpsons Game's PS5 port has it

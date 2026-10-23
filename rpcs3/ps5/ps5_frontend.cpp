@@ -69,7 +69,7 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "Emu/Cell/Modules/sceNp.h"
 #include "util/video_source.h"
 
-#include <ps5platform/heap.h>
+#include <libre/heap.h>
 #include <ps5platform/kernel.h>
 
 #include <condition_variable>
@@ -107,10 +107,10 @@ u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
 extern atomic_t<u32> g_ps5_rsx_cpus[16]; // RSXThread.cpp: the CPUs the RSX thread ended its frames on
 extern atomic_t<u64> g_ps5_vk_memory[9]; // VKPresent.cpp: what the renderer's caches hold
 std::array<s64, 5> ps5_vk_driver_bytes(); // vkutils/instance.cpp: the Vulkan driver's own memory, by scope
-std::string ps5_alloc_report(u32 top, s64* total, s64* exact_total); // ps5_alloc_track.cpp: the heap's live blocks, by the thread that allocated them
-std::string ps5_alloc_sites(u32 top); // ps5_alloc_track.cpp: and by the code that allocated them
-void ps5_alloc_track_start(); // ps5_alloc_track.cpp: recording starts
-void ps5_alloc_track_name(const char* name); // ps5_alloc_track.cpp: this thread's name for it
+std::string ps5_alloc_report(u32 top, s64* total, s64* exact_total); // ps5_heap_track.cpp: the heap's live blocks, by the thread that allocated them
+std::string ps5_alloc_sites(u32 top); // ps5_heap_track.cpp: and by the code that allocated them
+void ps5_alloc_track_start(); // ps5_heap_track.cpp: recording starts
+void ps5_alloc_track_name(const char* name); // ps5_heap_track.cpp: this thread's name for it
 const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them,
@@ -1550,8 +1550,8 @@ int run(const char* boot_path)
 						{
 							driver_total += bytes;
 						}
-						struct ps5_heap_stats now{};
-						ps5_heap_stats(&now);
+						struct libre_heap_stats now{};
+						libre_heap_stats(&now);
 						trace_logged("memory: heap %u MiB; Vulkan driver %d MiB (objects %d, caches %d, device %d, commands %d, instance %d); textures %u MiB (%u unreleased, %u MiB temporary), render targets %u MiB; %u vertex and %u fragment programs, %u pipelines; GPU allocator at %u%% of the %u MiB heap",
 							static_cast<u32>(now.mapped_bytes >> 20), static_cast<s32>(driver_total >> 20), static_cast<s32>(driver[1] >> 20),
 							static_cast<s32>(driver[2] >> 20), static_cast<s32>(driver[3] >> 20),
@@ -1561,11 +1561,11 @@ int run(const char* boot_path)
 							static_cast<u32>(g_ps5_vk_memory[6].load()), static_cast<u32>(g_ps5_vk_memory[7].load()), static_cast<u32>(g_ps5_vk_memory[8].load()));
 					}
 					// And the heap's live blocks, C and C++, by the thread that
-					// allocated them (ps5_alloc_track.cpp): what the line above did
+					// allocated them (ps5_heap_track.cpp): what the line above did
 					// not find. Build 141's C++ alone held 820 MiB, flat, of 8.6 GiB
 					{
-						struct ps5_heap_stats now{};
-						ps5_heap_stats(&now);
+						struct libre_heap_stats now{};
+						libre_heap_stats(&now);
 						s64 live = 0, exact = 0;
 						const std::string owners = ps5_alloc_report(8, &live, &exact);
 						trace_logged("memory by thread (C and C++; blocks of 1 MiB or more all, smaller ones one in 256): about %d MiB live of the heap's %u MiB (%d MiB in large blocks): %s",
@@ -1586,8 +1586,8 @@ int run(const char* boot_path)
 					// And memory: the home menu's run ended at 205 s with no error of
 					// RPCS3's or signal (71d0fa2), as the kernel ends a title out of
 					// memory or after a GPU fault
-					struct ps5_heap_stats heap{};
-					ps5_heap_stats(&heap);
+					struct libre_heap_stats heap{};
+					libre_heap_stats(&heap);
 					size_t flexible = 0, direct = 0;
 					int64_t direct_start = 0;
 					sceKernelAvailableFlexibleMemorySize(&flexible);
@@ -1710,7 +1710,7 @@ int run(const char* boot_path)
 					trace("frontend: stopped, booting again (a reboot the game asked for, or back to Big Picture Mode)");
 				}
 			};
-			// The title is up: its allocations are recorded from now (ps5_alloc_track.cpp)
+			// The title is up: its allocations are recorded from now (ps5_heap_track.cpp)
 			ps5_alloc_track_name("frontend main");
 			ps5_alloc_track_start();
 			g_main.run();

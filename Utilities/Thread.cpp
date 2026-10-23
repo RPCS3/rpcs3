@@ -100,12 +100,12 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #endif
 
 #ifdef __PROSPERO__
-#include <ps5platform/heap.h>
+#include <libre/heap.h>
 #include <ps5platform/kernel.h>
 #include <ps5platform/libc.h>
 
 u64 ps5_cpu_kept_mask(); // rpcs3/ps5/ps5_cpus.cpp: the core kept for one busy SPU
-void ps5_alloc_track_name(const char* name); // rpcs3/ps5/ps5_alloc_track.cpp: the allocations' owner, by thread
+void ps5_alloc_track_name(const char* name); // rpcs3/ps5/ps5_heap_track.cpp: the allocations' owner, by thread
 
 // PS5: a thread's end runs its C++ thread_local destructors before libkernel's
 // key destructors, while its thread-local storage (emulated) is whole. Plain
@@ -2822,8 +2822,8 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 		fmt::append(msg, "top of stack %p\n", *reinterpret_cast<void* const*>(mc.mc_rsp));
 		fmt::append(msg, "rdi %p, rsi %p, rax %p, rbx %p\n", reinterpret_cast<void*>(mc.mc_rdi), reinterpret_cast<void*>(mc.mc_rsi),
 			reinterpret_cast<void*>(mc.mc_rax), reinterpret_cast<void*>(mc.mc_rbx));
-		struct ps5_heap_stats heap{};
-		ps5_heap_stats(&heap);
+		struct libre_heap_stats heap{};
+		libre_heap_stats(&heap);
 		fmt::append(msg, "title heap %p, 0x%x bytes\nBacktrace:", reinterpret_cast<void*>(heap.range_base), heap.range_bytes);
 		u64 frame = mc.mc_rbp;
 		const u64 low = mc.mc_rsp;
