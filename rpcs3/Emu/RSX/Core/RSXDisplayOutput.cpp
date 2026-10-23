@@ -38,15 +38,14 @@ namespace rsx
 			return;
 		}
 
-		if (type != video_renderer::opengl ||
-			m_frame->supports_opengl())
+		if (m_frame->renderer() == type)
 		{
-			// Reuse the same frame
+			// Same backend (e.g. only the adapter changed). Reuse the same frame
 			m_frame->reset();
 			return;
 		}
 
-		// Switching to OpenGL from another renderer. We have to close and reopen the game window
+		// The window is set up for a specific backend. Some platforms cannot share it between APIs, so close and reopen it
 		GSFrameBase* frame = nullptr;
 		Emu.BlockingCallFromMainThread([&]()
 		{

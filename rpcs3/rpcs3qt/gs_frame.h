@@ -55,7 +55,7 @@ public:
 	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
 
-	video_renderer renderer() const { return m_renderer; };
+	video_renderer renderer() const override { return m_renderer; };
 
 	void ignore_stop_events() { m_ignore_stop_events = true; }
 
@@ -83,9 +83,6 @@ public:
 	void take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
 
 	void update_title(double fps = 0.0) override;
-
-	// Properties
-	bool supports_opengl() const override { return false; }
 
 protected:
 	video_renderer m_renderer;
