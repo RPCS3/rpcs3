@@ -56,8 +56,8 @@ namespace rsx
 		}
 
 		RSX(ctx)->reset();
-		RSX(ctx)->on_frame_end(arg);
-		RSX(ctx)->request_emu_flip(arg);
+		RSX(ctx)->on_frame_end(ctx, arg);
+		RSX(ctx)->request_emu_flip(ctx, arg);
 		vm::_ptr<atomic_t<u128>>(ctx->fw.label_addr + 0x10)->store(u128{});
 	}
 

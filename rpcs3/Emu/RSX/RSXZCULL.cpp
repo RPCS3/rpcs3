@@ -172,6 +172,15 @@ namespace rsx
 			}
 		}
 
+		void ZCULL_control::on_context_switch(class ::rsx::thread* ptimer)
+		{
+			if (host_queries_active)
+			{
+				// The incoming context's state restarts the queries if it needs them
+				set_active(ptimer, false, false);
+			}
+		}
+
 		void ZCULL_control::set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue)
 		{
 			if (state != unit_enabled)

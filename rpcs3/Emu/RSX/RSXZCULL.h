@@ -213,6 +213,9 @@ namespace rsx
 			// Draw call notification
 			void on_draw();
 
+			// The bound context is about to change. The active query counts the outgoing context's draws, so it ends here.
+			void on_context_switch(class ::rsx::thread* ptimer);
+
 			// Sync hint notification
 			void on_sync_hint(sync_hint_payload_t payload);
 

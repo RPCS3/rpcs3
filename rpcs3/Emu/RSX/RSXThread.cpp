@@ -1152,6 +1152,8 @@ namespace rsx
 				end_conditional_rendering();
 			}
 
+			zcull_ctrl->on_context_switch(this);
+
 			save_fifo_channel(m_ctx->fifo);
 		}
 
@@ -1178,6 +1180,12 @@ namespace rsx
 
 		// The backend's bound state belonged to the previous context
 		ctx->mark_all_dirty();
+
+		// ZCULL runs on the incoming context's registers. Not created yet when the thread binds its first context.
+		if (zcull_ctrl)
+		{
+			check_zcull_status(false);
+		}
 	}
 
 	u64 thread::timestamp()
@@ -1237,6 +1245,20 @@ namespace rsx
 			// lv2 freed one of several contexts
 			eng_interrupt_mask.clear(rsx::context_free_interrupt);
 			free_stale_contexts();
+		}
+
+		// A guest flip queued by lv2 presents from its own context's display buffers
+		if (const u32 id = m_display.pending_flip_context(); id != umax && id != m_ctx->id())
+		{
+			if (!find_context(id))
+			{
+				// Freed before it could present
+				m_display.discard_pending_flip();
+			}
+			else if (can_switch_context())
+			{
+				bind_context(id);
+			}
 		}
 	}
 
@@ -2144,7 +2166,7 @@ namespace rsx
 		return performance_counters.approximate_load;
 	}
 
-	void thread::on_frame_end(u32 buffer, bool forced)
+	void thread::on_frame_end(context* ctx, u32 buffer, bool forced)
 	{
 		bool pause_emulator = false;
 
@@ -2214,7 +2236,7 @@ namespace rsx
 		}
 
 		// Save current state for the next flip
-		m_display.queue_frame(buffer);
+		m_display.queue_frame(ctx, buffer);
 
 		if (!forced) [[likely]]
 		{
@@ -2222,17 +2244,17 @@ namespace rsx
 			{
 				// Try to enable FIFO optimizations
 				// Only rarely useful for some games like RE4
-				m_flattener.evaluate_performance(m_ctx->stats.draw_calls);
+				m_flattener.evaluate_performance(ctx->stats.draw_calls);
 			}
 
 			if (g_cfg.video.frame_skip_enabled)
 			{
-				m_ctx->frame_skip.skip_frame_ctr++;
+				ctx->frame_skip.skip_frame_ctr++;
 
-				if (m_ctx->frame_skip.skip_frame_ctr >= g_cfg.video.consecutive_frames_to_draw)
-					m_ctx->frame_skip.skip_frame_ctr = -g_cfg.video.consecutive_frames_to_skip;
+				if (ctx->frame_skip.skip_frame_ctr >= g_cfg.video.consecutive_frames_to_draw)
+					ctx->frame_skip.skip_frame_ctr = -g_cfg.video.consecutive_frames_to_skip;
 
-				m_ctx->frame_skip.skip_current_frame = (m_ctx->frame_skip.skip_frame_ctr < 0);
+				ctx->frame_skip.skip_current_frame = (ctx->frame_skip.skip_frame_ctr < 0);
 			}
 		}
 		else
@@ -2256,7 +2278,7 @@ namespace rsx
 		}
 
 		// Reset current stats
-		m_ctx->stats = {};
+		ctx->stats = {};
 		m_profiler.enabled = !!g_cfg.video.debug_overlay;
 	}
 

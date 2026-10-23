@@ -186,7 +186,9 @@ namespace vk
 		m_async_command_queue.clear();
 		m_next_cb_index = 0;
 		m_current_cb = nullptr;
+		m_last_used_cb = nullptr;
 		m_sync_label = nullptr;
+		m_sync_required = false; // Recording can be cut short by a device loss
 		m_command_pool.destroy();
 		m_events_pool.clear();
 		m_semaphore_pool.clear();
