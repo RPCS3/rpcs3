@@ -16,6 +16,7 @@
 #include "vkutils/scratch.h"
 
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Core/RSXRendererFactory.h"
 #include "Emu/RSX/Host/MM.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
@@ -911,12 +912,16 @@ std::string VKGSRender::logical_id() const
 
 std::string VKGSRender::configured_logical_id() const
 {
-	if (g_cfg.video.renderer != video_renderer::vulkan)
+	if (rsx::resolve_render_backend_type(g_cfg.video.renderer) != video_renderer::vulkan)
 	{
 		return "";
 	}
 
-	return "Vulkan | " + g_cfg.video.vk.adapter.to_string();
+	// An empty adapter selects the default GPU, which is the one in use
+	const std::string adapter = g_cfg.video.vk.adapter.to_string();
+	return adapter.empty()
+		? logical_id()
+		: "Vulkan | " + adapter;
 }
 
 bool VKGSRender::on_access_violation(rsx::context* ctx, u32 address, bool is_writing)

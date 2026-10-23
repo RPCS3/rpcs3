@@ -8,6 +8,7 @@
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Core/RSXRendererFactory.h"
 #include "Emu/RSX/Host/MM.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
@@ -65,7 +66,7 @@ GLGSRender::~GLGSRender()
 
 std::string GLGSRender::configured_logical_id() const
 {
-	return (g_cfg.video.renderer == video_renderer::opengl)
+	return (rsx::resolve_render_backend_type(g_cfg.video.renderer) == video_renderer::opengl)
 		? "OpenGL"
 		: "";
 }
