@@ -434,6 +434,12 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 
 bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 {
+	if (m_device->is_lost())
+	{
+		// A lost device presents nothing. The core replaces the renderer.
+		return false;
+	}
+
 	if (!info.emu_flip)
 	{
 		// Native UI flips are requested from the local task. Submit outstanding work first.
@@ -636,7 +642,8 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 			ensure(m_current_frame, "Could not reinitialize swapchain after VK_ERROR_OUT_OF_DATE_KHR signal!");
 			continue;
 		default:
-			vk::die_with_error(status);
+			if (vk::die_with_error(status))
+				return false;
 		}
 
 		if (should_reinitialize_swapchain)

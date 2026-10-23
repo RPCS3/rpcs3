@@ -129,7 +129,7 @@ namespace vk
 		return fault_message;
 	}
 
-	void die_with_error(VkResult error_code, std::string message, std::source_location src_loc)
+	bool die_with_error(VkResult error_code, std::string message, std::source_location src_loc)
 	{
 		std::string error_message, extra_info;
 		int severity = 0; // 0 - die, 1 - warn, 2 - nothing
@@ -140,7 +140,7 @@ namespace vk
 		case VK_EVENT_SET:
 		case VK_EVENT_RESET:
 		case VK_INCOMPLETE:
-			return;
+			return false;
 		case VK_SUBOPTIMAL_KHR:
 			error_message = "Present surface is suboptimal (VK_SUBOPTIMAL_KHR)";
 			severity = 1;
@@ -230,7 +230,8 @@ namespace vk
 		{
 		default:
 		case 0:
-			if (!ensure(g_render_device)->device_lost()) break;
+			// Already reported if the device was lost earlier
+			if (!ensure(g_render_device)->device_lost()) return true;
 
 			print_debug_markers();
 			if (!message.empty()) message += "\n\n";
@@ -239,12 +240,12 @@ namespace vk
 				fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
 
 			rsx_log.error("%sVulkan device lost, the renderer will be replaced: %s%s", message, error_message, src_loc);
-			break;
+			return true;
 		case 1:
 			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc);
-			break;
+			return false;
 		case 2:
-			break;
+			return false;
 		}
 	}
 
