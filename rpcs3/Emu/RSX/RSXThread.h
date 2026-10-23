@@ -370,6 +370,9 @@ namespace rsx
 		// Round-robin over contexts with pending FIFO commands, when the bound one goes idle or uses up its quantum
 		void schedule_contexts();
 
+		// Renderer replacement and context frees. Only safe to call at specific points.
+		void do_context_management();
+
 		// Scheduling quantum. Unit is in local-task ticks
 		static constexpr u32 context_quantum_ticks = 16;
 
