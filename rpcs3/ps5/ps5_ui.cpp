@@ -468,7 +468,27 @@ namespace rsx::overlays::ps5ui
 
 	std::span<const settings_entry> settings_table()
 	{
+#if PS5_GPL3_FRAME_GENERATION
 		return c_settings_table;
+#else
+		// A build without Lossless Scaling's and MihawkGen's frame generation (the
+		// one that can be shared, VKFrameGenNone.cpp): not their settings, nor
+		// the choice between them and the built-in one
+		static const std::vector<settings_entry> table = []
+		{
+			std::vector<settings_entry> kept;
+			for (const settings_entry& entry : c_settings_table)
+			{
+				if (entry.type != emu_settings_type::FrameGenerationMethod && entry.type != emu_settings_type::FrameGenerationFlowScale &&
+					entry.type != emu_settings_type::FrameGenerationRepair && entry.type != emu_settings_type::FrameGenerationMihawkAssist)
+				{
+					kept.push_back(entry);
+				}
+			}
+			return kept;
+		}();
+		return table;
+#endif
 	}
 
 	// An entry's section in the config ("Video/Performance Overlay") and name

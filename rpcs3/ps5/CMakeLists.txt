@@ -62,3 +62,6 @@ target_compile_options(rpcs3_ps5 PRIVATE "SHELL:-include ${PS5_VOLK_DIR}/volk.h"
 # The unit built with exceptions: std::terminate's report rethrows the
 # exception for its message (ps5_terminate.cpp)
 set_source_files_properties(ps5_terminate.cpp PROPERTIES COMPILE_OPTIONS "-fexceptions")
+# Lossless Scaling's and MihawkGen's frame generation in this build or not
+# (PS5_GPL3_FRAME_GENERATION, ../Emu/CMakeLists.txt): the settings offer them only if so
+set_property(SOURCE ps5_ui.cpp APPEND PROPERTY COMPILE_DEFINITIONS PS5_GPL3_FRAME_GENERATION=${PS5_GPL3_FRAME_GENERATION_VALUE})

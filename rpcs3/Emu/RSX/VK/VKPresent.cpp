@@ -1098,8 +1098,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			// Lossless Scaling's or MihawkGen's frame generation when the setting
 			// asks for it and it runs (VKFrameGenLSFG.h, VKFrameGenMihawk.h),
 			// else the built-in one; one not fed this frame forgets its last, to
-			// start again when used
-			const u32 method = g_cfg.video.frame_generation_method;
+			// start again when used. A build without them (the one that can be
+			// shared, VKFrameGenNone.cpp) has only the built-in one
+			const u32 method = PS5_GPL3_FRAME_GENERATION ? g_cfg.video.frame_generation_method.get() : 0;
 			const bool lossless = method == 1 && !(m_lsfg_generator && m_lsfg_generator->failed());
 			const bool mihawk = method == 2 && !(m_mihawk_generator && m_mihawk_generator->failed());
 			if (lossless && !m_lsfg_generator)
