@@ -65,6 +65,12 @@ namespace rsx
 					return;
 				}
 
+				if (ctx->fw.free_requested)
+				{
+					// lv2 waits for the context to be freed, which only happens once this method returns
+					break;
+				}
+
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
 					const u64 current = get_system_time();

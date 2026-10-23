@@ -79,7 +79,8 @@ namespace rsx
 				sync_get();
 				invalidate_cache();
 
-				while (read_put() == m_fifo_pos && !Emu.IsStopped())
+				// NOTE: lv2 waits for a freed context to go away, which only happens once this command returns
+				while (read_put() == m_fifo_pos && !Emu.IsStopped() && !m_thread->get_context()->fw.free_requested)
 				{
 					m_thread->cpu_wait({});
 				}

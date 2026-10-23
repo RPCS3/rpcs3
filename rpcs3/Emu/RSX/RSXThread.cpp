@@ -778,6 +778,8 @@ namespace rsx
 		// Wait for startup (TODO)
 		while (!rsx_thread_running || Emu.IsPausedOrReady())
 		{
+			do_context_management();
+
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
 
@@ -893,6 +895,8 @@ namespace rsx
 			// If something is going on in the backend that requires an update, set the interrupt bit explicitly.
 			if ((m_cycles_counter++ & 63) == 0 || eng_interrupt_mask)
 			{
+				do_context_management();
+
 				// Execute backend-local tasks first
 				do_local_task(performance_counters.state);
 
@@ -1214,10 +1218,11 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	void thread::do_local_task(FIFO::state state)
+	void thread::do_context_management()
 	{
-		// Check if we need to replace the backend
-		if (state != FIFO::state::lock_wait)
+		// Check if we need to replace the backend.
+		// NOTE: A draw spans several commands. The new backend would not have seen its start.
+		if (!m_ctx->in_begin_end)
 		{
 			if (const bool device_lost = m_renderer->check_device_status() != device_status::ok;
 				device_lost || m_renderer_switch_requested)
@@ -1227,6 +1232,16 @@ namespace rsx
 			}
 		}
 
+		if (eng_interrupt_mask & rsx::context_free_interrupt)
+		{
+			// lv2 freed one of several contexts
+			eng_interrupt_mask.clear(rsx::context_free_interrupt);
+			free_stale_contexts();
+		}
+	}
+
+	void thread::do_local_task(FIFO::state state)
+	{
 		if (!m_renderer->on_local_task(state))
 		{
 			// The backend is busy and cannot service the rest of the task right now
@@ -1287,9 +1302,6 @@ namespace rsx
 					channel.ret_addr = RSX_CALL_STACK_EMPTY;
 					channel.restore_point = channel.get;
 				});
-
-				// lv2 freed one of several contexts
-				free_stale_contexts();
 
 				eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
@@ -1385,7 +1397,7 @@ namespace rsx
 		ensure(!is_current_thread());
 
 		ensure(find_context(id))->fw.free_requested = true;
-		eng_interrupt_mask |= rsx::dma_control_interrupt;
+		eng_interrupt_mask |= rsx::context_free_interrupt;
 
 		while (find_context(id) && !is_stopped())
 		{
