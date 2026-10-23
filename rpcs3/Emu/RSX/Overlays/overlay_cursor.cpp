@@ -8,7 +8,6 @@
 
 namespace rsx
 {
-
 	namespace overlays
 	{
 		cursor_item::cursor_item()

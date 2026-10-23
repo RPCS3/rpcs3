@@ -62,8 +62,8 @@ namespace rsx
 		bool two_sided_stencil_test_enabled = false;
 
 		// Only decoded while the stencil test is enabled. The back face is only decoded for two-sided stencil.
-		stencil_face_state front;
-		stencil_face_state back;
+		stencil_face_state front{};
+		stencil_face_state back{};
 
 		bool operator==(const depth_stencil_state&) const = default;
 	};
@@ -251,24 +251,24 @@ namespace rsx
 			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier | constants | fragment_texture_env,
 		};
 
-		bitmask_t<group> dirty;
+		bitmask_t<group> dirty{};
 
 		// Groups whose source registers changed since they were last decoded. Raised through draw_state_signals.
-		bitmask_t<group> pending;
+		bitmask_t<group> pending{};
 
-		raster_state raster;
-		depth_stencil_state depth_stencil;
-		blend_state blend;
-		multisample_state multisample;
-		viewport_state viewport;
-		input_assembly_state input_assembly;
-		stipple_state stipple;
-		fragment_env_state fragment_env;
+		raster_state raster{};
+		depth_stencil_state depth_stencil{};
+		blend_state blend{};
+		multisample_state multisample{};
+		viewport_state viewport{};
+		input_assembly_state input_assembly{};
+		stipple_state stipple{};
+		fragment_env_state fragment_env{};
 
 		// Resolved by the GRAPH engine when the framebuffer is bound, not decoded
-		scissor_state scissor;
+		scissor_state scissor{};
 
 		// Not a group: decoded per clear command
-		clear_state clear;
+		clear_state clear{};
 	};
 }
