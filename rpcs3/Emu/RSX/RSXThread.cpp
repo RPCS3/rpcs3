@@ -544,11 +544,30 @@ namespace rsx
 		{
 			rsx::mm_flush(address);
 
-			bool handled = false;
-			for_each_context([&](context* ctx)
+			const auto handle_fault = [&]()
 			{
-				handled |= m_renderer->on_access_violation(ctx, address, is_writing);
-			});
+				bool handled = false;
+				if (m_renderer)
+				{
+					for_each_context([&](context* ctx)
+					{
+						handled |= m_renderer->on_access_violation(ctx, address, is_writing);
+					});
+				}
+				return handled;
+			};
+
+			bool handled = false;
+			if (is_current_thread())
+			{
+				// This thread is the only writer. It can fault while releasing resources and must not wait on itself.
+				handled = handle_fault();
+			}
+			else
+			{
+				reader_lock lock(m_renderer_lock);
+				handled = handle_fault();
+			}
 
 			return handled || zcull_ctrl->on_access_violation(address);
 		};
@@ -974,12 +993,23 @@ namespace rsx
 
 		release_backend_resources();
 		m_renderer->on_shutdown();
-		m_renderer.reset();
+
+		// NOTE: Do not hold the lock across the window or renderer setup. The window is replaced on the main thread.
+		{
+			std::lock_guard lock(m_renderer_lock);
+			m_renderer.reset();
+		}
 
 		// Prep the game window for the incoming renderer.
 		m_display_out.prepare_game_window(g_cfg.video.renderer);
 
-		m_renderer = make_render_backend(g_cfg.video.renderer, m_ctx, &m_display_out);
+		// Replace the renderer under lock
+		auto renderer = make_render_backend(g_cfg.video.renderer, m_ctx, &m_display_out);
+		{
+			std::lock_guard lock(m_renderer_lock);
+			m_renderer = std::move(renderer);
+		}
+
 		m_renderer_info = m_renderer->logical_id();
 		m_renderer->on_init();
 		create_backend_resources();
@@ -1004,7 +1034,7 @@ namespace rsx
 
 	void thread::create_backend_resources()
 	{
-		for_each_context([this](context* ctx)
+		for_each_context_exclusive([this](context* ctx)
 		{
 			ctx->resources = m_renderer->create_context_resources(ctx);
 		});
@@ -1012,7 +1042,7 @@ namespace rsx
 
 	void thread::release_backend_resources()
 	{
-		for_each_context([this](context* ctx)
+		for_each_context_exclusive([this](context* ctx)
 		{
 			release_context_resources(ctx);
 		});
@@ -1020,6 +1050,7 @@ namespace rsx
 
 	void thread::release_context_resources(context* ctx)
 	{
+		// NOTE: The caller holds m_renderer_lock
 		if (!ctx->resources)
 		{
 			return;
@@ -1029,16 +1060,16 @@ namespace rsx
 		ctx->resources.reset();
 	}
 
-	void thread::lock_context_table()
+	void thread::lock_exclusive(shared_mutex& mutex)
 	{
 		if (!is_current_thread())
 		{
-			m_contexts_lock.lock();
+			mutex.lock();
 			return;
 		}
 
 		// RSX thread should still run management during lock wait to avoid deadlocks.
-		while (!m_contexts_lock.try_lock())
+		while (!mutex.try_lock())
 		{
 			do_local_task(rsx::FIFO::state::lock_wait);
 		}
@@ -1049,7 +1080,7 @@ namespace rsx
 		auto ctx = std::make_unique<context>(id, this);
 		context* result = ctx.get();
 
-		lock_context_table();
+		lock_exclusive(m_contexts_lock);
 		const bool inserted = m_contexts.emplace(id, std::move(ctx)).second;
 		m_context_count = ::size32(m_contexts);
 		m_contexts_lock.unlock();
@@ -1070,11 +1101,13 @@ namespace rsx
 		ensure(ctx != m_ctx);
 
 		// Its caches can still protect pages: release them while faults can still find the context.
-		// NOTE: Do not do this under the lock. The release itself can fault on this thread.
+		// NOTE: Do not do this under the context table lock. The release itself can fault on this thread.
 		// flush_guest_data(ctx); // FIXME: This would require all contexts to flush their caches
+		lock_exclusive(m_renderer_lock);
 		release_context_resources(ctx);
+		m_renderer_lock.unlock();
 
-		lock_context_table();
+		lock_exclusive(m_contexts_lock);
 		m_contexts.erase(id);
 		m_context_count = ::size32(m_contexts);
 		m_contexts_lock.unlock();
@@ -1123,7 +1156,9 @@ namespace rsx
 			if (!ctx->resources && is_initialized)
 			{
 				// Created by lv2 on another thread
+				lock_exclusive(m_renderer_lock);
 				ctx->resources = m_renderer->create_context_resources(ctx);
+				m_renderer_lock.unlock();
 			}
 
 			m_renderer->bind_context(ctx);
@@ -2217,6 +2252,16 @@ namespace rsx
 	{
 		m_renderer_switch_requested = true;
 		raise_backend_interrupt();
+	}
+
+	void thread::notify_tile_unbound(u32 tile)
+	{
+		reader_lock lock(m_renderer_lock);
+
+		if (m_renderer)
+		{
+			m_renderer->notify_tile_unbound(tile);
+		}
 	}
 
 } // namespace rsx
