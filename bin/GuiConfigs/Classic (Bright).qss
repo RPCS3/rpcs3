@@ -147,6 +147,14 @@ QLabel#l_controller {
 	color: #fff;
 }
 
+/* Screenshot Manager */
+#screenshot_flow_widget #flow_widget_content { background: transparent; }
+#screenshot_item { background: transparent; }
+#screenshot_item[selected=\"true\"] { background: #0078D7; }
+#screenshot_item:focus { background: #0078D7; }
+#screenshot_item:hover { background: #008cff; }
+#screenshot_item:hover:focus { background: #0078D7; }
+
 /* Top menu bar (Workaround for transparent menus in Qt 6.7.3) */
 QMenu {
 	color: #000;
