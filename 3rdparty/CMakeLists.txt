@@ -350,7 +350,22 @@ endif()
 add_subdirectory(llvm EXCLUDE_FROM_ALL)
 
 # WOLFSSL
-add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+if(PS5)
+	# PS5: RPCN's TLS (and libcurl's) is wolfSSL, GPL-3.0-or-later since 5.7, and a
+	# title with it in cannot be shared. Without RPCN, ../rpcs3/ps5/no-wolfssl
+	# gives the part of its interface RPCN's client calls, failing at once
+	# (RPCN stays offline), and libcurl has no TLS
+	option(PS5_RPCN "RPCN, with wolfSSL (GPL-3.0-or-later) for its TLS" ON)
+endif()
+if(PS5 AND NOT PS5_RPCN)
+	add_library(wolfssl STATIC ${CMAKE_SOURCE_DIR}/rpcs3/ps5/no-wolfssl/no_wolfssl.cpp)
+	target_include_directories(wolfssl PUBLIC ${CMAKE_SOURCE_DIR}/rpcs3/ps5/no-wolfssl/include)
+	# Its own name: the title links every archive the build leaves, and a check of
+	# what in it is GPL-3.0 (PS5_RPCS3Title's ps5/tools/shareable.py) knows wolfSSL's
+	set_target_properties(wolfssl PROPERTIES OUTPUT_NAME no_wolfssl)
+else()
+	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
+endif()
 
 # CURL
 add_subdirectory(curl EXCLUDE_FROM_ALL)
