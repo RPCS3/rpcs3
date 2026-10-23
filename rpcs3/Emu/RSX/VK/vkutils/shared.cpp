@@ -12,23 +12,33 @@ namespace vk
 {
 	extern void print_debug_markers();
 
-	// Track the timestamp of the last GPU reset if any.
+	// Track the timestamp of the last GPU reset if any to avoid an endless reset loop
+	static atomic_t<bool> s_allow_gpu_recovery = true;
 	static atomic_t<u64> s_last_device_reset = 0ull;
 	constexpr u64 c_min_time_between_resets_us = 10 * 1000'000ull;
 
 	static bool can_device_recover()
 	{
-		// Avoid endless reset loop
 		const u64 now = get_system_time();
 		const u64 prev = s_last_device_reset.exchange(now);
 
-		if (prev && (now - prev) < c_min_time_between_resets_us)
+		if (!s_allow_gpu_recovery)
 		{
 			return false;
 		}
 
-		s_last_device_reset = now;
-		return true;
+		return !prev || (now - prev) >= c_min_time_between_resets_us;
+	}
+
+	void arm_device_loss_protection()
+	{
+		s_allow_gpu_recovery = true;
+		s_last_device_reset = get_system_time();
+	}
+
+	void disable_device_loss_protection()
+	{
+		s_allow_gpu_recovery = false;
 	}
 
 	static std::string retrieve_device_fault_info()
@@ -220,7 +230,7 @@ namespace vk
 		{
 		default:
 		case 0:
-			if (!g_render_device->device_lost()) break;
+			if (!ensure(g_render_device)->device_lost()) break;
 
 			print_debug_markers();
 			if (!message.empty()) message += "\n\n";

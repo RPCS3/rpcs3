@@ -1273,6 +1273,9 @@ void VKGSRender::bind_viewport()
 
 void VKGSRender::on_init()
 {
+	// Disable automatic backend reset if we crash during initialization.
+	vk::disable_device_loss_protection();
+
 	if (m_device == VK_NULL_HANDLE)
 	{
 		fmt::throw_exception("No Vulkan device was created");
@@ -1312,6 +1315,9 @@ void VKGSRender::on_init()
 	{
 		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 	}
+
+	// If we survived init - loading shaders, etc, then we can re-enable protection.
+	vk::arm_device_loss_protection();
 }
 
 std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx::context* ctx)

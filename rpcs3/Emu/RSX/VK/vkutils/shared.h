@@ -10,6 +10,9 @@ namespace vk
 
 	void die_with_error(VkResult error_code, std::string message = {}, std::source_location src_loc = std::source_location::current());
 
+	void arm_device_loss_protection();
+	void disable_device_loss_protection();
+
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 	                                       u64 srcObject, usz location, s32 msgCode,
 	                                       const char *pLayerPrefix, const char *pMsg, void *pUserData);
