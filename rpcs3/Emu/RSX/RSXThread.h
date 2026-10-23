@@ -300,7 +300,8 @@ namespace rsx
 		// NV4097_CLEAR_SURFACE, forwarded to the renderer core
 		void clear_surface(u32 arg);
 
-		void on_frame_end(u32 buffer, bool forced = false);
+		// The frame of the given context ended. lv2 calls this from the PPU, for a context that need not be bound.
+		void on_frame_end(context* ctx, u32 buffer, bool forced = false);
 		void flip(const display_flip_info_t& info) { m_display.flip(info); }
 		u64 timestamp();
 
@@ -423,7 +424,7 @@ namespace rsx
 		}
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
-		bool request_emu_flip(u32 buffer) { return m_display.request_emu_flip(buffer); }
+		bool request_emu_flip(context* ctx, u32 buffer) { return m_display.request_emu_flip(ctx->id(), buffer); }
 
 		void pause();
 		void unpause();
