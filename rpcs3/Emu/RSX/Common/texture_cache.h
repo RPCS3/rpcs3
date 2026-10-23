@@ -3096,7 +3096,7 @@ namespace rsx
 				{
 				case rsx::texture_dimension_extended::texture_dimension_3d:
 				case rsx::texture_dimension_extended::texture_dimension_cubemap:
-					scale.depth /= attributes.depth;
+					scale.depth /= tex.depth();
 					[[ fallthrough ]];
 				case rsx::texture_dimension_extended::texture_dimension_2d:
 					scale.height /= attributes.height;
