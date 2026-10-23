@@ -875,7 +875,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 		}
 
-		if (!render->request_emu_flip(flip_idx))
+		if (!render->request_emu_flip(ctx, flip_idx))
 		{
 			if (auto cpu = get_current_cpu_thread())
 			{
@@ -895,7 +895,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].lastQueuedBufferId = static_cast<u32>(a4);
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
-		render->on_frame_end(static_cast<u32>(a4));
+		render->on_frame_end(ctx, static_cast<u32>(a4));
 		if (!render->send_event(ctx, 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
 		{
 			break;

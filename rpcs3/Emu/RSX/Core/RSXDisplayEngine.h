@@ -17,6 +17,7 @@ namespace rsx
 {
 	class thread;
 	class display_output;
+	struct context;
 
 	// Display management (flip, vblank and frame-pacing) state of RSX.
 	class display_engine
@@ -30,13 +31,19 @@ namespace rsx
 			any = emu_requested | native_ui
 		};
 
+		struct async_flip_request_t
+		{
+			atomic_bitmask_t<flip_request> requested{};
+			u32 context_id = 0;
+			u8 buffer = 0;
+		};
+
 	private:
 		thread* m_pump = nullptr;
 		display_output* m_output = nullptr;
 
 		// Flip requests
-		atomic_bitmask_t<flip_request> async_flip_requested{};
-		u8 async_flip_buffer{ 0 };
+		async_flip_request_t m_async_flip_request{};
 		display_flip_info_t m_queued_flip{};
 
 		// Guest-visible flip state
@@ -77,14 +84,20 @@ namespace rsx
 		// Savestates: pause the emulator after this many flips
 		void pause_after_flips(u32 count) { m_pause_after_x_flips = count; }
 
-		// Guest flip. Flips immediately when called on the RSX thread (command buffer), otherwise queues it for the RSX thread (lv2 syscall).
-		bool request_emu_flip(u32 buffer);
+		// Guest flip of the given context. Flips immediately when called on the RSX thread enqueues it otherwise.
+		bool request_emu_flip(u32 ctx_id, u32 buffer);
 
-		// RSX thread: runs the guest flip queued by request_emu_flip if requested
+		// RSX thread: runs the guest flip queued by request_emu_flip if requested, once its context is bound
 		void handle_pending_flip();
 
-		void request_native_ui_flip() { async_flip_requested |= flip_request::native_ui; }
-		bool has_flip_request(flip_request request) const { return async_flip_requested & request; }
+		// The context id a queued guest flip waits for, or umax if there is none
+		u32 pending_flip_context() const { return m_async_flip_request.requested.test(flip_request::emu_requested) ? m_async_flip_request.context_id : umax; }
+
+		// Drops a queued guest flip whose context got nuked
+		void discard_pending_flip() { m_async_flip_request.requested.clear(flip_request::emu_requested); }
+
+		void request_native_ui_flip() { m_async_flip_request.requested |= flip_request::native_ui; }
+		bool has_flip_request(flip_request request) const { return m_async_flip_request.requested & request; }
 
 		// A flip command reached the FIFO. A vsync-held flip still pending sends one more flip notification when it presents.
 		void on_flip_queued()
@@ -103,8 +116,8 @@ namespace rsx
 		u64 get_last_host_flip_timestamp() const { return last_host_flip_timestamp; }
 		u64 get_vblank_count() const { return vblank_count; }
 
-		// Records the finished frame (buffer, stats, frame-skip flag) for the next guest flip
-		void queue_frame(u32 buffer);
+		// Records the finished frame of a context for the next guest flip
+		void queue_frame(const context* ctx, u32 buffer);
 
 		// Presents a frame through the renderer. Guest flips and the native UI both end here.
 		void flip(const display_flip_info_t& info);
