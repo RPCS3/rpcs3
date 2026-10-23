@@ -184,7 +184,7 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 
 	connect(m_savestate_table, &QTableWidget::customContextMenuRequested, this, &savestate_manager_dialog::ShowSavestateTableContextMenu);
 
-	connect(m_game_combo, &QComboBox::currentTextChanged, this, [this]
+	connect(m_game_combo, &QComboBox::currentIndexChanged, this, [this]
 	{
 		PopulateSavestateTable();
 	});
@@ -197,12 +197,17 @@ savestate_manager_dialog::savestate_manager_dialog(std::shared_ptr<gui_settings>
 		{
 			return;
 		}
-		QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), static_cast<int>(gui::savestate_game_list_columns::name));
+
+		QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), static_cast<int>(gui::savestate_game_list_columns::icon));
 		if (!item)
 		{
 			return;
 		}
-		m_game_combo->setCurrentText(item->text());
+
+		if (const int index = m_game_combo->findData(item->data(GameUserRole::GameIndex)); index >= 0)
+		{
+			m_game_combo->setCurrentIndex(index);
+		}
 	});
 
 	connect(this, &savestate_manager_dialog::GameIconReady, this, [this](int index, const QPixmap& pixmap)

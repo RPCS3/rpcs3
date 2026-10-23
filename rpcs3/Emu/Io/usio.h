@@ -41,6 +41,7 @@ private:
 		usz card_index = 0;
 		s8 vital_sensors[2] = {0, 0};
 		s8 wheel_rotation = 0;
+		std::array<bool, 4> taiko_hit_already = {}; // Status of taiko_hit_side_left, taiko_hit_center_right, taiko_hit_side_right, and taiko_hit_center_left from last polling
 	};
 
 	std::array<io_status, 2> m_io_status;

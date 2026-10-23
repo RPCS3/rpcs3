@@ -233,6 +233,12 @@ namespace gl
 			work_kernel = fmt::replace_all(work_kernel, "bswap_u32(value)", "value", 1);
 		}
 
+		if (gl::emulate_extended_depth_range())
+		{
+			// Float depth surfaces hold the emulated encoding (half the bit pattern)
+			work_kernel = fmt::replace_all(work_kernel, "f32_to_d24f(depth)", "f32_to_d24f(depth << 1)");
+		}
+
 		cs_shuffle_base::build("");
 	}
 
@@ -288,6 +294,11 @@ namespace gl
 		if constexpr (!SwapBytes)
 		{
 			work_kernel = fmt::replace_all(work_kernel, "value = bswap_u32(value)", "// value = bswap_u32(value)", 1);
+		}
+
+		if (gl::emulate_extended_depth_range())
+		{
+			work_kernel = fmt::replace_all(work_kernel, "d24f_to_f32(depth)", "(d24f_to_f32(depth) >> 1)");
 		}
 
 		cs_shuffle_base::build("");

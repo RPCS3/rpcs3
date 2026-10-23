@@ -1,15 +1,14 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
-
-#include <rtmidi_c.h>
+#include "util/midi_types.h"
 
 class usb_device_rb3_midi_keyboard : public usb_device_emulated
 {
 private:
 	usz response_pos = 0;
 	bool buttons_enabled = false;
-	RtMidiInPtr midi_in{};
+	midi_ptr midi_in{};
 
 	// button states
 	// TODO: emulate velocity

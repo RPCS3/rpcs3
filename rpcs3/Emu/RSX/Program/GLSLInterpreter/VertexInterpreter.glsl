@@ -349,7 +349,9 @@ bool dynamic_branch()
 	if (d0.cond == 0) return false;
 
 	return any(test_cond(get_cond(), d0.cond));
-}
+})"
+
+R"(
 
 vec4 read_src(const in int index)
 {

@@ -219,7 +219,9 @@ void VKGSRender::update_draw_state()
 		const auto polygon_offset_scale = rsx::method_registers.poly_offset_scale();
 		auto polygon_offset_bias = rsx::method_registers.poly_offset_bias();
 
-		if (m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT && is_NVIDIA(vk::get_chip_family()))
+		if (!m_draw_fbo->attachments.empty() &&
+			m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT &&
+			is_NVIDIA(vk::get_chip_family()))
 		{
 			// Empirically derived to be 0.5 * (2^24 - 1) for fixed type on Pascal. The same seems to apply for other NVIDIA GPUs.
 			// RSX seems to be using 2^24 - 1 instead making the biases twice as large when using fixed type Z-buffer on NVIDIA.
@@ -253,8 +255,14 @@ void VKGSRender::update_draw_state()
 			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
 
-		if (!m_device->get_unrestricted_depth_range_support())
+		if (!backend_config.supports_extended_depth_range)
 		{
+			if (rsx::method_registers.depth_bounds_test_enabled() && requires_depth_range_emulation()) [[ unlikely ]]
+			{
+				bounds_min = rsx::encode_emulated_depth(bounds_min);
+				bounds_max = rsx::encode_emulated_depth(bounds_max);
+			}
+
 			bounds_min = std::clamp(bounds_min, 0.f, 1.f);
 			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
 		}
@@ -1255,7 +1263,6 @@ void VKGSRender::begin()
 	rsx::thread::begin();
 
 	if (skip_current_frame ||
-		swapchain_unavailable ||
 		cond_render_ctrl.disable_rendering())
 	{
 		return;
@@ -1273,7 +1280,7 @@ void VKGSRender::begin()
 
 void VKGSRender::end()
 {
-	if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || swapchain_unavailable || cond_render_ctrl.disable_rendering())
+	if (should_skip_draw())
 	{
 		execute_nop_draw();
 		rsx::thread::end();

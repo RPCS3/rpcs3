@@ -404,8 +404,28 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	g_tls_log_control(fmt, 0);
 
 	// Get text, extract va_args
-	thread_local std::string text;
-	thread_local std::vector<u64> args;
+	// exit() destroys the thread_local objects of the exiting thread before it runs static
+	// destructors (macOS dyld and glibc both do this), and static destructors may still log
+	// (e.g. sdl_instance). Fall back to local buffers once the thread_local ones are gone.
+	thread_local bool tls_destroyed = false;
+
+	struct tls_buffers
+	{
+		std::string text;
+		std::vector<u64> args;
+
+		~tls_buffers()
+		{
+			tls_destroyed = true;
+		}
+	};
+
+	thread_local tls_buffers tls;
+	std::string local_text;
+	std::vector<u64> local_args;
+
+	std::string& text = tls_destroyed ? local_text : tls.text;
+	std::vector<u64>& args = tls_destroyed ? local_args : tls.args;
 
 	static constexpr fmt_type_info empty_sup{};
 
@@ -785,8 +805,19 @@ logs::file_listener::file_listener(const std::string& path, u64 max_size)
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, std::string_view prefix, std::string_view _text)
 {
-	/*constinit thread_local*/ std::string text;
-	text.reserve(50000);
+	thread_local bool tls_destroyed = false;
+
+	struct tls_buffer
+	{
+		std::string text;
+		tls_buffer() { text.reserve(50000); }
+		~tls_buffer() { tls_destroyed = true; }
+	};
+
+	thread_local tls_buffer tls;
+	std::string local_text;
+	std::string& text = tls_destroyed ? local_text : tls.text;
+	text.clear();
 
 	// Used character: U+00B7 (Middle Dot)
 	switch (msg)

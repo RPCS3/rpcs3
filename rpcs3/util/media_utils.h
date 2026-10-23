@@ -67,19 +67,29 @@ namespace utils
 		void set_swap_endianness(bool swapped);
 		void clear();
 		void stop();
+		void wake_up();
 		void decode();
 		u32 set_next_index(bool next);
 
-		shared_mutex m_mtx;
-		static constexpr s32 sample_rate = 48000;
-		std::vector<u8> data;
-		atomic_t<u64> m_size = 0;
-		atomic_t<u32> track_fully_decoded{0};
-		atomic_t<u32> track_fully_consumed{0};
-		atomic_t<bool> has_error{false};
-		std::deque<std::pair<u64, u64>> timestamps_ms;
+		bool has_error() const { return m_has_error; }
+		bool track_fully_decoded() const { return m_track_fully_decoded; }
+
+		u64 size() const { return m_data.size(); }        // caller must hold data_mutex()
+		s64 get_start_time_ms(u64 read_pos);              // caller must hold data_mutex()
+		u64 read(void* dst, u64 read_pos, u64 read_size); // caller must hold data_mutex()
+
+		shared_mutex& data_mutex() { return m_data_mtx; }
 
 	private:
+		shared_mutex m_data_mtx;
+
+		static constexpr s32 sample_rate = 48000;
+		std::vector<u8> m_data;
+		atomic_t<u32> m_track_fully_decoded{0};
+		atomic_t<u32> m_track_fully_consumed{0};
+		atomic_t<bool> m_has_error{false};
+		std::deque<std::pair<u64, s64>> m_timestamps_ms;
+
 		bool m_swap_endianness = false;
 		music_selection_context m_context{};
 		std::unique_ptr<named_thread<std::function<void()>>> m_thread;

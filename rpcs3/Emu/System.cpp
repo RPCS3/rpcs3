@@ -56,6 +56,8 @@
 #include "Utilities/JIT.h"
 
 #include "Emu/IPC_socket.h"
+#include "Emu/Io/SkylanderPortalIPC.h"
+#include "Emu/Io/SkylanderPortalIPC_config.h"
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
@@ -822,6 +824,15 @@ void Emulator::Init()
 	{
 		g_fxo->init<IPC_socket::IPC_server_manager>(true);
 	}
+
+	// Load Skylanders IPC config and start server if enabled
+	g_cfg_sky_ipc.load();
+	sys_log.notice("Using Skylanders IPC config:\n%s", g_cfg_sky_ipc.to_string());
+
+	if (g_cfg_sky_ipc.get_server_enabled())
+	{
+		g_fxo->init<SkylanderPortalIPCServerManager>(true);
+	}
 }
 
 void Emulator::SetUsr(const std::string& user)
@@ -1116,7 +1127,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	m_db_config = db_config;
 
 	// Handle files and special paths inside Load unmodified
-	if (direct || !fs::is_dir(path) || fs::get_optical_raw_device(path))
+	if (direct || !fs::is_dir(path) || is_iso_file(path))
 	{
 		m_path = path;
 
@@ -4564,7 +4575,7 @@ game_boot_result Emulator::AddGame(std::string path, bool is_iso)
 	fmt::trim_back(path, fs::delim);
 
 	// Handle files directly
-	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
+	if (!fs::is_dir(path) || is_iso_file(path))
 	{
 		return AddGameToYml(path, is_iso);
 	}

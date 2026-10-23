@@ -255,6 +255,18 @@ namespace gl
 		return m_size;
 	}
 
+	void fbo::set_default_extents(const size2i& extents) const
+	{
+		DSA_CALL2(NamedFramebufferParameteri, m_id, GL_FRAMEBUFFER_DEFAULT_WIDTH, extents.width);
+		DSA_CALL2(NamedFramebufferParameteri, m_id, GL_FRAMEBUFFER_DEFAULT_HEIGHT, extents.height);
+	}
+
+	void fbo::set_default_samples(GLint samples) const
+	{
+		DSA_CALL2(NamedFramebufferParameteri, m_id, GL_FRAMEBUFFER_DEFAULT_SAMPLES, samples > 1 ? samples : 0);
+		DSA_CALL2(NamedFramebufferParameteri, m_id, GL_FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS, GL_TRUE);
+	}
+
 	bool fbo::matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const
 	{
 		for (u32 index = 0; index < 4; ++index)

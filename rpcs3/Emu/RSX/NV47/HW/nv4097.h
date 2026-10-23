@@ -69,6 +69,8 @@ namespace rsx
 
 		void set_surface_dirty_bit(context* ctx, u32 reg, u32 arg);
 
+		void set_zmin_max_control(context* ctx, u32 reg, u32 arg);
+
 		void set_surface_format(context* ctx, u32 reg, u32 arg);
 
 		void set_surface_options_dirty_bit(context* ctx, u32 reg, u32 arg);
