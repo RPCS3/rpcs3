@@ -766,7 +766,7 @@ namespace rsx::overlays
 		}
 		else
 		{
-			style_label(m_logo_text, "RPCS3", 15, f_bold, c_text);
+			style_label(m_logo_text, "Kong³", 15, f_bold, c_text);
 			place(m_logo_text, c_margin, c_bar_y);
 		}
 		const s16 logo_right = m_logo_data ? static_cast<s16>(m_logo.x + m_logo.w) : static_cast<s16>(m_logo_text.x + m_logo_text.w);
@@ -776,7 +776,7 @@ namespace rsx::overlays
 		style_label(m_intro_name, spaced("KONGATIME"), 20, f_semibold, color4f(0.12f, 0.11f, 0.11f, 1.f));
 		m_intro_name.set_pos(static_cast<s16>((virtual_width - m_intro_name.w) / 2), 0);
 		place(m_intro_name, m_intro_name.x, c_diamond_y + c_diamond_r + 52.f);
-		style_label(m_intro_print, "RPCS3 is free software, under the GNU General Public License, version 2.", 10, f_regular, color4f(0.6f, 0.63f, 0.72f, 1.f));
+		style_label(m_intro_print, "Kong³ is built on RPCS3, free software under the GNU General Public License, version 2.", 10, f_regular, color4f(0.6f, 0.63f, 0.72f, 1.f));
 		m_intro_print.set_pos(static_cast<s16>((virtual_width - m_intro_print.w) / 2), 0);
 
 		m_bar_divider.set_pos(static_cast<s16>(logo_right + 22), c_bar_y - 12);
