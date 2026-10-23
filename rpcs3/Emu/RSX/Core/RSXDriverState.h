@@ -25,7 +25,6 @@ namespace rsx
 
 		push_buffer_arrays_dirty      = (1 << 17),   // Push buffers have data written to them (immediate mode vertex buffers)
 
-
 		pipeline_config_dirty         = (1 << 20), // Generic pipeline configuration changes. Shader peek hint.
 
 		rtt_config_dirty              = (1 << 21), // Render target configuration changed

@@ -80,7 +80,6 @@ namespace rsx
 		}
 	}
 
-	//Convert decoded integer values for CONSTANT_BLEND_FACTOR into f32 array in 0-1 range
 	// Fit a aspect-correct rectangle within a frame of wxh dimensions
 	template <typename T>
 	area_base<T> convert_aspect_ratio_impl(const size2_base<T>& output_dimensions, double aspect)

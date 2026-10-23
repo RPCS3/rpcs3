@@ -257,6 +257,5 @@ namespace rsx
 				util::set_vertex_texture_dirty_bit(ctx, index);
 			}
 		};
-
 	}
 }
