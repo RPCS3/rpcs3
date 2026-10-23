@@ -474,8 +474,6 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 		id++;
 	}
 
-	rsx::context* ctx = render->create_context(id);
-
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
 	const u32 dma_address = area ? area->alloc(0x300000) : 0;
 
@@ -483,6 +481,8 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	{
 		return CELL_ENOMEM;
 	}
+
+	rsx::context* ctx = render->create_context(id);
 
 	sys_rsx.warning("sys_rsx_context_allocate(): Mapped address 0x%x", dma_address);
 
