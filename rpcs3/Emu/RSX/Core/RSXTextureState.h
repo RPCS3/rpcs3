@@ -1,9 +1,6 @@
 #pragma once
 
 #include <util/types.hpp>
-#include <array>
-#include <memory>
-#include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
 
 namespace rsx

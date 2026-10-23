@@ -64,7 +64,6 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
-
 #ifdef LLVM_AVAILABLE
 #include "llvm/Config/llvm-config.h"
 #endif

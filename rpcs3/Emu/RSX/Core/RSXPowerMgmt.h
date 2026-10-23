@@ -17,9 +17,9 @@ namespace rsx
 
 		struct pacing_target
 		{
-			u64 fps_10;     // Tenths of fps
-			bool high_rate; // Matched with the wider of the two tolerances
-			u64 yield_pct;  // Portion of the frame during which yielding is allowed
+			u64 fps_10 = 0;         // Tenths of fps
+			bool high_rate = false; // Matched with the wider of the two tolerances
+			u64 yield_pct = 0;      // Portion of the frame during which yielding is allowed
 		};
 
 		using pacing_targets = std::array<pacing_target, 4>;

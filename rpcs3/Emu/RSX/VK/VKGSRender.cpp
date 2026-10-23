@@ -902,7 +902,11 @@ VKGSRender::~VKGSRender()
 
 std::string VKGSRender::logical_id() const
 {
-	return "Vulkan | " + m_device->gpu().get_name();
+	std::string gpu_name = m_device
+		? m_device->gpu().get_name()
+		: "NULL";
+
+	return "Vulkan | " + gpu_name;
 }
 
 std::string VKGSRender::configured_logical_id() const

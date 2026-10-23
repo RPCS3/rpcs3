@@ -114,7 +114,7 @@ namespace rsx
 		class ZCULL_control
 		{
 		private:
-			occlusion_query_provider* m_provider;
+			occlusion_query_provider* m_provider = nullptr;
 
 			std::unordered_map<u32, MMIO_page_data_t> m_locked_pages[2];
 			atomic_t<bool> m_pages_accessed[2] = { false, false };
