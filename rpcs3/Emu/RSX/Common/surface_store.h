@@ -1285,7 +1285,14 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
+		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(
+			commandbuffer_type& cmd,
+			u32 texaddr,
+			u32 required_width,
+			u32 required_height,
+			u32 required_pitch,
+			u8 required_bpp,
+			rsx::surface_access access)
 		{
 			rsx::simple_array<surface_overlap_info> result;
 			rsx::simple_array<utils::pair<u32, bool>> dirty;
@@ -1432,17 +1439,35 @@ namespace rsx
 
 			if (result.size() > 1)
 			{
-				result.sort([](const auto &a, const auto &b)
+				result.sort([texaddr](const auto &a, const auto &b)
 				{
-					if (a.surface->last_use_tag == b.surface->last_use_tag)
+					// Check for the common case first. 99.99% of lookups end here.
+					if (a.surface->last_use_tag != b.surface->last_use_tag) [[ likely ]]
 					{
-						const auto area_a = a.dst_area.width * a.dst_area.height;
-						const auto area_b = b.dst_area.width * b.dst_area.height;
-
-						return area_a < area_b;
+						return a.surface->last_use_tag < b.surface->last_use_tag;
 					}
 
-					return a.surface->last_use_tag < b.surface->last_use_tag;
+					// Surfaces are aliasing. We need a tie-breaker
+					if (a.is_depth != b.is_depth &&
+						g_cfg.video.fb_aliasing_bias != framebuffer_aliasing_bias::_auto)
+					{
+						// User-defined preference for mismatched depth/color aliasing. This is the most common aliasing cause.
+						// Preferred aspect goes last.
+						const bool prefer_color = g_cfg.video.fb_aliasing_bias == framebuffer_aliasing_bias::prefer_color;
+						return prefer_color ? a.is_depth : b.is_depth;
+					}
+
+					// Check if we have a perfect match and make it go last
+					if (a.base_address == texaddr && !a.is_clipped) return false;
+					if (b.base_address == texaddr && !b.is_clipped) return true;
+
+					// Check if one of the two is able to serve the full request better than the other.
+					if (a.is_clipped != b.is_clipped) return a.is_clipped;
+
+					// Compare available area if nothing else could break the tie
+					const auto area_a = a.dst_area.width * a.dst_area.height;
+					const auto area_b = b.dst_area.width * b.dst_area.height;
+					return area_a < area_b;
 				});
 			}
 

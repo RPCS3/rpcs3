@@ -221,7 +221,7 @@ namespace vm
 
 			if (!busy) [[likely]]
 			{
-				if (vm::check_addr(begin, vm::page_readable, size)) [[likely]]
+				if (begin >= RAW_SPU_BASE_ADDR || vm::check_addr(begin, vm::page_readable, size)) [[likely]]
 				{
 					break;
 				}
@@ -1291,13 +1291,15 @@ namespace vm
 		// Fill stack guards with STACKGRD
 		if (this->flags & stack_guarded)
 		{
-			auto fill64 = [](u8* ptr, u64 data, usz count)
+			const auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
-				std::fill(ptr, ptr + count, data);
+				u64* dst = reinterpret_cast<u64*>(ptr);
+				std::fill(dst, dst + count, data);
 			};
 
-			const u32 enda = addr + size - 4096;
-			fill64(g_sudo_addr + addr, "STACKGRD"_u64, 4096 / sizeof(u64));
+			const u32 begina = addr - 4096;
+			const u32 enda = addr + size;
+			fill64(g_sudo_addr + begina, "STACKGRD"_u64, 4096 / sizeof(u64));
 			fill64(g_sudo_addr + enda, "UNDERFLO"_u64, 4096 / sizeof(u64));
 		}
 

@@ -259,11 +259,14 @@ public:
 	// input has to be [-1,1]. result will be [0,255]
 	static u16 ConvertAxis(f32 value);
 
+	// Convert analog stick angle to a value ranging from 0 to 255
+	static u8 ConvertAngleToU8(f32 angle, f32 distance_to_center);
+
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of ~4000
 	// This function assumes inX and inY is already in 0-255
-	static void ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
+	static std::tuple<f32, f32> ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
 
 	// u32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
 	u32 thumb_max = 255;
@@ -301,7 +304,7 @@ public:
 	virtual pad_capabilities get_capabilities(const std::string& /*pad_id*/);
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
-	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
+	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling, f32& angle, f32& distance_to_center) const;
 	void set_trigger_recognition_mode(trigger_recognition_mode mode) { m_trigger_recognition_mode = mode; }
 
 	virtual bool Init() { return true; }

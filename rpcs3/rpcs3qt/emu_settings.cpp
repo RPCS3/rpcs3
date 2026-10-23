@@ -1241,6 +1241,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case ghltar_handler::two_controllers: return tr("2 controllers", "GHLtar handler");
 		}
 		break;
+	case emu_settings_type::USIO:
+		switch (static_cast<usio_handler_mode>(index))
+		{
+		case usio_handler_mode::fighting_games: return tr("Fighting Games", "USIO mode");
+		case usio_handler_mode::shooter_games: return tr("Shooter Games", "USIO mode");
+		}
+		break;
 	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{

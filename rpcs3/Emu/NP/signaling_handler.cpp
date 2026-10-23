@@ -280,8 +280,6 @@ void signaling_handler::process_incoming_messages()
 		}
 
 		const auto now = steady_clock::now();
-		if (si)
-			si->time_last_msg_recvd = now;
 
 		const auto setup_ping = [&]()
 		{
@@ -299,10 +297,16 @@ void signaling_handler::process_incoming_messages()
 			queue_signaling_packet(sent_packet, si, now + REPEAT_PING_DELAY);
 		};
 
-		const auto update_rtt = [&](u64 rtt_timestamp)
+		const auto update_rtt = [&](u64 rtt_timestamp) -> bool
 		{
-			u64 timestamp_now = get_micro_timestamp(now);
-			u64 rtt = timestamp_now - rtt_timestamp;
+			const u64 timestamp_now = get_micro_timestamp(now);
+			if (rtt_timestamp > timestamp_now || timestamp_now - rtt_timestamp > std::numeric_limits<u32>::max())
+			{
+				sign_log.error("Received a signaling packet with an invalid RTT timestamp");
+				return false;
+			}
+
+			const u64 rtt = timestamp_now - rtt_timestamp;
 			si->last_rtts[(si->rtt_counters % 6)] = rtt;
 			si->rtt_counters++;
 
@@ -313,7 +317,8 @@ void signaling_handler::process_incoming_messages()
 				sum += si->last_rtts[index];
 			}
 
-			si->rtt = ::narrow<u32>(sum / num_rtts);
+			si->rtt = static_cast<u32>(sum / num_rtts);
+			return true;
 		};
 
 		switch (sp->command)
@@ -325,7 +330,8 @@ void signaling_handler::process_incoming_messages()
 			sent_packet.timestamp_sender = sp->timestamp_sender;
 			break;
 		case signal_pong:
-			update_rtt(sp->timestamp_sender);
+			if (!update_rtt(sp->timestamp_sender))
+				continue;
 			reply = false;
 			schedule_repeat = false;
 			reschedule_packet(si, signal_ping, now + 10s);
@@ -344,7 +350,8 @@ void signaling_handler::process_incoming_messages()
 			update_si_addr(si, op_addr, op_port);
 			break;
 		case signal_connect_ack:
-			update_rtt(sp->timestamp_sender);
+			if (!update_rtt(sp->timestamp_sender))
+				continue;
 			reply = true;
 			schedule_repeat = false;
 			setup_ping();
@@ -356,7 +363,8 @@ void signaling_handler::process_incoming_messages()
 			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, CELL_OK);
 			break;
 		case signal_confirm:
-			update_rtt(sp->timestamp_receiver);
+			if (!update_rtt(sp->timestamp_receiver))
+				continue;
 			reply = false;
 			schedule_repeat = false;
 			setup_ping();
@@ -380,6 +388,9 @@ void signaling_handler::process_incoming_messages()
 			break;
 		default: sign_log.error("Invalid signaling command received"); continue;
 		}
+
+		if (si)
+			si->time_last_msg_recvd = now;
 
 		if (reply)
 		{

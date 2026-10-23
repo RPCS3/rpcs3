@@ -390,16 +390,17 @@ namespace gl
 			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
 			ensure(!initialize_scratch_mem());
+			const u32 out_offset = dst_offset + static_cast<u32>(mem_info->image_size_in_bytes);
 
 			if (pack_info.swap_bytes) [[ likely ]]
 			{
 				get_compute_task<cs_fconvert_task<f32, f16, false, true>>()->run(cmd, dst, dst_offset,
-					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
+					static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
 			}
 			else
 			{
 				get_compute_task<cs_fconvert_task<f32, f16, false, false>>()->run(cmd, dst, dst_offset,
-					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_bytes));
+					static_cast<u32>(mem_info->image_size_in_bytes), out_offset);
 			}
 			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes + dst_offset);
 		}
@@ -408,16 +409,17 @@ namespace gl
 			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
 			ensure(!initialize_scratch_mem());
+			const u32 out_offset = dst_offset + static_cast<u32>(mem_info->image_size_in_bytes);
 
 			if (pack_info.swap_bytes)
 			{
 				get_compute_task<cs_shuffle_d32fx8_to_x8d24f<true>>()->run(cmd, dst, dst_offset,
-					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
+					out_offset, static_cast<u32>(mem_info->image_size_in_texels));
 			}
 			else
 			{
 				get_compute_task<cs_shuffle_d32fx8_to_x8d24f<false>>()->run(cmd, dst, dst_offset,
-					static_cast<u32>(mem_info->image_size_in_bytes), static_cast<u32>(mem_info->image_size_in_texels));
+					out_offset, static_cast<u32>(mem_info->image_size_in_texels));
 			}
 			result = reinterpret_cast<void*>(mem_info->image_size_in_bytes + dst_offset);
 		}

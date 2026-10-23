@@ -337,14 +337,18 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 		{
 			const int num_axes = SDL_GetNumJoystickAxes(joystick);
 			const int num_buttons = SDL_GetNumJoystickButtons(joystick);
+			const SDL_JoystickType joystick_type = SDL_GetJoystickType(joystick);
 
 			// The DJ Hero Turntable (VID 0x12BA, PID 0x0140) coincidentally matches the
 			// DS3 axis/button counts (16 axes, 11 buttons) but is NOT a pressure-sensitive
 			// DS3. Routing its face buttons through the pressure axes drops the green (Cross)
 			// and blue (Square) deck buttons, so exclude it and read its buttons digitally.
+			// Guitars and drums have this problem too
 			const bool is_dj_hero_turntable = info.vid == 0x12BA && info.pid == 0x0140;
+			const bool is_guitar = joystick_type == SDL_JOYSTICK_TYPE_GUITAR;
+			const bool is_drums = joystick_type == SDL_JOYSTICK_TYPE_DRUM_KIT;
 
-			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11 && !is_dj_hero_turntable;
+			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11 && !is_dj_hero_turntable && !is_guitar && !is_drums;
 
 			sdl_log.notice("DS3 device %d has %d axis and %d buttons (has_pressure_buttons=%d)", id, num_axes, num_buttons, info.is_ds3_with_pressure_buttons);
 
@@ -422,19 +426,36 @@ std::shared_ptr<SDLDevice> sdl_pad_handler::get_device_by_gamepad(SDL_Gamepad* g
 	const char* path = SDL_GetGamepadPath(gamepad);
 	const char* serial = SDL_GetGamepadSerial(gamepad);
 
+	const auto is_same = [](const char* c, std::string_view s) -> bool
+	{
+		return c ? c == s : s.empty();
+	};
+
 	// Try to find a real device
 	for (const auto& controller : m_controllers)
 	{
 		if (!controller.second || controller.second->sdl.is_virtual_device)
 			continue;
 
-		const auto is_same = [](const char* c, std::string_view s) -> bool
-		{
-			return c ? c == s : s.empty();
-		};
-
 		if (is_same(name, controller.second->sdl.name) &&
 			is_same(path, controller.second->sdl.path) &&
+			is_same(serial, controller.second->sdl.serial))
+		{
+			return controller.second;
+		}
+	}
+
+	// The path may change when a controller reconnects (on macOS it contains the IOKit registry ID).
+	// Try to find a disconnected real device with the same name and serial if we can't find an exact match.
+	for (const auto& controller : m_controllers)
+	{
+		if (!controller.second || controller.second->sdl.is_virtual_device)
+			continue;
+
+		if (controller.second->sdl.gamepad && SDL_GamepadConnected(controller.second->sdl.gamepad))
+			continue;
+
+		if (is_same(name, controller.second->sdl.name) &&
 			is_same(serial, controller.second->sdl.serial))
 		{
 			return controller.second;

@@ -126,19 +126,35 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		}
 		break;
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
+		// Hardware tests show that d1.const_src beyond 467 returns vec4(0).
+		// Indexed reads however read out of bounds and can access arbitrary data but wrap around 512.
+		if (const auto constant_id = static_cast<u16>(d1.const_src);
+			!d3.index_const) [[ likely ]]
+		{
+			if (constant_id < 468)
+			{
+				m_constant_ids.insert(constant_id);
+				fmt::append(ret, "_fetch_constant(%u)", constant_id);
+			}
+			else
+			{
+				// OOB read embedded. Always returns 0
+				return getFloatTypeName(4) + "(0.f)";
+			}
+		}
+		else
+		{
+			properties.has_indexed_constants = true;
+			fmt::append(ret, "_fetch_indexed_constant((%s+%u) & 511)", AddAddrReg(), constant_id);
+		}
 		m_parr.AddParam(PF_PARAM_UNIFORM, float4, std::string("vc[468]"));
-		properties.has_indexed_constants |= !!d3.index_const;
-		m_constant_ids.insert(static_cast<u16>(d1.const_src));
-		fmt::append(ret, "_fetch_constant(%u%s)", d1.const_src, (d3.index_const ? " + " + AddAddrReg() : ""));
 		break;
-
 	default:
 		rsx_log.fatal("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
 		break;
 	}
 
 	static const std::string f = "xyzw";
-
 	std::string swizzle;
 
 	swizzle += f[src[n].swz_x];
@@ -149,7 +165,6 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 	if (swizzle != f) ret += '.' + swizzle;
 
 	bool abs = false;
-
 	switch (n)
 	{
 	default:

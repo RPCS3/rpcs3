@@ -111,28 +111,6 @@ namespace gl
 	{
 		u32 m_ssbo_length = 0;
 
-		void declare_f16_expansion()
-		{
-			method_declarations +=
-				"uvec2 unpack_e4m12_pack16(const in uint value)\n"
-				"{\n"
-				"	uvec2 result = uvec2(bitfieldExtract(value, 0, 16), bitfieldExtract(value, 16, 16));\n"
-				"	result <<= 11;\n"
-				"	result += (120 << 23);\n"
-				"	return result;\n"
-				"}\n\n";
-		}
-
-		void declare_f16_contraction()
-		{
-			method_declarations +=
-				"uint pack_e4m12_pack16(const in uvec2 value)\n"
-				"{\n"
-				"	uvec2 result = (value - (120 << 23)) >> 11;\n"
-				"	return (result.x & 0xFFFF) | (result.y << 16);\n"
-				"}\n\n";
-		}
-
 		cs_fconvert_task()
 		{
 			uniforms =
@@ -144,15 +122,16 @@ namespace gl
 				"	uint out_offset = out_ptr >> 2;\n"
 				"	uvec4 tmp;\n";
 
-			work_kernel =
-				"		if (index >= block_length)\n"
-				"			return;\n";
-
 			if constexpr (sizeof(From) == 4)
 			{
-				static_assert(sizeof(To) == 2);
-				declare_f16_contraction();
+				// NOTE: We're halving the block size for output
+				work_kernel =
+					"		if ((index * 2) >= block_length)\n"
+					"			return;\n";
 
+				method_declarations += "#define _CONVERT_F32_TO_E4M12 1\n";
+
+				static_assert(sizeof(To) == 2);
 				work_kernel +=
 					"		const uint src_offset = (index * 2) + in_offset;\n"
 					"		const uint dst_offset = index + out_offset;\n"
@@ -163,6 +142,12 @@ namespace gl
 				{
 					work_kernel +=
 						"		tmp = bswap_u32(tmp);\n";
+				}
+
+				if (gl::emulate_extended_depth_range())
+				{
+					// Float depth surfaces hold the emulated encoding (half the bit pattern)
+					work_kernel += "		tmp.xy <<= 1;\n";
 				}
 
 				// Convert
@@ -177,9 +162,11 @@ namespace gl
 			}
 			else
 			{
-				static_assert(sizeof(To) == 4);
-				declare_f16_expansion();
+				work_kernel =
+					"		if (index >= block_length)\n"
+					"			return;\n";
 
+				static_assert(sizeof(To) == 4);
 				work_kernel +=
 					"		const uint src_offset = index + in_offset;\n"
 					"		const uint dst_offset = (index * 2) + out_offset;\n"
@@ -194,6 +181,11 @@ namespace gl
 				// Convert
 				work_kernel += "		tmp.yz = unpack_e4m12_pack16(tmp.x);\n";
 
+				if (gl::emulate_extended_depth_range())
+				{
+					work_kernel += "		tmp.yz >>= 1;\n";
+				}
+
 				if constexpr (_SwapDst)
 				{
 					work_kernel += "		tmp.yz = bswap_u32(tmp.yz);\n";
@@ -203,6 +195,10 @@ namespace gl
 					"		data[dst_offset] = tmp.y;\n"
 					"		data[dst_offset + 1] = tmp.z;\n";
 			}
+
+			method_declarations +=
+				#include "Emu/RSX/Program/GLSLSnippets/E4M12Conversion.glsl"
+				;
 
 			cs_shuffle_base::build("");
 		}

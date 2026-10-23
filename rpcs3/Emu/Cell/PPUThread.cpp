@@ -20,6 +20,7 @@
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
 #include "PPUDisAsm.h"
+#include "Common.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
 #include "lv2/sys_sync.h"
@@ -2547,9 +2548,10 @@ void ppu_thread::cpu_task()
 			{
 				// The caller of sys_ppu_thread_start has higher or equal priority and waits for the exchange above:
 				// let it leave the syscall and run its first instructions before this thread starts
+				// Bounded, as it may enter another syscall right away (e.g. joining this thread), and ended on suspension, which cannot be acknowledged here
 				if (const auto caller = idm::get_unlocked<named_thread<ppu_thread>>(caller_id))
 				{
-					while (!is_stopped())
+					for (const u64 wait_start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - wait_start < 1000;)
 					{
 						const auto caller_state = +caller->state;
 
@@ -2564,7 +2566,7 @@ void ppu_thread::cpu_task()
 						{
 							constexpr u64 caller_head_start_us = 10;
 
-							for (const u64 start = get_system_time(); !is_stopped() && get_system_time() - start < caller_head_start_us;)
+							for (const u64 start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - start < caller_head_start_us;)
 							{
 								std::this_thread::yield();
 							}
@@ -4886,6 +4888,15 @@ extern void ppu_initialize()
 	}
 }
 
+template <u32 (*Estimate)(u32, bool)>
+static void ppu_vec_estimate(v128& v, u32 nj)
+{
+	for (u32 i = 0; i < 4; i++)
+	{
+		v._u32[i] = Estimate(v._u32[i], nj != 0);
+	}
+}
+
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
 	ppu_log.notice("Entering ppu_initialize(const ppu_module&..)");
@@ -4966,6 +4977,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
 			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
+			{ "__vrefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrefp>) },
+			{ "__vrsqrtefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrsqrtefp>) },
+			{ "__vexptefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vexptefp>) },
+			{ "__vlogefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vlogefp>) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -5027,13 +5042,16 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Difference between function name and current location
 	const u32 reloc = info.is_relocatable ? ::at32(info.segs, 0).addr : 0;
 
-	// Info sent to threads
-	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
-
 	// Info to load to main JIT instance (true - compiled)
-	std::vector<std::pair<std::string, bool>> link_workload;
-
-	bool compiled_new = false;
+	struct link_entry
+	{
+		std::string obj_name;
+		bool is_compiled = false;
+		bool drop = false;
+		std::unique_ptr<llvm::MemoryBuffer> object;
+		ppu_module<lv2_obj> part;
+	};
+	std::vector<link_entry> link_workload;
 
 	bool has_mfvscr = false;
 
@@ -5325,7 +5343,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		info.attr += ppu_attr::has_mfvscr;
 	}
 
-	while (!jit_mod.init && fpos < info.get_funcs().size())
+	const auto all_funcs = info.get_funcs();
+
+	while (!jit_mod.init && fpos < all_funcs.size())
 	{
 		// Copy module information
 		ppu_module<lv2_obj> part;
@@ -5335,9 +5355,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		usz bsize = 0;
 		usz bcount = 0;
 
-		while (fpos < info.get_funcs().size())
+		while (fpos < all_funcs.size())
 		{
-			auto& func = info.get_funcs()[fpos];
+			auto& func = all_funcs[fpos];
 
 			if (!func.size)
 			{
@@ -5487,7 +5507,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
-			if (fpos >= info.get_funcs().size() || (module_counter % c_modules_per_jit) == (c_modules_per_jit - 1))
+			const bool has_symbol_resolver = fpos >= all_funcs.size() || (module_counter % c_modules_per_jit) == (c_modules_per_jit - 1);
+
+			if (has_symbol_resolver)
 			{
 				// Hash the entire function grouped addresses for the integrity of the symbol resolver function
 				// Potentially occuring during patches
@@ -5554,6 +5576,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				accurate_nj_mode,
 				contains_symbol_resolver,
 				daz_and_ftz,
+				accurate_vest,
 
 				__bitset_enum_max
 			};
@@ -5580,13 +5603,15 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
 				settings += ppu_settings::accurate_nj_mode, fmt::throw_exception("NJ Not implemented");
-			if (fpos >= info.get_funcs().size() || (module_counter % c_modules_per_jit) == (c_modules_per_jit - 1))
+			if (has_symbol_resolver)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 			if (g_cfg.core.set_daz_and_ftz)
 				settings += ppu_settings::daz_and_ftz;
+			if (g_cfg.core.ppu_set_vest)
+				settings += ppu_settings::accurate_vest;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v8-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+			fmt::append(obj_name, "v9-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5595,43 +5620,90 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 
 		module_counter++;
+		link_workload.push_back(link_entry{
+			.obj_name = std::move(obj_name),
+			.is_compiled = false,
+			.drop = false,
+			.object = nullptr,
+			.part = std::move(part)
+		});
+	}
 
-		if (!check_only)
-		{
-			link_workload.emplace_back(obj_name, false);
-		}
+	// Multithreaded load_object
+	atomic_t<bool> compiled_new = false;
+	{
+		atomic_t<bool> check_only_needs_compilation = false;
 
-		// Check object file
-		if (jit_compiler::check(cache_path + obj_name))
+		const usz thread_count = std::min<usz>(link_workload.size(), rpcs3::utils::get_max_threads());
+		const usz num_threads_succeeded = map_workload("PPU Loader "sv, thread_count, link_workload.size(), [&](usz index)
 		{
-			if (!is_being_used_in_emulation && !check_only)
+			if (check_only_needs_compilation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 			{
-				ppu_log.success("LLVM: Module exists: %s", obj_name);
-				link_workload.pop_back();
+				return;
 			}
 
-			continue;
+			link_entry& entry = ::at32(link_workload, index);
+
+			// Check object file
+			if (auto object = jit_compiler::load_object(cache_path + entry.obj_name))
+			{
+				if (!check_only)
+				{
+					if (is_being_used_in_emulation)
+					{
+						entry.object = std::move(object);
+					}
+					else
+					{
+						ppu_log.success("LLVM: Module exists: %s", entry.obj_name);
+						entry.drop = true;
+					}
+				}
+
+				return;
+			}
+
+			if (check_only || check_only_needs_compilation)
+			{
+				check_only_needs_compilation = true;
+				return;
+			}
+
+			// Remember, used in ppu_initialize(void)
+			compiled_new = true;
+
+			// Adjust information (is_compiled)
+			entry.is_compiled = true;
+		});
+
+		if (thread_count != num_threads_succeeded)
+		{
+			ppu_log.error("%d PPU Loader thread(s) failed with an exception!", thread_count - num_threads_succeeded);
 		}
 
 		if (check_only)
 		{
-			return true;
+			return check_only_needs_compilation;
 		}
-
-		// Remember, used in ppu_initialize(void)
-		compiled_new = true;
-
-		// Adjust information (is_compiled)
-		link_workload.back().second = true;
-
-		// Fill workload list for compilation
-		workload.emplace_back(std::move(obj_name), std::move(part));
 	}
 
-	if (check_only)
+	// Remove dropped entries
+	std::erase_if(link_workload, [](const link_entry& entry) { return entry.drop; });
+
+	// Fill workload list for compilation
+	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
+
+	for (link_entry& entry : link_workload)
 	{
-		return false;
+		if (entry.is_compiled)
+		{
+			workload.emplace_back(entry.obj_name, std::move(entry.part));
+		}
 	}
+
+	// Compile the parts containing a symbol resolver first (only those have jit_bounds).
+	// They take by far the longest, so starting them last would leave a long single-threaded tail.
+	std::stable_partition(workload.begin(), workload.end(), FN(!!x.second.jit_bounds));
 
 	if (g_progr_ftotal_bits && file_size)
 	{
@@ -5816,7 +5888,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		ppu_log.notice("Loading %u modules", link_workload.size());
 
-		for (const auto& [obj_name, is_compiled] : link_workload)
+		for (link_entry& entry : link_workload)
 		{
 			mod_index++;
 
@@ -5825,10 +5897,19 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				break;
 			}
 
-			if (!failed_to_load && !jits[mod_index / c_modules_per_jit]->add(cache_path + obj_name))
+			if (!failed_to_load)
 			{
-				ppu_log.error("LLVM: Failed to load module %s", obj_name);
-				failed_to_load = true;
+				auto& jit = jits[mod_index / c_modules_per_jit];
+
+				const bool ok = entry.object
+					? jit->add(std::move(entry.object), cache_path + entry.obj_name)
+					: jit->add(cache_path + entry.obj_name); // freshly compiled modules
+
+				if (!ok)
+				{
+					ppu_log.error("LLVM: Failed to load module %s", entry.obj_name);
+					failed_to_load = true;
+				}
 			}
 
 			if (mod_index % increment_link_count_at == (link_workload.size() - 1) % increment_link_count_at)
@@ -5842,9 +5923,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				continue;
 			}
 
-			if (!is_compiled)
+			if (!entry.is_compiled)
 			{
-				ppu_log.success("LLVM: Loaded module #%u %s", mod_index, obj_name);
+				ppu_log.success("LLVM: Loaded module #%u %s", mod_index, entry.obj_name);
 			}
 		}
 	}

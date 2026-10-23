@@ -270,6 +270,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::SPULoopDetection, ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 	EnhanceCheckBox(emu_settings_type::PPUReservationPriorityOverSPUs, ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuReservations, ui->accurateSpuReservations, tooltips.settings.accurate_spu_reservations);
+	EnhanceCheckBox(emu_settings_type::SPUMmioDelay, ui->spuMmioDelay, tooltips.settings.spu_mmio_delay);
 
 	// Comboboxes
 	EnhanceComboBox(emu_settings_type::XFloatAccuracy, ui->xfloatAccuracy, tooltips.settings.xfloat, ui->gb_xfloat_accuracy);
@@ -1092,7 +1093,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->m_microphone_creator.refresh_list();
 	propagate_used_devices(); // Fills comboboxes list
 
-	m_emu_settings->m_microphone_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MicrophoneDevices));
+	m_emu_settings->m_microphone_creator.update_device_selection(m_emu_settings->GetSetting(emu_settings_type::MicrophoneDevices));
 
 	const std::array<std::string, 4>& mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
 
@@ -1187,6 +1188,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceComboBox(emu_settings_type::Buzz, ui->buzzBox, tooltips.settings.buzz, ui->gb_buzz_emulated);
 	EnhanceComboBox(emu_settings_type::Turntable, ui->turntableBox, tooltips.settings.turntable, ui->gb_turntable_emulated);
 	EnhanceComboBox(emu_settings_type::GHLtar, ui->ghltarBox, tooltips.settings.ghltar, ui->gb_ghltar_emulated);
+	EnhanceComboBox(emu_settings_type::USIO, ui->usioBox, tooltips.settings.usio, ui->gb_usio_emulated);
 
 	EnhanceCheckBox(emu_settings_type::BackgroundInput, ui->backgroundInputBox, tooltips.settings.background_input);
 	EnhanceCheckBox(emu_settings_type::PadConnection, ui->padConnectionBox, tooltips.settings.pad_connection);
@@ -1275,7 +1277,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->m_midi_creator.refresh_list();
 	propagate_midi_devices(); // Fills comboboxes list
 
-	m_emu_settings->m_midi_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
+	m_emu_settings->m_midi_creator.update_device_selection(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
 
 	const std::array<midi_device, max_midi_devices>& midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
 
@@ -1348,6 +1350,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceRadioButton(enter_button_assignment_bg, emu_settings_type::EnterButtonAssignment);
 	SubscribeTooltip(ui->gb_enterButtonAssignment, tooltips.settings.enter_button_assignment);
+
+	// Edits
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_model, emu_settings_type::HDDModelName);
+	SubscribeTooltip(ui->gb_edit_hdd_model, tooltips.settings.hdd_model);
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_serial, emu_settings_type::HDDSerialNumber);
+	SubscribeTooltip(ui->gb_edit_hdd_serial, tooltips.settings.hdd_serial);
 
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
@@ -1433,6 +1443,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes
 
 	EnhanceCheckBox(emu_settings_type::DebugConsoleMode, ui->debugConsoleMode, tooltips.settings.debug_console_mode);
+	EnhanceCheckBox(emu_settings_type::AccuratePPUVEST, ui->accuratePPUVEST, tooltips.settings.accurate_ppuvest);
 	EnhanceCheckBox(emu_settings_type::AccurateRSXAccess, ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuDMA, ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
 	EnhanceCheckBox(emu_settings_type::LLVMPrecompilation, ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
@@ -1499,6 +1510,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vblank->setValue(vblank_def);
 	});
 
+	EnhanceSlider(emu_settings_type::PPUEventWakeUpDelay, ui->ppuEventWakeupDelay, ui->ppuEventWakeupText, tr(reinterpret_cast<const char*>(u8"%0 µs"), "PPU event wake up delay"));
+	const int ppu_event_wakeup_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::PPUEventWakeUpDelay));
+	connect(ui->ppuEventWakeupReset, &QAbstractButton::clicked, [ppu_event_wakeup_def, this]()
+	{
+		ui->ppuEventWakeupDelay->setValue(ppu_event_wakeup_def);
+	});
+
 	EnhanceSlider(emu_settings_type::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %", "Clocks scale"));
 	SnapSlider(ui->clockScale, 10);
 	ui->clockScale->setPageStep(50);
@@ -1530,6 +1548,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_vblank->setDisabled(true);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.disabled_from_global);
+		ui->gb_ppuEventWakeupDelay->setDisabled(true);
+		SubscribeTooltip(ui->gb_ppuEventWakeupDelay, tooltips.settings.disabled_from_global);
 		ui->gb_clockScale->setDisabled(true);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.disabled_from_global);
 		ui->gb_wakeupDelay->setDisabled(true);
@@ -1538,6 +1558,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	else
 	{
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
+		SubscribeTooltip(ui->gb_ppuEventWakeupDelay, tooltips.settings.ppu_event_wake_up_delay);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
 	}

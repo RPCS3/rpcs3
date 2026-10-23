@@ -129,7 +129,8 @@ namespace rsx
 	constexpr u32 fs_export_config_mask =
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
 		RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
-		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING |
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
@@ -1006,6 +1007,22 @@ namespace rsx
 		while (method_registers.current_draw_clause.next());
 	}
 
+	bool thread::should_skip_draw() const
+	{
+		if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+		{
+			return true;
+		}
+
+		if (m_graphics_state.test(rsx::rtt_config_no_attachments) &&
+			(g_cfg.video.disable_zcull_queries || !zcull_ctrl->has_active_queries()))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	void thread::cpu_task()
 	{
 		while (Emu.IsReady())
@@ -1284,7 +1301,7 @@ namespace rsx
 			// Note a possible rollback address
 			if (sync_point_request && !in_begin_end)
 			{
-				restore_point = ctrl->get;
+				restore_point = fifo_ctrl->get_pos();
 				saved_fifo_ret = fifo_ret_addr;
 				sync_point_request.release(false);
 			}
@@ -1462,6 +1479,7 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
+		// NOTE: rtt_config_no_attachments is intentionally not reset.
 		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
 		m_current_framebuffer_context = context;
 
@@ -1774,10 +1792,34 @@ namespace rsx
 			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		if (!m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address)
+		const bool framebufferless = !m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address;
+		if (framebufferless)
 		{
-			rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
-			return;
+			// No attachments. The hardware still rasterizes in this case and side effects such as ZPASS counters are still updated.
+			if (context != rsx::framebuffer_creation_context::context_draw ||
+				!backend_config.supports_framebufferless_rendering)
+			{
+				rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
+				return;
+			}
+
+			// Context must be draw now...
+		}
+
+		if (framebufferless != m_graphics_state.test(rsx::rtt_config_no_attachments))
+		{
+			// Programmable blending reads back from the color attachments and is disabled when there are none.
+			// Force the blend configuration to be re-evaluated when moving in or out of this state.
+			if (framebufferless)
+			{
+				m_graphics_state.set(rsx::rtt_config_no_attachments);
+			}
+			else
+			{
+				m_graphics_state.clear(rsx::rtt_config_no_attachments);
+			}
+
+			m_graphics_state.set(rsx::pipeline_config_dirty);
 		}
 
 		// At least one attachment exists
@@ -1853,7 +1895,8 @@ namespace rsx
 			}
 		}
 
-		if (!really_changed)
+		// Framebufferless setups have no surface info to compare against. Always rebuild.
+		if (!really_changed && !framebufferless)
 		{
 			if (layout.zeta_address == m_depth_surface_info.address &&
 				layout.depth_format == m_depth_surface_info.depth_format &&
@@ -2120,8 +2163,9 @@ namespace rsx
 	{
 		u32 expected_ctrl = 0;
 
-		// Programmable blending
-		if (backend_config.supports_programmable_blending)
+		// Programmable blending. Requires color attachments to read from.
+		if (backend_config.supports_programmable_blending &&
+			!m_graphics_state.test(rsx::rtt_config_no_attachments))
 		{
 			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 
@@ -2137,6 +2181,11 @@ namespace rsx
 			backend_config.supports_hw_msaa)
 		{
 			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
+		}
+
+		if (requires_depth_range_emulation()) [[ unlikely ]]
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 		}
 
 		// Depth compare
@@ -2166,6 +2215,16 @@ namespace rsx
 		}
 
 		return expected_ctrl;
+	}
+
+	bool thread::requires_depth_range_emulation() const
+	{
+		if (backend_config.supports_extended_depth_range || !g_cfg.video.emulate_extended_depth_range) [[ likely ]]
+		{
+			return false;
+		}
+
+		return m_framebuffer_layout.zeta_address && rsx::is_float_depth_format(REGS(m_ctx)->surface_depth_fmt());
 	}
 
 	void thread::prefetch_fragment_program()
@@ -2290,6 +2349,13 @@ namespace rsx
 			m_graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
 
 			// Emit invalidate here in case ucode is actually clean
+			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
+		}
+
+		if (const bool emulate_depth_range = requires_depth_range_emulation();
+			emulate_depth_range != !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE))
+		{
+			current_vertex_program.ctrl ^= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
 		}
 
@@ -3111,9 +3177,9 @@ namespace rsx
 
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
-		if (ctrl)
+		if (ctrl && fifo_ctrl)
 		{
-			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
+			fmt::append(result, "FIFO: EXEC=0x%x, GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", fifo_ctrl->get_pos(), +ctrl->get, +ctrl->put, +ctrl->ref);
 			fmt::append(result, "FIFO: RET-ADDR=0x%x, Code=0x%x, Jump=0x%x\n", fifo_ret_addr, last_known_code_start, last_code_jump);
 			fmt::append(result, "FIFO: Semaphore Acquire: pos=0x%x, address=0x%x\n", last_sema_cmd, last_sema_addr);
 		}

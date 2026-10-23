@@ -438,7 +438,7 @@ void qt_video_source_wrapper::set_iso_path(const std::string& iso_path)
 
 void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool video_in_archive)
 {
-	Emu.CallFromMainThread([this, video_in_archive, path = video_path]()
+	Emu.BlockingCallFromMainThread([this, video_in_archive, &video_path]()
 	{
 		init_video_source();
 
@@ -469,23 +469,23 @@ void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool
 
 			notify_update();
 		};
-		m_qt_video_source->set_video_path(path, video_in_archive);
+		m_qt_video_source->set_video_path(video_path, video_in_archive);
 	});
 }
 
 void qt_video_source_wrapper::set_audio_path(const std::string& audio_path, bool audio_in_archive)
 {
-	Emu.CallFromMainThread([this, audio_in_archive, path = audio_path]()
+	Emu.BlockingCallFromMainThread([this, audio_in_archive, &audio_path]()
 	{
 		init_video_source();
 
-		m_qt_video_source->set_audio_path(path, audio_in_archive);
+		m_qt_video_source->set_audio_path(audio_path, audio_in_archive);
 	});
 }
 
 void qt_video_source_wrapper::set_active(bool active)
 {
-	Emu.CallFromMainThread([this, active]()
+	Emu.BlockingCallFromMainThread([this, active]()
 	{
 		ensure(m_qt_video_source);
 		m_qt_video_source->set_active(active);
