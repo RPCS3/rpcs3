@@ -65,10 +65,15 @@ if(PS5)
     endif()
     target_include_directories(rpcs3_emu BEFORE PRIVATE ${PS5_ICONV_DIR}/include)
 
-    # PS5: virtual memory and shared memory through the platform layer's ranges
-    # and direct-memory objects (ps5platform/shm.h), not POSIX mmap
+    # PS5: virtual memory and shared memory through the console's direct memory,
+    # not POSIX mmap: the PS5 libre layer's ranges and shared memory (libre/vm.h,
+    # PS5_RPCS3Title's ps5/libre, MIT), which the title links
+    if(NOT PS5_LIBRE_DIR)
+        message(FATAL_ERROR "PS5: set PS5_LIBRE_DIR to the title's PS5 libre layer (include/libre/vm.h)")
+    endif()
     set_source_files_properties(../util/vm_native.cpp PROPERTIES HEADER_FILE_ONLY ON)
     target_sources(rpcs3_emu PRIVATE ../util/vm_native_ps5.cpp)
+    set_source_files_properties(../util/vm_native_ps5.cpp PROPERTIES INCLUDE_DIRECTORIES ${PS5_LIBRE_DIR}/include)
 
     # PS5: Lossless Scaling's frame generation (RSX/VK/VKFrameGenLSFG.h), the
     # Eden/lsfg-vk compute chain as the Simpsons Game's PS5 port has it

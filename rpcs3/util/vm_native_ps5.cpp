@@ -8,17 +8,17 @@
 // The first RPCS3 title on the console stopped before main: memory_commit's
 // mprotect on a range plain mmap had reserved failed (EINVAL).
 //
-// So everything goes through the platform layer (ps5platform/shm.h):
-// reservations are its virtual ranges, committed memory its direct-memory
-// units, and shared memory (the guest's RAM and its mirrors) its direct-memory
-// objects, mapped into the ranges, charged to the direct pool only.
+// So everything goes through the console's direct memory, by the PS5 libre
+// layer (libre/vm.h, the title's ps5/libre): reservations are its virtual
+// ranges, committed memory its direct-memory units, and shared memory (the
+// guest's RAM and its mirrors) its direct-memory blocks, mapped into the
+// ranges, charged to the direct pool only.
 
 #include "stdafx.h"
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 
-#include <ps5platform/shm.h>
-#include <ps5platform/kernel.h>
+#include <libre/vm.h>
 
 #include <sys/mman.h>
 #include <errno.h>
@@ -34,33 +34,32 @@ namespace utils
 {
 	namespace
 	{
-		// Measured: the console's page (PROBE.md, "Memory")
-		constexpr long ps5_page_size = 0x4000;
+		// Measured: the console's page
+		constexpr long ps5_page_size = LIBRE_VM_PAGE;
 
+		// The console's CPU protection bits, which sceKernelMprotect takes as they are
 		int ps5_protection(protection prot)
 		{
 			switch (prot)
 			{
-			case protection::rw: return PS5_SHM_READ | PS5_SHM_WRITE;
-			case protection::ro: return PS5_SHM_READ;
+			case protection::rw: return LIBRE_VM_READ | LIBRE_VM_WRITE;
+			case protection::ro: return LIBRE_VM_READ;
 			case protection::no: return 0;
-			case protection::wx: return PS5_SHM_READ | PS5_SHM_WRITE | PS5_SHM_EXEC;
-			case protection::rx: return PS5_SHM_READ | PS5_SHM_EXEC;
+			case protection::wx: return LIBRE_VM_READ | LIBRE_VM_WRITE | LIBRE_VM_EXEC;
+			case protection::rx: return LIBRE_VM_READ | LIBRE_VM_EXEC;
 			}
 			return 0;
 		}
 
 		int kernel_protection(protection prot)
 		{
-			const int p = ps5_protection(prot);
-			return (p & PS5_SHM_READ ? PS5_KERNEL_PROT_CPU_READ : 0) | (p & PS5_SHM_WRITE ? PS5_KERNEL_PROT_CPU_WRITE : 0) |
-				(p & PS5_SHM_EXEC ? PS5_KERNEL_PROT_CPU_EXEC : 0);
+			return ps5_protection(prot);
 		}
 
 		int posix_protection(protection prot)
 		{
 			const int p = ps5_protection(prot);
-			return (p & PS5_SHM_READ ? PROT_READ : 0) | (p & PS5_SHM_WRITE ? PROT_WRITE : 0) | (p & PS5_SHM_EXEC ? PROT_EXEC : 0);
+			return (p & LIBRE_VM_READ ? PROT_READ : 0) | (p & LIBRE_VM_WRITE ? PROT_WRITE : 0) | (p & LIBRE_VM_EXEC ? PROT_EXEC : 0);
 		}
 
 		// The ranges memory_reserve gave out, so memory_protect knows reserved space
@@ -129,7 +128,7 @@ namespace utils
 		if (use_addr)
 		{
 			// Exactly at the address, or refused: callers search upward themselves
-			if (reinterpret_cast<uptr>(use_addr) % 0x10000 || ps5_vrange_reserve_at(use_addr, size) != 0)
+			if (reinterpret_cast<uptr>(use_addr) % 0x10000 || libre_vrange_reserve_at(use_addr, size) != 0)
 			{
 				return nullptr;
 			}
@@ -143,7 +142,7 @@ namespace utils
 			// memory_commit EINVAL, on my console), as it had refused the
 			// guest's executable range there. The guest's ranges are at
 			// 0x10_0000_0000 and the title heap at 0x20_0000_0000
-			// (ps5platform/heap.h). Searched from the bottom each time, so a
+			// (the libre layer's heap). Searched from the bottom each time, so a
 			// released range (the JIT's, as each compiler is destroyed) is used
 			// again: handed out in order, never reused, they ran out after some
 			// 700 of the JIT's 768 MiB
@@ -152,7 +151,7 @@ namespace utils
 			u64 at = 0x40'0000'0000;
 			for (u32 tries = 0; tries < 4096 && !base; tries++)
 			{
-				if (ps5_vrange_reserve_at(reinterpret_cast<void*>(at), size) == 0)
+				if (libre_vrange_reserve_at(reinterpret_cast<void*>(at), size) == 0)
 				{
 					base = reinterpret_cast<void*>(at);
 					break;
@@ -192,9 +191,9 @@ namespace utils
 			return;
 		}
 
-		// Execute asked for at map time is refused; the platform layer maps new
+		// Execute asked for at map time is refused; the libre layer maps new
 		// units read-write and gives them execute after, under its lock
-		// (PS5_PayloadSDK's PROBE.md, ps5platform/exec.h). The whole protection
+		// (libre/vm.h). The whole protection
 		// goes to it in one call: committing memory already backed only changes
 		// its protection, and committing RPCS3's JIT code read-write first, then
 		// executable, took execute away for a moment from code other threads
@@ -202,7 +201,7 @@ namespace utils
 		// two threads crossing into a new 2 MiB both commit it: GTA IV's SPU
 		// threads faulted executing their dispatch code just past 24 MiB, three
 		// at once, on my console
-		const int result = ps5_vrange_commit(pointer, size, ps5_protection(prot));
+		const int result = libre_vrange_commit(pointer, size, ps5_protection(prot));
 		if (result != 0)
 		{
 			fmt::throw_exception("memory_commit(%p, 0x%x, %d) failed: 0x%x", pointer, size, static_cast<int>(prot), static_cast<u32>(result));
@@ -216,7 +215,7 @@ namespace utils
 			return;
 		}
 
-		const int result = ps5_vrange_decommit(pointer, size);
+		const int result = libre_vrange_decommit(pointer, size);
 		if (result != 0)
 		{
 			fmt::throw_exception("memory_decommit(%p, 0x%x) failed: 0x%x", pointer, size, static_cast<u32>(result));
@@ -237,7 +236,7 @@ namespace utils
 			return;
 		}
 
-		ensure(ps5_vrange_release(pointer, size) == 0);
+		ensure(libre_vrange_release(pointer, size) == 0);
 
 		std::lock_guard lock(g_ranges_lock);
 		std::erase_if(g_ranges, [&](const reserved_range& r) { return r.base == reinterpret_cast<u64>(pointer); });
@@ -307,7 +306,7 @@ namespace utils
 			// Reserved and unbacked, a page at a time (the query says nothing of
 			// where the next mapping starts)
 			const u64 next = at + ps5_page_size;
-			if (const int result = ps5_vrange_commit(reinterpret_cast<void*>(at), next - at, ps5_protection(prot)); result != 0)
+			if (const int result = libre_vrange_commit(reinterpret_cast<void*>(at), next - at, ps5_protection(prot)); result != 0)
 			{
 				fmt::throw_exception("memory_protect(%p, 0x%x, %d) at 0x%x: query 0x%x, then commit 0x%x",
 					pointer, size, static_cast<int>(prot), at, static_cast<u32>(queried), static_cast<u32>(result));
@@ -331,14 +330,14 @@ namespace utils
 		: m_flags(flags)
 		, m_size(utils::align(size, 0x10000))
 	{
-		ps5_shm object{};
-		const int result = ps5_shm_create(m_size, &object);
+		libre_shm object{};
+		const int result = libre_shm_create(m_size, &object);
 		if (result != 0)
 		{
-			fmt::throw_exception("ps5_shm_create(0x%x) failed: 0x%x", m_size, static_cast<u32>(result));
+			fmt::throw_exception("libre_shm_create(0x%x) failed: 0x%x", m_size, static_cast<u32>(result));
 		}
 		m_direct_start = object.direct_start;
-		m_direct_bytes = object.bytes;
+		m_direct_bytes = object.size;
 	}
 
 	shm::shm(u64 size, const std::string& storage)
@@ -352,8 +351,8 @@ namespace utils
 	{
 		this->unmap_self();
 
-		ps5_shm object{m_direct_start, static_cast<size_t>(m_direct_bytes)};
-		ps5_shm_destroy(&object);
+		libre_shm object{m_direct_start, static_cast<size_t>(m_direct_bytes)};
+		libre_shm_destroy(&object);
 	}
 
 	u8* shm::map(void* ptr, protection prot, bool cow) const
@@ -365,13 +364,13 @@ namespace utils
 			return nullptr;
 		}
 
-		const ps5_shm object{m_direct_start, static_cast<size_t>(m_direct_bytes)};
+		const libre_shm object{m_direct_start, static_cast<size_t>(m_direct_bytes)};
 		void* const target = reinterpret_cast<void*>(reinterpret_cast<u64>(ptr) & -0x10000);
 		void* view = nullptr;
 
 		// At an address: there, over whatever reservation is there; else anywhere
-		const unsigned flags = target ? PS5_SHM_FIXED : 0;
-		if (ps5_shm_map(&object, 0, m_size, target, ps5_protection(prot), flags, &view) != 0)
+		const unsigned flags = target ? LIBRE_SHM_FIXED : 0;
+		if (libre_shm_map(&object, 0, m_size, target, ps5_protection(prot), flags, &view) != 0)
 		{
 			return nullptr;
 		}
@@ -393,7 +392,7 @@ namespace utils
 			return {mapped, {}};
 		}
 
-		return {nullptr, "ps5_shm_map failed"};
+		return {nullptr, "libre_shm_map failed"};
 	}
 
 	u8* shm::map_self(protection prot)
@@ -436,7 +435,7 @@ namespace utils
 	void shm::unmap(void* ptr) const
 	{
 		remove_view(ptr);
-		ps5_shm_unmap(ptr, m_size, 0);
+		libre_shm_unmap(ptr, m_size, 0);
 	}
 
 	void shm::unmap_critical(void* ptr)
@@ -444,7 +443,7 @@ namespace utils
 		// The view goes; its place stays reserved, a hole in the guest's layout
 		void* const target = reinterpret_cast<void*>(reinterpret_cast<u64>(ptr) & -0x10000);
 		remove_view(target);
-		ps5_shm_unmap(target, m_size, PS5_SHM_KEEP_RESERVED);
+		libre_shm_unmap(target, m_size, LIBRE_SHM_KEEP_RESERVED);
 	}
 
 	void shm::unmap_self()
