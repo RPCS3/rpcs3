@@ -1367,14 +1367,20 @@ void VKGSRender::on_bind_context(rsx::context* ctx)
 
 void VKGSRender::on_release_context_resources(rsx::context* ctx)
 {
-	// Destroyed section images go through the GC and point back at their cache. Retire them while the cache still exists.
+	if (!m_device->is_lost())
+	{
+		// FIXME: This is very slow. It needs to be done on a background worker.
+		flush_command_queue(true);
+	}
+
 	vkDeviceWaitIdle(*m_device);
 
 	const auto resources = res(ctx);
 	resources->texture_cache.destroy(); // NOTE: Always destroy this first because surface cache owns some of the resources.
 	resources->surface_cache.destroy();
 
-	vk::get_resource_manager()->flush();
+	// Parial flush to destroy only unused resources.
+	vk::get_resource_manager()->flush_disposables();
 }
 
 void VKGSRender::on_unbind_context(rsx::context* ctx)
