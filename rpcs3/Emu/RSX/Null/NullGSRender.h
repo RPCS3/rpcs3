@@ -18,4 +18,8 @@ public:
 
 	// There are no host surfaces to bind. Keeps the GRAPH engine on its fast path.
 	bool is_framebuffer_bound() const override { return true; }
+
+	// Identifiers
+	std::string logical_id() const override { return "Null"; }
+	std::string configured_logical_id() const override;
 };
