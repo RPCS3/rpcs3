@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "display.h"
+#include "Emu/system_config_types.h"
 
 class GSFrameBase
 {
@@ -15,9 +16,8 @@ public:
 	virtual void close() = 0;
 	virtual void reset() = 0;
 
-	// Workaround. At this time, OpenGL window management is handled by QT.
-	// That means we cannot bind an OpenGL context to an existing window, so one has to be specially created for it.
-	virtual bool supports_opengl() const = 0;
+	// The renderer the window was created for. Windows are set up for a specific backend (e.g. OpenGL window management is handled by Qt).
+	virtual video_renderer renderer() const = 0;
 
 	virtual bool shown() = 0;
 	virtual void hide() = 0;

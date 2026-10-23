@@ -25,7 +25,4 @@ public:
 	void set_current(draw_context_t ctx) override;
 	void delete_context(draw_context_t ctx) override;
 	void flip(draw_context_t context, bool skip_frame = false) override;
-
-	// Properties
-	bool supports_opengl() const override { return true; }
 };
