@@ -52,9 +52,10 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ps5_localized.cpp
     VERBATIM)
 target_sources(rpcs3_ps5 PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/ps5_localized.cpp)
 target_include_directories(rpcs3_ps5 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-# The PS5 libre layer's heap (libre/heap.h, PS5_RPCS3Title's ps5/libre, MIT): its
-# statistics, and the tracker it tells of each allocation
-set_source_files_properties(ps5_frontend.cpp ps5_heap_track.cpp PROPERTIES INCLUDE_DIRECTORIES ${PS5_LIBRE_DIR}/include)
+# The PS5 libre layer (PS5_RPCS3Title's ps5/libre, MIT): the heap's statistics and
+# the tracker it tells of each allocation, the console's memory figures, and
+# threads' CPUs
+set_source_files_properties(ps5_frontend.cpp ps5_heap_track.cpp ps5_cpus.cpp PROPERTIES INCLUDE_DIRECTORIES ${PS5_LIBRE_DIR}/include)
 
 target_link_libraries(rpcs3_ps5 PUBLIC rpcs3_emu 3rdparty::fusion 3rdparty::zlib 3rdparty::yaml-cpp) # Fusion: the pad thread's motion filter; zlib: the SCE decrypter (firmware); yaml-cpp: the patch engine's header (ps5_patches.h)
 target_compile_options(rpcs3_ps5 PRIVATE "SHELL:-include ${PS5_VOLK_DIR}/volk.h")

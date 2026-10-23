@@ -16,11 +16,10 @@
 #include <chrono>
 #include <thread>
 
-// The platform layer's affinity calls (ps5platform/libc.h), which take a set of
-// any size: libc's refuses FreeBSD's 32-byte cpuset_t (ERANGE), and the kernel's
-// current CPU (ps5platform/kernel.h)
-extern "C" int ps5_pthread_getaffinity_np(pthread_t thread, size_t size, void* set);
-extern "C" int ps5_pthread_setaffinity_np(pthread_t thread, size_t size, const void* set);
+// The PS5 libre layer's affinity calls (libre/threads.h), which take a set of
+// any size: libc's refuses FreeBSD's 32-byte cpuset_t (ERANGE); and the kernel's
+// current CPU
+#include <libre/threads.h>
 extern "C" int32_t sceKernelGetCurrentCpu(void);
 
 namespace
@@ -36,7 +35,7 @@ namespace
 	bool pin_self(s32 cpu)
 	{
 		const u64 mask = 1ull << cpu;
-		if (ps5_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) != 0)
+		if (libre_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask) != 0)
 		{
 			return false;
 		}
@@ -188,7 +187,7 @@ namespace
 		const u64 mask = 1ull << test.target;
 		if (test.how == 1)
 		{
-			test.result = ps5_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
+			test.result = libre_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
 		}
 		else if (test.how == 3)
 		{
@@ -208,7 +207,7 @@ namespace
 std::string ps5_test_pinning()
 {
 	u64 mask = 0;
-	if (ps5_pthread_getaffinity_np(pthread_self(), sizeof(mask), &mask) != 0 || !mask)
+	if (libre_pthread_getaffinity_np(pthread_self(), sizeof(mask), &mask) != 0 || !mask)
 	{
 		return "the title's CPUs could not be read";
 	}
@@ -247,7 +246,7 @@ std::string ps5_test_pinning()
 std::string ps5_measure_cpus()
 {
 	u64 mask = 0;
-	if (ps5_pthread_getaffinity_np(pthread_self(), sizeof(mask), &mask) != 0 || !mask)
+	if (libre_pthread_getaffinity_np(pthread_self(), sizeof(mask), &mask) != 0 || !mask)
 	{
 		return "the title's CPUs could not be read";
 	}
@@ -302,7 +301,7 @@ std::string ps5_measure_cpus()
 	}
 
 	// Back on every CPU it had
-	ps5_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
+	libre_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
 
 	std::string cores, alone;
 	for (s32 cpu = 0; cpu < 64; cpu++)

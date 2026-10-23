@@ -77,7 +77,7 @@ namespace utils
 		u32 m_flags{};
 		u64 m_size{};
 #ifdef __PROSPERO__
-		// PS5: the direct-memory object (ps5platform/shm.h, util/vm_native_ps5.cpp)
+		// PS5: the direct-memory block (the PS5 libre layer's libre/vm.h, util/vm_native_ps5.cpp)
 		s64 m_direct_start = -1;
 		u64 m_direct_bytes = 0;
 #endif

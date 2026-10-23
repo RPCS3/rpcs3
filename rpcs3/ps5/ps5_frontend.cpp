@@ -70,7 +70,7 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "util/video_source.h"
 
 #include <libre/heap.h>
-#include <ps5platform/kernel.h>
+#include <libre/vm.h>
 
 #include <condition_variable>
 #include <sys/stat.h>
