@@ -112,6 +112,9 @@ namespace rsx
 		// Host renderer. Created with the thread and destroyed with it.
 		std::unique_ptr<render_backend> m_renderer;
 
+		// Guards the renderer and the backend resources of every context against other threads (lv2, fault handler).
+		shared_mutex m_renderer_lock;
+
 		// Renderer config. Can indicate that we should replace the current one.
 		std::string m_renderer_info{};
 		bool m_renderer_switch_requested = false;
@@ -211,8 +214,12 @@ namespace rsx
 		// RSX thread only, and must be outside a draw. The renderer and every engine work on the given context from now on.
 		void bind_context(u32 id);
 
+		// RSX thread only. The renderer can be replaced at any time.
 		render_backend* renderer() const { return m_renderer.get(); }
 		void request_renderer_update();
+
+		// Callable from any thread
+		void notify_tile_unbound(u32 tile);
 
 		core_renderer& core() { return m_ctx->core; }
 		display_output& display() { return m_display_out; }
@@ -331,7 +338,16 @@ namespace rsx
 		void release_context_resources(context* ctx);
 
 		// Fault handling requires a walk of the HT, so we must lock it to find the culprit.
-		void lock_context_table();
+		void lock_exclusive(shared_mutex& mutex);
+
+		// Context table walk with renderer lock guarding
+		template <typename F>
+		void for_each_context_exclusive(F&& func)
+		{
+			lock_exclusive(m_renderer_lock);
+			for_each_context(std::forward<F>(func));
+			m_renderer_lock.unlock();
+		}
 
 		// Serialize a context
 		void save_context(utils::serial& ar, context& ctx);
