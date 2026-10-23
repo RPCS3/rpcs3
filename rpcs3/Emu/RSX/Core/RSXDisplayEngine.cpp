@@ -34,7 +34,7 @@ namespace rsx
 
 		if (ar.is_writing())
 		{
-			flip_pending = async_flip_requested.test(flip_request::emu_requested);
+			flip_pending = m_async_flip_request.requested.test(flip_request::emu_requested);
 		}
 
 		ar(flip_pending);
@@ -42,11 +42,11 @@ namespace rsx
 		if (flip_pending)
 		{
 			ar(vblank_at_flip);
-			ar(async_flip_buffer);
+			ar(m_async_flip_request.buffer, m_async_flip_request.context_id);
 
 			if (!ar.is_writing())
 			{
-				async_flip_requested |= flip_request::emu_requested;
+				m_async_flip_request.requested |= flip_request::emu_requested;
 				flip_notification_count = 1;
 			}
 		}
@@ -59,23 +59,27 @@ namespace rsx
 		vblank_count = 0;
 	}
 
-	bool display_engine::request_emu_flip(u32 buffer)
+	bool display_engine::request_emu_flip(u32 ctx_id, u32 buffer)
 	{
 		if (m_pump->is_current_thread()) // requested through command buffer
 		{
+			// The command buffer belongs to the bound context
+			ensure(m_pump->get_context()->id() == ctx_id);
+
 			// NOTE: The flip will clear any queued flip requests
 			handle_emu_flip(buffer);
 		}
 		else // requested 'manually' through ppu syscall
 		{
-			if (async_flip_requested.test(flip_request::emu_requested))
+			if (m_async_flip_request.requested.test(flip_request::emu_requested))
 			{
 				// ignore multiple requests until previous happens
 				return true;
 			}
 
-			async_flip_buffer = buffer;
-			async_flip_requested |= flip_request::emu_requested;
+			m_async_flip_request.buffer = buffer;
+			m_async_flip_request.context_id = ctx_id;
+			m_async_flip_request.requested |= flip_request::emu_requested;
 
 			m_pump->eng_interrupt_mask |= rsx::display_interrupt;
 
@@ -91,12 +95,18 @@ namespace rsx
 
 	void display_engine::handle_pending_flip()
 	{
-		if (!async_flip_requested.test(flip_request::emu_requested))
+		if (!m_async_flip_request.requested.test(flip_request::emu_requested))
 		{
 			return;
 		}
 
-		handle_emu_flip(async_flip_buffer);
+		if (m_async_flip_request.context_id != m_pump->get_context()->id())
+		{
+			// The display buffers belong to another context. The RSX thread binds it between commands.
+			return;
+		}
+
+		handle_emu_flip(m_async_flip_request.buffer);
 	}
 
 	void display_engine::handle_emu_flip(u32 buffer)
@@ -110,7 +120,7 @@ namespace rsx
 		if (!m_queued_flip.pop(buffer))
 		{
 			// Frame was not queued before flipping
-			m_pump->on_frame_end(buffer, true);
+			m_pump->on_frame_end(m_pump->get_context(), buffer, true);
 			ensure(m_queued_flip.pop(buffer));
 		}
 
@@ -170,8 +180,9 @@ namespace rsx
 			if (m_pump->requested_vsync && (exit || vblank_at_flip == vblank_count))
 			{
 				// Not yet signaled, handle it later
-				async_flip_requested |= flip_request::emu_requested;
-				async_flip_buffer = buffer;
+				m_async_flip_request.buffer = buffer;
+				m_async_flip_request.context_id = m_pump->get_context()->id();
+				m_async_flip_request.requested |= flip_request::emu_requested;
 				return;
 			}
 
@@ -227,9 +238,8 @@ namespace rsx
 		}
 	}
 
-	void display_engine::queue_frame(u32 buffer)
+	void display_engine::queue_frame(const context* ctx, u32 buffer)
 	{
-		const auto ctx = m_pump->get_context();
 		m_queued_flip.stats = ctx->stats;
 		m_queued_flip.push(buffer);
 		m_queued_flip.skip_frame = ctx->frame_skip.skip_current_frame;
@@ -242,16 +252,16 @@ namespace rsx
 
 		m_pump->eng_interrupt_mask.clear(rsx::display_interrupt);
 
-		if (async_flip_requested & flip_request::any)
+		if (m_async_flip_request.requested & flip_request::any)
 		{
 			// Deferred flip
 			if (info.emu_flip)
 			{
-				async_flip_requested.clear(flip_request::emu_requested);
+				m_async_flip_request.requested.clear(flip_request::emu_requested);
 			}
 			else
 			{
-				async_flip_requested.clear(flip_request::native_ui);
+				m_async_flip_request.requested.clear(flip_request::native_ui);
 			}
 		}
 

@@ -248,7 +248,7 @@ namespace rsx
 			if (render->display_ctrl().get_flip_index() == last_flip)
 			{
 				// Capture did not include a display flip, flip manually
-				render->request_emu_flip(1u);
+				render->request_emu_flip(replay_ctx, 1u);
 			}
 
 			// random pause to not destroy gpu
