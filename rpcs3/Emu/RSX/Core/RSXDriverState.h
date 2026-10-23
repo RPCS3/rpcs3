@@ -59,6 +59,7 @@ namespace rsx
 		display_interrupt       = 0x0004,        // Display handling
 		pipe_flush_interrupt    = 0x0008,        // Flush pipelines
 		dma_control_interrupt   = 0x0010,        // DMA interrupt
+		context_free_interrupt  = 0x0020,        // lv2 freed a context
 
 		all_interrupt_bits = memory_config_interrupt | backend_interrupt | display_interrupt | pipe_flush_interrupt
 	};
