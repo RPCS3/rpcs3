@@ -87,13 +87,17 @@ namespace vk
 
 		void flush()
 		{
+			flush_disposables();
+			m_sampler_pool.clear();
+		}
+
+		void flush_disposables()
+		{
 			std::list<eid_scope_t> dispose_queue;
 			{
 				std::lock_guard lock(m_eid_map_lock);
 				dispose_queue.splice(dispose_queue.begin(), m_eid_map);
 			}
-
-			m_sampler_pool.clear();
 		}
 
 		vk::sampler* get_sampler(const vk::render_device& dev, vk::sampler* previous,
