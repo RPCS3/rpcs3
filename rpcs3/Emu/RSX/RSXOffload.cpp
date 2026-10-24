@@ -5,6 +5,7 @@
 #include "Core/RSXReservationLock.hpp"
 #include "RSXOffload.h"
 #include "RSXThread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "Utilities/lockless.h"
 
@@ -22,6 +23,8 @@ namespace rsx
 
 		thread_base* current_thread_ = nullptr;
 
+		static constexpr u64 max_idle_spin_us = 200;
+
 		void operator ()()
 		{
 			if (!g_cfg.video.multithreaded_rsx)
@@ -37,6 +40,8 @@ namespace rsx
 			{
 				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
 			}
+
+			u64 idle_since = 0;
 
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
@@ -79,7 +84,27 @@ namespace rsx
 				if (m_enqueued_count.load() == m_processed_count.load())
 				{
 					m_processed_count.notify_all();
-					std::this_thread::yield();
+
+					if (!idle_since)
+					{
+						idle_since = get_system_time();
+					}
+
+					if (get_system_time() - idle_since < max_idle_spin_us)
+					{
+						// Stay responsive to bursts of work
+						std::this_thread::yield();
+					}
+					else
+					{
+						// Sleep until a new job is pushed instead of burning a host core (matters on CPUs with few fast cores)
+						thread_ctrl::wait_on(m_work_queue);
+						idle_since = 0;
+					}
+				}
+				else
+				{
+					idle_since = 0;
 				}
 			}
 
