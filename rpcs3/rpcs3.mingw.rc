@@ -1,0 +1,3 @@
+// Embeds the application manifest in MinGW builds. MSVC builds merge rpcs3.manifest into the linker-generated manifest instead.
+// 1 = CREATEPROCESS_MANIFEST_RESOURCE_ID, 24 = RT_MANIFEST
+1 24 "rpcs3.manifest"
