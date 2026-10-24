@@ -673,13 +673,13 @@ void GLGSRender::clear_surface(u32 arg)
 	bool update_color = false, update_z = false;
 	rsx::surface_depth_format2 surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); ds && arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
 			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
-      clear_cmd.aspect_mask |= gl::image_aspect::depth;
+			clear_cmd.aspect_mask |= gl::image_aspect::depth;
 
 			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
 			{

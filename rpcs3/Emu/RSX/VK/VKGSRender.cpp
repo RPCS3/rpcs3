@@ -1355,7 +1355,7 @@ void VKGSRender::clear_surface(u32 mask)
 	bool update_color = false, update_z = false;
 	auto surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); ds && mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
