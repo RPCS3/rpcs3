@@ -162,6 +162,7 @@ add_library(rpcs3_ui STATIC
 
     ../Input/basic_keyboard_handler.cpp
     ../Input/basic_mouse_handler.cpp
+    ../Input/blob_detector.cpp
     ../Input/camera_video_sink.cpp
     ../Input/ds3_pad_handler.cpp
     ../Input/ds4_pad_handler.cpp
@@ -230,7 +231,6 @@ target_link_libraries(rpcs3_ui
         3rdparty::libusb
         3rdparty::wolfssl
         3rdparty::libcurl
-        3rdparty::opencv
         3rdparty::fusion
 
     PRIVATE

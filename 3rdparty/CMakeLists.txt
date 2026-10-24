@@ -323,7 +323,7 @@ endif()
 
 # GLEW
 add_library(3rdparty_glew INTERFACE)
-if(NOT MSVC AND NOT ANDROID AND NOT APPLE)
+if(NOT WIN32 AND NOT ANDROID AND NOT APPLE)
 	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()
@@ -343,9 +343,6 @@ add_subdirectory(miniupnp EXCLUDE_FROM_ALL)
 
 # RTMIDI
 add_subdirectory(rtmidi EXCLUDE_FROM_ALL)
-
-# OPENCV
-add_subdirectory(opencv EXCLUDE_FROM_ALL)
 
 # FUSION
 add_subdirectory(fusion EXCLUDE_FROM_ALL)
@@ -383,6 +380,5 @@ add_library(3rdparty::soundtouch ALIAS soundtouch)
 add_library(3rdparty::sdl3 ALIAS ${SDL3_TARGET})
 add_library(3rdparty::miniupnpc ALIAS 3rdparty_miniupnpc)
 add_library(3rdparty::rtmidi ALIAS rtmidi)
-add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
 add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)

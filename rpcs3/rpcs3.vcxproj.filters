@@ -1275,6 +1275,9 @@
     <ClCompile Include="Input\ps_move_tracker.cpp">
       <Filter>Io\Move</Filter>
     </ClCompile>
+    <ClCompile Include="Input\blob_detector.cpp">
+      <Filter>Io\Move</Filter>
+    </ClCompile>
     <ClCompile Include="Input\ps_move_config.cpp">
       <Filter>Io\Move</Filter>
     </ClCompile>
@@ -1569,6 +1572,9 @@
       <Filter>Io\Move</Filter>
     </ClInclude>
     <ClInclude Include="Input\ps_move_tracker.h">
+      <Filter>Io\Move</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\blob_detector.h">
       <Filter>Io\Move</Filter>
     </ClInclude>
     <ClInclude Include="Input\ps_move_config.h">
@@ -2011,6 +2017,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="rpcs3.manifest" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss">
