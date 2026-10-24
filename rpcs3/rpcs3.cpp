@@ -1376,10 +1376,10 @@ int run_rpcs3(int argc, char** argv)
 	}
 	else if (g_cfg.misc.start_big_picture_mode || parser.isSet(arg_big_picture))
 	{
-		Emu.CallFromMainThread([]()
+		if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
 		{
-			Emu.BootBigPictureMode();
-		});
+			gui_app->SetStartBigPictureMode();
+		}
 	}
 
 	// run event loop (maybe only needed for the gui application)
