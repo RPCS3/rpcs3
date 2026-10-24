@@ -710,12 +710,12 @@ void GLGSRender::clear()
 	bool update_color = false, update_z = false;
 	const rsx::surface_depth_format2 surface_depth_format = info.depth_format;
 
-	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); ds && (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK))
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			clear_cmd.clear_depth.value = info.depth_value;
-      clear_cmd.aspect_mask |= gl::image_aspect::depth;
+			clear_cmd.aspect_mask |= gl::image_aspect::depth;
 
 			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
 			{
