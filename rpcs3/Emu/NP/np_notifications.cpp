@@ -44,7 +44,9 @@ namespace np
 		rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", np::npid_to_string(notif_data->roomMemberDataInternal->userInfo.npId), notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
 
-		// We initiate signaling if necessary
+		std::optional<u64> signaling_peer;
+
+		// Copy peer data before publishing the event: the guest may consume edata.
 		if (notification->has_signaling())
 		{
 			const auto& signaling_info = notification->signaling();
@@ -56,10 +58,8 @@ namespace np
 
 			rpcn_log.notice("Join notification told to connect to member(%d=%s) of room(%d): %s:%d", member_id, np::npid_to_string(npid), room_id, ip_to_string(addr_p2p), port_p2p);
 
-			// Attempt Signaling
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-			const u32 conn_id = sigh.init_sig2(npid, room_id, member_id);
-			sigh.start_sig(conn_id, addr_p2p, port_p2p);
+			signaling_peer = sigh.prepare_sig2(room_event_cb_ctx, npid, room_id, member_id, addr_p2p, port_p2p);
 		}
 
 		if (room_event_cb)
@@ -69,6 +69,18 @@ namespace np
 					room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_MemberJoined, event_key, 0, size, room_event_cb_arg);
 					return 0;
 				});
+		}
+
+		if (signaling_peer)
+		{
+			// The guest must learn about the member before receiving its signaling
+			// events, including when start_sig2 reuses an already-active connection.
+			sysutil_register_cb([pending_id = *signaling_peer](ppu_thread&) -> s32
+			{
+				auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+				sigh.start_sig2(pending_id);
+				return CELL_OK;
+			});
 		}
 	}
 
@@ -100,6 +112,8 @@ namespace np
 
 		rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", np::npid_to_string(notif_data->roomMemberDataInternal->userInfo.npId), notif_data->roomMemberDataInternal->memberId, room_id);
 		extra_nps::print_SceNpMatching2RoomMemberDataInternal(notif_data->roomMemberDataInternal.get_ptr());
+
+		g_fxo->get<named_thread<signaling_handler>>().cancel_pending_sig2(room_id, notif_data->roomMemberDataInternal->memberId);
 
 		if (room_event_cb)
 		{
