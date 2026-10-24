@@ -189,3 +189,18 @@ lv2_socket& lv2_socket::operator=(thread_state s) noexcept
 lv2_socket::~lv2_socket() noexcept
 {
 }
+
+s32 lv2_socket::validate_so_rcvbuf(s32 size)
+{
+	if (size <= 0)
+	{
+		return -SYS_NET_EINVAL;
+	}
+
+	if (size > MAX_RCVBUF_SIZE)
+	{
+		return -SYS_NET_ENOBUFS;
+	}
+
+	return CELL_OK;
+}

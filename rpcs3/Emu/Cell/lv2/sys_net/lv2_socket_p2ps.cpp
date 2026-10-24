@@ -289,7 +289,7 @@ lv2_socket_p2ps::lv2_socket_p2ps(socket_type native_socket, u16 port, u16 vport,
 	this->cur_seq      = cur_seq;
 	this->data_beg_seq = data_beg_seq;
 	this->so_nbio      = so_nbio;
-	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_RCVBUF].data._int = so_rcvbuf;
+	this->so_rcvbuf = so_rcvbuf;
 	status             = p2ps_stream_status::stream_connected;
 }
 

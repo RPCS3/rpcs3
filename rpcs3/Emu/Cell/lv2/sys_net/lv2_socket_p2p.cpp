@@ -14,18 +14,8 @@ lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, l
 
 void lv2_socket_p2p::initialize_socket_options(lv2_socket_type type)
 {
-	sockopt_cache cache_type;
-	cache_type.data._int = type;
-	cache_type.len = 4;
-
-	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_TYPE] = cache_type;
-
-	// DGRAM-P2P uses the value observed on hardware. STREAM-P2P uses the regular stream default.
-	sockopt_cache cache_rcvbuf;
-	cache_rcvbuf.data._int = type == SYS_NET_SOCK_DGRAM_P2P ? 131072 : 65535;
-	cache_rcvbuf.len = 4;
-
-	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_RCVBUF] = cache_rcvbuf;
+	so_type = type;
+	so_rcvbuf = type == SYS_NET_SOCK_DGRAM_P2P ? 124800 : 65535; // Hardware verified
 }
 
 lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)
@@ -229,22 +219,22 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_p2p::getsockopt(s32 le
 {
 	std::lock_guard lock(mutex);
 
-	if (level == SYS_NET_SOL_SOCKET)
+	const auto create_return_value = [](s32 value) -> std::tuple<s32, lv2_socket::sockopt_data, u32>
 	{
 		sockopt_data out_val;
+		out_val._int = value;
+		return {CELL_OK, out_val, sizeof(s32)};
+	};
 
+	if (level == SYS_NET_SOL_SOCKET)
+	{
 		switch (optname)
 		{
-		case SYS_NET_SO_NBIO:
-		{
-			out_val._int = so_nbio;
-			return {CELL_OK, out_val, sizeof(s32)};
-		}
-		case SYS_NET_SO_ERROR:
-		{
-			out_val._int = std::exchange(so_error, 0);
-			return {CELL_OK, out_val, sizeof(s32)};
-		}
+		case SYS_NET_SO_TYPE: return create_return_value(so_type);
+		case SYS_NET_SO_RCVBUF: return create_return_value(so_rcvbuf);
+		case SYS_NET_SO_NBIO: return create_return_value(so_nbio);
+		case SYS_NET_SO_BROADCAST: return create_return_value(so_broadcast);
+		case SYS_NET_SO_ERROR: return create_return_value(std::exchange(so_error, 0));
 		default: break;
 		}
 	}
@@ -263,11 +253,7 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_p2p::getsockopt(s32 le
 
 usz lv2_socket_p2p::get_receive_buffer_size() const
 {
-	const u64 key = (static_cast<u64>(SYS_NET_SOL_SOCKET) << 32) | SYS_NET_SO_RCVBUF;
-	const auto& cache = ::at32(sockopts, key);
-	const s32 size = cache.data._int;
-
-	return size > 0 ? std::min<usz>(size, MAX_RECEIVED_BUFFER) : 0;
+	return so_rcvbuf > 0 ? std::min<usz>(so_rcvbuf, MAX_RECEIVED_BUFFER) : 0;
 }
 
 s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& optval)
@@ -276,19 +262,31 @@ s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& op
 
 	int native_int = *reinterpret_cast<const be_t<s32>*>(optval.data());
 
-	if (level == SYS_NET_SOL_SOCKET && optname == SYS_NET_SO_NBIO)
+	if (level == SYS_NET_SOL_SOCKET)
 	{
-		so_nbio = native_int;
-	}
-	else if (level == SYS_NET_SOL_SOCKET && optname == SYS_NET_SO_BROADCAST)
-	{
-		so_broadcast = native_int;
+		switch (optname)
+		{
+		case SYS_NET_SO_TYPE: return -SYS_NET_ENOPROTOOPT;
+		case SYS_NET_SO_RCVBUF:
+		{
+			if (s32 ret = lv2_socket::validate_so_rcvbuf(native_int); ret != CELL_OK)
+			{
+				return ret;
+			}
+
+			so_rcvbuf = native_int;
+			return CELL_OK;
+		}
+		case SYS_NET_SO_NBIO: so_nbio = native_int; return CELL_OK;
+		case SYS_NET_SO_BROADCAST: so_broadcast = native_int; return CELL_OK;
+		default: break;
+		}
 	}
 
 	const u64 key = (static_cast<u64>(level) << 32) | static_cast<u64>(optname);
 	sockopt_cache cache{};
-	memcpy(&cache.data._int, optval.data(), optval.size());
-	cache.len = ::size32(optval);
+	cache.len = std::min(::size32(optval), static_cast<u32>(sizeof(cache.data.ch)));
+	memcpy(&cache.data.ch, optval.data(), cache.len);
 
 	sockopts[key] = std::move(cache);
 
