@@ -510,9 +510,10 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		return;
 	}
 
-	u32 buffer_width = display_buffers[info.buffer].width;
-	u32 buffer_height = display_buffers[info.buffer].height;
-	u32 buffer_pitch = display_buffers[info.buffer].pitch;
+	const bool valid_buffer = info.buffer < display_buffers_count;
+	u32 buffer_width  = valid_buffer ? +display_buffers[info.buffer].width : 0;
+	u32 buffer_height = valid_buffer ? +display_buffers[info.buffer].height : 0;
+	u32 buffer_pitch  = valid_buffer ? +display_buffers[info.buffer].pitch : 0;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
