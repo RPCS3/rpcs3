@@ -388,6 +388,57 @@ namespace rsx
 		return { width, height };
 	}
 
+	// Scales the edges of an area (e.g. a scissor) of a surface whose clip area is clip_width x clip_height.
+	// Geometry is mapped to the scaled clip area (apply_resolution_scale of the clip size), and the rasterizer assigns a host pixel
+	// to the area whose scaled edges enclose the pixel centre, so an edge maps to ceil(edge * scaled_clip / clip - 0.5).
+	// This matches apply_resolution_scale whenever the scaled position is an integer (e.g. integer scales); otherwise it keeps
+	// every host pixel covered by the guest area that contains its centre.
+	static inline const std::tuple<u16, u16, u16, u16> apply_resolution_scale_to_area(
+		const surface_scaling_config_t& config,
+		u16 x1,
+		u16 y1,
+		u16 x2,
+		u16 y2,
+		u16 ref_width,
+		u16 ref_height,
+		u16 clip_width,
+		u16 clip_height)
+	{
+		if (std::max(ref_width, ref_height) <= config.min_scalable_dimension)
+		{
+			return { x1, y1, x2, y2 };
+		}
+
+		const auto scale_axis = [&](u16& edge1, u16& edge2, u16 clip)
+		{
+			clip = std::max<u16>(clip, 1);
+			const u32 scaled_clip = std::max<u32>((u32{config.scale_percent} * clip) / 100, 1);
+
+			if (scaled_clip % clip == 0)
+			{
+				// Integer ratio: every scaled edge is an integer
+				const u32 ratio = scaled_clip / clip;
+				edge1 = static_cast<u16>(edge1 * ratio);
+				edge2 = static_cast<u16>(edge2 * ratio);
+				return;
+			}
+
+			const auto scale_edge = [&](u16 value) -> u16
+			{
+				const s64 numerator = 2 * s64{value} * scaled_clip - clip;
+				const s64 denominator = 2 * s64{clip};
+				return static_cast<u16>(numerator > 0 ? (numerator + denominator - 1) / denominator : 0);
+			};
+
+			edge1 = scale_edge(edge1);
+			edge2 = scale_edge(edge2);
+		};
+
+		scale_axis(x1, x2, clip_width);
+		scale_axis(y1, y2, clip_height);
+		return { x1, y1, x2, y2 };
+	}
+
 	template <bool clamp = false>
 	static inline const std::pair<u16, u16> apply_inverse_resolution_scale(
 		const surface_scaling_config_t& config,
