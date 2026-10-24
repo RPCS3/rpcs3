@@ -2,6 +2,7 @@
 
 #include <util/types.hpp>
 #include <unordered_set>
+#include <vector>
 #include <string>
 
 // Patch utilities specific to PPU code
@@ -12,6 +13,14 @@ struct ppu_patch_block_registry_t
     ppu_patch_block_registry_t& operator=(const ppu_patch_block_registry_t&) = delete;
 
     std::unordered_set<u32> block_addresses{};
+    struct code_range
+    {
+        u32 addr;
+        u32 size;
+        std::string patch;
+    };
+
+    std::vector<code_range> code_ranges{};
 };
 
 void ppu_register_range(u32 addr, u32 size);
