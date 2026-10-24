@@ -491,7 +491,7 @@ namespace vk
 
 		void release_temporary_subresource(vk::image_view* view) override;
 
-		void initialize_subresource_from_memory(vk::command_buffer& cmd, vk::image* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const;
+		void initialize_subresource_from_memory(vk::command_buffer& cmd, vk::image* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type);
 
 		void update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, const deferred_subresource& desc) override;
 
