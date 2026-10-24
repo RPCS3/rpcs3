@@ -76,6 +76,8 @@ namespace utils
 
 	bool has_sve2();
 
+	bool has_sve2p2();
+
 	int sve_length();
 #endif
 	std::string get_cpu_brand();

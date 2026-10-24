@@ -23,6 +23,7 @@ namespace vk
 		{ "fog_c", 14 },
 		{ "fogc", 14 },
 		{ "usr", 15 }, // custom injected stuff
+		{ "depth_range", 17 }, // clip range for depth range emulation; 16 is used by the shader interpreter
 	} };
 
 	int get_varying_register_location(std::string_view varying_register_name)

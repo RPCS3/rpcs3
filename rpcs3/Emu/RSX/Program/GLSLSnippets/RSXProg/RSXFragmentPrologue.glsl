@@ -1,5 +1,19 @@
 R"(
 
+#ifdef _EMULATED_DEPTH_STORAGE
+// Halving the IEEE bit pattern of a non-negative float is monotonic and maps every finite value below 1.
+// The host depth test keeps working on the encoded values.
+float encode_emulated_depth(const in float depth)
+{
+	return uintBitsToFloat((floatBitsToUint(max(depth, 0.)) & 0x7fffffffu) >> 1);
+}
+
+float decode_emulated_depth(const in float stored)
+{
+	return uintBitsToFloat(floatBitsToUint(stored) << 1);
+}
+#endif
+
 #ifdef _32_BIT_OUTPUT
 // Everything is fp32 on ouput channels
 #define _mrt_color_t(expr) expr

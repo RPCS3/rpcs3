@@ -29,6 +29,7 @@ namespace glsl
 		bool require_clip_plane_functions : 1;
 		bool emulate_zclip_transform : 1;
 		bool emulate_depth_clip_only : 1;
+		bool emulate_depth_range : 1;
 
 		// Only relevant for fragment programs
 		bool fp32_outputs : 1;
@@ -41,6 +42,7 @@ namespace glsl
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
+		bool emulated_depth_storage : 1;      // Float depth surfaces hold encode_emulated_depth(z)
 
 		// ROP control flags
 		bool ROP_output_multisampled : 1;
@@ -52,6 +54,8 @@ namespace glsl
 		bool ROP_discard : 1;
 		bool ROP_channel_remap : 1;
 		bool ROP_programmable_blend : 1;
+		bool ROP_emulate_depth_range : 1;
+		bool ROP_depth_export : 1;
 
 		// Texturing spec
 		bool require_texture_ops : 1;           // Global switch to enable/disable all texture code

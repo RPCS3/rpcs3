@@ -21,7 +21,7 @@ namespace rsx
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
-		set_transform_constant::write_range set_transform_constant::compute_write_range(context* ctx, u32 reg, u32 count)
+		set_transform_constant::write_range set_transform_constant::compute_write_range([[maybe_unused]] context* ctx, u32 reg, u32 count)
 		{
 			const u32 load = REGS(ctx)->transform_constant_load();
 			if (load >= max_transform_constants)
@@ -39,7 +39,7 @@ namespace rsx
 			return { first_word, std::min(count, max_words - first_word) };
 		}
 
-		u32* set_transform_constant::get_constants_ptr(context* ctx, u32 word)
+		u32* set_transform_constant::get_constants_ptr([[maybe_unused]] context* ctx, u32 word)
 		{
 			return &REGS(ctx)->transform_constants[word / 4][word % 4];
 		}
@@ -186,7 +186,7 @@ namespace rsx
 
 			// Writes start at the current load position, which advances by one instruction per 4 words written
 			const u32 load_pos = REGS(ctx)->transform_program_load();
-			const u32 max_words = max_vertex_program_instructions * 4;
+			constexpr u32 max_words = max_vertex_program_instructions * 4;
 			const u32 first_word = load_pos < max_vertex_program_instructions ? load_pos * 4 + index % 4 : max_words;
 			const u32 write_count = std::min(count, max_words - first_word);
 
@@ -195,7 +195,7 @@ namespace rsx
 				rsx_log.warning("Program buffer overflow! (load=%u, index=%u, count=%u)", load_pos, index, count);
 			}
 
-			if (write_count == 0)
+			if (write_count == 0 || first_word >= REGS(ctx)->transform_program.size())
 			{
 				// Out-of-bounds write is a NOP
 				rsx_log.trace("Out of bounds write for transform program block.");
@@ -270,6 +270,22 @@ namespace rsx
 
 			RSX(ctx)->m_graphics_state.set(rtt_config_dirty);
 			RSX(ctx)->m_graphics_state.clear(rtt_config_contested);
+		}
+
+		void set_zmin_max_control(context* ctx, u32 /*reg*/, u32 arg)
+		{
+			if (arg == REGS(ctx)->latch)
+			{
+				return;
+			}
+
+			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+
+			// Depth clip and clamp are read by the fragment epilogue when the depth range is emulated
+			if (!RSX(ctx)->get_backend_config().supports_extended_depth_range && g_cfg.video.emulate_extended_depth_range)
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
 		}
 
 		void set_surface_format(context* ctx, u32 reg, u32 arg)
