@@ -717,6 +717,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
+	const u64 op_start_time = get_guest_system_time();
+
 	if (setList)
 	{
 		if (const auto& [ok, list] = setList.try_read(); ok)
@@ -1889,7 +1891,16 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				// Some games (Jak II [NPUA80707]) rely on this delay
 				lv2_obj::sleep(ppu);
-				delay_save_until = get_guest_system_time() + (has_modified ? 500'000 : 100'000);
+				if (operation <= SAVEDATA_OP_AUTO_LOAD)
+				{
+					// Shortest time measured on a PS3 from the AutoSave/AutoLoad call to its return
+					delay_save_until = op_start_time + (operation == SAVEDATA_OP_AUTO_SAVE ? 1'750'000 : 980'000);
+				}
+				else
+				{
+					delay_save_until = get_guest_system_time() + (has_modified ? 500'000 : 100'000);
+				}
+
 				break;
 			}
 
