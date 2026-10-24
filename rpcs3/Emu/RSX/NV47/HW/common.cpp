@@ -4,8 +4,7 @@
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/RSXThread.h"
 
-#define RSX(ctx) ctx->rsxthr
-#define REGS(ctx) (&rsx::method_registers)
+#include "context_accessors.define.h"
 
 namespace rsx
 {
@@ -13,17 +12,12 @@ namespace rsx
 	{
 		bool is_volatile_TIU(rsx::context* ctx, u32 index)
 		{
-			if (!RSX(ctx)->fs_sampler_state[index])
-			{
-				return false;
-			}
-
-			return RSX(ctx)->fs_sampler_state[index]->upload_context != rsx::texture_upload_context::shader_read;
+			return !!(ctx->textures.fragment_textures_volatile & (1u << index));
 		}
 
 		void push_vertex_data(rsx::context* ctx, u32 attrib_index, u32 channel_select, int count, rsx::vertex_base_type vtype, u32 value)
 		{
-			if (RSX(ctx)->in_begin_end)
+			if (ctx->in_begin_end)
 			{
 				// Update to immediate mode register/array
 				// NOTE: Push buffers still behave like register writes.
@@ -44,7 +38,7 @@ namespace rsx
 		void push_draw_parameter_change(rsx::context* ctx, rsx::command_barrier_type type, u32 reg, u32 arg0, u32 arg1, u32 index)
 		{
 			// NOTE: We can't test against latch here, since a previous change may be buffered in a pending barrier.
-			if (!RSX(ctx)->in_begin_end || REGS(ctx)->current_draw_clause.empty())
+			if (!ctx->in_begin_end || REGS(ctx)->current_draw_clause.empty())
 			{
 				return;
 			}
@@ -56,10 +50,10 @@ namespace rsx
 			REGS(ctx)->current_draw_clause.insert_command_barrier(type, arg0, arg1, index);
 		}
 
-		u32 get_report_data_impl([[maybe_unused]] rsx::context* ctx, u32 offset)
+		u32 get_report_data_impl(rsx::context* ctx, u32 offset)
 		{
 			blit_engine::context_dma report_dma = REGS(ctx)->context_dma_report();
-			return vm::cast(get_address(offset, static_cast<u32>(report_dma)));
+			return vm::cast(get_address(ctx, offset, static_cast<u32>(report_dma)));
 		}
 
 		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index)
@@ -69,21 +63,21 @@ namespace rsx
 				return;
 			}
 
-			RSX(ctx)->m_textures_dirty[index] = true;
+			ctx->textures.fragment_textures_dirty |= (1u << index);
 
-			if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << index))
+			if (ctx->program.fp_metadata.referenced_textures_mask & (1 << index))
 			{
-				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+				ctx->graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 			}
 		}
 
 		void set_vertex_texture_dirty_bit(rsx::context* ctx, u32 index)
 		{
-			RSX(ctx)->m_vertex_textures_dirty[index] = true;
+			ctx->textures.vertex_textures_dirty |= (1u << index);
 
-			if (RSX(ctx)->current_vp_metadata.referenced_textures_mask & (1 << index))
+			if (ctx->program.vp_metadata.referenced_textures_mask & (1 << index))
 			{
-				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
+				ctx->graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 			}
 		}
 	}

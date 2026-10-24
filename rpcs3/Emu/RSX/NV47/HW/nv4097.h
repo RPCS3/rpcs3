@@ -93,9 +93,6 @@ namespace rsx
 
 		void set_aa_control(context* ctx, u32 reg, u32 arg);
 
-#define RSX(ctx) ctx->rsxthr
-#define REGS(ctx) (&rsx::method_registers)
-
 		/**
 		* id = base method register
 		* index = register index in method
@@ -260,8 +257,5 @@ namespace rsx
 				util::set_vertex_texture_dirty_bit(ctx, index);
 			}
 		};
-
-#undef RSX
-#undef REGS
 	}
 }

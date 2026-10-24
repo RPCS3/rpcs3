@@ -55,15 +55,10 @@
 
 #include <clocale>
 
-#include "Emu/RSX/Null/NullGSRender.h"
-
-#ifndef __APPLE__
-#include "Emu/RSX/GL/GLGSRender.h"
-#endif
-
-#if defined(HAVE_VULKAN)
-#include "Emu/RSX/VK/VKGSRender.h"
-#endif
+#include "Emu/RSX/Core/RSXRendererFactory.h"
+#include "Emu/IdManager.h"
+#include "Emu/system_config.h"
+#include "util/sysinfo.hpp"
 
 #ifdef _WIN32
 #include <Usbiodef.h>
@@ -789,28 +784,7 @@ void gui_application::create_callbacks()
 
 	g_emu_callbacks.init_gs_render = [](utils::serial* ar)
 	{
-		switch (g_cfg.video.renderer.get())
-		{
-		case video_renderer::null:
-		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
-			break;
-		}
-		case video_renderer::opengl:
-		{
-#if not defined(__APPLE__)
-			g_fxo->init<rsx::thread, named_thread<GLGSRender>>(ar);
-#endif
-			break;
-		}
-		case video_renderer::vulkan:
-		{
-#if defined(HAVE_VULKAN)
-			g_fxo->init<rsx::thread, named_thread<VKGSRender>>(ar);
-#endif
-			break;
-		}
-		}
+		rsx::create_render_thread(ar);
 	};
 
 	g_emu_callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
@@ -862,7 +836,17 @@ void gui_application::create_callbacks()
 			m_game_window = nullptr;
 		}
 	};
+
 	g_emu_callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
+	g_emu_callbacks.replace_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
+	{
+		// Close and reopen the game window
+		g_emu_callbacks.close_gs_frame();
+		auto frame = get_gs_frame();
+		attach_input_to_game_window();
+		return frame;
+	};
+
 	g_emu_callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	g_emu_callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	g_emu_callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
@@ -883,6 +867,7 @@ void gui_application::create_callbacks()
 			OnEnableDiscEject(enabled);
 		});
 	};
+
 	g_emu_callbacks.enable_disc_insert = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()

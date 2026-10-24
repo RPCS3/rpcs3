@@ -1,5 +1,7 @@
 #pragma once
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Core/RSXRenderBackend.h"
+#include "Emu/RSX/GSFrameBase.h"
+#include "Emu/RSX/RSXThread.h"
 #include "GLTextureCache.h"
 #include "GLRenderTargets.h"
 #include "GLProgramBuffer.h"
@@ -43,6 +45,7 @@ namespace gl
 
 	struct work_item
 	{
+		rsx::context* ctx = nullptr;
 		u32  address_to_flush = 0;
 		gl::texture_cache::thrashed_set section_data;
 
@@ -70,9 +73,16 @@ namespace gl
 		u32 pitch;
 		u8  eye;
 	};
+
+	struct context_resources final : rsx::context_resources
+	{
+		std::unique_ptr<gl::vertex_cache> vertex_cache;
+		gl_render_targets surface_cache;
+		gl::texture_cache texture_cache;
+	};
 }
 
-class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
+class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
 	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
 	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
@@ -82,13 +92,10 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	gl::glsl::program* m_prev_program = nullptr;
 	const GLFragmentProgram *m_fragment_prog = nullptr;
 	const GLVertexProgram *m_vertex_prog = nullptr;
+	rsx::bitmask_t<rsx::draw_state_t::group> m_stale_constants;                           // Constant buffers whose host copy is out of date.
 
-	rsx::flags32_t m_interpreter_state = 0;
+	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 	gl::shader_interpreter m_shader_interpreter;
-
-	gl_render_targets m_rtts;
-
-	gl::texture_cache m_gl_texture_cache;
 
 	gl::buffer_view m_persistent_stream_view;
 	gl::buffer_view m_volatile_stream_view;
@@ -114,7 +121,6 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	// Used for hot-patching
 	std::unique_ptr<gl::ring_buffer> m_scratch_ring_buffer;
 
-	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
 	std::unique_ptr<gl::shader_cache> m_shaders_cache;
 
 	GLint m_min_texbuffer_alignment = 256;
@@ -155,27 +161,27 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	// Occlusion query type, can be SAMPLES_PASSED or ANY_SAMPLES_PASSED
 	GLenum m_occlusion_type = GL_ANY_SAMPLES_PASSED;
+	std::array<GLuint, rsx::reports::occlusion_query_count> m_occlusion_query_handles{}; // Host query per ZCULL query slot
 
 	// Host context for GPU-driven work
 	std::unique_ptr<gl::buffer> m_host_gpu_context_data;
 	std::unique_ptr<gl::scratch_ring_buffer> m_enqueued_host_write_buffer;
 
-public:
-	u64 get_cycles() final;
-
-	GLGSRender(utils::serial* ar) noexcept;
-	GLGSRender() noexcept : GLGSRender(nullptr) {}
-	virtual ~GLGSRender();
-
-private:
-
+	// State tracking
 	gl::driver_state gl_state;
 
+public:
+	GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept;
+	virtual ~GLGSRender();
+
+	// Identifiers
+	std::string logical_id() const override { return "OpenGL"; }
+	std::string configured_logical_id() const override;
+
+private:
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
 	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
-
-	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool load_program();
 	void load_program_env();
@@ -184,18 +190,21 @@ private:
 
 	void update_draw_state();
 
-	void load_texture_env();
+	rsx::flags32_t load_texture_env();
 	void bind_texture_env();
 
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 
 	void update_swap_interval();
 
+	static gl::context_resources* res(rsx::context* ctx) { return static_cast<gl::context_resources*>(ctx->resources.get()); }
+	gl::context_resources* res() const { return res(m_ctx); }
+
 public:
 	void set_viewport();
-	void set_scissor(bool clip_viewport);
+	void set_scissor(bool force = false);
 
-	gl::work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
+	gl::work_item& post_flush_request(rsx::context* ctx, u32 address, gl::texture_cache::thrashed_set& flush_data);
 
 	// NV3089
 	bool scaled_image_from_memory(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate) override;
@@ -209,6 +218,7 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	rsx::reports::occlusion_query_provider* occlusion_queries() override { return this; }
 
 	// DMA
 	bool release_GCM_label(u32 type, u32 address, u32 data) override;
@@ -222,19 +232,29 @@ public:
 	bool is_current_program_interpreted() const override;
 
 protected:
-	void clear_surface(u32 arg) override;
-	void begin() override;
-	void end() override;
+	void clear() override;
+	void begin_draw() override;
+	bool resolve_sampler_state(rsx::flags32_t& invalidated_programs) override;
+	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 
-	void on_init_thread() override;
-	void on_exit() override;
-	void flip(const rsx::display_flip_info_t& info) override;
+	bool on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
+	bool is_framebuffer_bound() const override;
 
-	void do_local_task(rsx::FIFO::state state) override;
+	void on_init() override;
+	void on_shutdown() override;
+	rsx::device_status check_device_status() const override;
+	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
+	void on_bind_context(rsx::context* ctx) override;
+	void on_unbind_context(rsx::context* ctx) override;
+	void on_release_context_resources(rsx::context* ctx) override;
+	bool present_frame(const rsx::display_flip_info_t& info) override;
+	void post_present() override;
 
-	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause) override;
+	bool on_local_task(rsx::FIFO::state state) override;
+
+	bool on_access_violation(rsx::context* ctx, u32 address, bool is_writing) override;
+	void on_invalidate_memory_range(rsx::context* ctx, const utils::address_range32 &range, rsx::invalidation_cause cause) override;
 	void notify_tile_unbound(u32 tile) override;
 	void on_semaphore_acquire_wait() override;
 };

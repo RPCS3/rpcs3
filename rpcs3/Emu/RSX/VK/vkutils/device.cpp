@@ -961,6 +961,17 @@ namespace vk
 		memory_map.device_local.rebalance();
 	}
 
+	bool render_device::device_lost() const
+	{
+		if (m_is_lost.exchange(true))
+			return false;
+
+		if (m_error_handler)
+			m_error_handler();
+
+		return true;
+	}
+
 	bool render_device::get_debug_utils_support() const
 	{
 		return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils;

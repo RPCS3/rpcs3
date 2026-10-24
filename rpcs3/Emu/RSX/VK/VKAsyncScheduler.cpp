@@ -8,6 +8,11 @@ namespace vk
 {
 	AsyncTaskScheduler::AsyncTaskScheduler(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency)
 	{
+		reset(mode, queue_dependency);
+	}
+
+	void AsyncTaskScheduler::reset(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency)
+	{
 		if (g_cfg.video.renderer != video_renderer::vulkan || !g_cfg.video.vk.asynchronous_texture_streaming)
 		{
 			// Invalid renderer combination, do not proceed. This should never happen.
@@ -180,8 +185,16 @@ namespace vk
 
 		m_async_command_queue.clear();
 		m_next_cb_index = 0;
+		m_current_cb = nullptr;
+		m_last_used_cb = nullptr;
+		m_sync_label = nullptr;
+		m_sync_required = false; // Recording can be cut short by a device loss
 		m_command_pool.destroy();
 		m_events_pool.clear();
 		m_semaphore_pool.clear();
+
+		// The options (dependency info) point into the renderer that is going away
+		std::lock_guard lock(m_config_mutex);
+		m_options_initialized = false;
 	}
 }

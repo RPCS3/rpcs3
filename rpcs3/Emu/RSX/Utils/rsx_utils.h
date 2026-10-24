@@ -4,6 +4,8 @@
 #include "Utilities/geometry.h"
 #include "../gcm_enums.h"
 
+#include <source_location>
+
 #define RSX_SURFACE_DIMENSION_IGNORED 1
 
 namespace rsx
@@ -22,6 +24,9 @@ namespace rsx
 	using flags8_t = u8;
 
 	extern atomic_t<u64> g_rsx_shared_tag;
+
+	struct context;
+	struct rsx_state;
 
 	enum class problem_severity : u8
 	{
@@ -236,8 +241,6 @@ namespace rsx
 			CELL_GCM_LOCATION_LOCAL :
 			CELL_GCM_LOCATION_MAIN;
 	}
-
-	std::array<float, 4> get_constant_blend_colors();
 
 	/**
 	 * Shuffle texel layout from xyzw to wzyx
@@ -601,4 +604,20 @@ namespace rsx
 			}
 		}
 	}
+
+	// Register state of the context bound to the RSX thread. For out-of-thread tools (debugger UI) only.
+	// Everything running under rsx::thread must use REGS(ctx) instead.
+	rsx_state& get_method_registers();
+
+	// Resolve object location/partition and offset to a usable address. Context can be nullptr for local memory only
+	u32 get_address(const context* ctx, u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
+
+	// Lets the RSX thread yield to other CPU threads (power save pre-emption)
+	void set_rsx_yield_flag() noexcept;
+
+	// Asks the display engine to flip the native UI
+	void set_native_ui_flip();
+
+	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
+
 }

@@ -60,6 +60,12 @@ namespace rsx
 
 		bool m_invalidate_on_write = false;
 
+		// Context this cache belongs to
+		rsx::context* m_ctx = nullptr;
+
+		// Resolution scaling the surfaces were last synced to
+		rsx::surface_scaling_config_t m_scaling_config{};
+
 		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
 
 	public:
@@ -84,6 +90,11 @@ namespace rsx
 		surface_store() = default;
 		~surface_store() = default;
 		surface_store(const surface_store&) = delete;
+
+		void set_context(rsx::context* ctx)
+		{
+			m_ctx = ctx;
+		}
 
 	private:
 		surface_storage_type find_reusable_matching_surface(surface_type ref, u16 width, u16 height, surface_type excluded_surface)
@@ -179,6 +190,7 @@ namespace rsx
 				}
 
 				Traits::clone_surface(cmd, sink, region.source, new_address, region, region.source->resolution_scaling_config);
+				Traits::get(sink)->ctx = m_ctx;
 				allocate_rsx_memory(Traits::get(sink));
 
 				if (invalidated) [[unlikely]]
@@ -580,6 +592,7 @@ namespace rsx
 				ensure(store);
 				new_surface_storage = Traits::create_new_surface(command_list, address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
+				new_surface->ctx = m_ctx;
 				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
 			}
@@ -1702,8 +1715,15 @@ namespace rsx
 			}
 		}
 
+		const rsx::surface_scaling_config_t& scaling_config() const
+		{
+			return m_scaling_config;
+		}
+
 		void sync_scaling_config(command_list_type cmd, const rsx::surface_scaling_config_t& active_config)
 		{
+			m_scaling_config = active_config;
+
 			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
 			{
 				std::vector<surface_type> surfaces_to_clone;
@@ -1752,6 +1772,7 @@ namespace rsx
 					copy.source = surface;
 
 					Traits::clone_surface(cmd, sink, surface, surface->base_addr, copy, active_config);
+					Traits::get(sink)->ctx = m_ctx;
 					allocate_rsx_memory(Traits::get(sink));
 
 					// Replace with the new one

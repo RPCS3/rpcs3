@@ -8,7 +8,11 @@ namespace vk
 #define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res); }
 #define CHECK_RESULT_EX(expr, msg) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res, msg); }
 
-	void die_with_error(VkResult error_code, std::string message = {}, std::source_location src_loc = std::source_location::current());
+	// Reports a failed API call. Returns true if the device cannot continue, false if the error is only logged.
+	bool die_with_error(VkResult error_code, std::string message = {}, std::source_location src_loc = std::source_location::current());
+
+	void arm_device_loss_protection();
+	void disable_device_loss_protection();
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 	                                       u64 srcObject, usz location, s32 msgCode,

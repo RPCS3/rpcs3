@@ -75,7 +75,7 @@ namespace rsx
 
 				const u32 data_length = count * 4;
 
-				const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, data_length);
+				const auto dst_address = get_address(ctx, dst_offset + (x * 4) + (out_pitch * y), dst_dma, data_length);
 
 				if (!dst_address)
 				{
@@ -114,7 +114,7 @@ namespace rsx
 			{
 				const auto data_length = count * 2;
 
-				const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
+				const auto dst_address = get_address(ctx, dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
 				const auto dst = vm::_ptr<u16>(dst_address);
 				const auto src = utils::bless<const be_t<u32>>(fifo_span.data());
 

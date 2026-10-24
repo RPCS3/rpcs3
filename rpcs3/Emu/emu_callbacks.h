@@ -34,6 +34,7 @@ struct emu_callbacks
 	std::function<void()> save_emu_settings;
 	std::function<void()> close_gs_frame;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
+	std::function<std::unique_ptr<class GSFrameBase>()> replace_gs_frame;
 	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
 	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
 	std::function<void(utils::serial*)> init_gs_render;
