@@ -1741,26 +1741,30 @@ public:
 
 		std::string function_log;
 
-		this->dump(func, function_log);
 		bool to_log_func = false;
+
+		for (u32 data : func.data)
+		{
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(data)};
+
+			if (op.ra == SPU_RdDec && g_spu_itype.decode(op.opcode) == spu_itype::RDCH)
+			{
+				to_log_func = true;
+				break;
+			}
+		}
+
+		// The disassembly is expensive, only create it if it's going to be logged
+		if (g_cfg.core.spu_debug || to_log_func)
+		{
+			this->dump(func, function_log);
+		}
 
 		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
 			if (!fs::write_file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append, function_log))
 			{
 				// Fallback: write to main log
-				to_log_func = true;
-			}
-		}
-
-		for (u32 data : func.data)
-		{
-			const spu_opcode_t op{std::bit_cast<be_t<u32>>(data)};
-
-			const auto itype = g_spu_itype.decode(op.opcode);
-
-			if (itype == spu_itype::RDCH && op.ra == SPU_RdDec)
-			{
 				to_log_func = true;
 			}
 		}
@@ -4017,12 +4021,26 @@ public:
 		std::string& llvm_log = function_log;
 		raw_string_ostream out(llvm_log);
 
-		fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
-		out << *_module; // print IR
-		out << "\n\n";
-
-		if (verifyModule(*_module, &out))
+		// Printing the IR is expensive, only do it when it's needed (verification failure or debug log)
+		const auto print_ir = [&]()
 		{
+			fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
+			out << *_module; // print IR
+			out << "\n\n";
+		};
+
+		std::string verify_log;
+		raw_string_ostream verify_out(verify_log);
+
+		if (verifyModule(*_module, &verify_out))
+		{
+			if (function_log.empty())
+			{
+				this->dump(func, function_log);
+			}
+
+			print_ir();
+			out << verify_out.str();
 			out.flush();
 			spu_log.error("LLVM: Verification failed at 0x%x:\n%s", func.entry_point, llvm_log);
 
@@ -4040,6 +4058,11 @@ public:
 			}
 
 			fmt::throw_exception("Compilation failed");
+		}
+
+		if (g_cfg.core.spu_debug)
+		{
+			print_ir();
 		}
 
 #if defined(__APPLE__)

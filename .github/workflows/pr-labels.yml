@@ -5,17 +5,18 @@ on:
     types:
       - opened
       - edited
+      - synchronize
 
 jobs:
   Label_PRs:
-    name: Label from title and linked issues
+    name: Label PRs
     runs-on: ubuntu-latest
     if: github.repository == 'RPCS3/rpcs3'
     permissions:
       issues: read
       pull-requests: write
     steps:
-      - name: Add labels from title and linked issues
+      - name: Add labels
         uses: actions/github-script@v9
         with:
           retries: 3
@@ -23,6 +24,7 @@ jobs:
             const AREAS = [
               'Build and CI', 'CLI', 'Filesystem', 'GUI', 'Input', 'ISO', 'Localization', 'Overlay', 'Render: Vulkan', 'RSX', 'Savestates',
             ];
+            const AI = /^\s*co-authored-by:.*\b(claude|anthropic|copilot|cursor|openai|chatgpt|gemini|codex)\b|generated with \[claude code\]/im;
 
             const {repository: {pullRequest: pull}} = await github.graphql(`
               query($owner: String!, $repo: String!, $number: Int!) {
@@ -31,19 +33,20 @@ jobs:
                     labels(first: 100) { nodes { name } }
                     closingIssuesReferences(first: 50) { nodes { labels(first: 100) { nodes { name } } } }
                     timelineItems(itemTypes: [UNLABELED_EVENT], last: 100) { nodes { ... on UnlabeledEvent { label { name } } } }
+                    commits(last: 100) { nodes { commit { message } } }
                   }
                 }
               }`, {...context.repo, number: context.issue.number});
 
-            if (pull.labels.nodes.some(x => AREAS.includes(x.name)))
-              return;
-
             // Skip labels a maintainer removed
             const removed = pull.timelineItems.nodes.map(x => x.label.name);
-            const fromTitle = /^rsx\b/i.test(context.payload.pull_request.title) ? ['RSX'] : [];
+            const fromTitle = /^(\[TESTERS NEEDED\]\s*)?rsx\b/i.test(context.payload.pull_request.title) ? ['RSX'] : [];
             const fromIssues = pull.closingIssuesReferences.nodes.flatMap(i => i.labels.nodes.map(x => x.name));
-            const labels = [...new Set([...fromTitle, ...fromIssues])]
-              .filter(name => AREAS.includes(name) && !removed.includes(name));
+            const fromAI = [context.payload.pull_request.body ?? '', ...pull.commits.nodes.map(x => x.commit.message)].some(x => AI.test(x)) ? ['Beep bop 🤖'] : [];
+            const current = pull.labels.nodes.map(x => x.name);
+            const areas = current.some(name => AREAS.includes(name)) ? [] : [...fromTitle, ...fromIssues].filter(name => AREAS.includes(name));
+            const labels = [...new Set([...areas, ...fromAI])]
+              .filter(name => !current.includes(name) && !removed.includes(name));
 
             if (labels.length > 0) {
               console.log(`Adding labels: ${labels.join(', ')}`);

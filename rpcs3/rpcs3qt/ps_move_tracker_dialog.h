@@ -39,6 +39,11 @@ private:
 	void reset_camera();
 	void process_camera_frame();
 
+	// Blink calibration. process_calibration runs on the tracker thread.
+	void process_calibration();
+	void abort_calibration();
+	void set_led_enabled(bool enabled);
+
 	QPixmap get_histogram(bool ignore_zero, int width) const;
 
 	enum class view_mode
@@ -65,6 +70,38 @@ private:
 	std::vector<u8> m_image_data_frozen;
 	std::vector<u8> m_image_data;
 	std::array<u32, 360> m_hues{};
+
+	// Measured sphere color of the selected device
+	// Measured or calibrated sphere color of the selected device
+	struct sphere_color_info
+	{
+		bool valid = false;
+		f32 hue = 0.0f;
+		f32 saturation = 0.0f;
+		f32 value = 0.0f;
+		bool is_calibration = false; // Show the thresholds instead of saturation and value
+		f32 hue_threshold = 0.0f;
+		s32 min_saturation = 0;
+		s32 min_value = 0;
+	};
+	sphere_color_info m_measured_color{};
+
+	// Blink calibration state. Only used on the tracker thread (or while it is stopped).
+	struct blink_calibration
+	{
+		bool active = false;
+		bool led_on = false;
+		u32 index = 0;
+		u32 frames = 0;
+		u8 led_r = 0; // LED color during the calibration
+		u8 led_g = 0;
+		u8 led_b = 0;
+		steady_clock::time_point step_start {};
+		std::vector<std::vector<u8>> images_on;
+		std::vector<std::vector<u8>> images_off;
+	};
+	blink_calibration m_calibration{};
+	atomic_t<bool> m_calibration_requested = false;
 	static constexpr s32 width = 640;
 	static constexpr s32 height = 480;
 	s32 m_format = 0;

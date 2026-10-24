@@ -147,7 +147,6 @@ if (-not (Test-Path $CacheFile)) {
 
     & cmake $SourceDir -G 'Ninja Multi-Config' `
         -DBUILD_LLVM=ON `
-        -DUSE_SYSTEM_OPENCV=OFF `
         -DUSE_SYSTEM_CURL=OFF `
         -DUSE_SYSTEM_ZLIB=OFF `
         -DUSE_SYSTEM_LIBPNG=OFF `
