@@ -12,6 +12,28 @@ R"(
 #define CMP_FIXUP(a) (a)
 #endif
 
+// Host compilers may assume no NaNs and fold x == x to true and x != x to false. Programs use SNE x, x as a NaN test.
+// The fold needs both operands to be the same value, so testing one of them with isnan restores the IEEE result.
+bool _cmp_seq(const in float a, const in float b)
+{
+    return a == b && !isnan(a);
+}
+
+bool _cmp_sne(const in float a, const in float b)
+{
+    return a != b || isnan(a);
+}
+
+bvec4 _cmp_seq(const in vec4 a, const in vec4 b)
+{
+    return bvec4(uvec4(equal(a, b)) & uvec4(not(isnan(a))));
+}
+
+bvec4 _cmp_sne(const in vec4 a, const in vec4 b)
+{
+    return bvec4(uvec4(notEqual(a, b)) | uvec4(isnan(a)));
+}
+
 #define _builtin_approx_pow(a, b) exp2((b) * log2(a))
 
 #ifdef _ENABLE_LIT_EMULATION
