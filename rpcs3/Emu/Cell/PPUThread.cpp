@@ -1070,6 +1070,19 @@ struct ppu_far_jumps_t
 	}
 };
 
+bool ppu_has_far_jump(u32 addr, u32 size)
+{
+	if (!g_fxo->is_init<ppu_far_jumps_t>())
+	{
+		return false;
+	}
+
+	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
+	reader_lock lock(jumps.mutex);
+	const auto it = jumps.vals.lower_bound(addr);
+	return it != jumps.vals.end() && it->first - addr < size;
+}
+
 u32 ppu_get_far_jump(u32 pc)
 {
 	if (!g_fxo->is_init<ppu_far_jumps_t>())
