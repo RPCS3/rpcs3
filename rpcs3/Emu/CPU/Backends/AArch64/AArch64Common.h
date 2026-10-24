@@ -39,4 +39,8 @@ namespace aarch64
 
     std::string get_cpu_name();
     std::string get_cpu_brand();
+
+    // Returns a concrete LLVM -mcpu name for the host (e.g. "apple-m2") or "" if unknown.
+    // Used to give the JIT the correct scheduling model instead of a generic fallback.
+    std::string get_cpu_llvm_name();
 }
