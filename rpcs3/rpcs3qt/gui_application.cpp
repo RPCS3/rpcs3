@@ -242,11 +242,6 @@ int gui_application::exec()
 
 	steps->push_back([this]()
 	{
-		if (m_main_window)
-		{
-			m_main_window->show();
-		}
-
 #ifdef __APPLE__
 		if (!m_render_creator->Vulkan.supported)
 		{
@@ -266,6 +261,22 @@ int gui_application::exec()
 									"Some games will crash.\n"
 									"\n"
 									"Please increase the limit before running RPCS3."));
+		}
+
+		if (m_start_big_picture_mode)
+		{
+			if (!Emu.BootBigPictureMode())
+			{
+				gui_log.error("Failed to start Big Picture Mode.");
+				if (m_main_window)
+				{
+					m_main_window->show();
+				}
+			}
+		}
+		else if (m_main_window)
+		{
+			m_main_window->show();
 		}
 	});
 
