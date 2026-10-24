@@ -53,6 +53,9 @@ protected:
 	// List of sock options
 	std::map<u64, sockopt_cache> sockopts;
 
+	s32 so_type = 0;
+	s32 so_rcvbuf = 0;
+
 private:
 	void initialize_socket_options(lv2_socket_type type);
 };
