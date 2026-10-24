@@ -111,7 +111,11 @@ private:
 	u64 data_beg_seq   = 0;                       // Seq of first byte of received_data
 	u64 data_available = 0;                       // Amount of continuous data available(calculated on ACK send)
 	std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
-	usz received_data_size = 0;
+	usz received_data_size = 0;                   // Payload of received_data plus the cost of describing each segment
+
+	// Simulates the cost of each segment as size of seq(u32 on ps3) + payload size
+	static constexpr usz SEGMENT_OVERHEAD = sizeof(u32);
+	static constexpr usz get_segment_cost(usz payload_size) { return SEGMENT_OVERHEAD + payload_size; }
 
 	u64 cur_seq = 0; // SEQ of next packet to be sent
 };

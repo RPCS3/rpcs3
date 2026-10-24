@@ -5492,7 +5492,7 @@ void spu_thread::set_interrupt_status(bool enable)
 
 			if (!g_cfg.core.mfc_transfers_shuffling)
 			{
-				fmt::throw_exception("Enable \"Delay Each Odd MFC comman in advanced\" tab.");
+				fmt::throw_exception("Enable \"Delay Each Odd MFC command in advanced\" tab.");
 			}
 
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
