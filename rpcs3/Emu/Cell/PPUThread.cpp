@@ -5053,49 +5053,42 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	};
 	std::vector<link_entry> link_workload;
 
-	bool has_mfvscr = false;
-
 	const bool is_being_used_in_emulation = vm::base(info.segs[0].addr) == info.segs[0].ptr;
 
 	const cpu_thread* cpu = cpu_thread::get_current();
 
-	for (auto& func : info.get_funcs())
+	// MFVSCR only matters for codegen with accurate SAT bit
+	const bool has_mfvscr = g_cfg.core.ppu_set_sat_bit && [&info]()
 	{
-		if (func.size == 0)
+		for (const auto& func : info.get_funcs())
 		{
-			continue;
-		}
-
-		for (const auto [addr, size] : func)
-		{
-			if (size == 0)
+			if (func.size == 0)
 			{
 				continue;
 			}
 
-			auto i_ptr = ensure(info.get_ptr<u32>(addr));
-
-			for (u32 i = addr; i < addr + size; i += 4, i_ptr++)
+			for (const auto [addr, size] : func)
 			{
-				if (g_ppu_itype.decode(*i_ptr) == ppu_itype::MFVSCR)
+				if (size == 0)
 				{
-					ppu_log.warning("MFVSCR found");
-					has_mfvscr = true;
-					break;
+					continue;
+				}
+
+				auto i_ptr = ensure(info.get_ptr<u32>(addr));
+
+				for (u32 i = addr; i < addr + size; i += 4, i_ptr++)
+				{
+					if (g_ppu_itype.decode(*i_ptr) == ppu_itype::MFVSCR)
+					{
+						ppu_log.warning("MFVSCR found");
+						return true;
+					}
 				}
 			}
-
-			if (has_mfvscr)
-			{
-				break;
-			}
 		}
 
-		if (has_mfvscr)
-		{
-			break;
-		}
-	}
+		return false;
+	}();
 
 	// Limit how many modules are per JIt instance
 	// Advantage to lower the limit:
@@ -5338,7 +5331,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		return code_ptr;
 	};
 
-	if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
+	if (has_mfvscr)
 	{
 		info.attr += ppu_attr::has_mfvscr;
 	}
@@ -5595,7 +5588,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
 				settings += ppu_settings::reservations_128_byte;
-			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
+			if (has_mfvscr)
 				settings += ppu_settings::accurate_sat;
 			if (g_cfg.core.ppu_set_fpcc)
 				settings += ppu_settings::accurate_fpcc, fmt::throw_exception("FPCC Not implemented");
