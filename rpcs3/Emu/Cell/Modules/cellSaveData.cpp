@@ -1891,7 +1891,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				// Some games (Jak II [NPUA80707]) rely on this delay
 				lv2_obj::sleep(ppu);
-				if (g_cfg.vfs.emulate_savedata_speed && operation <= SAVEDATA_OP_AUTO_LOAD)
+				if (operation <= SAVEDATA_OP_AUTO_LOAD)
 				{
 					// Shortest time measured on a PS3 from the AutoSave/AutoLoad call to its return
 					delay_save_until = op_start_time + (operation == SAVEDATA_OP_AUTO_SAVE ? 1'750'000 : 980'000);
