@@ -17,7 +17,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 
 			public:
-				user_list_entry(std::string_view username, std::string_view user_id, const std::string& avatar_path);
+				user_list_entry(std::string_view username, std::string_view user_id, const std::vector<u8>& avatar_png);
 			};
 
 			std::vector<u32> m_entry_ids;

@@ -204,6 +204,7 @@
     <ClCompile Include="Emu\NP\np_requests_gui.cpp" />
     <ClCompile Include="Emu\NP\np_handler.cpp" />
     <ClCompile Include="Emu\NP\np_helpers.cpp" />
+    <ClCompile Include="Emu\NP\np_avatar.cpp" />
     <ClCompile Include="Emu\NP\np_notifications.cpp" />
     <ClCompile Include="Emu\NP\np_requests.cpp" />
     <ClCompile Include="Emu\NP\signaling_handler.cpp" />
@@ -687,6 +688,7 @@
     <ClInclude Include="Emu\NP\np_dnshook.h" />
     <ClInclude Include="Emu\NP\np_event_data.h" />
     <ClInclude Include="Emu\NP\np_helpers.h" />
+    <ClInclude Include="Emu\NP\np_avatar.h" />
     <ClInclude Include="Emu\NP\np_structs_extra.h" />
     <ClInclude Include="Emu\NP\rpcn_client.h" />
     <ClInclude Include="Emu\NP\rpcn_config.h" />
