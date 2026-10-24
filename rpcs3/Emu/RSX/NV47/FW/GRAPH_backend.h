@@ -15,5 +15,8 @@ namespace rsx
 
 		// Patch transform constants. Units are in 32x4 units
 		virtual void patch_transform_constants(context* /*ctx*/, u32 /*index*/, u32 /*count*/) {};
+
+		// Run ZCOUNT statistics without a draw call.
+		virtual void evaluate_zcount_on_null_draw(context* ctx);
 	};
 }
