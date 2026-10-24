@@ -36,10 +36,18 @@ namespace gl
 		{
 			const auto completed = ctr.load();
 			const auto limit = stage ? limit2 : limit1;
-			const auto message = get_localized_string(stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD, "%u %s %u", ctr.load(), get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit);
+			const auto message = get_localized_string(
+				stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD,
+				"%u %s %u",
+				ctr.load(),
+				get_localized_string(localized_string_id::PROGRESS_DIALOG_OF),
+				limit);
 			dlg->update_msg(stage, message);
 			dlg->set_value(stage, completed);
 		};
+
+		// Initial message
+		update_progress(0);
 
 		// We only need to build the base "compatible pipeline" pairs.
 		for (const auto& variant : variants.base_pipelines)
