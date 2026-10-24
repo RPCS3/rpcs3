@@ -1128,6 +1128,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceSlider(emu_settings_type::MasterVolume, ui->masterVolume, ui->masterVolumeLabel, tr("Master: %0 %", "Master volume"));
 	SubscribeTooltip(ui->master_volume, tooltips.settings.master_volume);
 
+	EnhanceSlider(emu_settings_type::VoiceChatMicVolume, ui->voiceChatMicVolume, ui->voiceChatMicVolumeLabel, tr("Voice Chat Microphone: %0 %", "Voice chat microphone volume"));
+	SubscribeTooltip(ui->voice_chat_mic_volume, tooltips.settings.voice_chat_mic_volume);
+
 	EnhanceSlider(emu_settings_type::AudioBufferDuration, ui->audioBufferDuration, ui->audioBufferDurationLabel, tr("Audio Buffer Duration: %0 ms", "Audio buffer duration"));
 	SubscribeTooltip(ui->audio_buffer_duration, tooltips.settings.audio_buffer_duration);
 
@@ -1384,6 +1387,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::EnableUpnp, ui->enable_upnp, tooltips.settings.enable_upnp);
 	EnhanceCheckBox(emu_settings_type::DeriveMacFromPsid, ui->derive_mac_from_psid, tooltips.settings.derive_mac_from_psid);
 	EnhanceCheckBox(emu_settings_type::EnableClans, ui->enable_clans, tooltips.settings.enable_clans);
+	EnhanceCheckBox(emu_settings_type::EnableVoiceChat, ui->enable_voice_chat, tooltips.settings.enable_voice_chat);
 
 	// Comboboxes
 
@@ -1401,11 +1405,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->psnStatusBox->setCurrentIndex(find_item(ui->psnStatusBox, static_cast<int>(g_cfg.net.psn_status.def)));
 			ui->psnStatusBox->setEnabled(false);
 			ui->enable_clans->setEnabled(false);
+			ui->enable_voice_chat->setEnabled(false);
 		}
 		else
 		{
 			ui->psnStatusBox->setEnabled(true);
 			ui->enable_clans->setEnabled(true);
+			ui->enable_voice_chat->setEnabled(true);
 		}
 	});
 	EnhanceComboBox(emu_settings_type::InternetStatus, ui->netStatusBox, tooltips.settings.net_status, ui->gb_netStatusBox);

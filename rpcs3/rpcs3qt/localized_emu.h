@@ -230,6 +230,11 @@ private:
 		case localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE_MSG: return tr("Reject game invitation from %0?").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE: return tr("Reject Invitation");
 		case localized_string_id::HOME_MENU_FRIENDS_NEXT_LIST: return tr("Next list");
+		case localized_string_id::HOME_MENU_VOICE_CHAT: return tr("Voice Chat");
+		case localized_string_id::HOME_MENU_VOICE_CHAT_ENABLE: return tr("Enable Voice Chat", "Voice Chat");
+		case localized_string_id::HOME_MENU_VOICE_CHAT_MIC_VOLUME: return tr("Microphone Volume", "Voice Chat");
+		case localized_string_id::HOME_MENU_VOICE_CHAT_MUTE_PLAYER: return tr("Mute %0", "Voice Chat").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_VOICE_CHAT_NO_PLAYERS: return tr("No other players in the voice chat", "Voice Chat");
 		case localized_string_id::HOME_MENU_RESTART: return tr("Restart Game");
 		case localized_string_id::HOME_MENU_SETTINGS: return tr("Settings");
 		case localized_string_id::HOME_MENU_SETTINGS_SAVE: return tr("Save custom configuration?");
@@ -344,6 +349,8 @@ private:
 		case localized_string_id::AUDIO_MUTED: return tr("Audio muted", "Audio");
 		case localized_string_id::AUDIO_UNMUTED: return tr("Audio unmuted", "Audio");
 		case localized_string_id::AUDIO_CHANGED: return tr("Volume changed to %0", "Audio").arg(std::forward<Args>(args)...);
+		case localized_string_id::VOICE_CHAT_MIC_MUTED: return tr("Voice chat microphone muted", "Audio");
+		case localized_string_id::VOICE_CHAT_MIC_UNMUTED: return tr("Voice chat microphone unmuted", "Audio");
 		case localized_string_id::PROGRESS_DIALOG_PROGRESS: return tr("Progress:");
 		case localized_string_id::PROGRESS_DIALOG_PROGRESS_ANALYZING: return tr("Progress: analyzing...");
 		case localized_string_id::PROGRESS_DIALOG_REMAINING: return tr("remaining");

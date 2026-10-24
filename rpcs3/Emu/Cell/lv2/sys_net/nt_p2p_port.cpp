@@ -221,6 +221,27 @@ bool nt_p2p_port::recv_data()
 			sigh.wake_up();
 			return true;
 		}
+		case SUBSET_AVC2:
+		{
+			if (vport_0_data.size() > 4096)
+			{
+				sys_net.warning("Dropping oversized AV Chat2 packet (%d bytes)", vport_0_data.size());
+				return true;
+			}
+
+			signaling_message msg;
+			msg.src_addr = reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_addr.s_addr;
+			msg.src_port = std::bit_cast<u16, be_t<u16>>(reinterpret_cast<struct sockaddr_in*>(&native_addr)->sin_port);
+			msg.data     = std::move(vport_0_data);
+
+			std::lock_guard lock(s_avc2_mutex);
+			if (avc2_msgs.size() >= 256)
+			{
+				avc2_msgs.erase(avc2_msgs.begin());
+			}
+			avc2_msgs.push_back(std::move(msg));
+			return true;
+		}
 		default:
 		{
 			sys_net.error("Invalid vport 0 subset!");

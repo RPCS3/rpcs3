@@ -421,6 +421,11 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		audio::change_volume(-5);
 		break;
 	}
+	case gui::shortcuts::shortcut::gw_voice_chat_mute:
+	{
+		audio::toggle_voice_chat_mic_mute();
+		break;
+	}
 	case gui::shortcuts::shortcut::gw_toggle_mouse_gyro:
 	{
 		if (auto* pad_thr = pad::get_pad_thread(true))
