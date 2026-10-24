@@ -251,7 +251,6 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaximumCacheSize,      get_cfg_location(local_cfg.vfs.cache_max_size) },
 	{ emu_settings_type::EmulateHddSpeed,       get_cfg_location(local_cfg.vfs.emulate_hdd_speed) },
 	{ emu_settings_type::EmulateBdvdSpeed,      get_cfg_location(local_cfg.vfs.emulate_bdvd_speed) },
-	{ emu_settings_type::EmulateSavedataSpeed,  get_cfg_location(local_cfg.vfs.emulate_savedata_speed) },
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       get_cfg_location(local_cfg.savestate.suspend_emu) },

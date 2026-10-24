@@ -1474,7 +1474,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
 	EnhanceCheckBox(emu_settings_type::EmulateHddSpeed, ui->emulateHddSpeed, tooltips.settings.emulate_hdd_speed);
 	EnhanceCheckBox(emu_settings_type::EmulateBdvdSpeed, ui->emulateBdvdSpeed, tooltips.settings.emulate_bdvd_speed);
-	EnhanceCheckBox(emu_settings_type::EmulateSavedataSpeed, ui->emulateSavedataSpeed, tooltips.settings.emulate_savedata_speed);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
 	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 
