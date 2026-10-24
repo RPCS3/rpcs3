@@ -59,6 +59,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <sys/syscall.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
+#include <fstream>
 #endif
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -3589,6 +3590,46 @@ void thread_ctrl::silent_exit() noexcept
 	std::abort();
 }
 
+#ifdef __linux__
+// Parse a sysfs cpu list (e.g. "0-3,8,10-11") into a mask
+static u64 read_sysfs_cpu_mask(const char* path)
+{
+	std::ifstream file(path);
+	u64 mask = 0;
+
+	for (std::string range; std::getline(file, range, ',');)
+	{
+		u32 first = 0, last = 0;
+
+		switch (std::sscanf(range.c_str(), "%u-%u", &first, &last))
+		{
+		case 1: last = first; break;
+		case 2: break;
+		default: return 0;
+		}
+
+		for (u32 cpu = first; cpu <= last && cpu < 64; cpu++)
+		{
+			mask |= u64{1} << cpu;
+		}
+	}
+
+	return mask;
+}
+#endif
+
+// P-core and E-core masks of Intel hybrid CPUs (Alder Lake and newer), zero if not hybrid
+static std::pair<u64, u64> get_intel_hybrid_masks()
+{
+#ifdef __linux__
+	// The kernel exposes a separate PMU for each core type
+	static const std::pair<u64, u64> masks{read_sysfs_cpu_mask("/sys/devices/cpu_core/cpus"), read_sysfs_cpu_mask("/sys/devices/cpu_atom/cpus")};
+	return masks;
+#else
+	return {};
+#endif
+}
+
 void thread_ctrl::detect_cpu_layout()
 {
 	if (!g_native_core_layout.compare_and_swap_test(native_core_arrangement::undefined, native_core_arrangement::generic))
@@ -3643,7 +3684,15 @@ void thread_ctrl::detect_cpu_layout()
 			}
 		}
 #else
-		sig_log.todo("Thread scheduler is not implemented for Intel and this OS");
+		if (const auto [p_cores, e_cores] = get_intel_hybrid_masks(); p_cores && e_cores)
+		{
+			sig_log.notice("Detected Intel hybrid CPU (P-cores: 0x%x, E-cores: 0x%x)", p_cores, e_cores);
+			g_native_core_layout.store(native_core_arrangement::intel_hybrid);
+		}
+		else
+		{
+			sig_log.todo("Thread scheduler is not implemented for Intel and this OS");
+		}
 #endif
 	}
 }
@@ -3850,6 +3899,29 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 			if (thread_count >= 12 && g_cfg.core.thread_scheduler == thread_scheduler_mode::alt)
 				return (0b10101010101010101010101010101010 & all_cores_mask); // Potentially improves performance by mimicking HT off
 			return all_cores_mask;
+		}
+		case native_core_arrangement::intel_hybrid:
+		{
+			const auto [p_cores, e_cores] = get_intel_hybrid_masks();
+			const u64 p_mask = p_cores & all_cores_mask;
+			const u64 e_mask = e_cores & all_cores_mask;
+
+			if (!p_mask || !e_mask)
+			{
+				// Process affinity excludes one of the core types
+				return all_cores_mask;
+			}
+
+			switch (group)
+			{
+			case thread_class::ppu:
+			case thread_class::rsx:
+				// Keep the latency sensitive threads on the fast cores, the rest (SPU included) is free to use the E-cores
+				// SPU threads restricted to E-cores were too slow (audio stuttering)
+				return p_mask;
+			default:
+				return all_cores_mask;
+			}
 		}
 		}
 	}
