@@ -413,13 +413,20 @@ void GLGSRender::on_init()
 		sampler.bind(image_unit++);
 	}
 
-	//Occlusion query
+	// Occlusion query
 	glGenQueries(::size32(m_occlusion_query_handles), m_occlusion_query_handles.data());
 
 	m_ui_renderer.create();
 	m_video_output_pass.create();
 
 	gl::init_global_texture_resources();
+
+	// Workaround. Clear the screen buffers and ensure the window is prepped for display.
+	for (int i = 0; i < 3; ++i)
+	{
+		present_frame({});
+		std::this_thread::sleep_for(16ms);
+	}
 
 	m_prog_buffer.initialize
 	(
