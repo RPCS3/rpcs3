@@ -1,7 +1,6 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include <cstdint>
-#include <cstddef>
 #include <cstring>
 #include <type_traits>
 #include <utility>
@@ -14,6 +13,7 @@
 #include <string>
 #include <source_location>
 #include <new>
+#include <vector>
 
 #if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
 #define ARCH_X64 1
@@ -23,7 +23,7 @@
 // See Arm C Language Extensions Documentation
 // Currently there is no feature macro for LSE2 specifically so we define it ourself
 // Unfortunately the __ARM_ARCH integer macro isn't universally defined so we use this hack instead
-#if defined(__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
+#if defined(__APPLE__) || (__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
 #define ARM_FEATURE_LSE2 1
 #endif
 #endif

@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <QJsonObject>
+#include <QObject>
 
 class downloader;
 

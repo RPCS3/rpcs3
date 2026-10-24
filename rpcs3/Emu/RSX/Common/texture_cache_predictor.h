@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../rsx_utils.h"
 #include "TextureUtils.h"
+#include "../Utils/rsx_utils.h"
 
 #include <unordered_map>
 

@@ -24,8 +24,8 @@ gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& ap
 		m_format.setOption(QSurfaceFormat::FormatOption::DebugContext);
 	}
 	setFormat(m_format);
+	setVisibility(m_startup_visibility);
 	create();
-	show();
 }
 
 void gl_gs_frame::reset()

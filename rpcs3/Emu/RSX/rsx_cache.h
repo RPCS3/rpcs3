@@ -435,9 +435,9 @@ namespace rsx
 			{
 				if (!index && !vp.jump_table.empty())
 				{
-					for (auto &address : vp.jump_table)
+					for (auto& address : vp.jump_table)
 					{
-						data_block.vp_jump_table[index++] = static_cast<u16>(address);
+						::at32(data_block.vp_jump_table, index++) = static_cast<u16>(address);
 					}
 				}
 				else

@@ -702,6 +702,9 @@
                  <property name="text">
                   <string>-</string>
                  </property>
+                 <property name="autoDefault">
+                  <bool>false</bool>
+                 </property>
                 </widget>
                </item>
                <item>
@@ -752,6 +755,9 @@
                 <widget class="QPushButton" name="b_analog_limiter">
                  <property name="text">
                   <string>-</string>
+                 </property>
+                 <property name="autoDefault">
+                  <bool>false</bool>
                  </property>
                 </widget>
                </item>
@@ -804,6 +810,9 @@
                  <property name="text">
                   <string>-</string>
                  </property>
+                 <property name="autoDefault">
+                  <bool>false</bool>
+                 </property>
                 </widget>
                </item>
                <item>
@@ -851,6 +860,16 @@
                 <widget class="QSlider" name="pressure_intensity_deadzone">
                  <property name="orientation">
                   <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="pressure_intensity_deadzone_label">
+                 <property name="text">
+                  <string>0</string>
+                 </property>
+                 <property name="alignment">
+                  <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                  </property>
                 </widget>
                </item>
@@ -906,36 +925,92 @@
                    <item>
                     <layout class="QVBoxLayout" name="gb_trigger_left">
                      <item>
-                      <widget class="QSlider" name="slider_trigger_left">
-                       <property name="orientation">
-                        <enum>Qt::Orientation::Horizontal</enum>
-                       </property>
-                      </widget>
+                      <layout class="QHBoxLayout" name="slider_trigger_left_layout">
+                       <item>
+                        <widget class="QSlider" name="slider_trigger_left">
+                         <property name="orientation">
+                          <enum>Qt::Orientation::Horizontal</enum>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="slider_trigger_left_label">
+                         <property name="text">
+                          <string>0</string>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
                      </item>
                      <item>
-                      <widget class="QSlider" name="preview_trigger_left">
-                       <property name="orientation">
-                        <enum>Qt::Orientation::Horizontal</enum>
-                       </property>
-                      </widget>
+                      <layout class="QHBoxLayout" name="preview_trigger_left_layout">
+                       <item>
+                        <widget class="QSlider" name="preview_trigger_left">
+                         <property name="orientation">
+                          <enum>Qt::Orientation::Horizontal</enum>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="preview_trigger_left_label">
+                         <property name="text">
+                          <string>0</string>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
                      </item>
                     </layout>
                    </item>
                    <item>
                     <layout class="QVBoxLayout" name="gb_trigger_right">
                      <item>
-                      <widget class="QSlider" name="slider_trigger_right">
-                       <property name="orientation">
-                        <enum>Qt::Orientation::Horizontal</enum>
-                       </property>
-                      </widget>
+                      <layout class="QHBoxLayout" name="slider_trigger_right_layout">
+                       <item>
+                        <widget class="QSlider" name="slider_trigger_right">
+                         <property name="orientation">
+                          <enum>Qt::Orientation::Horizontal</enum>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="slider_trigger_right_label">
+                         <property name="text">
+                          <string>0</string>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
                      </item>
                      <item>
-                      <widget class="QSlider" name="preview_trigger_right">
-                       <property name="orientation">
-                        <enum>Qt::Orientation::Horizontal</enum>
-                       </property>
-                      </widget>
+                      <layout class="QHBoxLayout" name="preview_trigger_right_layout">
+                       <item>
+                        <widget class="QSlider" name="preview_trigger_right">
+                         <property name="orientation">
+                          <enum>Qt::Orientation::Horizontal</enum>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLabel" name="preview_trigger_right_label">
+                         <property name="text">
+                          <string>0</string>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
                      </item>
                     </layout>
                    </item>
@@ -2528,9 +2603,29 @@
                     </widget>
                    </item>
                    <item>
+                    <widget class="QLabel" name="slider_label_stick_left">
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
                     <widget class="QSlider" name="slider_stick_right">
                      <property name="orientation">
                       <enum>Qt::Orientation::Horizontal</enum>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="slider_label_stick_right">
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                      </property>
                     </widget>
                    </item>
@@ -2563,9 +2658,29 @@
                     </widget>
                    </item>
                    <item>
+                    <widget class="QLabel" name="anti_deadzone_slider_label_stick_left">
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
                     <widget class="QSlider" name="anti_deadzone_slider_stick_right">
                      <property name="orientation">
                       <enum>Qt::Orientation::Horizontal</enum>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="anti_deadzone_slider_label_stick_right">
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
                      </property>
                     </widget>
                    </item>

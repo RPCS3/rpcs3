@@ -11,6 +11,7 @@
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
 #include "Input/pad_thread.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
@@ -131,11 +132,9 @@ void main_application::OnEmuSettingsChange()
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
-EmuCallbacks main_application::CreateCallbacks()
+void main_application::create_callbacks()
 {
-	EmuCallbacks callbacks{};
-
-	callbacks.update_emu_settings = [this]()
+	g_emu_callbacks.update_emu_settings = [this]()
 	{
 		Emu.CallFromMainThread([&]()
 		{
@@ -143,7 +142,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		});
 	};
 
-	callbacks.save_emu_settings = [this]()
+	g_emu_callbacks.save_emu_settings = [this]()
 	{
 		Emu.BlockingCallFromMainThread([&]()
 		{
@@ -151,7 +150,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		});
 	};
 
-	callbacks.init_kb_handler = [this]()
+	g_emu_callbacks.init_kb_handler = [this]()
 	{
 		switch (g_cfg.io.keyboard.get())
 		{
@@ -171,7 +170,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.init_mouse_handler = [this]()
+	g_emu_callbacks.init_mouse_handler = [this]()
 	{
 		mouse_handler handler = g_cfg.io.mouse;
 
@@ -213,14 +212,14 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.init_pad_handler = [this](std::string_view title_id)
+	g_emu_callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
 		ensure(g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id));
 
 		qt_events_aware_op(0, [](){ return !!pad::g_started; });
 	};
 
-	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
+	g_emu_callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
 	{
 		std::shared_ptr<AudioBackend> result;
 		switch (g_cfg.audio.renderer.get())
@@ -244,7 +243,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		return result;
 	};
 
-	callbacks.get_audio_enumerator = [](u64 renderer) -> std::shared_ptr<audio_device_enumerator>
+	g_emu_callbacks.get_audio_enumerator = [](u64 renderer) -> std::shared_ptr<audio_device_enumerator>
 	{
 		switch (static_cast<audio_renderer>(renderer))
 		{
@@ -260,7 +259,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.get_image_info = [](const std::string& filename, std::string& sub_type, s32& width, s32& height, s32& orientation) -> bool
+	g_emu_callbacks.get_image_info = [](const std::string& filename, std::string& sub_type, s32& width, s32& height, s32& orientation) -> bool
 	{
 		sub_type.clear();
 		width = 0;
@@ -308,7 +307,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		return success;
 	};
 
-	callbacks.get_scaled_image = [](const std::string& path, s32 target_width, s32 target_height, s32& width, s32& height, u8* dst, bool force_fit) -> bool
+	g_emu_callbacks.get_scaled_image = [](const std::string& path, s32 target_width, s32 target_height, s32& width, s32& height, u8* dst, bool force_fit) -> bool
 	{
 		width = 0;
 		height = 0;
@@ -378,13 +377,13 @@ EmuCallbacks main_application::CreateCallbacks()
 		return success;
 	};
 
-	callbacks.resolve_path = [](std::string_view sv)
+	g_emu_callbacks.resolve_path = [](std::string_view sv)
 	{
 		// May result in an empty string if path does not exist
 		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
-	callbacks.resolve_path_may_not_exist = [](std::string_view sv)
+	g_emu_callbacks.resolve_path_may_not_exist = [](std::string_view sv)
 	{
 		const QString path = QString::fromUtf8(sv.data(), static_cast<int>(sv.size()));
 		QFileInfo fi(path);
@@ -397,12 +396,22 @@ EmuCallbacks main_application::CreateCallbacks()
 			fi.setFile(fi.path());
 		}
 
-		const QString result = QDir(fi.canonicalFilePath()).filePath(tail);
+		QString result = QDir::cleanPath(QDir(fi.canonicalFilePath()).filePath(tail));
 
-		return QDir::cleanPath(result).toStdString();
+#ifdef _WIN32
+		if (sv.starts_with("/") && !sv.starts_with("//"))
+		{
+			// Erase absolute path for non-existant path
+			if (result.size() >= 3 && result[1] == ':' && result[2] == '/')
+			{
+				result.remove(0, 2);
+			}
+		}
+#endif
+		return result.toStdString();
 	};
 
-	callbacks.get_font_dirs = []()
+	g_emu_callbacks.get_font_dirs = []()
 	{
 		const QStringList locations = QStandardPaths::standardLocations(QStandardPaths::FontsLocation);
 		std::vector<std::string> font_dirs;
@@ -418,11 +427,11 @@ EmuCallbacks main_application::CreateCallbacks()
 		return font_dirs;
 	};
 
-	callbacks.on_install_pkgs = [](const std::vector<std::string>& pkgs)
+	g_emu_callbacks.on_install_pkgs = [](const std::vector<std::string>& pkgs, bool from_optical_drive)
 	{
 		for (const std::string& pkg : pkgs)
 		{
-			if (!rpcs3::utils::install_pkg(pkg))
+			if (!rpcs3::utils::install_pkg(pkg, from_optical_drive))
 			{
 				sys_log.error("Failed to install %s", pkg);
 				return false;
@@ -431,9 +440,9 @@ EmuCallbacks main_application::CreateCallbacks()
 		return true;
 	};
 
-	callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
+	g_emu_callbacks.enable_gamemode = [](bool enabled){ enable_gamemode(enabled); };
 
-	callbacks.get_photo_path = [](std::string_view title)
+	g_emu_callbacks.get_photo_path = [](std::string_view title)
 	{
 		const QDateTime date_time = QDateTime::currentDateTime();
 		const QDate date = date_time.date();
@@ -461,7 +470,7 @@ EmuCallbacks main_application::CreateCallbacks()
 		return path + suffix;
 	};
 
-	callbacks.get_database_config = [](const std::string& title_id)
+	g_emu_callbacks.get_database_config = [](const std::string& title_id)
 	{
 		sys_log.notice("Trying to retrieve database config for: '%s'", title_id);
 
@@ -489,6 +498,4 @@ EmuCallbacks main_application::CreateCallbacks()
 		sys_log.error("Failed to retrieve database config for: '%s'", title_id);
 		return std::string();
 	};
-
-	return callbacks;
 }

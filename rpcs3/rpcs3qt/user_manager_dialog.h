@@ -27,6 +27,7 @@ private Q_SLOTS:
 	void OnUserCreate();
 	void OnUserRemove();
 	void OnUserRename();
+	void OnUserAvatar();
 	void OnSort(int logicalIndex);
 
 protected:

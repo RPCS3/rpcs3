@@ -260,6 +260,15 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	const int width = m_frame->client_width();
 	const int height = m_frame->client_height();
 
+	// Qt on Wayland only resizes the window surface when the context is made current.
+	// Make it current again whenever the window size changes, so the surface matches the new size before we draw.
+	if (width != m_last_client_width || height != m_last_client_height)
+	{
+		m_frame->set_current(m_context);
+		m_last_client_width = width;
+		m_last_client_height = height;
+	}
+
 	// Calculate blit coordinates
 	areai aspect_ratio;
 	if (!g_cfg.video.stretch_to_display_area)
@@ -373,7 +382,8 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
 			glGetError();
 
-			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, pack_settings);
+			const coord3u region = { {}, { buffer_width, buffer_height, 1 } };
+			tex->copy_to(std::span<const u8>(sshot_frame), gl::texture::format::rgba, gl::texture::type::ubyte, 0, region, pack_settings);
 
 			m_sshot_tex.reset();
 

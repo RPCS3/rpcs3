@@ -5,13 +5,15 @@
 
 #include "Emu/GameInfo.h"
 
-#include <set>
 #include <QPixmap>
 
 /* Having the icons associated with the game info simplifies logic internally */
-struct gui_game_info
+struct gui_game_info : public GameInfo
 {
-	GameInfo info{};
+	gui_game_info() : GameInfo() {}
+	gui_game_info(const GameInfo& info) : GameInfo(info) {}
+	gui_game_info(GameInfo&& info) : GameInfo(std::move(info)) {}
+
 	QString localized_category;
 	compat::status compat{};
 	QPixmap icon;
@@ -19,11 +21,6 @@ struct gui_game_info
 	bool has_database_config = false;
 	bool has_custom_config = false;
 	bool has_custom_pad_config = false;
-	bool has_custom_icon = false;
-	bool has_hover_gif = false;
-	bool has_hover_pam = false;
-	bool has_audio_file = false;
-	bool icon_in_archive = false;
 	movie_item_base* item = nullptr;
 
 	// Returns the visible version string in the game list

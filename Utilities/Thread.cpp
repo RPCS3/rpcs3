@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
 #include <cfenv>
@@ -96,6 +97,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include "util/asm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
+#include "util/cctype.hpp"
 #include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_locking.h"
 
@@ -185,9 +187,9 @@ bool IsDebuggerPresent()
 
 	for (const char* cp = status.data() + found + 10; cp <= status.data() + num_read; ++cp)
 	{
-		if (!std::isspace(*cp))
+		if (!utils::isspace(*cp))
 		{
-			return std::isdigit(*cp) != 0 && *cp != '0';
+			return utils::isdigit(*cp) != 0 && *cp != '0';
 		}
 	}
 
@@ -384,7 +386,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 
 		case 0x67: // group 4
 		{
-			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length, prefix);
+			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length);
 			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;
@@ -2195,11 +2197,35 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 			// SPUThread: Send sys_spu exception event
 			cpu->state += cpu_flag::dbg_pause;
 
-			if (cpu->check_state() && !hack_alloc())
-			{
-				return false;
+			// Remove flags preventing check_state() from waiting here (access violation cannot be returned without being handled)
+			bs_t<cpu_flag> to_restore_flags = {};
+			constexpr bs_t<cpu_flag> remove_cpu_flags = cpu_flag::stop + cpu_flag::ret;
+
+			while (cpu->check_state())
+			{ 
+				const bool is_emu_stopped = ::is_stopped(cpu->state - cpu_flag::stop);
+
+				if (is_emu_stopped)
+				{	
+					for (u32 try_count = 0; !hack_alloc(); try_count++)
+					{
+						if (try_count == 100)
+						{
+							fmt::throw_exception("Failed to rescue CPU thread from access violation handler.");
+						}
+
+						thread_ctrl::wait_for(10000);
+					}
+
+					break;
+				}
+
+				ensure(cpu->state & cpu_flag::stop);
+				to_restore_flags += cpu->state.fetch_sub(remove_cpu_flags) & remove_cpu_flags;
 			}
 
+			// Restore them
+			cpu->state += to_restore_flags;
 			return true;
 		}
 		else
@@ -2276,9 +2302,14 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 	{
 		// Keep retrying until the page is mapped: the thread must be able to resume so it can observe cpu_flag::exit and terminate cleanly.
 		// Reporting the violation as unhandled here would escalate a guest crash into an unhandled host exception.
-		while (!hack_alloc())
+		for (u32 try_count = 0; !hack_alloc(); try_count++)
 		{
-			thread_ctrl::wait_for(1000);
+			if (try_count == 100)
+			{
+				fmt::throw_exception("Failed to rescue CPU thread from access violation handler.");
+			}
+
+			thread_ctrl::wait_for(10000);
 		}
 	}
 
@@ -2806,6 +2837,14 @@ void thread_base::initialize(void (*error_cb)())
 	if (!m_thread && !m_thread.compare_and_swap_test(0, new_tid))
 	{
 		ensure(m_thread == new_tid);
+	}
+#endif
+
+#if !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
+	// A new thread inherits its creator's affinity mask (e.g. compile workers spawned by a pinned PPU thread): reset it to the process mask
+	if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
+	{
+		thread_ctrl::set_thread_affinity_mask(0);
 	}
 #endif
 
@@ -4032,4 +4071,82 @@ u64 thread_ctrl::get_tid()
 bool thread_ctrl::is_main()
 {
 	return get_tid() == utils::main_tid;
+}
+
+usz map_workload(std::string_view thread_name, usz thread_count, usz count, std::function<void(usz)>&& func)
+{
+	ensure(!!func);
+
+	if (thread_count <= 1)
+	{
+		for (usz i = 0; i < count; i++)
+		{
+			func(i);
+		}
+		return thread_count;
+	}
+
+	atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
+
+	atomic_t<usz> indexer = 0;
+	const auto iterate = [count, &func, &indexer]()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			// Make sure indexer does not exceed count
+			const usz index = indexer.fetch_op([count](usz& v)
+			{
+				if (v < count)
+				{
+					v++;
+					return true;
+				}
+
+				return false;
+			}).first;
+
+			if (index >= count)
+			{
+				break;
+			}
+
+			func(index);
+		}
+	};
+	named_thread_group workers(thread_name, ::narrow<u32>(thread_count) - 1, [&iterate, &num_threads_succeeded]()
+	{
+		iterate();
+		num_threads_succeeded++;
+	});
+
+	iterate();
+
+	workers.join();
+
+	return num_threads_succeeded + 1;
+}
+
+usz map_workload(std::string_view thread_name, usz thread_count, std::function<void()>&& func)
+{
+	ensure(!!func);
+
+	if (thread_count <= 1)
+	{
+		func();
+		return thread_count;
+	}
+
+	atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
+
+	named_thread_group workers(thread_name, ::narrow<u32>(thread_count) - 1, [&func, &num_threads_succeeded]()
+	{
+		func();
+		num_threads_succeeded++;
+	});
+
+	func();
+
+	workers.join();
+
+	return num_threads_succeeded + 1;
 }

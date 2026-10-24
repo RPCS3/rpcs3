@@ -25,4 +25,11 @@ struct GameInfo
 	u32 resolution = 0;
 
 	u64 size_on_disk = umax;
+
+	bool has_custom_icon = false;
+
+	bool is_iso_file = false;
+	bool icon_in_archive = false;
+	bool movie_in_archive = false;
+	bool audio_in_archive = false;
 };

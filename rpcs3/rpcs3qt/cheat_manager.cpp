@@ -22,6 +22,7 @@
 #include "util/asm.hpp"
 #include "util/logs.hpp"
 #include "util/to_endian.hpp"
+#include "util/cctype.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/bin_patch.h" // get_patches_path()
@@ -221,12 +222,12 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, std::stri
 
 	while (index < red_script.size())
 	{
-		if (std::isdigit(static_cast<u8>(red_script[index])))
+		if (utils::isdigit(red_script[index]))
 		{
 			std::string num_string;
 			for (; index < red_script.size(); index++)
 			{
-				if (!std::isdigit(static_cast<u8>(red_script[index])))
+				if (!utils::isdigit(red_script[index]))
 					break;
 
 				num_string += red_script[index];
@@ -760,9 +761,13 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	connect(btn_apply, &QPushButton::clicked, [this](bool /*checked*/)
 	{
-		const int row     = tbl_cheats->currentRow();
-		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
+		const int row = tbl_cheats->currentRow();
+		if (row < 0)
+		{
+			return;
+		}
 
+		cheat_info* cheat = g_cheat.get(tbl_cheats->item(row, cheat_table_columns::title)->text().toStdString(), tbl_cheats->item(row, cheat_table_columns::offset)->data(Qt::UserRole).toUInt());
 		if (!cheat)
 		{
 			log_cheat.fatal("Failed to retrieve cheat selected from internal cheat_engine");
@@ -839,7 +844,10 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	{
 		const QPoint globalPos = lst_search->mapToGlobal(loc);
 		const int current_row  = lst_search->currentRow();
-		QListWidgetItem* item  = lst_search->item(current_row);
+		if (current_row < 0 || static_cast<usz>(current_row) >= offsets_found.size())
+			return;
+
+		QListWidgetItem* item = lst_search->item(current_row);
 
 		// Skip if the item was a placeholder
 		if (!item || item->data(Qt::UserRole).toBool())

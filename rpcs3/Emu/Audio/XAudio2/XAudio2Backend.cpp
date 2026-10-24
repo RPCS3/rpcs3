@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include "util/logs.hpp"
-#include "Emu/System.h"
 #include "Emu/Audio/audio_device_enumerator.h"
 #include "Utilities/StrUtil.h"
 

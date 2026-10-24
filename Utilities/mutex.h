@@ -28,6 +28,11 @@ class shared_mutex final
 public:
 	constexpr shared_mutex() = default;
 
+	const atomic_t<u32>& raw() const
+	{
+		return m_value;
+	}
+
 	bool try_lock_shared()
 	{
 		const u32 value = m_value.load();

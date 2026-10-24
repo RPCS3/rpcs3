@@ -49,9 +49,11 @@
   <PropertyGroup Label="UserMacros">
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
       cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
       cmake -G Ninja ^
         -DCMAKE_CXX_COMPILER="cl.exe" ^
         -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_BUILD_TYPE="Release" ^
         -DCMAKE_INSTALL_PREFIX="./Release" ^
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
@@ -70,9 +72,11 @@
     </CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
       cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
       cmake -G Ninja ^
         -DCMAKE_CXX_COMPILER="cl.exe" ^
         -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_BUILD_TYPE="Debug" ^
         -DCMAKE_INSTALL_PREFIX="./Debug" ^
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug ^

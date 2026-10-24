@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/RSX/Overlays/overlays.h"
-#include "Emu/Cell/ErrorCodes.h"
 #include "overlay_big_picture_main_menu.h"
 
 namespace rsx

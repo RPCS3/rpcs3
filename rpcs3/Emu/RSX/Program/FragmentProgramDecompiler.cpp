@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "FragmentProgramDecompiler.h"
-#include "ProgramStateCache.h"
 
 #include "Assembler/Passes/FP/RegisterAnnotationPass.h"
 #include "Assembler/Passes/FP/RegisterDependencyPass.h"
@@ -792,8 +791,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	}
 
 	// Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
+	const bool precision_before_abs = precision_modifier == RSX_FP_PRECISION_SATURATE;
+	if (precision_before_abs) ret = ClampValue(ret, precision_modifier);
 	if (src.abs) ret = "abs(" + ret + ")";
-	if (precision_modifier) ret = ClampValue(ret, precision_modifier);
+	if (precision_modifier && !precision_before_abs) ret = ClampValue(ret, precision_modifier);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;

@@ -208,7 +208,7 @@ public:
 	std::string GetCgParamSemantic(u32 offset) const;
 	std::string GetCgParamValue(u32 offset, u32 end_offset) const;
 
-	void ConvertToLE(CgBinaryProgram& prog);
+	bool ConvertToLE(CgBinaryProgram& prog);
 	void BuildShaderBody(bool include_glsl = true);
 
 	static u32 GetData(const u32 d) { return d << 16 | d >> 16; }

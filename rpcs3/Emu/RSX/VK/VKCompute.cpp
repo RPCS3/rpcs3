@@ -77,9 +77,17 @@ namespace vk
 				break;
 			case vk::driver_vendor::MVK:
 			case vk::driver_vendor::HONEYKRISP:
+			case vk::driver_vendor::KOSMICKRISP:
 				unroll_loops = true;
 				optimal_kernel_size = 1;
 				optimal_group_size = 256;
+				break;
+			case vk::driver_vendor::QUALCOMM:
+			case vk::driver_vendor::TURNIP:
+				// Wavefronts are multiples of 64. (Some generations also support wave128)
+				unroll_loops = true;
+				optimal_kernel_size = 1;
+				optimal_group_size = 64;
 				break;
 			}
 

@@ -358,6 +358,8 @@ void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
 		case microphone_handler::singstar: return "SingStar";
 		case microphone_handler::real_singstar: return "Real SingStar";
 		case microphone_handler::rocksmith: return "Rocksmith";
+		case microphone_handler::eye_toy: return "Eye Toy";
+		case microphone_handler::ps_eye: return "PS Eye";
 		}
 
 		return unknown;
@@ -514,6 +516,21 @@ void fmt_class_string<ghltar_handler>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<usio_handler_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+		{
+			switch (value)
+			{
+			case usio_handler_mode::fighting_games: return "Fighting Games";
+			case usio_handler_mode::shooter_games: return "Shooter Games";
+			}
+
+			return unknown;
+		});
 }
 
 template <>

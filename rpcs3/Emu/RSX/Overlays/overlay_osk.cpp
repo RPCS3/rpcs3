@@ -473,7 +473,7 @@ namespace rsx
 			{
 				if (const font* fnt = elem.get_font())
 				{
-					elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+					elem.set_font(get_scaled(fnt->get_size_pt()), fnt->get_name());
 				}
 			};
 
@@ -517,14 +517,7 @@ namespace rsx
 			m_btn_space.set_image_resource(resource_config::standard_image_resource::triangle);
 			m_btn_delete.set_image_resource(resource_config::standard_image_resource::square);
 
-			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-			{
-				m_btn_cancel.set_image_resource(resource_config::standard_image_resource::cross);
-			}
-			else
-			{
-				m_btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
-			}
+			m_btn_cancel.set_image_resource(resource_config::cancel_button_resource());
 
 			m_update = true;
 			set_visible(continuous_mode != CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE);
@@ -1250,7 +1243,7 @@ namespace rsx
 				{
 					if (const font* fnt = elem.get_font())
 					{
-						elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+						elem.set_font(get_scaled(fnt->get_size_pt()), fnt->get_name());
 					}
 				};
 				scale_font(label);

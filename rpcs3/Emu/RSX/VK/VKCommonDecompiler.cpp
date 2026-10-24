@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKCommonDecompiler.h"
+#include "util/cctype.hpp"
 
 namespace vk
 {
@@ -22,6 +23,7 @@ namespace vk
 		{ "fog_c", 14 },
 		{ "fogc", 14 },
 		{ "usr", 15 }, // custom injected stuff
+		{ "depth_range", 17 }, // clip range for depth range emulation; 16 is used by the shader interpreter
 	} };
 
 	int get_varying_register_location(std::string_view varying_register_name)
@@ -50,7 +52,7 @@ namespace vk
 
 		for (int char_idx = name_length - max_index_length; char_idx < name_length; ++char_idx)
 		{
-			if (std::isdigit(name[char_idx]))
+			if (utils::isdigit(name[char_idx]))
 			{
 				index += name[char_idx];
 			}

@@ -8,6 +8,7 @@
 #include "Host/MM.h"
 #include "Host/RSXDMAWriter.h"
 #include "NV47/HW/context.h"
+#include "NV47/HW/context_accessors.define.h"
 #include "Program/GLSLCommon.h"
 #include "rsx_methods.h"
 
@@ -15,6 +16,7 @@
 #include "RSXDisAsm.h"
 
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_event.h"
@@ -121,6 +123,12 @@ namespace rsx
 
 	// TODO: Proper context manager
 	static rsx::context s_ctx{ .rsxthr = nullptr, .register_state = &method_registers };
+
+	constexpr u32 fs_export_config_mask =
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
+		RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING |
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
@@ -286,6 +294,131 @@ namespace rsx
 		{
 			rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
 		}
+	}
+
+	static bool evaluate_programmable_blending_state(rsx::context* ctx, u32& fragment_ctrl)
+	{
+		const bool is_blend_config_dirty = RSX(ctx)->m_graphics_state.test(rsx::blend_config_dirty);
+		RSX(ctx)->m_graphics_state.clear(rsx::blend_config_dirty);
+
+		const auto blend_enable_mask = REGS(ctx)->blend_enabled_mask() & REGS(ctx)->surface_color_target_mask();
+		const bool programmable_blend_active = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
+		const bool is_blending_active = !!blend_enable_mask && !REGS(ctx)->logic_op_enabled();
+
+		if (!is_blending_active && !programmable_blend_active)
+		{
+			return false;
+		}
+
+		if (!is_blending_active)
+		{
+			fragment_ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			return true;
+		}
+
+		if (g_cfg.video.disable_hardware_blending)
+		{
+			fragment_ctrl |= RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			return !programmable_blend_active;
+		}
+
+		// We actually need to handle this, we're still blending
+		const auto is_signed_equation = [](rsx::blend_equation equation)
+		{
+			switch (equation)
+			{
+			case rsx::blend_equation::add_signed:
+			case rsx::blend_equation::reverse_add_signed:
+			case rsx::blend_equation::reverse_subtract_signed:
+				return true;
+			default:
+				return false;
+			}
+		};
+
+		const auto factor_references_alpha = [](rsx::blend_factor factor)
+		{
+			switch (factor)
+			{
+			case rsx::blend_factor::src_alpha:
+			case rsx::blend_factor::one_minus_src_alpha:
+			case rsx::blend_factor::dst_alpha:
+			case rsx::blend_factor::one_minus_dst_alpha:
+			case rsx::blend_factor::src_alpha_saturate:
+				return true;
+			default:
+				return false;
+			}
+		};
+
+		const auto shader_writes_alpha = [&]()
+		{
+			for (u32 i = 0, mask = blend_enable_mask; !!mask; mask >>= 1, i++)
+			{
+				if (REGS(ctx)->color_mask_a(i))
+				{
+					return true;
+				}
+			}
+			return false;
+		};
+
+		bool need_programmable_blending = false;
+		const auto surface_format = REGS(ctx)->surface_color();
+
+		switch (surface_format)
+		{
+		case surface_color_format::x1r5g5b5_z1r5g5b5:
+		case surface_color_format::x1r5g5b5_o1r5g5b5:
+		case surface_color_format::x8r8g8b8_z8r8g8b8:
+		case surface_color_format::x8r8g8b8_o8r8g8b8:
+		case surface_color_format::x8b8g8r8_z8b8g8r8:
+		case surface_color_format::x8b8g8r8_o8b8g8r8:
+			// Force PB if alpha is read in the RGB factors or A is written without passthrough.
+			if (factor_references_alpha(REGS(ctx)->blend_func_sfactor_rgb()) ||
+				factor_references_alpha(REGS(ctx)->blend_func_dfactor_rgb()))
+			{
+				need_programmable_blending = true;
+			}
+			else
+			{
+				need_programmable_blending = shader_writes_alpha() && (
+					REGS(ctx)->blend_equation_a() == rsx::blend_equation::reverse_subtract ||
+					REGS(ctx)->blend_equation_a() == rsx::blend_equation::min ||
+					REGS(ctx)->blend_equation_a() == rsx::blend_equation::max ||
+					REGS(ctx)->blend_func_sfactor_a() != rsx::blend_factor::one ||
+					REGS(ctx)->blend_func_dfactor_a() != rsx::blend_factor::zero);
+			}
+			break;
+		case surface_color_format::b8:
+		case surface_color_format::g8b8:
+			// These 2 don't accept custom factors anyway
+			[[ fallthrough ]];
+		default:
+			need_programmable_blending = need_programmable_blending ||
+				is_signed_equation(REGS(ctx)->blend_equation_rgb()) ||
+				is_signed_equation(REGS(ctx)->blend_equation_a());
+			break;
+		}
+
+		if (need_programmable_blending && is_blend_config_dirty)
+		{
+			RSX(ctx)->m_graphics_state.set(rsx::fragment_state_dirty);
+		}
+
+		if (need_programmable_blending == programmable_blend_active)
+		{
+			return false;
+		}
+
+		if (!need_programmable_blending)
+		{
+			fragment_ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			return true;
+		}
+
+		fragment_ctrl |= RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+		return true;
 	}
 
 	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count)
@@ -679,11 +812,25 @@ namespace rsx
 			{
 				ar(u32{0});
 			}
+
+			ar(fifo_ctrl ? fifo_ctrl->get_pos() : 0);
 		}
-		else if (u32 count{ar})
+		else
 		{
-			restore_fifo_count = count;
-			ar(restore_fifo_cmd);
+			if (u32 count{ar})
+			{
+				restore_fifo_count = count;
+				ar(restore_fifo_cmd);
+			}
+
+			if (version >= 4)
+			{
+				ar(restore_fifo_position);
+			}
+			else
+			{
+				restore_fifo_position = vm::_ptr<RsxDmaControl>(dma_address)->get;
+			}
 		}
 	}
 
@@ -714,7 +861,7 @@ namespace rsx
 
 			if (g_cfg.misc.play_music_during_boot)
 			{
-				if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+				if (const std::string audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound); !audio_path.empty())
 				{
 					m_overlay_manager->start_audio(audio_path);
 				}
@@ -856,6 +1003,22 @@ namespace rsx
 			method_registers.current_draw_clause.execute_pipeline_dependencies(m_ctx);
 		}
 		while (method_registers.current_draw_clause.next());
+	}
+
+	bool thread::should_skip_draw() const
+	{
+		if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+		{
+			return true;
+		}
+
+		if (m_graphics_state.test(rsx::rtt_config_no_attachments) &&
+			(g_cfg.video.disable_zcull_queries || !zcull_ctrl->has_active_queries()))
+		{
+			return true;
+		}
+
+		return false;
 	}
 
 	void thread::cpu_task()
@@ -1009,9 +1172,9 @@ namespace rsx
 
 		vblank_count = 0;
 
-		if (restore_fifo_count)
+		if (serialized)
 		{
-			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count);
+			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count, restore_fifo_position);
 		}
 
 		if (!send_event(0, event_flags, 0))
@@ -1136,7 +1299,7 @@ namespace rsx
 			// Note a possible rollback address
 			if (sync_point_request && !in_begin_end)
 			{
-				restore_point = ctrl->get;
+				restore_point = fifo_ctrl->get_pos();
 				saved_fifo_ret = fifo_ret_addr;
 				sync_point_request.release(false);
 			}
@@ -1314,6 +1477,7 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
+		// NOTE: rtt_config_no_attachments is intentionally not reset.
 		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
 		m_current_framebuffer_context = context;
 
@@ -1626,10 +1790,34 @@ namespace rsx
 			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		if (!m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address)
+		const bool framebufferless = !m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address;
+		if (framebufferless)
 		{
-			rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
-			return;
+			// No attachments. The hardware still rasterizes in this case and side effects such as ZPASS counters are still updated.
+			if (context != rsx::framebuffer_creation_context::context_draw ||
+				!backend_config.supports_framebufferless_rendering)
+			{
+				rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
+				return;
+			}
+
+			// Context must be draw now...
+		}
+
+		if (framebufferless != m_graphics_state.test(rsx::rtt_config_no_attachments))
+		{
+			// Programmable blending reads back from the color attachments and is disabled when there are none.
+			// Force the blend configuration to be re-evaluated when moving in or out of this state.
+			if (framebufferless)
+			{
+				m_graphics_state.set(rsx::rtt_config_no_attachments);
+			}
+			else
+			{
+				m_graphics_state.clear(rsx::rtt_config_no_attachments);
+			}
+
+			m_graphics_state.set(rsx::pipeline_config_dirty);
 		}
 
 		// At least one attachment exists
@@ -1705,11 +1893,13 @@ namespace rsx
 			}
 		}
 
-		if (!really_changed)
+		// Framebufferless setups have no surface info to compare against. Always rebuild.
+		if (!really_changed && !framebufferless)
 		{
 			if (layout.zeta_address == m_depth_surface_info.address &&
 				layout.depth_format == m_depth_surface_info.depth_format &&
-				sample_count == m_depth_surface_info.samples)
+				sample_count == m_depth_surface_info.samples &&
+				(!layout.zeta_address || (m_depth_surface_info.width == layout.width && m_depth_surface_info.height == layout.height)))
 			{
 				// Same target is reused
 				return;
@@ -1773,12 +1963,13 @@ namespace rsx
 
 		auto evaluate_color_buffer_state = [&]() -> bool
 		{
+			m_framebuffer_layout.color_write_enabled = {};
 			const auto mrt_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
 			bool any_found = false;
 
 			for (uint i = 0; i < mrt_buffers.size(); ++i)
 			{
-				if (m_ctx->register_state->color_write_enabled(i))
+				if (REGS(m_ctx)->color_write_enabled(i))
 				{
 					const auto real_index = mrt_buffers[i];
 					m_framebuffer_layout.color_write_enabled[real_index] = true;
@@ -1892,7 +2083,7 @@ namespace rsx
 			return;
 		}
 
-		const auto target = m_ctx->register_state->surface_color_target();
+		const auto target = REGS(m_ctx)->surface_color_target();
 		if (rsx::utility::get_mrt_buffers_count(target) == current_fragment_program.mrt_buffers_count)
 		{
 			return;
@@ -1968,32 +2159,70 @@ namespace rsx
 
 	rsx::flags32_t thread::get_fragment_program_export_config()
 	{
-		if (!g_cfg.video.emulate_depth_compare) [[ likely ]]
-		{
-			return 0;
-		}
-
-		if (m_ctx->register_state->current_draw_clause.classify_mode() != primitive_class::polygon)
-		{
-			return 0;
-		}
-
 		u32 expected_ctrl = 0;
 
-		if (m_framebuffer_layout.zeta_address &&
-			m_ctx->register_state->depth_test_enabled() &&
-			m_ctx->register_state->depth_func() == rsx::comparison_function::equal)
+		// Programmable blending. Requires color attachments to read from.
+		if (backend_config.supports_programmable_blending &&
+			!m_graphics_state.test(rsx::rtt_config_no_attachments))
 		{
-			expected_ctrl |= RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE;
+			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 
-			if (backend_config.supports_hw_msaa &&
-				m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample)
+			if (m_graphics_state.test(rsx::pipeline_config_dirty))
 			{
-				expected_ctrl |= RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER;
+				evaluate_programmable_blending_state(m_ctx, expected_ctrl);
 			}
 		}
 
+		// Resolve MSAA here if needed
+		if (!!(expected_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
+			REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
+			backend_config.supports_hw_msaa)
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
+		}
+
+		if (requires_depth_range_emulation()) [[ unlikely ]]
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
+		}
+
+		// Depth compare
+		if (!g_cfg.video.emulate_depth_compare) [[ likely ]]
+		{
+			return expected_ctrl;
+		}
+
+		if (REGS(m_ctx)->current_draw_clause.classify_mode() != primitive_class::polygon)
+		{
+			return expected_ctrl;
+		}
+
+		if (m_framebuffer_layout.zeta_address &&
+			REGS(m_ctx)->depth_test_enabled() &&
+			REGS(m_ctx)->depth_func() == rsx::comparison_function::equal)
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE;
+		}
+
+		// Resolve MSAA here if needed
+		if ((expected_ctrl & (RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE | RSX_SHADER_CONTROL_ROP_MULTISAMPLED)) == RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE &&
+			REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
+			backend_config.supports_hw_msaa)
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
+		}
+
 		return expected_ctrl;
+	}
+
+	bool thread::requires_depth_range_emulation() const
+	{
+		if (backend_config.supports_extended_depth_range || !g_cfg.video.emulate_extended_depth_range) [[ likely ]]
+		{
+			return false;
+		}
+
+		return m_framebuffer_layout.zeta_address && rsx::is_float_depth_format(REGS(m_ctx)->surface_depth_fmt());
 	}
 
 	void thread::prefetch_fragment_program()
@@ -2090,7 +2319,6 @@ namespace rsx
 	{
 		m_program_cache_hint.invalidate(m_graphics_state.load());
 
-		constexpr u32 fs_export_config_mask = (RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE | RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER);
 		if (u32 export_ctrl = get_fragment_program_export_config();
 			(current_fragment_program.ctrl & fs_export_config_mask) != export_ctrl)
 		{
@@ -2119,6 +2347,13 @@ namespace rsx
 			m_graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
 
 			// Emit invalidate here in case ucode is actually clean
+			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
+		}
+
+		if (const bool emulate_depth_range = requires_depth_range_emulation();
+			emulate_depth_range != !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE))
+		{
+			current_vertex_program.ctrl ^= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
 		}
 
@@ -2171,46 +2406,45 @@ namespace rsx
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
-		current_fragment_program.ctrl = m_ctx->register_state->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
-		current_fragment_program.texcoord_control_mask = m_ctx->register_state->texcoord_control_mask();
-		current_fragment_program.two_sided_lighting = m_ctx->register_state->two_side_light_en();
-		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(m_ctx->register_state->surface_color_target());
+		current_fragment_program.ctrl &= fs_export_config_mask;
+		current_fragment_program.ctrl |= REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
+		current_fragment_program.texcoord_control_mask = REGS(m_ctx)->texcoord_control_mask();
+		current_fragment_program.two_sided_lighting = REGS(m_ctx)->two_side_light_en();
+		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(REGS(m_ctx)->surface_color_target());
 
-		if (m_ctx->register_state->shade_mode() == rsx::shading_mode::flat &&
+		if (REGS(m_ctx)->shade_mode() == rsx::shading_mode::flat &&
 			backend_config.supports_last_provoking_vertex)
 		{
 			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
 		}
 
-		if (m_ctx->register_state->current_draw_clause.classify_mode() == primitive_class::polygon)
+		if (REGS(m_ctx)->current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
 			if (!backend_config.supports_normalized_barycentrics)
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
 
-			if (m_ctx->register_state->polygon_stipple_enabled())
+			if (REGS(m_ctx)->polygon_stipple_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
 			}
-
-			current_fragment_program.ctrl |= get_fragment_program_export_config();
 		}
-		else if (m_ctx->register_state->point_sprite_enabled() &&
-			m_ctx->register_state->current_draw_clause.primitive == primitive_type::points)
+		else if (REGS(m_ctx)->point_sprite_enabled() &&
+			REGS(m_ctx)->current_draw_clause.primitive == primitive_type::points)
 		{
 			// Set high word of the control mask to store point sprite control
-			current_fragment_program.texcoord_control_mask |= u32(m_ctx->register_state->point_sprite_control_mask()) << 16;
+			current_fragment_program.texcoord_control_mask |= u32(REGS(m_ctx)->point_sprite_control_mask()) << 16;
 		}
 
-		if (m_ctx->register_state->alpha_test_enabled())
+		if (REGS(m_ctx)->alpha_test_enabled())
 		{
 			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
 		}
 
-		if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
+		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled())
 		{
-			const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+			const bool is_multiple_samples = REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
 			if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
 			{
 				// Emulation required
@@ -2219,7 +2453,7 @@ namespace rsx
 		}
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
-		switch (m_ctx->register_state->surface_color())
+		switch (REGS(m_ctx)->surface_color())
 		{
 		case rsx::surface_color_format::w16z16y16x16:
 		case rsx::surface_color_format::w32z32y32x32:
@@ -2230,11 +2464,11 @@ namespace rsx
 			// Integer framebuffer formats. These can support sRGB output as well as some special rules for output quantization.
 			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER;
 			if (!(current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) && // Cannot output sRGB from 32-bit registers
-				m_ctx->register_state->framebuffer_srgb_enabled())
+				REGS(m_ctx)->framebuffer_srgb_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
 			}
-			if (m_ctx->register_state->surface_is_swizzle_remapped())
+			if (REGS(m_ctx)->surface_is_swizzle_remapped())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP;
 			}
@@ -2248,7 +2482,7 @@ namespace rsx
 		{
 			if (!(textures_ref & 1)) continue;
 
-			auto &tex = m_ctx->register_state->fragment_textures[i];
+			auto &tex = REGS(m_ctx)->fragment_textures[i];
 			current_fp_texture_state.clear(i);
 
 			if (!tex.enabled() || sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_UNDEFINED)
@@ -2443,7 +2677,7 @@ namespace rsx
 		if (current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
 			//Check that the depth stage is not disabled
-			if (!m_ctx->register_state->depth_test_enabled())
+			if (!REGS(m_ctx)->depth_test_enabled())
 			{
 				rsx_log.trace("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
@@ -2714,9 +2948,8 @@ namespace rsx
 
 	void thread::flush_fifo()
 	{
-		// Make sure GET value is exposed before sync points
-		fifo_ctrl->sync_get();
 		fifo_ctrl->invalidate_cache();
+		fifo_ctrl->fetch_u32(fifo_ctrl->get_pos());
 	}
 
 	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const
@@ -2942,9 +3175,11 @@ namespace rsx
 
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
-		if (ctrl)
+		if (ctrl && fifo_ctrl)
 		{
-			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
+			fmt::append(result, "FIFO: EXEC=0x%x, GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", fifo_ctrl->get_pos(), +ctrl->get, +ctrl->put, +ctrl->ref);
+			fmt::append(result, "FIFO: RET-ADDR=0x%x, Code=0x%x, Jump=0x%x\n", fifo_ret_addr, last_known_code_start, last_code_jump);
+			fmt::append(result, "FIFO: Semaphore Acquire: pos=0x%x, address=0x%x\n", last_sema_cmd, last_sema_addr);
 		}
 
 		for (u32 i = 0; i < 1 << 14; i++)
@@ -3067,7 +3302,7 @@ namespace rsx
 
 							if (ea < (rsx::constants::local_mem_base >> 20))
 							{
-								cfg.offsetTable.eaAddress[ea] = null_entry;
+								cfg.offsetTable.ioAddress[ea] = null_entry;
 							}
 						}
 

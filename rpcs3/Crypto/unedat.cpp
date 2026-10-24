@@ -9,6 +9,8 @@
 #include "Emu/system_utils.hpp"
 
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
+
 #include <algorithm>
 #include <span>
 
@@ -162,7 +164,7 @@ u128 get_block_key(int block, const NPD_HEADER& npd)
 // for out data, allocate a buffer the size of 'edat.block_size'
 // Also, set 'in file' to the beginning of the encrypted data, which may be offset if inside another file, but normally just reset to beginning of file
 // returns number of bytes written, -1 for error
-s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& edat, const NPD_HEADER& npd, const u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
+s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& edat, const NPD_HEADER& npd, const u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false, bool verbose = true)
 {
 	// Get metadata info and setup buffers.
 	const u64 metadata_section_size = ((edat.flags & EDAT_COMPRESSED_FLAG) != 0 || (edat.flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
@@ -314,7 +316,11 @@ s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& e
 		// Call main crypto routine on this data block.
 		if (!decrypt(hash_mode, crypto_mode, (npd.version == 4), enc_data->data(), dec_data->data(), length, key_result, iv, hash, hash_result))
 		{
-			edat_log.error("Block at offset 0x%llx has invalid hash!", offset);
+			if (verbose)
+			{
+				edat_log.error("Block at offset 0x%llx has invalid hash!", offset);
+			}
+
 			return -1;
 		}
 	}
@@ -628,8 +634,8 @@ bool validate_npd_hashes(std::string_view file_name, const u8* klicensee, const 
 	for (usz i = std::distance(it, buf_span.rend()) - 1; i < buf_len; ++i)
 	{
 		const u8 c = buf[i];
-		buf_upper[i] = std::toupper(c);
-		buf_lower[i] = std::tolower(c);
+		buf_upper[i] = utils::toupper(c);
+		buf_lower[i] = utils::tolower(c);
 	}
 
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
@@ -795,7 +801,7 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 	return output;
 }
 
-bool EDATADecrypter::ReadHeader()
+bool EDATADecrypter::ReadHeader(bool verbose)
 {
 	edata_file.seek(0);
 
@@ -816,14 +822,29 @@ bool EDATADecrypter::ReadHeader()
 	}
 	else
 	{
-		// extract key from RIF
 		char real_file_name[CRYPTO_MAX_PATH]{};
 		extract_file_name(m_file_name, real_file_name);
 
+		// A klicensee that does not match the header decrypts nothing, so there is nothing to carry on with.
+		// DEBUG data carries no key at all, hence the exception
+		if (!(edatHeader.flags & EDAT_DEBUG_DATA_FLAG) && !validate_dev_klic(reinterpret_cast<const u8*>(&dec_key), npdHeader))
+		{
+			if (verbose)
+			{
+				edat_log.error("Invalid klicensee for this file!");
+			}
+
+			return false;
+		}
+
+		// Beyond the key, this checks the title hash, taken over the name the file was packaged with: a file
+		// renamed since then decrypts all the same, so a mismatch is only worth a warning
 		if (!validate_npd_hashes(real_file_name, reinterpret_cast<const u8*>(&dec_key), npdHeader, edatHeader, false))
 		{
-			edat_log.error("NPD hash validation failed!");
-			return true;
+			if (verbose)
+			{
+				edat_log.warning("NPD title hash is invalid!");
+			}
 		}
 
 		// Select EDAT key.
@@ -849,8 +870,9 @@ bool EDATADecrypter::ReadHeader()
 			// Make sure we don't have an empty RIF key.
 			if (!dec_key)
 			{
-				edat_log.error("A valid RAP file is needed for this EDAT file! (license=%d)", npdHeader.license);
-				return true;
+				edat_log.error("A valid RAP file is needed for this EDAT file! (content id '%s', license=%d, expected '%s')",
+					npdHeader.get_content_id(), npdHeader.license, rap_path);
+				return false;
 			}
 
 			edat_log.trace("RIFKEY: %s", std::bit_cast<be_t<u128>>(dec_key));
@@ -873,16 +895,20 @@ bool EDATADecrypter::ReadHeader()
 	// Try decrypting the first block instead
 	u8 data_sample[1];
 
-	if (file_size && !ReadData(0, data_sample, 1))
+	if (file_size && !ReadData(0, data_sample, 1, verbose))
 	{
-		edat_log.error("NPDRM ReadData() failed!");
+		if (verbose)
+		{
+			edat_log.error("NPDRM ReadData() failed!");
+		}
+
 		return false;
 	}
 
 	return true;
 }
 
-u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
+u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size, bool verbose)
 {
 	size = std::min<u64>(size, pos > edatHeader.file_size ? 0 : edatHeader.file_size - pos);
 
@@ -906,11 +932,15 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 
 	for (u32 i = starting_block; i < ending_block; i++)
 	{
-		u64 res = decrypt_block(edata_file, data_buf, edatHeader, npdHeader, reinterpret_cast<u8*>(&dec_key), i, total_blocks, edatHeader.file_size, true);
+		u64 res = decrypt_block(edata_file, data_buf, edatHeader, npdHeader, reinterpret_cast<u8*>(&dec_key), i, total_blocks, edatHeader.file_size, true, verbose);
 
 		if (res == umax)
 		{
-			edat_log.error("Error Decrypting data");
+			if (verbose)
+			{
+				edat_log.error("Error Decrypting data");
+			}
+
 			return 0;
 		}
 

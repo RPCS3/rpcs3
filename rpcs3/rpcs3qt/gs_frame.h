@@ -86,6 +86,7 @@ public:
 
 protected:
 	video_renderer m_renderer;
+	Visibility m_startup_visibility = Visibility::Hidden;
 
 	void paintEvent(QPaintEvent* event) override;
 	void showEvent(QShowEvent* event) override;

@@ -6,6 +6,8 @@
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
 #include "Emu/Cell/timers.hpp"
+#include "Loader/ISO.h"
+#include "Emu/system_config.h"
 
 #include <numbers>
 
@@ -13,14 +15,6 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <limits.h>
-
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
-
-#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
-#include <sys/sysctl.h>
-#endif
 #endif
 
 // Definitions for common UI controls and their routines
@@ -107,7 +101,7 @@ namespace rsx
 			load_data(bytes, grayscaled);
 		}
 
-		image_info::image_info(const std::vector<u8>& bytes, bool grayscaled)
+		image_info::image_info(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			load_data(bytes, grayscaled);
 		}
@@ -117,7 +111,7 @@ namespace rsx
 			if (data) stbi_image_free(data);
 		}
 
-		void image_info::load_data(const std::vector<u8>& bytes, bool grayscaled)
+		void image_info::load_data(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, grayscaled ? STBI_grey_alpha : STBI_rgb_alpha);
 			channels = grayscaled ? 2 : 4;
@@ -141,6 +135,34 @@ namespace rsx
 			{
 				data_grey.clear();
 			}
+		}
+
+		std::unique_ptr<image_info> image_info::load_icon(const std::string& icon_path, const std::string& archive_path)
+		{
+			if (icon_path.empty()) return nullptr;
+
+			if (archive_path.empty())
+			{
+				if (!fs::exists(icon_path)) return nullptr;
+				return std::make_unique<image_info>(icon_path);
+			}
+
+			const bool is_archive = is_iso_file(archive_path);
+			if (!is_archive) return nullptr;
+
+			iso_archive archive(archive_path);
+			if (!archive.exists(icon_path)) return nullptr;
+
+			auto icon_file = archive.open(icon_path);
+			if (!icon_file) return nullptr;
+
+			const auto icon_size = icon_file->size();
+			if (icon_size == 0) return nullptr;
+
+			std::vector<u8> data(icon_size);
+			icon_file->read(data.data(), icon_size);
+
+			return std::make_unique<image_info>(data);
 		}
 
 		resource_config::resource_config()
@@ -175,45 +197,18 @@ namespace rsx
 				// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
 				if (info->get_data() == nullptr)
 				{
-					char result[ PATH_MAX ];
-#if defined(__APPLE__)
-					u32 bufsize = PATH_MAX;
-					const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
-#elif defined(KERN_PROC_PATHNAME)
-					usz bufsize = PATH_MAX;
-					int mib[] = {
-						CTL_KERN,
-#if defined(__NetBSD__)
-						KERN_PROC_ARGS,
-						-1,
-						KERN_PROC_PATHNAME,
-#else
-						KERN_PROC,
-						KERN_PROC_PATHNAME,
-						-1,
-#endif
-					};
-					const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
-#elif defined(__linux__)
-					const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
-#elif defined(__sun)
-					const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
-#else
-					const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
-#endif
-					if (success)
+					if (const std::string& resources_dir = fs::get_resources_dir(); !resources_dir.empty())
 					{
-						std::string executablePath = dirname(result);
-#ifdef __APPLE__
-						src = executablePath + "/../Resources/Icons/ui/" + res;
-#else
-						src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
-#endif
+						src = resources_dir + "Icons/ui/" + res;
 						info = std::make_unique<image_info>(src);
-						// Check if the icons are in the same directory as the executable (local builds)
-						if (info->get_data() == nullptr)
+					}
+
+					// Check if the icons are in the same directory as the executable (local builds)
+					if (info->get_data() == nullptr)
+					{
+						if (const std::string& executable_dir = fs::get_real_executable_dir(); !executable_dir.empty())
 						{
-							src = executablePath + "/Icons/ui/" + res;
+							src = executable_dir + "/Icons/ui/" + res;
 							info = std::make_unique<image_info>(src);
 						}
 					}
@@ -228,6 +223,16 @@ namespace rsx
 			}
 
 			return info;
+		}
+
+		resource_config::standard_image_resource resource_config::confirm_button_resource()
+		{
+			return g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? circle : cross;
+		}
+
+		resource_config::standard_image_resource resource_config::cancel_button_resource()
+		{
+			return g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? cross : circle;
 		}
 
 		void resource_config::load_files()
@@ -465,9 +470,17 @@ namespace rsx
 			set_text(container.str);
 		}
 
-		void overlay_element::set_font(const char* font_name, u16 font_size)
+		void overlay_element::set_font(u16 font_size, std::string_view font_name)
 		{
-			font_ref = fontmgr::get(font_name, font_size);
+			if (font_name.empty())
+			{
+				font_ref = fontmgr::get(g_cfg.video.ui.default_font.get(), font_size);
+			}
+			else
+			{
+				font_ref = fontmgr::get(font_name, font_size);
+			}
+
 			m_is_compiled = false;
 		}
 
@@ -485,7 +498,7 @@ namespace rsx
 
 		font* overlay_element::get_font() const
 		{
-			return font_ref ? font_ref : fontmgr::get("Arial", 12);
+			return font_ref ? font_ref : fontmgr::get(g_cfg.video.ui.default_font.get(), 12);
 		}
 
 		std::vector<vertex> overlay_element::render_text(const char32_t* string, f32 x, f32 y)
@@ -1012,6 +1025,59 @@ namespace rsx
 			return result;
 		}
 
+		void image_view::adjust_padding()
+		{
+			overlay_element::set_padding(m_original_padding_left, m_original_padding_right, m_original_padding_top, m_original_padding_bottom);
+
+			if (!m_keep_aspect_ratio || !external_ref || external_ref->w <= 0 || external_ref->h <= 0)
+			{
+				return;
+			}
+
+			// Adjust padding so that the image keeps its aspect ratio
+
+			const u16 p_left   = m_original_padding_left;
+			const u16 p_right  = m_original_padding_right;
+			const u16 p_top    = m_original_padding_top;
+			const u16 p_bottom = m_original_padding_bottom;
+
+			const u16 target_width = w - (p_left + p_right);
+			const u16 target_height = h - (p_top + p_bottom);
+			const f32 target_ratio = target_width / static_cast<f32>(target_height);
+			const f32 image_ratio = external_ref->w / static_cast<f32>(external_ref->h);
+
+			if (image_ratio > target_ratio)
+			{
+				const u16 new_padding = static_cast<u16>(target_height - target_width / image_ratio) / 2;
+				overlay_element::set_padding(p_left, p_right, p_top + new_padding, p_bottom + new_padding);
+			}
+			else if (image_ratio < target_ratio)
+			{
+				const u16 new_padding = static_cast<u16>(target_width - target_height * image_ratio) / 2;
+				overlay_element::set_padding(p_left + new_padding, p_right + new_padding, p_top, p_bottom);
+			}
+		}
+
+		void image_view::set_padding(u16 left, u16 right, u16 top, u16 bottom)
+		{
+			m_original_padding_left = left;
+			m_original_padding_right = right;
+			m_original_padding_top = top;
+			m_original_padding_bottom = bottom;
+
+			adjust_padding();
+		}
+
+		void image_view::set_padding(u16 padding)
+		{
+			m_original_padding_left = padding;
+			m_original_padding_right = padding;
+			m_original_padding_top = padding;
+			m_original_padding_bottom = padding;
+
+			adjust_padding();
+		}
+
 		compiled_resource& image_view::get_compiled()
 		{
 			if (is_compiled())
@@ -1057,6 +1123,8 @@ namespace rsx
 		{
 			image_resource_ref = image_resource_id::raw_image;
 			external_ref = raw_image;
+
+			adjust_padding();
 		}
 
 		void image_view::clear_image()
@@ -1068,6 +1136,15 @@ namespace rsx
 		void image_view::set_blur_strength(u8 strength)
 		{
 			blur_strength = strength;
+		}
+
+		void image_view::set_keep_aspect_ratio(bool enabled)
+		{
+			if (m_keep_aspect_ratio != enabled)
+			{
+				m_keep_aspect_ratio = enabled;
+				adjust_padding();
+			}
 		}
 
 		image_button::image_button()

@@ -238,6 +238,18 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->left_stack->setCurrentIndex(0);
 	ui->right_stack->setCurrentIndex(0);
 
+	// Set slider label width
+	const int slider_label_width = gui::utils::get_label_width(QStringLiteral("100"));
+	ui->slider_label_stick_left->setFixedWidth(slider_label_width);
+	ui->slider_label_stick_right->setFixedWidth(slider_label_width);
+	ui->anti_deadzone_slider_label_stick_left->setFixedWidth(slider_label_width);
+	ui->anti_deadzone_slider_label_stick_right->setFixedWidth(slider_label_width);
+	ui->pressure_intensity_deadzone_label->setFixedWidth(slider_label_width);
+	ui->slider_trigger_left_label->setFixedWidth(slider_label_width);
+	ui->slider_trigger_right_label->setFixedWidth(slider_label_width);
+	ui->preview_trigger_left_label->setFixedWidth(slider_label_width);
+	ui->preview_trigger_right_label->setFixedWidth(slider_label_width);
+
 	// Set up first tab
 	OnTabChanged(0);
 	ChangeConfig(ui->chooseConfig->currentText());
@@ -410,24 +422,53 @@ void pad_settings_dialog::InitButtons()
 		});
 	});
 
-	connect(ui->slider_stick_left, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->slider_stick_left, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->slider_label_stick_left->setText(QString::number(std::round((value * 100.0f) / ui->slider_stick_left->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_left, value, ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
-	connect(ui->slider_stick_right, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->slider_stick_right, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->slider_label_stick_right->setText(QString::number(std::round((value * 100.0f) / ui->slider_stick_right->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 	});
 
-	connect(ui->anti_deadzone_slider_stick_left, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->anti_deadzone_slider_stick_left, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->anti_deadzone_slider_label_stick_left->setText(QString::number(std::round((value * 100.0f) / ui->anti_deadzone_slider_stick_left->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), value, ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
-	connect(ui->anti_deadzone_slider_stick_right, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->anti_deadzone_slider_stick_right, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->anti_deadzone_slider_label_stick_right->setText(QString::number(std::round((value * 100.0f) / ui->anti_deadzone_slider_stick_right->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), value, ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
+	});
+
+	connect(ui->pressure_intensity_deadzone, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->pressure_intensity_deadzone_label->setText(QString::number(std::round((value * 100.0f) / ui->pressure_intensity_deadzone->maximum())));
+	});
+
+	connect(ui->slider_trigger_left, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->slider_trigger_left_label->setText(QString::number(std::round((value * 100.0f) / ui->slider_trigger_left->maximum())));
+	});
+
+	connect(ui->slider_trigger_right, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->slider_trigger_right_label->setText(QString::number(std::round((value * 100.0f) / ui->slider_trigger_right->maximum())));
+	});
+
+	connect(ui->preview_trigger_left, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->preview_trigger_left_label->setText(QString::number(std::round((value * 100.0f) / ui->preview_trigger_left->maximum())));
+	});
+
+	connect(ui->preview_trigger_right, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->preview_trigger_right_label->setText(QString::number(std::round((value * 100.0f) / ui->preview_trigger_right->maximum())));
 	});
 
 	// Open LED settings
@@ -953,7 +994,8 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* label, int deadzone, int a
 			const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
 			const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
 			const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
-			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, anti_deadzone, squircle);
+			[[maybe_unused]] f32 angle, distance_to_center;
+			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, anti_deadzone, squircle, angle, distance_to_center);
 		}
 
 		constexpr qreal real_max = 126;
@@ -1176,7 +1218,10 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	case QEvent::MouseButtonPress:
 	{
 		// Save object on rightclick if we are not remapping a button in order to allow clearing a binding
-		m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		if (const auto button = qobject_cast<QPushButton*>(object); button && button->isEnabled() && m_cfg_entries.contains(m_pad_buttons->id(button)))
+		{
+			m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		}
 		break;
 	}
 	case QEvent::MouseButtonRelease:

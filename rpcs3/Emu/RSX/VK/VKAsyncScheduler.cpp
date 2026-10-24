@@ -1,5 +1,6 @@
 #include "VKAsyncScheduler.h"
 #include "VKHelpers.h"
+#include "Emu/system_config.h"
 
 #include <vector>
 

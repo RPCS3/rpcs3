@@ -27,7 +27,6 @@
 #include "QMessageBox"
 
 LOG_CHANNEL(game_list_log, "GameList");
-LOG_CHANNEL(sys_log, "SYS");
 
 std::string get_savestate_file(std::string_view title_id, std::string_view boot_pat, s64 rel_id, u64 aggregate_file_size = umax);
 
@@ -63,7 +62,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 {
 	ensure(!!gameinfo);
 
-	GameInfo current_game = gameinfo->info;
+	const GameInfo current_game = *gameinfo;
 	const std::string serial = current_game.serial;
 	const QString name = QString::fromStdString(current_game.name).simplified();
 	const bool is_current_running_game = game_list_actions::IsGameRunning(serial);
@@ -326,8 +325,8 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	manage_game_menu->addSeparator();
 
-	// Move the game to a user defined game collection
-	m_game_list_actions->AddMoveToCollectionMenu(manage_game_menu, {gameinfo});
+	// Add the game to user defined game collections
+	m_game_list_actions->AddCollectionMenu(manage_game_menu, {gameinfo});
 
 	// Hide/rename game in game list
 	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
@@ -626,29 +625,51 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
-		const bool raw_archive = is_iso_file(current_game.path);
+		// A disc held by a drive is what a Redump image is dumped from, and its hash is taken over encrypted content,
+		// so no key file is needed for it
+		const bool raw_device = fs::get_optical_raw_device(current_game.path);
 		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path);
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
 		// it if the ISO does not support integrity check (e.g. non Redump ISO) or no integrity DB is found.
 		// That is to highlight a Redump ISO from a non Redump ISO
-		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
+		if (raw_device || iso_type != iso_type_status::NOT_ISO)
 		{
-			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity (Redump)"));
 
-			// If it's a Redump ISO and the integrity DB exists
-			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+			// If it's a Redump ISO, or a disc held by a drive, and the integrity DB exists
+			if ((raw_device || iso_type == iso_type_status::REDUMP_ISO) &&
 				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
 				connect(check_iso_integrity, &QAction::triggered, this, [this, gameinfo]()
 				{
-					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo->info.path);
+					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo->path);
 				});
 			}
 			else
 			{
 				check_iso_integrity->setEnabled(false);
 			}
+
+			// Unlike the check above, which weighs the image as a whole against the Redump DB, this one weighs each
+			// file of the image against the IRD file of the disc, so it also tells which file is wrong
+			QAction* check_iso_files_integrity = addAction(tr("&Check ISO Integrity (IRD)"));
+
+			connect(check_iso_files_integrity, &QAction::triggered, this, [this, gameinfo]()
+			{
+				m_game_list_actions->ShowIrdIntegrityDialog(gameinfo->path);
+			});
+		}
+		else if (fs::is_file(current_game.path + "/PARAM.SFO") || fs::is_file(current_game.path + "/PS3_GAME/PARAM.SFO"))
+		{
+			// The game is not held by an ISO file but by a "JB folder": it is validated file by file against the
+			// IRD file of the disc it was ripped from
+			QAction* check_jb_folder_integrity = addAction(tr("&Check JB Folder Integrity (IRD)"));
+
+			connect(check_jb_folder_integrity, &QAction::triggered, this, [this, gameinfo]()
+			{
+				m_game_list_actions->ShowIrdIntegrityDialog(gameinfo->path);
+			});
 		}
 	}
 
@@ -677,7 +698,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	const auto configure_game = [this, current_game, gameinfo](bool create_cfg_from_global_cfg, bool create_cfg_from_database)
 	{
-		const std::optional<std::string> db_config = create_cfg_from_database ? m_game_list_frame->GetConfigDatabase()->get_config(gameinfo->info.serial) : "";
+		const std::optional<std::string> db_config = create_cfg_from_database ? m_game_list_frame->GetConfigDatabase()->get_config(gameinfo->serial) : "";
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, m_game_list_frame, &current_game, create_cfg_from_global_cfg, db_config ? *db_config : "");
 
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, [this, gameinfo]()
@@ -758,7 +779,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	});
 	connect(configure_patches, &QAction::triggered, m_game_list_frame, [this, gameinfo]()
 	{
-		patch_manager_dialog patch_manager(m_gui_settings, m_game_list_frame->GetGameInfo(), gameinfo->info.serial, gameinfo->GetGameVersion(), m_game_list_frame);
+		patch_manager_dialog patch_manager(m_gui_settings, m_game_list_frame->GetGameInfo(), gameinfo->serial, gameinfo->GetGameVersion(), m_game_list_frame);
 		patch_manager.exec();
 	});
 	connect(check_compat, &QAction::triggered, this, [serial = QString::fromStdString(serial)]
@@ -965,8 +986,8 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 	manage_game_menu->addSeparator();
 
-	// Move the games to a user defined game collection
-	m_game_list_actions->AddMoveToCollectionMenu(manage_game_menu, games);
+	// Add the games to user defined game collections
+	m_game_list_actions->AddCollectionMenu(manage_game_menu, games);
 
 	// Hide game in game list
 	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
@@ -977,7 +998,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 		for (const auto& game : games)
 		{
-			m_game_list_frame->hidden_list().insert(QString::fromStdString(game->info.serial));
+			m_game_list_frame->hidden_list().insert(QString::fromStdString(game->serial));
 		}
 
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
@@ -991,7 +1012,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 		for (const auto& game : games)
 		{
-			m_game_list_frame->broken_list().insert(QString::fromStdString(game->info.serial));
+			m_game_list_frame->broken_list().insert(QString::fromStdString(game->serial));
 		}
 
 		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
@@ -1005,7 +1026,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 		for (const auto& game : games)
 		{
-			m_game_list_frame->completed_list().insert(QString::fromStdString(game->info.serial));
+			m_game_list_frame->completed_list().insert(QString::fromStdString(game->serial));
 		}
 
 		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
@@ -1018,7 +1039,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	{
 		for (const auto& game : games)
 		{
-			m_game_list_frame->hidden_list().remove(QString::fromStdString(game->info.serial));
+			m_game_list_frame->hidden_list().remove(QString::fromStdString(game->serial));
 		}
 
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
@@ -1029,7 +1050,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	{
 		for (const auto& game : games)
 		{
-			m_game_list_frame->broken_list().remove(QString::fromStdString(game->info.serial));
+			m_game_list_frame->broken_list().remove(QString::fromStdString(game->serial));
 		}
 
 		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
@@ -1040,7 +1061,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	{
 		for (const auto& game : games)
 		{
-			m_game_list_frame->completed_list().remove(QString::fromStdString(game->info.serial));
+			m_game_list_frame->completed_list().remove(QString::fromStdString(game->serial));
 		}
 
 		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
@@ -1056,7 +1077,7 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 		for (const auto& game : games)
 		{
-			const auto serial = QString::fromStdString(game->info.serial);
+			const auto serial = QString::fromStdString(game->serial);
 
 			m_persistent_settings->SetPlaytime(serial, 0, false);
 			m_persistent_settings->SetLastPlayed(serial, 0, true);

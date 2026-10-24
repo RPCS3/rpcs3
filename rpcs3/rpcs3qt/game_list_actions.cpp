@@ -8,11 +8,9 @@
 
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
-#include "Loader/ISO.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/VFS.h"
 
 #include "Input/pad_thread.h"
 
@@ -32,7 +30,6 @@
 #include <QTimer>
 
 LOG_CHANNEL(game_list_log, "GameList");
-LOG_CHANNEL(sys_log, "SYS");
 
 extern atomic_t<bool> g_system_progress_canceled;
 
@@ -92,37 +89,35 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 
 	for (const auto& game : games)
 	{
-		GameInfo& current_game = game->info;
-
-		is_disc_game = QString::fromStdString(current_game.category) == cat::cat_disc_game;
+		is_disc_game = QString::fromStdString(game->category) == cat::cat_disc_game;
 
 		// +1 if it's a disc game's path and it's present in the shared games folder
-		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir())) ? 1 : 0;
+		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(game->path, rpcs3::utils::get_games_dir())) ? 1 : 0;
 
 		// Add the name to the content's name list for the related serial
-		content_info.name_list[current_game.serial].insert(current_game.name);
+		content_info.name_list[game->serial].insert(game->name);
 
 		if (is_disc_game)
 		{
-			if (current_game.size_on_disk != umax) // If size was properly detected
-				total_disc_size += current_game.size_on_disk;
+			if (game->size_on_disk != umax) // If size was properly detected
+				total_disc_size += game->size_on_disk;
 
 			// Add the serial to the disc list
-			content_info.disc_list.insert(current_game.serial);
+			content_info.disc_list.insert(game->serial);
 
 			// It could be an empty list for a disc game
-			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), current_game.serial);
+			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), game->serial);
 
 			// Add the path list to the content's path list for the related serial
 			for (const auto& data_dir : data_dir_list)
 			{
-				content_info.path_list[current_game.serial].insert(data_dir);
+				content_info.path_list[game->serial].insert(data_dir);
 			}
 		}
 		else
 		{
 			// Add the path to the content's path list for the related serial
-			content_info.path_list[current_game.serial].insert(current_game.path);
+			content_info.path_list[game->serial].insert(game->path);
 		}
 	}
 
@@ -130,22 +125,22 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		GameInfo& current_game = games[0]->info;
+		auto& current_game = games[0];
 
-		text = tr("%0 - %1\n").arg(QString::fromStdString(current_game.serial)).arg(QString::fromStdString(current_game.name));
+		text = tr("%0 - %1\n").arg(QString::fromStdString(current_game->serial)).arg(QString::fromStdString(current_game->name));
 
 		if (is_disc_game)
 		{
-			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game.path));
+			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game->path));
 
 			if (total_disc_size)
 				text += tr("Size: %0\n").arg(gui::utils::format_byte_size(total_disc_size));
 		}
 
 		// if a path is present (it could be an empty list for a disc game)
-		if (const auto& it = content_info.path_list.find(current_game.serial); it != content_info.path_list.end())
+		if (const auto& it = content_info.path_list.find(current_game->serial); it != content_info.path_list.end())
 		{
-			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : games[0]->localized_category);
+			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : current_game->localized_category);
 
 			for (const auto& data_dir : it->second)
 			{
@@ -348,11 +343,11 @@ void game_list_actions::ShowRemoveGameDialog(const std::vector<game_info>& games
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		if (!RemoveContentList(games[0]->info.serial))
+		if (!RemoveContentList(games[0]->serial))
 		{
 			QMessageBox::critical(m_game_list_frame, tr("Failure!"), caches->isChecked()
-				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->info.name))
-				: tr("Failed to remove %0 from drive!").arg(QString::fromStdString(games[0]->info.name)));
+				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->name))
+				: tr("Failed to remove %0 from drive!").arg(QString::fromStdString(games[0]->name)));
 
 			return;
 		}
@@ -505,7 +500,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 
 		if (m_game_validator->get_status() == content_hash_status::ABORTED)
 		{
-			text_dialog = tr("Hash calculation failed!\n\nIntegrity check aborted");
+			text_dialog = tr("Integrity check aborted!\n\nHash calculation failed!");
 			info_dialog = false;
 		}
 		else
@@ -531,6 +526,11 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 		}, nullptr, false);
 	});
 
+	StartHashProgressDialog();
+}
+
+void game_list_actions::StartHashProgressDialog()
+{
 	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), "", tr("Cancel"),
 		0, 100, false, m_game_list_frame);
 
@@ -571,6 +571,186 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 	update_timer->start(500);
 }
 
+void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
+{
+	if (m_game_integrity_future.isRunning()) // Still running the last request
+		return;
+
+	// A game is validated file by file against the IRD file of the disc it comes from: it is the only place the
+	// MD5 hash of each file of the disc can be read from (and the key of an encrypted image, when its key file is
+	// missing), so the user has to provide it
+	const QString ird_path = QFileDialog::getOpenFileName(nullptr, tr("Select the IRD file of the game"),
+		QString::fromStdString(game_path), tr("IRD files (*.ird *.IRD);;All files (*.*)"));
+
+	if (ird_path.isEmpty())
+	{
+		return;
+	}
+
+	// Tell the progress bar thread that a check is running: how far it got is reported by the validator itself,
+	// which knows how many files are left only once the IRD is parsed
+	m_game_validator->set_count(1);
+
+	// Hashing every file of a game can take a while (in particular on non ssd/m.2 disks) so run it on a concurrent
+	// thread avoiding to block the entire GUI
+	m_game_integrity_future = QtConcurrent::run([this, game_path, ird_path]()
+	{
+		thread_base::set_name("Game Integrity");
+
+		disc_check_report report;
+
+		m_game_validator->check_ird_content(game_path, ird_path.toStdString(), report);
+
+		QString text_result, text_dialog, text_details;
+		bool info_dialog = false;
+
+		switch (report.status)
+		{
+		case disc_check_status::PASSED:
+		case disc_check_status::FAILED:
+		{
+			info_dialog = report.status == disc_check_status::PASSED;
+
+			text_result = (info_dialog ? tr("Game check PASSED\n\n") : tr("Game check NOT PASSED\n\n"));
+
+			text_result += tr("Summary:\n - %0: %1\n - Game: %2 [%3]\n - IRD: %4 [%5] (game v%6, app v%7, firmware v%8)\n\n"
+				"%9 valid | %10 invalid | %11 missing | %12 not required")
+				.arg(report.is_iso ? tr("ISO") : tr("Folder"))
+				.arg(QString::fromStdString(game_path))
+				.arg(QString::fromStdString(report.game_title))
+				.arg(QString::fromStdString(report.game_id))
+				.arg(QString::fromStdString(report.ird_game_name))
+				.arg(QString::fromStdString(report.ird_game_id))
+				.arg(QString::fromStdString(report.ird_game_version))
+				.arg(QString::fromStdString(report.ird_app_version))
+				.arg(QString::fromStdString(report.ird_update_version))
+				.arg(report.matched)
+				.arg(report.mismatched)
+				.arg(report.missing)
+				.arg(report.not_required);
+
+			if (report.decrypted_with_ird_key)
+			{
+				text_result += tr("\n\nNOTE: no key file was found for this encrypted image, so it was read back through "
+					"the key stored in the IRD file");
+			}
+
+			if (report.serial_mismatch)
+			{
+				text_result += tr("\n\nWARNING: the IRD file belongs to another game!");
+				info_dialog = false;
+			}
+
+			if (!report.ird_crc_valid)
+			{
+				text_result += tr("\n\nWARNING: the IRD file is corrupted (wrong CRC32)!");
+				info_dialog = false;
+			}
+
+			for (const disc_file_entry& entry : report.entries)
+			{
+				switch (entry.status)
+				{
+				case disc_file_status::MATCH:
+					continue;
+				case disc_file_status::MATCH_REBUILT:
+					text_details += tr("[VALID, TO BE REBUILT] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				case disc_file_status::MISMATCH:
+					text_details += tr("[INVALID] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				case disc_file_status::MISSING:
+					// The firmware update a rip left out is the one missing file a check survives, so it is not worth
+					// a line of its own: the note below is what tells the user about it, and nothing else being wrong
+					// there is no list of files to go through
+					if (report.status == disc_check_status::PASSED)
+					{
+						continue;
+					}
+
+					text_details += tr("[MISSING] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				case disc_file_status::NOT_REQUIRED:
+					text_details += tr("[NOT REQUIRED] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				}
+			}
+
+			if (report.rebuilt)
+			{
+				text_result += tr("\n\nNOTE: %0 file(s) match the disc only once rebuilt (e.g. a missing license file or "
+					"a firmware update not padded to its size on the disc)").arg(report.rebuilt);
+			}
+
+			// A rip regularly leaves out the firmware update the disc holds: it does not belong to the game, so the
+			// check passes all the same, and this is what tells the user why it did despite the count above
+			if (report.missing_update && report.status == disc_check_status::PASSED)
+			{
+				text_result += tr("\n\nNOTE: only the firmware update is missing. All the game data matches the disc");
+			}
+
+			break;
+		}
+		case disc_check_status::ABORTED:
+			text_dialog = tr("Integrity check aborted!\n\nHash calculation failed!");
+			break;
+		case disc_check_status::ERROR_NOT_A_PS3_GAME:
+			text_dialog = tr("Integrity check failed!\n\n'%0' does not hold a PS3 game").arg(QString::fromStdString(game_path));
+			break;
+		case disc_check_status::ERROR_OPENING_ISO:
+			text_dialog = tr("Integrity check failed!\n\nFailed to open the ISO file: '%0'").arg(QString::fromStdString(game_path));
+			break;
+		// Both are shown through the dialog the boot path puts an unreadable image in, which names the key file that
+		// is being looked for and opens the folder it goes in
+		case disc_check_status::ERROR_KEY_MISSING:
+		case disc_check_status::ERROR_KEY_INVALID:
+			break;
+		case disc_check_status::ERROR_PARSING_IRD:
+			text_dialog = tr("Integrity check failed!\n\nFailed to parse the IRD file: '%0'").arg(ird_path);
+			break;
+		}
+
+		if (!text_result.isEmpty())
+		{
+			text_dialog = tr("Integrity check completed!\n\n%0").arg(text_result);
+		}
+
+		// Tell the progress bar thread to terminate
+		m_game_validator->set_count(0);
+
+		Emu.CallFromMainThread([this, text_dialog, text_details, info_dialog, status = report.status, game_path]()
+		{
+			if (status == disc_check_status::ERROR_KEY_MISSING || status == disc_check_status::ERROR_KEY_INVALID)
+			{
+				gui::utils::show_disc_key_error(m_game_list_frame, tr("Game Integrity"), game_path,
+					status == disc_check_status::ERROR_KEY_INVALID, tr("Integrity check failed!<br><br>"));
+				return;
+			}
+
+			QMessageBox mb(info_dialog ? QMessageBox::Information : QMessageBox::Critical, tr("Game Integrity"),
+				text_dialog, QMessageBox::Ok, m_game_list_frame);
+
+			if (!text_details.isEmpty())
+			{
+				mb.setDetailedText(text_details);
+			}
+
+			if (info_dialog)
+			{
+				sys_log.success("%s", text_dialog.toStdString());
+			}
+			else
+			{
+				sys_log.error("%s", text_dialog.toStdString());
+			}
+
+			mb.exec();
+		}, nullptr, false);
+	});
+
+	StartHashProgressDialog();
+}
+
 void game_list_actions::ShowDiskUsageDialog()
 {
 	if (m_disk_usage_future.isRunning()) // Still running the last request
@@ -606,6 +786,13 @@ void game_list_actions::ShowDiskUsageDialog()
 			QMessageBox::information(m_game_list_frame, tr("Disk usage"), text);
 		}, nullptr, false);
 	});
+}
+
+// How a game collection is listed in either menu: its name, and how many of its games the game list is
+// showing. One pass: a collection may be named "%1", and a chained arg() would substitute into it.
+static QString collection_entry_text(const QString& name, qsizetype count)
+{
+	return QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name), QString::number(count));
 }
 
 void game_list_actions::UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_group, QMenu* rename_menu, QMenu* remove_menu)
@@ -664,20 +851,25 @@ void game_list_actions::UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_
 
 	for (const QString& name : collections)
 	{
-		// One pass: a collection may be named "%1", and a chained arg() would substitute into it.
-		add_entry(QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name),
-			QString::number(counts.value(name))), name);
+		add_entry(collection_entry_text(name, counts.value(name)), name);
 	}
 }
 
-void game_list_actions::CreateGameCollection()
+void game_list_actions::CreateGameCollection(const QSet<QString>& serials)
 {
 	const QString name = AskForCollectionName(tr("Create Game Collection"), {},
 		[this](const QString& to) { return m_gui_settings->AddGameCollection(to); });
 
-	if (!name.isEmpty())
+	if (name.isEmpty())
 	{
-		game_list_log.notice("Created game collection '%s'", name);
+		return;
+	}
+
+	game_list_log.notice("Created game collection '%s'", name);
+
+	if (!serials.isEmpty())
+	{
+		ChangeCollectionMembership(serials, name, true);
 	}
 }
 
@@ -732,7 +924,7 @@ void game_list_actions::SelectGameCollection(const QString& name)
 	m_game_list_frame->SetGameCollection(name);
 }
 
-void game_list_actions::AddMoveToCollectionMenu(QMenu* parent, const std::vector<game_info>& games)
+void game_list_actions::AddCollectionMenu(QMenu* parent, const std::vector<game_info>& games)
 {
 	QSet<QString> serials;
 
@@ -740,7 +932,7 @@ void game_list_actions::AddMoveToCollectionMenu(QMenu* parent, const std::vector
 	{
 		if (game)
 		{
-			serials.insert(QString::fromStdString(game->info.serial));
+			serials.insert(QString::fromStdString(game->serial));
 		}
 	}
 
@@ -750,51 +942,47 @@ void game_list_actions::AddMoveToCollectionMenu(QMenu* parent, const std::vector
 	}
 
 	const QStringList collections = m_gui_settings->GetGameCollections();
-
-	QMenu* collection_menu = parent->addMenu(tr("&Move To Collection"));
-	collection_menu->setEnabled(!collections.isEmpty());
-
-	if (collections.isEmpty())
-	{
-		return;
-	}
-
-	// A single game shows the collection it currently sits in. A multi selection is a bulk move to whatever
-	// entry is picked, no matter which collections the games come from, so it shows no state at all.
-	const bool is_single_game = serials.size() == 1;
-	const QString current = is_single_game ? m_gui_settings->GetCollectionOfGame(*serials.cbegin()) : QString();
-
-	QActionGroup* collection_act_group = is_single_game ? new QActionGroup(collection_menu) : nullptr;
-
-	const auto add_entry = [&](const QString& text, const QString& name)
-	{
-		QAction* act = collection_menu->addAction(text);
-
-		if (collection_act_group)
-		{
-			act->setCheckable(true);
-			act->setChecked(name == current);
-			collection_act_group->addAction(act);
-		}
-
-		// Moving one game is trivially undone. Moving a block is not: the games can come from several
-		// collections at once and where each of them was is not recorded anywhere, so that one asks first.
-		connect(act, &QAction::triggered, this, [this, serials, name, is_single_game]()
-		{
-			MoveGamesToCollection(serials, name, !is_single_game);
-		});
-	};
-
 	const QHash<QString, qsizetype> counts = m_game_list_frame->CountGamesPerCollection(collections);
 
-	add_entry(gui_settings::GetAllGamesCollectionLabel(), {});
+	QMenu* collection_menu = parent->addMenu(tr("&Add to Collection"));
+
+	// Always there: with no collection yet this is the only thing the submenu can offer
+	connect(collection_menu->addAction(tr("&Create and Add")), &QAction::triggered, this, [this, serials]()
+	{
+		CreateGameCollection(serials);
+	});
+
+	if (!collections.isEmpty())
+	{
+		collection_menu->addSeparator();
+	}
 
 	for (const QString& collection : collections)
 	{
-		// One pass: a collection may be named "%1", and a chained arg() would substitute into it.
-		const QString text = QString("%0 (%1)").arg(gui::utils::escape_mnemonics(collection),
-			QString::number(counts.value(collection)));
-		add_entry(text, collection);
+		// A multi selection is ticked only once every game in it belongs to the collection, so that the
+		// entry finishes adding the ones that are missing before it starts taking any out
+		const bool is_member = m_gui_settings->GetGamesInCollection(collection).contains(serials);
+
+		QAction* act = collection_menu->addAction(collection_entry_text(collection, counts.value(collection)));
+		act->setCheckable(true);
+		act->setChecked(is_member);
+
+		connect(act, &QAction::triggered, this, [this, serials, collection, is_member]()
+		{
+			ChangeCollectionMembership(serials, collection, !is_member);
+		});
+	}
+
+	const QString current = m_gui_settings->GetCurrentGameCollection();
+
+	// Acts on the collection the game list is filtered by, which is the one the user is looking at
+	if (!current.isEmpty() && m_gui_settings->GetGamesInCollection(current).intersects(serials))
+	{
+		connect(parent->addAction(tr("&Remove from Collection '%0'").arg(gui::utils::escape_mnemonics(current))),
+			&QAction::triggered, this, [this, serials, current]()
+		{
+			ChangeCollectionMembership(serials, current, false);
+		});
 	}
 }
 
@@ -851,39 +1039,40 @@ QString game_list_actions::AskForCollectionName(const QString& title, const QStr
 	return {};
 }
 
-void game_list_actions::MoveGamesToCollection(const QSet<QString>& serials, const QString& name, bool is_interactive)
+void game_list_actions::ChangeCollectionMembership(const QSet<QString>& serials, const QString& name, bool add)
 {
-	const bool moves_anything = !m_gui_settings->GetGamesInCollection(name).contains(serials);
-
-	if (is_interactive && moves_anything)
+	// Adding is undone by the very entry that did it, but a removal takes memberships that were given one
+	// game at a time and cannot be handed back the same way, so a block of them asks first
+	if (!add && serials.size() > 1)
 	{
-		const QString question = name.isEmpty()
-			? tr("Remove %Ln game(s) from their game collection?", "", static_cast<int>(serials.size()))
-			: tr("Move %Ln game(s) to the '%0' game collection?", "", static_cast<int>(serials.size())).arg(name);
+		const QString question = tr("Remove %Ln game(s) from the '%0' game collection?", "",
+			static_cast<int>(serials.size())).arg(name);
 
-		if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Move"), question,
+		if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Removal"), question,
 			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
 		{
 			return;
 		}
 	}
 
-	// The user picked the collection the games already sit in
-	if (!m_gui_settings->MoveGamesToCollection(serials, name))
+	const bool changed = m_gui_settings->SetGameCollectionMembership(serials, name, add);
+
+	// The menu was built before the collection changed under it
+	if (!changed)
 	{
 		return;
 	}
 
-	if (name.isEmpty())
+	if (add)
 	{
-		game_list_log.notice("Removed %d game(s) from their game collection", serials.size());
+		game_list_log.notice("Added %d game(s) to game collection '%s'", serials.size(), name);
 	}
 	else
 	{
-		game_list_log.notice("Moved %d game(s) to game collection '%s'", serials.size(), name);
+		game_list_log.notice("Removed %d game(s) from game collection '%s'", serials.size(), name);
 	}
 
-	// The moved games may have entered or left the collection the game list is filtered by
+	// The games may have entered or left the collection the game list is filtered by
 	m_game_list_frame->ReloadGameCollection();
 }
 
@@ -968,7 +1157,7 @@ bool game_list_actions::CreateCPUCaches(const std::string& path, const std::stri
 
 bool game_list_actions::CreateCPUCaches(const game_info& game, bool is_fast_compilation)
 {
-	return game && CreateCPUCaches(game->info.path, game->info.serial, is_fast_compilation);
+	return game && CreateCPUCaches(game->path, game->serial, is_fast_compilation);
 }
 
 bool game_list_actions::RemoveCustomConfiguration(const std::string& serial, const game_info& game, bool is_interactive)
@@ -1206,14 +1395,18 @@ bool game_list_actions::RemoveHDD1Cache(const std::string& serial, bool is_inter
 	u32 dirs_removed = 0;
 	u32 dirs_total = 0;
 
-	const QStringList filter{ QString::fromStdString(serial + "_*") };
 	const QString q_base_dir = QString::fromStdString(base_dir);
+	const QString prefix = QString::fromStdString(serial + "_");
 
-	QDirIterator dir_iter(q_base_dir, filter, QDir::Dirs | QDir::NoDotAndDotDot);
+	QDirIterator dir_iter(q_base_dir, QDir::Dirs | QDir::NoDotAndDotDot);
 
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
+		if (!dir_iter.fileName().startsWith(prefix))
+		{
+			continue;
+		}
 
 		if (fs::remove_all(filepath.toStdString()))
 		{
@@ -1544,7 +1737,7 @@ void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	if (include_vsh)
@@ -1597,11 +1790,11 @@ void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games
 			{
 				const auto& games = m_game_list_frame->GetGameInfo();
 
-				const auto it = std::find_if(games.cbegin(), games.cend(), FN(x->info.serial == serial));
+				const auto it = std::find_if(games.cbegin(), games.cend(), FN(x->serial == serial));
 
 				if (it != games.cend())
 				{
-					return CreateCPUCaches((*it)->info.path, serial, is_fast_compilation);
+					return CreateCPUCaches((*it)->path, serial, is_fast_compilation);
 				}
 			}
 
@@ -1628,9 +1821,9 @@ void game_list_actions::BatchRemoveCustomConfigurations(const std::vector<game_i
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		if (game->has_custom_config && !serials.count(game->info.serial))
+		if (game->has_custom_config && !serials.count(game->serial))
 		{
-			serials.emplace(game->info.serial);
+			serials.emplace(game->serial);
 		}
 	}
 
@@ -1668,9 +1861,9 @@ void game_list_actions::BatchRemoveCustomPadConfigurations(const std::vector<gam
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		if (game->has_custom_pad_config && !serials.count(game->info.serial))
+		if (game->has_custom_pad_config && !serials.count(game->serial))
 		{
-			serials.emplace(game->info.serial);
+			serials.emplace(game->serial);
 		}
 	}
 
@@ -1713,7 +1906,7 @@ void game_list_actions::BatchRemoveShaderCaches(const std::vector<game_info>& ga
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1755,7 +1948,7 @@ void game_list_actions::BatchRemovePPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1798,7 +1991,7 @@ void game_list_actions::BatchRemoveSPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1841,7 +2034,7 @@ void game_list_actions::BatchRemoveHDD1Caches(const std::vector<game_info>& game
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1884,7 +2077,7 @@ void game_list_actions::BatchRemoveAllCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1931,7 +2124,7 @@ void game_list_actions::BatchRemoveContentLists(const std::vector<game_info>& ga
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -2052,11 +2245,12 @@ u32 game_list_actions::RemoveContentPathList(const std::set<std::string>& path_l
 bool game_list_actions::RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc)
 {
 	bool success = true;
+	const std::string serial_prefix = serial + "_";
 
 	for (const auto& entry : fs::dir(base_dir))
 	{
-		// Search for any path starting with serial (e.g. BCES01118_BCES01118)
-		if (!entry.name.starts_with(serial))
+		// Search for the serial or a suffixed entry (e.g. BCES01118_BCES01118)
+		if (entry.name != serial && !entry.name.starts_with(serial_prefix))
 		{
 			continue;
 		}

@@ -3,7 +3,7 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
-#include "Emu/RSX/color_utils.h"
+#include "Emu/RSX/Utils/color_utils.hpp"
 #include "Emu/RSX/gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
@@ -151,8 +151,13 @@ namespace glsl
 			;
 	}
 
-	void insert_rop_init(std::ostream& OS)
+	void insert_rop_init(std::ostream& OS, u32 mrt_buffer_count)
 	{
+		program_common::define_glsl_constants<u32>(OS,
+		{
+			{ "_MRT_BUFFERS_COUNT", mrt_buffer_count },
+		});
+
 		OS <<
 			#include "GLSLSnippets/RSXProg/RSXROPPrologue.glsl"
 			;
@@ -162,6 +167,13 @@ namespace glsl
 	{
 		OS <<
 			#include "GLSLSnippets/RSXProg/RSXROPEpilogue.glsl"
+			;
+	}
+
+	void insert_fragment_epilogue(std::ostream& OS, const shader_properties& /*props*/)
+	{
+		OS <<
+			#include "GLSLSnippets/RSXProg/RSXFragmentEpilogue.glsl"
 			;
 	}
 
@@ -203,8 +215,11 @@ namespace glsl
 				{ "MSAA_SAMPLE_CTRL_LENGTH     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
 				{ "FRAG_DEPTH_24_BIT           ", rsx::ROP_control_bits::FRAG_DEPTH_24_BIT },
 				{ "FRAG_DEPTH_FLOAT_BIT        ", rsx::ROP_control_bits::FRAG_DEPTH_FLOAT_BIT },
+				{ "DEPTH_CLAMP_ENABLE_BIT      ", rsx::ROP_control_bits::DEPTH_CLAMP_ENABLE_BIT },
 				{ "MRT_CHANNEL_REMAP_OFFSET    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET },
 				{ "MRT_CHANNEL_REMAP_LENGTH    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_NUM_BITS },
+				{ "MRT_BLEND_TARGETS_OFFSET    ", rsx::ROP_control_bits::MRT_BLEND_TARGETS_OFFSET },
+				{ "MRT_BLEND_TARGETS_LENGTH    ", rsx::ROP_control_bits::MRT_BLEND_TARGETS_NUM_BITS },
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
 
@@ -263,9 +278,19 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_DEPTH_COMPARE");
 			}
 
-			if (props.depth_buffer_multisampled)
+			if (props.ROP_output_multisampled)
 			{
-				enabled_options.push_back("_ENABLE_DEPTH_BUFFER_MULTISAMPLED");
+				enabled_options.push_back("_ENABLE_ROP_OUTPUT_MULTISAMPLED");
+			}
+
+			if (props.ROP_emulate_depth_range)
+			{
+				enabled_options.push_back("_EMULATE_DEPTH_RANGE");
+			}
+
+			if (props.ROP_depth_export)
+			{
+				enabled_options.push_back("_ENABLE_DEPTH_EXPORT");
 			}
 		}
 
@@ -299,6 +324,11 @@ namespace glsl
 			if (props.require_instanced_render)
 			{
 				enabled_options.push_back("_ENABLE_INSTANCED_CONSTANTS");
+			}
+
+			if (props.emulate_depth_range)
+			{
+				enabled_options.push_back("_EMULATE_DEPTH_RANGE");
 			}
 
 			// Import vertex header
@@ -346,6 +376,11 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_ROP_CHANNEL_REMAPPING");
 		}
 
+		if (props.ROP_programmable_blend)
+		{
+			enabled_options.push_back("_ENABLE_PROGRAMMABLE_BLENDING");
+		}
+
 		if (props.require_fog_read)
 		{
 			program_common::define_glsl_constants<rsx::fog_mode>(OS,
@@ -359,6 +394,12 @@ namespace glsl
 			});
 
 			enabled_options.push_back("_ENABLE_FOG_READ");
+		}
+
+		// Programs with the emulation bit always need the encoding, even if they were cached while the option was off
+		if (props.emulated_depth_storage || props.ROP_emulate_depth_range)
+		{
+			enabled_options.push_back("_EMULATED_DEPTH_STORAGE");
 		}
 
 		// Import fragment header
@@ -492,6 +533,11 @@ namespace glsl
 					OS << fmt::replace_all(msaa_sampling_impl, "_MSAA_SAMPLER_TYPE_", "usampler2DMS");
 				}
 			}
+		}
+
+		if (props.ROP_programmable_blend)
+		{
+			insert_blend_prologue(OS);
 		}
 	}
 

@@ -803,13 +803,16 @@ namespace vk
 			}
 		}
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+		state_flags &= ~(rsx::surface_state_flags::erase_bkgnd | rsx::surface_state_flags::force_data_load);
 	}
 
 	void render_target::initialize_memory(vk::command_buffer& cmd, rsx::surface_access access)
 	{
-		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth_surface() ?
+			!!g_cfg.video.read_depth_buffer :
+			!!g_cfg.video.read_color_buffers;
+
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (!should_read_buffers)
 		{
@@ -868,6 +871,12 @@ namespace vk
 			// If we have back-to-back depth-read barriers, skip subsequent ones
 			// If an actual write is happening, this flag will be automatically reset
 			return;
+		}
+
+		if (msaa_flags & rsx::surface_state_flags::require_unresolve)
+		{
+			// Emit an early write barrier here to commit any resolve operations
+			write_barrier(cmd);
 		}
 
 		vk::insert_texture_barrier(cmd, this, optimal_layout);
@@ -947,7 +956,8 @@ namespace vk
 		}
 
 		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (should_read_buffers)
 		{

@@ -411,7 +411,7 @@ namespace psf
 				else
 				{
 					// TODO: Better logging of other types
-					psf_log.error("Entry %s is invalid.%s", key, value.as_string(), src_loc);
+					psf_log.error("Entry %s is invalid.%s", key, src_loc);
 				}
 
 				// Do not break, run over all entries in order to report all errors

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "cellCamera.h"
 
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
@@ -1418,7 +1419,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 			u64 frame_number{};
 			u64 bytes_read{};
 
-			if (!g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+			if (!g_camera.get_camera_frame(g_camera.info.buffer ? g_camera.info.buffer.get_ptr() : nullptr, width, height, frame_number, bytes_read))
 			{
 				return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 			}
@@ -1716,20 +1717,20 @@ void camera_context::operator()()
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
+					constexpr u64 camera_id = 0;
 					u64 data2 = 0;
 					u64 data3 = 0;
 
 					if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
 					{
 						const u64 image_data_size = static_cast<u64>(info.bytesize);
-						const u64 camera_id = 0;
 
 						data2 = image_data_size << 32 | buffer_number << 16 | camera_id;
 						data3 = get_guest_system_time() - start_timestamp_us; // timestamp
 					}
 					else // CELL_CAMERA_READ_FUNCCALL, also default
 					{
-						data2 = 0; // device id (always 0)
+						data2 = camera_id;
 						data3 = 0; // unused
 					}
 
@@ -1770,7 +1771,7 @@ bool camera_context::open_camera()
 	Emu.BlockingCallFromMainThread([this]()
 	{
 		handler.reset();
-		handler = Emu.GetCallbacks().get_camera_handler();
+		handler = g_emu_callbacks.get_camera_handler();
 		if (handler)
 		{
 			handler->open_camera();
@@ -1997,7 +1998,7 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 	{
 		if (!is_attached)
 		{
-			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
+			cellCamera.warning("Camera handler not attached (state=%d). Sending attach event...", static_cast<int>(state));
 			is_attached = true;
 			is_attached_dirty = true;
 		}

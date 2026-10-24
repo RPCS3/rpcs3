@@ -55,27 +55,8 @@ namespace rsx
 				if (fs::exists(entry.info.path))
 				{
 					// Fit the new image into the available space
-					if (entry.info.width > 0 && entry.info.height > 0)
-					{
-						const u16 target_width = image->w - (image->padding_left + image->padding_right);
-						const u16 target_height = image->h - (image->padding_top + image->padding_bottom);
-						const f32 target_ratio = target_width / static_cast<f32>(target_height);
-						const f32 image_ratio = entry.info.width / static_cast<f32>(entry.info.height);
-						const f32 convert_ratio = image_ratio / target_ratio;
-
-						if (convert_ratio > 1.0f)
-						{
-							const u16 new_padding = static_cast<u16>(target_height - target_height / convert_ratio) / 2;
-							image->set_padding(image->padding_left, image->padding_right, new_padding + image->padding_top, new_padding + image->padding_bottom);
-						}
-						else if (convert_ratio < 1.0f)
-						{
-							const u16 new_padding = static_cast<u16>(target_width - target_width * convert_ratio) / 2;
-							image->set_padding(image->padding_left + new_padding, image->padding_right + new_padding, image->padding_top, image->padding_bottom);
-						}
-					}
-
 					icon_data = std::make_unique<image_info>(entry.info.path);
+					static_cast<image_view*>(image.get())->set_keep_aspect_ratio(true);
 					static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 				}
 				else
@@ -115,11 +96,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -152,7 +133,7 @@ namespace rsx
 			m_dim_background->back_color.a = 0.5f;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select media"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -315,7 +296,7 @@ namespace rsx
 			if (m_list->m_items.empty())
 			{
 				m_no_media_text = std::make_unique<label>(get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY));
-				m_no_media_text->set_font("Arial", 20);
+				m_no_media_text->set_font(20);
 				m_no_media_text->align_text(overlay_element::text_align::center);
 				m_no_media_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
 				m_no_media_text->set_size(m_list->w, 30);

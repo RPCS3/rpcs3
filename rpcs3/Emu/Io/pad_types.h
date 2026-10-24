@@ -60,6 +60,11 @@ enum class pad_button : u8
 	mouse_button_6,
 	mouse_button_7,
 	mouse_button_8,
+
+	// Special "buttons" that map behaviour
+	mouse,
+	left_stick,
+	right_stick
 };
 
 u32 pad_button_offset(pad_button button);
@@ -542,6 +547,7 @@ struct Pad
 	std::array<AnalogStick, 4> m_sticks{};
 	std::array<AnalogSensor, 4> m_sensors{};
 	std::array<VibrateMotor, 2> m_vibrate_motors{};
+	std::array<u8, 2> m_angles{};
 
 	std::vector<ButtonExternal> m_buttons_external;
 	std::array<AnalogStickExternal, 4> m_sticks_external{};

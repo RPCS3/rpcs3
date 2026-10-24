@@ -17,7 +17,6 @@
 #pragma clang diagnostic pop
 #endif
 
-#include <Crypto/utils.h>
 #include <Utilities/StrUtil.h>
 #include <Utilities/StrFmt.h>
 
@@ -29,7 +28,6 @@
 #include "Emu/system_config.h"
 
 LOG_CHANNEL(clan_log, "clans");
-
 
 const char* REQ_TYPE_FUNC = "func";
 const char* REQ_TYPE_SEC = "sec";
@@ -128,6 +126,11 @@ void fmt_class_string<clan::ClanRequestAction>::format(std::string& out, u64 arg
 
 namespace clan
 {
+	constexpr size_t base64_size(size_t size)
+	{
+		return (size + 2) / 3 * 4 + 1;
+	}
+
 	size_t clans_client::curl_write_callback(void* data, size_t size, size_t nmemb, void* clientp)
 	{
 		const size_t realsize = size * nmemb;
@@ -341,11 +344,16 @@ namespace clan
 			return "";
 		}
 
-		std::vector<byte> ticket_bytes(1024);
-		uint32_t ticket_size = UINT32_MAX;
+		std::vector<byte> ticket_bytes(base64_size(clan_ticket.size()));
+		uint32_t encoded_ticket_size = ::size32(ticket_bytes);
 
-		Base64_Encode_NoNl(clan_ticket.data(), static_cast<u32>(clan_ticket.size()), ticket_bytes.data(), &ticket_size);
-		const std::string ticket_str = std::string(reinterpret_cast<char*>(ticket_bytes.data()), ticket_size);
+		if (Base64_Encode_NoNl(clan_ticket.data(), ::size32(clan_ticket), ticket_bytes.data(), &encoded_ticket_size) != 0)
+		{
+			clan_log.error("Failed to encode clan ticket to base64");
+			return "";
+		}
+
+		const std::string ticket_str = std::string(reinterpret_cast<char*>(ticket_bytes.data()), encoded_ticket_size);
 
 		return ticket_str;
 	}
@@ -492,7 +500,7 @@ namespace clan
 
 		const pugi::xml_attribute member_jid = member_info.attribute("jid"sv);
 		const std::string member_jid_str = member_jid.as_string();
-		const std::string member_username = fmt::split(member_jid_str, {"@"})[0];
+		const std::string member_username = ::at32(fmt::split(member_jid_str, {"@"}), 0);
 
 		SceNpId member_npid;
 		if (strncmp(member_username.c_str(), nph.get_npid().handle.data, 16) == 0)
@@ -560,7 +568,7 @@ namespace clan
 		for (pugi::xml_node member_info = list.child("info"sv); member_info; member_info = member_info.next_sibling("info"sv))
 		{
 			const std::string member_jid = member_info.attribute("jid"sv).as_string();
-			const std::string member_username = fmt::split(member_jid, {"@"})[0];
+			const std::string member_username = ::at32(fmt::split(member_jid, {"@"}), 0);
 
 			SceNpId member_npid;
 			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, SCE_NET_NP_ONLINEID_MAX_LENGTH) == 0)
@@ -629,7 +637,7 @@ namespace clan
 		{
 			const pugi::xml_node member_jid = member.child("jid"sv);
 			const std::string member_jid_str = member_jid.text().as_string();
-			const std::string member_username = fmt::split(member_jid_str, {"@"})[0];
+			const std::string member_username = ::at32(fmt::split(member_jid_str, {"@"}), 0);
 
 			SceNpId member_npid = {};
 			if (strncmp(member_username.c_str(), nph.get_npid().handle.data, SCE_NET_NP_ONLINEID_MAX_LENGTH) == 0)
@@ -923,11 +931,14 @@ namespace clan
 
 		pugi::xml_node status = clan.append_child("bin-attr1"sv);
 
-		byte bin_attr_1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE * 2 + 1] = {0};
-		uint32_t bin_attr_1_size = UINT32_MAX;
-		Base64_Encode_NoNl(info.binAttr1, info.binData1Size, bin_attr_1, &bin_attr_1_size);
+		const u32 bin_data_size = static_cast<u32>(info.binData1Size);
+		if (bin_data_size > sizeof(info.binAttr1))
+			return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 
-		if (bin_attr_1_size == UINT32_MAX)
+		byte bin_attr_1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE * 2 + 1] = {0};
+		uint32_t bin_attr_1_size = sizeof(bin_attr_1);
+
+		if (Base64_Encode_NoNl(info.binAttr1, bin_data_size, bin_attr_1, &bin_attr_1_size) != 0)
 			return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 
 		// `reinterpret_cast` used to let the compiler select the correct overload of `set`
@@ -1072,7 +1083,7 @@ namespace clan
 			const std::string msg_date = node.child("msg-date"sv).text().as_string();
 
 			SceNpId author_npid;
-			const std::string author_username = fmt::split(author_jid, {"@"})[0];
+			const std::string author_username = ::at32(fmt::split(author_jid, {"@"}), 0);
 
 			if (strncmp(author_username.c_str(), nph.get_npid().handle.data, SCE_NET_NP_ONLINEID_MAX_LENGTH) == 0)
 			{

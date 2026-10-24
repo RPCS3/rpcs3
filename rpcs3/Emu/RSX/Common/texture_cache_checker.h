@@ -2,7 +2,7 @@
 
 #ifdef TEXTURE_CACHE_DEBUG
 
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 
 namespace rsx {
 

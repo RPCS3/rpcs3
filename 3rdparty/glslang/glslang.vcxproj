@@ -37,9 +37,13 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
-    <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
-      cmake -G $(CmakeGenerator) -A x64 ^
+      cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
+      cmake -G Ninja ^
+        -DCMAKE_CXX_COMPILER="cl.exe" ^
+        -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_BUILD_TYPE="Release" ^
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
         -DGLSLANG_TESTS=OFF ^
@@ -48,11 +52,15 @@
         -DENABLE_SPVREMAPPER=OFF ^
         -DENABLE_HLSL=OFF ^
         -DENABLE_OPT=OFF ^
-        -S glslang ^
-        -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+        -S "$(SolutionDir)3rdparty\glslang\glslang"
     </CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
-      cmake -G $(CmakeGenerator) -A x64 ^
+      cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
+      cmake -G Ninja ^
+        -DCMAKE_CXX_COMPILER="cl.exe" ^
+        -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_BUILD_TYPE="Debug" ^
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug ^
         -DGLSLANG_TESTS=OFF ^
@@ -61,15 +69,14 @@
         -DENABLE_SPVREMAPPER=OFF ^
         -DENABLE_HLSL=OFF ^
         -DENABLE_OPT=OFF ^
-        -S glslang ^
-        -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+        -S "$(SolutionDir)3rdparty\glslang\glslang"
     </CmakeDebugCLI>
     <CmakeCopyCLI>
       echo Copying..
       mkdir "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
-      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\SPIRV\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
-      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\OSDependent\Windows\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
-      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\SPIRV\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\OSDependent\Windows\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
     </CmakeCopyCLI>
     <CmakeCleanCLI>
       echo Cleaning..
@@ -83,17 +90,16 @@
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <NMakeBuildCommandLine>
       $(CmakeReleaseCLI)
-      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      ninja
       $(CmakeCopyCLI)
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
+      $(CmakeCleanCLI)
       $(CmakeReleaseCLI)
-      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      ninja
       $(CmakeCopyCLI)
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
-      $(CmakeReleaseCLI)
-      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
       $(CmakeCleanCLI)
     </NMakeCleanCommandLine>
   </PropertyGroup>
@@ -102,17 +108,16 @@
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <NMakeBuildCommandLine>
       $(CmakeDebugCLI)
-      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      ninja
       $(CmakeCopyCLI)
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
+      $(CmakeCleanCLI)
       $(CmakeDebugCLI)
-      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      ninja
       $(CmakeCopyCLI)
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
-      $(CmakeDebugCLI)
-      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
       $(CmakeCleanCLI)
     </NMakeCleanCommandLine>
   </PropertyGroup>

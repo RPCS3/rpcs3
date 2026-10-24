@@ -25,22 +25,30 @@ struct lv2_memory : lv2_obj
 	const u64 flags;
 	const u64 key; // IPC key
 	const bool pshared; // Process shared flag
-	lv2_memory_container* const ct; // Associated memory container
+	lv2_memory_container* const ct; // null for system memory
+	u32 system_handle = 0; // stands in for the vsh handle
 	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
 	atomic_t<u32> counter{0};
+	// the game can drop its handle while audio still needs the buffer
+	atomic_t<u32> external_refs{0};
 
 	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct);
 
 	lv2_memory(utils::serial& ar);
 	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial& ar);
+	void save_data(utils::serial& ar);
+	void release_memory();
 
 	CellError on_id_create();
+	CellError on_id_create(u64 requested_size, u32 requested_align, const shared_ptr<lv2_memory>& created);
 };
 
 enum : u64
 {
+	SYS_MMAPPER_SYSUTIL_SHM_KEY = 0x8006010000000010ULL,
+	SYS_MMAPPER_MIO_SHM_KEY = 0x80004d494f323211ULL,
 	SYS_MEMORY_PAGE_FAULT_EVENT_KEY	       = 0xfffe000000000000ULL,
 };
 
@@ -99,6 +107,7 @@ struct mmapper_unk_entry_struct0
 // Aux
 class ppu_thread;
 
+void init_system_shared_memory();
 error_code mmapper_thread_recover_page_fault(cpu_thread* cpu);
 
 // SysCalls

@@ -146,23 +146,39 @@ public:
 
 	constexpr bool test_and_set(T bit)
 	{
-		bool r = (m_data & shift(bit)) != 0;
-		m_data |= shift(bit);
+		const under s = shift(bit);
+		const bool r = (m_data & s) != 0;
+		m_data |= s;
+		return r;
+	}
+
+	constexpr bool test_and_set(T bit, bool value)
+	{
+		const under s = shift(bit);
+		const bool r = (m_data & s) != 0;
+		m_data = (value ? (m_data | s) : (m_data & ~s));
 		return r;
 	}
 
 	constexpr bool test_and_reset(T bit)
 	{
-		bool r = (m_data & shift(bit)) != 0;
-		m_data &= ~shift(bit);
+		const under s = shift(bit);
+		const bool r = (m_data & s) != 0;
+		m_data &= ~s;
 		return r;
 	}
 
 	constexpr bool test_and_complement(T bit)
 	{
-		bool r = (m_data & shift(bit)) != 0;
-		m_data ^= shift(bit);
+		const under s = shift(bit);
+		const bool r = (m_data & s) != 0;
+		m_data ^= s;
 		return r;
+	}
+
+	constexpr bool test(bs_t arg) const
+	{
+		return (m_data & arg.m_data) != 0;
 	}
 
 	constexpr bool all_of(bs_t arg) const

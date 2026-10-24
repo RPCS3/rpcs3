@@ -159,13 +159,15 @@ namespace vk
 		switch (op)
 		{
 		case rsx::blend_equation::add_signed:
-			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
+			rsx_log.error("blend equation add_signed used. Emulating using FUNC_ADD");
 			[[fallthrough]];
-		case rsx::blend_equation::add:
+		case rsx::blend_equation::add: return VK_BLEND_OP_ADD;
+		case rsx::blend_equation::reverse_add_signed:
+			rsx_log.error("blend equation reverse_add_signed used. Emulating using FUNC_ADD");
 			return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::subtract: return VK_BLEND_OP_SUBTRACT;
 		case rsx::blend_equation::reverse_subtract_signed:
-			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			rsx_log.error("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 			[[fallthrough]];
 		case rsx::blend_equation::reverse_subtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
@@ -242,12 +244,15 @@ namespace vk
 
 	// TODO: This should be deprecated soon (kd)
 	vk::pipeline_props decode_rsx_state(
+		const rsx::context* ctx,
 		const vertex_input_assembly_state& vertex_input,
 		vk::render_target* ds,
 		const rsx::backend_configuration& backend_config,
 		u8 num_draw_buffers,
 		u8 num_rasterization_samples,
-		bool depth_bounds_support)
+		bool depth_bounds_support,
+		bool force_disable_blending,
+		bool force_depth_clamp)
 	{
 		vk::pipeline_props properties{};
 
@@ -257,32 +262,40 @@ namespace vk
 
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
-		properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
-		properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
+		properties.state.set_front_face(vk::get_front_face(REGS(ctx)->front_face_mode()));
+		if (!force_depth_clamp) [[ likely ]]
+		{
+			properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
+		}
+		else
+		{
+			// Depth clip and clamp are emulated in the fragment shader
+			properties.state.enable_depth_clamp(true);
+		}
 		properties.state.enable_depth_bias(true);
 		properties.state.enable_depth_bounds_test(depth_bounds_support);
 
-		if (rsx::method_registers.depth_test_enabled())
+		if (REGS(ctx)->depth_test_enabled())
 		{
 			//NOTE: Like stencil, depth write is meaningless without depth test
-			properties.state.set_depth_mask(rsx::method_registers.depth_write_enabled());
-			properties.state.enable_depth_test(vk::get_compare_func(rsx::method_registers.depth_func()));
+			properties.state.set_depth_mask(REGS(ctx)->depth_write_enabled());
+			properties.state.enable_depth_test(vk::get_compare_func(REGS(ctx)->depth_func()));
 		}
 
-		if (rsx::method_registers.cull_face_enabled())
+		if (REGS(ctx)->cull_face_enabled())
 		{
-			properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
+			properties.state.enable_cull_face(vk::get_cull_face(REGS(ctx)->cull_face_mode()));
 		}
 
-		const auto host_write_mask = rsx::get_write_output_mask(rsx::method_registers.surface_color());
+		const auto host_write_mask = rsx::get_write_output_mask(REGS(ctx)->surface_color());
 		for (uint index = 0; index < num_draw_buffers; ++index)
 		{
-			bool color_mask_b = rsx::method_registers.color_mask_b(index);
-			bool color_mask_g = rsx::method_registers.color_mask_g(index);
-			bool color_mask_r = rsx::method_registers.color_mask_r(index);
-			bool color_mask_a = rsx::method_registers.color_mask_a(index);
+			bool color_mask_b = REGS(ctx)->color_mask_b(index);
+			bool color_mask_g = REGS(ctx)->color_mask_g(index);
+			bool color_mask_r = REGS(ctx)->color_mask_r(index);
+			bool color_mask_a = REGS(ctx)->color_mask_a(index);
 
-			switch (rsx::method_registers.surface_color())
+			switch (REGS(ctx)->surface_color())
 			{
 			case rsx::surface_color_format::b8:
 				rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
@@ -303,35 +316,27 @@ namespace vk
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
-		if (rsx::method_registers.logic_op_enabled())
+		if (REGS(ctx)->logic_op_enabled())
 		{
-			properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
+			properties.state.enable_logic_op(vk::get_logic_op(REGS(ctx)->logic_operation()));
 		}
-		else
+		else if (!force_disable_blending)
 		{
-			bool mrt_blend_enabled[] =
-			{
-				rsx::method_registers.blend_enabled(),
-				rsx::method_registers.blend_enabled_surface_1(),
-				rsx::method_registers.blend_enabled_surface_2(),
-				rsx::method_registers.blend_enabled_surface_3()
-			};
-
 			VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 			VkBlendOp equation_rgb, equation_a;
 
-			if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+			if (const auto blend_enabled = REGS(ctx)->blend_enabled_mask())
 			{
-				sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-				sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-				dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-				dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-				equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-				equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
+				sfactor_rgb = vk::get_blend_factor(REGS(ctx)->blend_func_sfactor_rgb());
+				sfactor_a = vk::get_blend_factor(REGS(ctx)->blend_func_sfactor_a());
+				dfactor_rgb = vk::get_blend_factor(REGS(ctx)->blend_func_dfactor_rgb());
+				dfactor_a = vk::get_blend_factor(REGS(ctx)->blend_func_dfactor_a());
+				equation_rgb = vk::get_blend_op(REGS(ctx)->blend_equation_rgb());
+				equation_a = vk::get_blend_op(REGS(ctx)->blend_equation_a());
 
 				for (u8 idx = 0; idx < num_draw_buffers; ++idx)
 				{
-					if (mrt_blend_enabled[idx])
+					if (blend_enabled & (1u << idx))
 					{
 						properties.state.enable_blend(idx, sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a, equation_rgb, equation_a);
 					}
@@ -339,31 +344,31 @@ namespace vk
 			}
 		}
 
-		if (rsx::method_registers.stencil_test_enabled())
+		if (REGS(ctx)->stencil_test_enabled())
 		{
-			if (!rsx::method_registers.two_sided_stencil_test_enabled())
+			if (!REGS(ctx)->two_sided_stencil_test_enabled())
 			{
 				properties.state.enable_stencil_test(
-					vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
-					vk::get_compare_func(rsx::method_registers.stencil_func()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_fail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zfail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zpass()),
+					vk::get_compare_func(REGS(ctx)->stencil_func()),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 			}
 			else
 			{
 				properties.state.enable_stencil_test_separate(0,
-					vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
-					vk::get_compare_func(rsx::method_registers.stencil_func()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_fail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zfail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zpass()),
+					vk::get_compare_func(REGS(ctx)->stencil_func()),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 
 				properties.state.enable_stencil_test_separate(1,
-					vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail()),
-					vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail()),
-					vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass()),
-					vk::get_compare_func(rsx::method_registers.back_stencil_func()),
+					vk::get_stencil_op(REGS(ctx)->back_stencil_op_fail()),
+					vk::get_stencil_op(REGS(ctx)->back_stencil_op_zfail()),
+					vk::get_stencil_op(REGS(ctx)->back_stencil_op_zpass()),
+					vk::get_compare_func(REGS(ctx)->back_stencil_func()),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 			}
 
@@ -384,13 +389,13 @@ namespace vk
 
 		if (backend_config.supports_hw_a2c || num_rasterization_samples > 1)
 		{
-			const bool alpha_to_one_enable = rsx::method_registers.msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
+			const bool alpha_to_one_enable = REGS(ctx)->msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
 
 			properties.state.set_multisample_state(
 				num_rasterization_samples,
-				rsx::method_registers.msaa_sample_mask(),
-				rsx::method_registers.msaa_enabled(),
-				rsx::method_registers.msaa_alpha_to_coverage_enabled(),
+				REGS(ctx)->msaa_sample_mask(),
+				REGS(ctx)->msaa_enabled(),
+				REGS(ctx)->msaa_alpha_to_coverage_enabled(),
 				alpha_to_one_enable);
 
 			// A problem observed on multiple GPUs is that interior geometry edges can resolve 0 samples unless we force shading rate of 1.
@@ -512,7 +517,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "vertex env buffer", 0x10000, VK_TRUE);
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
-	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex layout buffer", 0x10000, VK_TRUE);
+	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "raster env buffer", 0x10000, VK_TRUE);
@@ -598,8 +603,13 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
+	// Initialize the shader compiler stack
+	const int preferred_compiler_threads = g_cfg.video.shader_compiler_threads_count == 0
+		? utils::get_thread_count()                   // We spawn the initial pipe compiler with all threads during the boot sequence by default.
+		: g_cfg.video.shader_compiler_threads_count;  // Respect user override if set
+
 	spirv::initialize_compiler_context();
-	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
+	vk::initialize_pipe_compiler(preferred_compiler_threads);
 
 	m_prog_buffer = std::make_unique<vk::program_cache>
 	(
@@ -642,7 +652,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	backend_config.supports_multidraw = true;
 	backend_config.supports_hw_instanced_rendering = true;
+	backend_config.supports_programmable_blending = true;
 
+	backend_config.supports_extended_depth_range = m_device->get_unrestricted_depth_range_support();
 	backend_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
 	if (!backend_config.supports_last_provoking_vertex)
 	{
@@ -663,6 +675,21 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		backend_config.supports_hw_a2c = true;
 		backend_config.supports_hw_a2c_1spp = true;
 		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
+	}
+
+	// Framebufferless rendering. Zero-attachment subpasses can only rasterize at the sample counts reported for them.
+	const VkSampleCountFlags required_sample_counts = (g_cfg.video.antialiasing_level == msaa_level::_auto)
+		? VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT
+		: VK_SAMPLE_COUNT_1_BIT;
+
+	if (const auto supported_sample_counts = m_device->gpu().get_limits().framebufferNoAttachmentsSampleCounts & required_sample_counts;
+		supported_sample_counts == required_sample_counts)
+	{
+		backend_config.supports_framebufferless_rendering = true;
+	}
+	else
+	{
+		rsx_log.warning("Framebufferless rendering is not supported with the current MSAA configuration. Some occlusion queries may return incorrect results.");
 	}
 
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
@@ -792,6 +819,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 VKGSRender::~VKGSRender()
 {
+	// Force-release ZCULL-ctrl since it is a pointer to self.
+	zcull_ctrl.release();
+
 	if (m_device == VK_NULL_HANDLE)
 	{
 		//Initialization failed
@@ -1267,6 +1297,12 @@ void VKGSRender::on_init_thread()
 			m_shaders_cache->load(&dlg);
 		}
 	}
+
+	// Now we properly initialize the pipe compiler as per the user's configuration
+	if (!g_cfg.video.shader_compiler_threads_count)
+	{
+		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
+	}
 }
 
 void VKGSRender::on_exit()
@@ -1278,7 +1314,7 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
-	if (skip_current_frame || swapchain_unavailable) return;
+	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
@@ -1317,16 +1353,18 @@ void VKGSRender::clear_surface(u32 mask)
 
 	const bool full_frame = (scissor_w == fb_width && scissor_h == fb_height);
 	bool update_color = false, update_z = false;
-	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	auto surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
-			float depth_clear = static_cast<float>(clear_depth) / max_depth_value;
+			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
+			f32 depth_clear = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+			if (vk::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				depth_clear = rsx::encode_emulated_depth(depth_clear);
+			}
 
 			depth_stencil_clear_values.depthStencil.depth = depth_clear;
 			depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
@@ -1338,7 +1376,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			if (mask & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+				u8 clear_stencil = REGS(m_ctx)->stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -1387,12 +1425,12 @@ void VKGSRender::clear_surface(u32 mask)
 		if (!m_draw_buffers.empty())
 		{
 			bool use_fast_clear = (colormask == RSX_GCM_CLEAR_COLOR_RGBA_MASK);;
-			u8 clear_a = rsx::method_registers.clear_color_a();
-			u8 clear_r = rsx::method_registers.clear_color_r();
-			u8 clear_g = rsx::method_registers.clear_color_g();
-			u8 clear_b = rsx::method_registers.clear_color_b();
+			u8 clear_a = REGS(m_ctx)->clear_color_a();
+			u8 clear_r = REGS(m_ctx)->clear_color_r();
+			u8 clear_g = REGS(m_ctx)->clear_color_g();
+			u8 clear_b = REGS(m_ctx)->clear_color_b();
 
-			switch (rsx::method_registers.surface_color())
+			switch (REGS(m_ctx)->surface_color())
 			{
 			case rsx::surface_color_format::x32:
 			case rsx::surface_color_format::w16z16y16x16:
@@ -1491,7 +1529,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (depth_stencil_mask)
 	{
 		if ((depth_stencil_mask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-			rsx::method_registers.stencil_mask() != 0xff)
+			REGS(m_ctx)->stencil_mask() != 0xff)
 		{
 			// Partial stencil clear. Disables fast stencil clear
 			auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -1501,7 +1539,7 @@ void VKGSRender::clear_surface(u32 mask)
 			vk::get_overlay_pass<vk::stencil_clear_pass>()->run(
 				*m_current_command_buffer, ds, region.rect,
 				depth_stencil_clear_values.depthStencil.stencil,
-				rsx::method_registers.stencil_mask(), renderpass);
+				REGS(m_ctx)->stencil_mask(), renderpass);
 
 			depth_stencil_mask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
@@ -1830,18 +1868,27 @@ bool VKGSRender::load_program()
 		}
 	}
 
+	if (!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) !=
+		vk::renderpass_has_input_attachments(m_current_renderpass_key))
+	{
+		invalidate_render_pass();
+	}
+
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 
 	if (m_graphics_state & rsx::pipeline_state::pipeline_config_dirty)
 	{
 		vk::pipeline_props properties = vk::decode_rsx_state(
+			m_ctx,
 			vertex_state,
 			m_rtts.m_bound_depth_stencil.second,
 			backend_config,
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
-			m_device->get_depth_bounds_support()
+			m_device->get_depth_bounds_support(),
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING),
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
@@ -1886,12 +1933,16 @@ bool VKGSRender::load_program()
 		}
 
 		// Load current program from cache
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(
 			&m_program_cache_hint,
 			vertex_program,
 			fragment_program,
 			m_pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		vk::leave_uninterruptible();
 
@@ -2290,6 +2341,29 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		4,
 		&push_val);
 
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		// TODO: This should be cached aggressively.
+		u32 blend_config[7];
+		blend_config[0] = REGS(m_ctx)->registers[NV4097_SET_BLEND_EQUATION];
+		blend_config[1] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_SFACTOR];
+		blend_config[2] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_DFACTOR];
+
+		const auto blend_colors = rsx::get_constant_blend_colors();
+		blend_config[3] = std::bit_cast<u32>(blend_colors[0]);
+		blend_config[4] = std::bit_cast<u32>(blend_colors[1]);
+		blend_config[5] = std::bit_cast<u32>(blend_colors[2]);
+		blend_config[6] = std::bit_cast<u32>(blend_colors[3]);
+
+		vkCmdPushConstants(
+			*m_current_command_buffer,
+			m_program->layout(),
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			4,
+			28,
+			blend_config);
+	}
+
 	// Now actually fill in the data
 	m_draw_processor.fill_vertex_layout_state(
 		m_vertex_layout,
@@ -2483,8 +2557,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
 		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
-		resolution_scaling_config,
-		(*m_device), *m_current_command_buffer);
+		resolution_scaling_config);
 
 	// Reset framebuffer information
 	const auto color_bpp = get_format_block_size_in_bytes(m_framebuffer_layout.color_format);
@@ -2575,9 +2648,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	if (!m_rtts.orphaned_surfaces.empty())
 	{
-		u32 gcm_format;
-		bool swap_bytes;
-
 		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
 		{
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
@@ -2603,28 +2673,15 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				continue;
 			}
 
-			if (surface->is_depth_surface())
-			{
-				gcm_format = (surface->get_surface_depth_format() != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-				swap_bytes = true;
-			}
-			else
-			{
-				auto info = get_compatible_gcm_format(surface->get_surface_color_format());
-				gcm_format = info.first;
-				swap_bytes = info.second;
-			}
-
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, surface, surface->get_memory_range(), false,
 				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
-				gcm_format, swap_bytes);
+				surface);
 		}
 
 		m_rtts.orphaned_surfaces.clear();
 	}
 
-	const auto color_fmt_info = get_compatible_gcm_format(m_framebuffer_layout.color_format);
 	for (u8 index : m_draw_buffers)
 	{
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
@@ -2635,7 +2692,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_render_targets[index].second, surface_range, true,
 				m_surface_info[index].width, m_surface_info[index].height, m_framebuffer_layout.actual_color_pitch[index],
-				color_fmt_info.first, color_fmt_info.second);
+				m_rtts.m_bound_render_targets[index].second);
 		}
 		else
 		{
@@ -2648,10 +2705,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
-			const u32 gcm_format = (m_depth_surface_info.depth_format == rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_depth_stencil.second, surface_range, true,
-				m_depth_surface_info.width, m_depth_surface_info.height, m_framebuffer_layout.actual_zeta_pitch, gcm_format, true);
+				m_depth_surface_info.width, m_depth_surface_info.height, m_framebuffer_layout.actual_zeta_pitch,
+				m_rtts.m_bound_depth_stencil.second);
 		}
 		else
 		{
@@ -2659,7 +2716,27 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 	}
 
-	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images);
+	std::vector<u8> input_attachments{};
+	if ((current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
+		!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
+	{
+		input_attachments.resize(m_draw_buffers.size());
+		std::iota(input_attachments.begin(), input_attachments.end(), 0);
+	}
+
+	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	{
+		// Framebufferless rendering. The raster sample count must match what real surfaces would have used.
+		ensure(m_fbo_images.empty() && input_attachments.empty());
+
+		const u8 raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_current_renderpass_key = vk::get_renderpass_key_no_attachments(raster_samples);
+	}
+	else
+	{
+		m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images, input_attachments);
+	}
+
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
@@ -2671,7 +2748,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_draw_fbo->release();
 	}
 
-	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, VK_FALSE, m_cached_renderpass, m_fbo_images);
+	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, vk::to_bool32(!input_attachments.empty()), m_cached_renderpass, m_fbo_images);
 	m_draw_fbo->add_ref();
 
 	set_viewport();
@@ -2699,9 +2776,6 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 
 bool VKGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
-	if (swapchain_unavailable)
-		return false;
-
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{
 		m_samplers_dirty.store(true);

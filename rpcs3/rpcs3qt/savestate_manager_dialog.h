@@ -10,6 +10,7 @@
 
 class game_list;
 class gui_settings;
+class QLabel;
 
 class savestate_manager_dialog : public QWidget
 {
@@ -88,5 +89,6 @@ private:
 	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
 	bool m_save_game_icon_size = false;
 	QSlider* m_game_icon_slider = nullptr;
+	QLabel* m_corrupt_warning_label = nullptr;
 	QColor m_game_icon_color;
 };

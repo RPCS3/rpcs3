@@ -96,6 +96,7 @@ void lv2_socket_native::set_socket(socket_type native_socket, lv2_socket_family 
 
 	set_default_buffers();
 	set_non_blocking();
+	set_dgram_disable_connreset();
 }
 
 std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
@@ -1209,6 +1210,14 @@ void lv2_socket_native::set_non_blocking()
 	// This is done to avoid having threads stuck on blocking socket functions
 	// Blocking functions just put the thread to sleep and delegate the waking up to network_thread which polls the sockets
 	np::set_socket_non_blocking(native_socket);
+}
+
+void lv2_socket_native::set_dgram_disable_connreset()
+{
+	if (type == SYS_NET_SOCK_DGRAM)
+	{
+		np::set_dgram_socket_disable_connreset(native_socket);	
+	}
 }
 
 void lv2_socket_native::get_sockinfo(sys_net_sockinfo_t& info)

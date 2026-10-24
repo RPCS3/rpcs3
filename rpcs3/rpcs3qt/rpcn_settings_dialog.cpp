@@ -15,6 +15,7 @@
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/ip_address.h"
+#include "util/cctype.hpp"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -36,9 +37,9 @@ bool validate_rpcn_username(std::string_view username)
 		return false;
 
 	return std::all_of(username.cbegin(), username.cend(), [](const char c)
-		{
-			return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_';
-		});
+	{
+		return utils::isalnum(c) || c == '-' || c == '_';
+	});
 }
 
 bool validate_email(std::string_view email)
@@ -751,7 +752,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 	QPushButton* btn_resendtoken     = new QPushButton(tr("Resend Token"), this);
 	QPushButton* btn_change_password = new QPushButton(tr("Change Password"), this);
-	QPushButton* btn_delete_account = new QPushButton(tr("Delete Account"), this);
+	QPushButton* btn_delete_account  = new QPushButton(tr("Delete Account"), this);
 	QPushButton* btn_save            = new QPushButton(tr("Save"), this);
 
 	vbox_labels->addWidget(lbl_username);

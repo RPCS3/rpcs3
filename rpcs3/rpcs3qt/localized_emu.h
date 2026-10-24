@@ -43,7 +43,11 @@ private:
 		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned a silver trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned a gold trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM: return tr("You have earned a platinum trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Compiling shaders");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Precompiling shader interpreter variants.\nPlease wait...");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE: return tr("Shader Compilation");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN: return tr("Building base variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD: return tr("Building variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK: return tr("Linking variant %0...").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_COMPILING_PPU_MODULES: return tr("Compiling PPU Modules");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES: return tr("Yes", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO: return tr("No", "Message Dialog");
@@ -266,6 +270,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_SLEEP_TIMERS_ACCURACY: return tr("Sleep Timers Accuracy", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_RSX_MEMORY_TILING: return tr("Handle RSX Memory Tiling", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_SPURS_THREADS: return tr("Max SPURS Threads", "Advanced");
+		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_PPU_EVENT_WAKE_UP_DELAY: return tr("PPU Event Wake-Up Delay", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_DRIVER_WAKE_UP_DELAY: return tr("Driver Wake-Up Delay", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_FREQUENCY: return tr("VBlank Frequency", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_NTSC: return tr("VBlank NTSC Fixup", "Advanced");
@@ -369,6 +374,7 @@ private:
 		case localized_string_id::BIG_PICTURE_MENU_OPEN_INTERFACE: return tr("Open QT Interface");
 		case localized_string_id::BIG_PICTURE_MENU_EXIT: return tr("Exit Big Picture Mode");
 		case localized_string_id::BIG_PICTURE_NO_GAMES_FOUND: return tr("No games found.\nAdd games in the main RPCS3 window.");
+		case localized_string_id::BIG_PICTURE_LOADING: return tr("Loading games...");
 		case localized_string_id::BIG_PICTURE_GAME_DETAILS_START: return tr("Start");
 		case localized_string_id::BIG_PICTURE_HINT_BACK: return tr("Back");
 		case localized_string_id::BIG_PICTURE_HINT_SELECT: return tr("Select");

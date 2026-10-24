@@ -20,6 +20,7 @@
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
 #include "PPUDisAsm.h"
+#include "Common.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
 #include "lv2/sys_sync.h"
@@ -54,7 +55,6 @@
 #endif
 
 #include <cfenv>
-#include <cctype>
 #include <span>
 #include <optional>
 #include <charconv>
@@ -65,6 +65,7 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 #include "util/fnv_hash.hpp"
+#include "util/cctype.hpp"
 
 #include "Utilities/sema.h"
 
@@ -1481,7 +1482,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 			// NTS: size of 3 and above is required
 			// If ends with a newline, only one character is required
 			else if ((sv.size() == buf_tmp.size() || (sv.size() >= (buf_tmp[sv.size()] == '\n' ? 1 : 3))) &&
-				std::all_of(sv.begin(), sv.end(), [](u8 c){ return std::isprint(c); }))
+				std::all_of(sv.begin(), sv.end(), [](u8 c){ return utils::isprint(c); }))
 			{
 				fmt::append(ret, " -> \"%s\"", sv);
 			}
@@ -1980,7 +1981,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 			if (res.maybe_leaf && !res.non_leaf)
 			{
-				const u32 result = res.maybe_use_reg0_instead_of_lr ? static_cast<u32>(gpr0) : static_cast<u32>(_lr);
+				const u32 result = res.maybe_use_reg0_instead_of_lr && !is_invalid(static_cast<u32>(gpr0)) ? static_cast<u32>(gpr0) : static_cast<u32>(_lr);
 
 				// Same stack as far as we know
 				call_stack_list.emplace_back(result, static_cast<u32>(sp));
@@ -2037,7 +2038,367 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 		is_first = false;
 	}
 
-	return call_stack_list;
+	// Experimental: include tail calls in callstack
+	// Debuggers are often so naive to calling optimizations 
+	// Try to have higher standards
+	std::vector<std::pair<u32, u32>> call_stack_list_expanded_with_tail_calls;
+
+	if (!call_stack_list.empty())
+	{
+		for (usz i = 0; i < call_stack_list.size(); i++)
+		{
+			const auto [func_call_before, stack_frame_addr_prev] = call_stack_list[i];
+			const auto [func_call_next, stack_frame_addr_next] = i == 0 ? std::make_pair(_cia, stack_ptr) : call_stack_list[i - 1];
+
+			ensure(func_call_before > 4);
+
+			be_t<u32> opcode;
+			if (!vm::try_access(func_call_before - 4, &opcode, sizeof(opcode), false))
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			const ppu_opcode_t op{opcode};
+
+			const auto results = op_branch_targets(func_call_before - 4, op);
+
+			bool proceeded = false;
+			u32 func_call_before_target = umax;
+
+			for (usz res_i = 0; res_i < results.size(); res_i++)
+			{
+				const u32 route_pc = results[res_i];
+
+				if (route_pc == umax || route_pc == func_call_before)
+				{
+					continue;
+				}
+
+				if (vm::check_addr(route_pc, vm::page_executable))
+				{
+					ensure(!proceeded);
+
+					// Next PC
+					func_call_before_target = route_pc;
+					proceeded = true;
+					break;
+				}
+			}
+
+			if (!proceeded)
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			struct context_t
+			{
+				u32 start_point;
+				bool modified_stack = false;
+				bool restored_stack = false;
+
+				bool can_be_tail_call() const
+				{
+					// Either stack was not touched or was saved and restored
+					// Either way, stack address did not change in the end
+					return modified_stack == restored_stack;
+				}
+			};
+
+			std::deque<context_t> workload{context_t{func_call_before_target}};
+
+			std::vector<be_t<u32>> inst_pos;
+
+			auto get_inst = [&](u32 pos, u32 low_bound) -> be_t<u32>&
+			{
+				static be_t<u32> s_inst_empty{};
+
+				if (pos < low_bound)
+				{
+					return s_inst_empty;
+				}
+
+				const u32 pos_dist = (pos - low_bound) / 4;
+
+				if (pos_dist >= inst_pos.size())
+				{
+					const u32 inst_bound = utils::align<u32>(pos, 256);
+
+					const usz old_size = inst_pos.size();
+					const usz new_size = pos_dist + (inst_bound - pos) / 4 + 1;
+
+					if (new_size >= 0x2000)
+					{
+						// Let's not analyse a function this far at the moment
+						// Functions using tail calls are very short
+						return s_inst_empty;
+					}
+
+					inst_pos.resize(new_size);
+
+					if (!vm::try_access(pos, &inst_pos[old_size], ::narrow<u32>((new_size - old_size) * sizeof(be_t<u32>)), false))
+					{
+						// Failure (this would be detected as failure by zeroes)
+					}
+				}
+
+				return inst_pos[pos_dist];
+			};
+
+			// Tail call CIAs
+			std::vector<u32> tail_calls_found;
+
+			// Highest target address, but must be lower than func_call_before_target
+			// Which would be the only option to be the parent function
+			u32 highest_CIA_target_of_tail_call = 0;
+
+			for (usz wi = 0; wi < workload.size(); wi++)
+			{
+				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
+
+				for (u32 inst_pc = work_pc;;)
+				{
+					be_t<u32>& opcode = get_inst(inst_pc, func_call_before_target);
+
+					if (!opcode)
+					{
+						// Already passed or failure of reading
+						break;
+					}
+
+					const ppu_opcode_t op{opcode};
+
+					// Mark as passed through
+					opcode = 0;
+
+					const auto type = g_ppu_itype.decode(op.opcode);
+
+					if ((type & ppu_itype::branch) && op.lk)
+					{
+						if (!modified_stack || restored_stack)
+						{
+							// Cannot be a valid call, abort
+							highest_CIA_target_of_tail_call = 0;
+							tail_calls_found.clear();
+							break;
+						}
+
+						// We do not care about the target here
+						inst_pc += 4;
+						continue;
+					}
+
+					if (type == ppu_itype::B || type == ppu_itype::BC)
+					{
+						const u32 target = ((op.aa ? 0 : inst_pc) + (type == ppu_itype::B ? +op.bt24 : +op.bt14));
+
+						if (modified_stack == restored_stack)
+						{
+							// Can be a tail call
+
+							if (target && highest_CIA_target_of_tail_call < target && target < func_call_before_target)
+							{
+								// All the previous list is discarded as being irrelevant
+								tail_calls_found.clear();
+								highest_CIA_target_of_tail_call = target;
+							}
+
+							if (target && highest_CIA_target_of_tail_call == target)
+							{
+								tail_calls_found.emplace_back(inst_pc);
+							}
+						}
+					}
+
+					if (type == ppu_itype::STDU && op.rs == 1u && op.ra == 1u)
+					{
+						if (modified_stack)
+						{
+							highest_CIA_target_of_tail_call = 0;
+							tail_calls_found.clear();
+							break;
+						}
+
+						modified_stack = true;
+					}
+					else if (type == ppu_itype::ADDI && op.ra == 1u && op.rd == 1u)
+					{
+						if (!modified_stack || restored_stack)
+						{
+							highest_CIA_target_of_tail_call = 0;
+							tail_calls_found.clear();
+							break;
+						}
+
+						restored_stack = true;
+					}
+
+					// Even if BCLR is conditional, it still counts because LR value is ready for return
+					if (type == ppu_itype::BCLR || type == ppu_itype::BCCTR)
+					{
+						// This is more complex than that but let's treat it as function return for now
+						// Jump table is not to be supported in this short and humble function analyzer
+						break;
+					}
+
+					const auto results = op_branch_targets(inst_pc, op);
+
+					bool proceeded = false;
+
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+
+						if (route_pc == umax)
+						{
+							continue;
+						}
+
+						if (vm::check_addr(route_pc, vm::page_executable) && get_inst(route_pc, func_call_before_target))
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								workload.push_back(context_t{route_pc, modified_stack, restored_stack});
+							}
+							else
+							{
+								// Next PC
+								inst_pc = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+
+					if (!proceeded)
+					{
+						break;
+					}
+				}
+			}
+
+			if (tail_calls_found.empty() || !highest_CIA_target_of_tail_call)
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			if (tail_calls_found.size() >= 2)
+			{
+				// Ambiguity: it is impossible to handle
+				// There is more than one tail call that targets the function
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			const u32 tail_call_cia = ::at32(tail_calls_found, 0);
+
+			// Now we check if highest_CIA_target_of_tail_call is actually the function that hosts the program counter
+
+			workload.clear();
+			inst_pos.clear();
+			workload.push_back(context_t{highest_CIA_target_of_tail_call});
+
+			bool path_to_current_frame_found = false;
+
+			for (usz wi = 0; !path_to_current_frame_found && wi < workload.size(); wi++)
+			{
+				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
+
+				for (u32 inst_pc = work_pc;;)
+				{
+					if (inst_pc == func_call_next)
+					{
+						// Match found!
+						path_to_current_frame_found = true;
+						break;
+					}
+
+					be_t<u32>& opcode = get_inst(inst_pc, highest_CIA_target_of_tail_call);
+
+					if (!opcode)
+					{
+						// Already passed or failure of reading
+						break;
+					}
+
+					const ppu_opcode_t op{opcode};
+
+					// Mark as passed through
+					opcode = 0;
+
+					const auto type = g_ppu_itype.decode(op.opcode);
+
+					if ((type & ppu_itype::branch) && op.lk)
+					{
+						// We do not care about the target here
+						inst_pc += 4;
+						continue;
+					}
+
+					// Even if BCLR is conditional, it still counts because LR value is ready for return
+					if (type == ppu_itype::BCLR || type == ppu_itype::BCCTR)
+					{
+						// This is more complex than that but let's treat it as function return for now
+						// Jump table is not to be supported in this short and humble function analyzer
+						break;
+					}
+
+					const auto results = op_branch_targets(inst_pc, op);
+
+					bool proceeded = false;
+
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+
+						if (route_pc == umax)
+						{
+							continue;
+						}
+
+						if (vm::check_addr(route_pc, vm::page_executable) && get_inst(route_pc, highest_CIA_target_of_tail_call))
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								workload.push_back(context_t{route_pc, modified_stack, restored_stack});
+							}
+							else
+							{
+								// Next PC
+								inst_pc = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+
+					if (!proceeded)
+					{
+						break;
+					}
+				}
+			}
+
+			if (!path_to_current_frame_found)
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			// Tail call found!
+			call_stack_list_expanded_with_tail_calls.emplace_back(tail_call_cia, stack_frame_addr_next); // TODO: Check stack frame, maybe it is stack_frame_addr_prev
+			call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+		}
+	}
+
+	ensure(call_stack_list_expanded_with_tail_calls.size() >= call_stack_list.size());
+	return call_stack_list_expanded_with_tail_calls;
 }
 
 void ppu_thread::dump_misc(std::string& ret, std::any& custom_data) const
@@ -2183,6 +2544,41 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::entry_call:
 		{
+			if (const u32 caller_id = start_gate_caller.exchange(0))
+			{
+				// The caller of sys_ppu_thread_start has higher or equal priority and waits for the exchange above:
+				// let it leave the syscall and run its first instructions before this thread starts
+				// Bounded, as it may enter another syscall right away (e.g. joining this thread), and ended on suspension, which cannot be acknowledged here
+				if (const auto caller = idm::get_unlocked<named_thread<ppu_thread>>(caller_id))
+				{
+					for (const u64 wait_start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - wait_start < 1000;)
+					{
+						const auto caller_state = +caller->state;
+
+						// Cannot run anyway: nothing to wait for
+						if (caller_state.all_of(cpu_flag::suspend) || ::is_stopped(caller_state))
+						{
+							break;
+						}
+
+						// Left the syscall: heuristic margin, as the first instructions it runs are not observable
+						if (caller_state.none_of(cpu_flag::wait))
+						{
+							constexpr u64 caller_head_start_us = 10;
+
+							for (const u64 start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - start < caller_head_start_us;)
+							{
+								std::this_thread::yield();
+							}
+
+							break;
+						}
+
+						std::this_thread::yield();
+					}
+				}
+			}
+
 			cmd_pop(), fast_call(entry_func.addr, entry_func.rtoc, true);
 			break;
 		}
@@ -2303,6 +2699,7 @@ void ppu_thread::cpu_sleep()
 		ptr->compare_and_swap(this, nullptr);
 	}
 
+	hw_sleep_time = 0;
 	lv2_obj::awake(this);
 }
 
@@ -2363,6 +2760,7 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 		return;
 	}
 
+	hw_sleep_time = 0;
 	state.wait(old);
 }
 
@@ -4490,6 +4888,15 @@ extern void ppu_initialize()
 	}
 }
 
+template <u32 (*Estimate)(u32, bool)>
+static void ppu_vec_estimate(v128& v, u32 nj)
+{
+	for (u32 i = 0; i < 4; i++)
+	{
+		v._u32[i] = Estimate(v._u32[i], nj != 0);
+	}
+}
+
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
 	ppu_log.notice("Entering ppu_initialize(const ppu_module&..)");
@@ -4570,6 +4977,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
 			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
+			{ "__vrefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrefp>) },
+			{ "__vrsqrtefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrsqrtefp>) },
+			{ "__vexptefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vexptefp>) },
+			{ "__vlogefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vlogefp>) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -4631,57 +5042,53 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Difference between function name and current location
 	const u32 reloc = info.is_relocatable ? ::at32(info.segs, 0).addr : 0;
 
-	// Info sent to threads
-	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
-
 	// Info to load to main JIT instance (true - compiled)
-	std::vector<std::pair<std::string, bool>> link_workload;
-
-	bool compiled_new = false;
-
-	bool has_mfvscr = false;
+	struct link_entry
+	{
+		std::string obj_name;
+		bool is_compiled = false;
+		bool drop = false;
+		std::unique_ptr<llvm::MemoryBuffer> object;
+		ppu_module<lv2_obj> part;
+	};
+	std::vector<link_entry> link_workload;
 
 	const bool is_being_used_in_emulation = vm::base(info.segs[0].addr) == info.segs[0].ptr;
 
 	const cpu_thread* cpu = cpu_thread::get_current();
 
-	for (auto& func : info.get_funcs())
+	// MFVSCR only matters for codegen with accurate SAT bit
+	const bool has_mfvscr = g_cfg.core.ppu_set_sat_bit && [&info]()
 	{
-		if (func.size == 0)
+		for (const auto& func : info.get_funcs())
 		{
-			continue;
-		}
-
-		for (const auto [addr, size] : func)
-		{
-			if (size == 0)
+			if (func.size == 0)
 			{
 				continue;
 			}
 
-			auto i_ptr = ensure(info.get_ptr<u32>(addr));
-
-			for (u32 i = addr; i < addr + size; i += 4, i_ptr++)
+			for (const auto [addr, size] : func)
 			{
-				if (g_ppu_itype.decode(*i_ptr) == ppu_itype::MFVSCR)
+				if (size == 0)
 				{
-					ppu_log.warning("MFVSCR found");
-					has_mfvscr = true;
-					break;
+					continue;
+				}
+
+				auto i_ptr = ensure(info.get_ptr<u32>(addr));
+
+				for (u32 i = addr; i < addr + size; i += 4, i_ptr++)
+				{
+					if (g_ppu_itype.decode(*i_ptr) == ppu_itype::MFVSCR)
+					{
+						ppu_log.warning("MFVSCR found");
+						return true;
+					}
 				}
 			}
-
-			if (has_mfvscr)
-			{
-				break;
-			}
 		}
 
-		if (has_mfvscr)
-		{
-			break;
-		}
-	}
+		return false;
+	}();
 
 	// Limit how many modules are per JIt instance
 	// Advantage to lower the limit:
@@ -4689,9 +5096,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Its disadvantage:
 	// 1. B instruction can wander up to 16MB relatively to its range,
 	// each additional split of JIT instance results in a downgraded version of around (100% / N-1th) - (100% / Nth) percent of instructions
-	// where N is the total amunt of JIT instances
+	// where N is the total amount of JIT instances
 	// Subject to change
-	constexpr u32 c_moudles_per_jit = 100;
+	constexpr u32 c_modules_per_jit = 100;
 
 	std::shared_ptr<std::pair<u32, u32>> local_jit_bounds = std::make_shared<std::pair<u32, u32>>(u32{umax}, 0);
 
@@ -4924,12 +5331,14 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		return code_ptr;
 	};
 
-	if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
+	if (has_mfvscr)
 	{
 		info.attr += ppu_attr::has_mfvscr;
 	}
 
-	while (!jit_mod.init && fpos < info.get_funcs().size())
+	const auto all_funcs = info.get_funcs();
+
+	while (!jit_mod.init && fpos < all_funcs.size())
 	{
 		// Copy module information
 		ppu_module<lv2_obj> part;
@@ -4939,9 +5348,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		usz bsize = 0;
 		usz bcount = 0;
 
-		while (fpos < info.get_funcs().size())
+		while (fpos < all_funcs.size())
 		{
-			auto& func = info.get_funcs()[fpos];
+			auto& func = all_funcs[fpos];
 
 			if (!func.size)
 			{
@@ -5091,7 +5500,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
-			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
+			const bool has_symbol_resolver = fpos >= all_funcs.size() || (module_counter % c_modules_per_jit) == (c_modules_per_jit - 1);
+
+			if (has_symbol_resolver)
 			{
 				// Hash the entire function grouped addresses for the integrity of the symbol resolver function
 				// Potentially occuring during patches
@@ -5158,6 +5569,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				accurate_nj_mode,
 				contains_symbol_resolver,
 				daz_and_ftz,
+				accurate_vest,
 
 				__bitset_enum_max
 			};
@@ -5176,7 +5588,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
 				settings += ppu_settings::reservations_128_byte;
-			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
+			if (has_mfvscr)
 				settings += ppu_settings::accurate_sat;
 			if (g_cfg.core.ppu_set_fpcc)
 				settings += ppu_settings::accurate_fpcc, fmt::throw_exception("FPCC Not implemented");
@@ -5184,13 +5596,15 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
 				settings += ppu_settings::accurate_nj_mode, fmt::throw_exception("NJ Not implemented");
-			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
+			if (has_symbol_resolver)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 			if (g_cfg.core.set_daz_and_ftz)
 				settings += ppu_settings::daz_and_ftz;
+			if (g_cfg.core.ppu_set_vest)
+				settings += ppu_settings::accurate_vest;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v8-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+			fmt::append(obj_name, "v9-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5199,43 +5613,90 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 
 		module_counter++;
+		link_workload.push_back(link_entry{
+			.obj_name = std::move(obj_name),
+			.is_compiled = false,
+			.drop = false,
+			.object = nullptr,
+			.part = std::move(part)
+		});
+	}
 
-		if (!check_only)
-		{
-			link_workload.emplace_back(obj_name, false);
-		}
+	// Multithreaded load_object
+	atomic_t<bool> compiled_new = false;
+	{
+		atomic_t<bool> check_only_needs_compilation = false;
 
-		// Check object file
-		if (jit_compiler::check(cache_path + obj_name))
+		const usz thread_count = std::min<usz>(link_workload.size(), rpcs3::utils::get_max_threads());
+		const usz num_threads_succeeded = map_workload("PPU Loader "sv, thread_count, link_workload.size(), [&](usz index)
 		{
-			if (!is_being_used_in_emulation && !check_only)
+			if (check_only_needs_compilation || (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped()))
 			{
-				ppu_log.success("LLVM: Module exists: %s", obj_name);
-				link_workload.pop_back();
+				return;
 			}
 
-			continue;
+			link_entry& entry = ::at32(link_workload, index);
+
+			// Check object file
+			if (auto object = jit_compiler::load_object(cache_path + entry.obj_name))
+			{
+				if (!check_only)
+				{
+					if (is_being_used_in_emulation)
+					{
+						entry.object = std::move(object);
+					}
+					else
+					{
+						ppu_log.success("LLVM: Module exists: %s", entry.obj_name);
+						entry.drop = true;
+					}
+				}
+
+				return;
+			}
+
+			if (check_only || check_only_needs_compilation)
+			{
+				check_only_needs_compilation = true;
+				return;
+			}
+
+			// Remember, used in ppu_initialize(void)
+			compiled_new = true;
+
+			// Adjust information (is_compiled)
+			entry.is_compiled = true;
+		});
+
+		if (thread_count != num_threads_succeeded)
+		{
+			ppu_log.error("%d PPU Loader thread(s) failed with an exception!", thread_count - num_threads_succeeded);
 		}
 
 		if (check_only)
 		{
-			return true;
+			return check_only_needs_compilation;
 		}
-
-		// Remember, used in ppu_initialize(void)
-		compiled_new = true;
-
-		// Adjust information (is_compiled)
-		link_workload.back().second = true;
-
-		// Fill workload list for compilation
-		workload.emplace_back(std::move(obj_name), std::move(part));
 	}
 
-	if (check_only)
+	// Remove dropped entries
+	std::erase_if(link_workload, [](const link_entry& entry) { return entry.drop; });
+
+	// Fill workload list for compilation
+	std::vector<std::pair<std::string, ppu_module<lv2_obj>>> workload;
+
+	for (link_entry& entry : link_workload)
 	{
-		return false;
+		if (entry.is_compiled)
+		{
+			workload.emplace_back(entry.obj_name, std::move(entry.part));
+		}
 	}
+
+	// Compile the parts containing a symbol resolver first (only those have jit_bounds).
+	// They take by far the longest, so starting them last would leave a long single-threaded tail.
+	std::stable_partition(workload.begin(), workload.end(), FN(!!x.second.jit_bounds));
 
 	if (g_progr_ftotal_bits && file_size)
 	{
@@ -5386,7 +5847,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	}
 
 	// Initialize compiler instance
-	while (jits.size() < utils::aligned_div<u64>(module_counter, c_moudles_per_jit) && is_being_used_in_emulation)
+	while (jits.size() < utils::aligned_div<u64>(module_counter, c_modules_per_jit) && is_being_used_in_emulation)
 	{
 		jits.emplace_back(std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu.to_string(), 0, symbols_cement));
 
@@ -5420,7 +5881,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		ppu_log.notice("Loading %u modules", link_workload.size());
 
-		for (const auto& [obj_name, is_compiled] : link_workload)
+		for (link_entry& entry : link_workload)
 		{
 			mod_index++;
 
@@ -5429,10 +5890,19 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				break;
 			}
 
-			if (!failed_to_load && !jits[mod_index / c_moudles_per_jit]->add(cache_path + obj_name))
+			if (!failed_to_load)
 			{
-				ppu_log.error("LLVM: Failed to load module %s", obj_name);
-				failed_to_load = true;
+				auto& jit = jits[mod_index / c_modules_per_jit];
+
+				const bool ok = entry.object
+					? jit->add(std::move(entry.object), cache_path + entry.obj_name)
+					: jit->add(cache_path + entry.obj_name); // freshly compiled modules
+
+				if (!ok)
+				{
+					ppu_log.error("LLVM: Failed to load module %s", entry.obj_name);
+					failed_to_load = true;
+				}
 			}
 
 			if (mod_index % increment_link_count_at == (link_workload.size() - 1) % increment_link_count_at)
@@ -5446,9 +5916,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				continue;
 			}
 
-			if (!is_compiled)
+			if (!entry.is_compiled)
 			{
-				ppu_log.success("LLVM: Loaded module #%u %s", mod_index, obj_name);
+				ppu_log.success("LLVM: Loaded module #%u %s", mod_index, entry.obj_name);
 			}
 		}
 	}
