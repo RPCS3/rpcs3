@@ -3244,9 +3244,14 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, this, [this]
 	{
+		const u32 user_id = Emu.GetUsrId();
 		user_manager_dialog user_manager(m_gui_settings, m_persistent_settings, this);
 		user_manager.exec();
-		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+
+		if (user_id != Emu.GetUsrId() || user_manager.original_user_removed())
+		{
+			m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+		}
 	});
 
 	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]
