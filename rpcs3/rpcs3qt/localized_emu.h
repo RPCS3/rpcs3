@@ -168,6 +168,7 @@ private:
 		case localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION: return tr("Do you really want to delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_DELETE_SUCCESS: return tr("Successfully removed data!\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_SAVE: return tr("Do you want to save this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Do you want to overwrite the saved data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_SAVEDATA_AUTOSAVE: return tr("Saving...");
