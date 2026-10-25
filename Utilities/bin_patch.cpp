@@ -1644,9 +1644,9 @@ void patch_engine::unload(const std::string& name)
 			// Deallocate used memory
 			if (u32 addr = std::exchange(entry.alloc_addr, 0))
 			{
-				if (g_fxo->is_init<ppu_patch_block_registry_t>())
+				if (auto* registry = g_fxo->try_get<ppu_patch_block_registry_t>())
 				{
-					std::erase_if(g_fxo->get<ppu_patch_block_registry_t>().code_ranges,
+					std::erase_if(registry->code_ranges,
 						[addr](const auto& range) { return range.addr == addr; });
 				}
 
