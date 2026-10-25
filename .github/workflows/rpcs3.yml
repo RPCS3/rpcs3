@@ -193,7 +193,7 @@ jobs:
             UPLOAD_COMMIT_HASH: 51ae32f468089a8169aaf1567de355ff4a3e0842
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac
           - name: Apple Silicon
-            runs-on: macos-15
+            runs-on: macos-26
             UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac-arm64
     name: RPCS3 Mac ${{ matrix.name }} 
@@ -535,7 +535,6 @@ jobs:
             mingw-w64-clang-${{ matrix.arch }}-llvm
             mingw-w64-clang-${{ matrix.arch }}-ffmpeg
             mingw-w64-clang-${{ matrix.arch }}-iconv
-            mingw-w64-clang-${{ matrix.arch }}-glew
             mingw-w64-clang-${{ matrix.arch }}-vulkan
             mingw-w64-clang-${{ matrix.arch }}-vulkan-headers
             mingw-w64-clang-${{ matrix.arch }}-vulkan-loader

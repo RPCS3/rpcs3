@@ -524,6 +524,7 @@ namespace llvm
 {
 	class LLVMContext;
 	class ExecutionEngine;
+	class MemoryBuffer;
 	class Module;
 	class StringRef;
 }
@@ -575,12 +576,13 @@ public:
 
 	// Add object (path to obj file)
 	bool add(const std::string& path);
+	bool add(std::unique_ptr<llvm::MemoryBuffer> object, const std::string& path);
 
 	// Update global mapping for a single value
 	void update_global_mapping(const std::string& name, u64 addr);
 
-	// Check object file
-	static bool check(const std::string& path);
+	// Load object file
+	static std::unique_ptr<llvm::MemoryBuffer> load_object(const std::string& path);
 
 	// Finalize
 	void fin();
