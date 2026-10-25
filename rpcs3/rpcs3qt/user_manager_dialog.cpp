@@ -34,7 +34,7 @@ user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 	, m_persistent_settings(std::move(persistent_settings))
 {
 	setWindowTitle(tr("User Manager"));
-	setMinimumSize(QSize(500, 400));
+	setMinimumSize(QSize(600, 400));
 	setModal(true);
 
 	Init();
@@ -101,6 +101,8 @@ void user_manager_dialog::Init()
 	{
 		m_active_user = Emu.GetUsr();
 	}
+
+	m_original_user = m_active_user;
 
 	UpdateTable();
 
@@ -227,15 +229,20 @@ void user_manager_dialog::OnUserRemove()
 	}
 
 	const QString username = QString::fromStdString(m_user_list[key].GetUsername());
-	const QString user_id = QString::fromStdString(m_user_list[key].GetUserId());
+	const std::string user_id = m_user_list[key].GetUserId();
 	const std::string user_dir = m_user_list[key].GetUserDir();
 
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete the following user?\n\nUser ID: %0\nUsername: %1\n\n"
-		"This will remove all files in:\n%2").arg(user_id).arg(username).arg(QString::fromStdString(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+		"This will remove all files in:\n%2").arg(QString::fromStdString(user_id)).arg(username).arg(QString::fromStdString(user_dir)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		gui_log.warning("Deleting user: %s", user_dir);
 		fs::remove_all(user_dir);
 		UpdateTable();
+
+		if (m_original_user == user_id)
+		{
+			m_original_user_removed = true;
+		}
 	}
 }
 
@@ -403,7 +410,8 @@ void user_manager_dialog::OnSort(int logicalIndex)
 	{
 		return;
 	}
-	else if (logicalIndex == m_sort_column)
+
+	if (logicalIndex == m_sort_column)
 	{
 		m_sort_ascending ^= true;
 	}
