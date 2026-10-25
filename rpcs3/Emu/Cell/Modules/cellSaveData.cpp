@@ -775,6 +775,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		ppu.check_state();
 	};
 
+	const auto lv2_sleep_until = [&lv2_sleep](ppu_thread& ppu, u64 until_time)
+	{
+		if (const u64 current_time = get_guest_system_time(); current_time < until_time)
+		{
+			lv2_sleep(ppu, until_time - current_time);
+		}
+	};
+
 	lv2_sleep(ppu, 500);
 
 	std::memset(g_savedata_context.get_ptr(), 0, g_savedata_context.size());
@@ -1656,6 +1664,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
+		if (operation <= SAVEDATA_OP_AUTO_LOAD)
+		{
+			// Lower bound of the time measured on a PS3 from the AutoSave/AutoLoad call to funcStat:
+			// 200 ms, 80 ms for a new save
+			lv2_sleep_until(ppu, op_start_time + (save_entry.isNew ? 80'000 : 200'000));
+		}
+
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
 		ppu.state += cpu_flag::wait;
@@ -2251,10 +2266,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		return display_callback_result_error_message(ppu, *result, errDialog);
 	}
 
-	if (u64 current_time = get_guest_system_time(); current_time < delay_save_until)
-	{
-		lv2_sleep(ppu, delay_save_until - current_time);
-	}
+	lv2_sleep_until(ppu, delay_save_until);
 
 	return savedata_result;
 }
