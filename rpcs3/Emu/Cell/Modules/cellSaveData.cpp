@@ -1865,6 +1865,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	error_code savedata_result = CELL_OK;
 
 	u64 delay_save_until = 0;
+	u64 file_ops = 0;
+	u64 secure_file_ops = 0;
 
 	while (funcFile)
 	{
@@ -1887,8 +1889,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				lv2_obj::sleep(ppu);
 				if (operation <= SAVEDATA_OP_AUTO_LOAD)
 				{
-					// Shortest time measured on a PS3 from the AutoSave/AutoLoad call to its return
-					delay_save_until = op_start_time + (operation == SAVEDATA_OP_AUTO_SAVE ? 1'750'000 : 980'000);
+					// Lower bound of the time measured on a PS3 from the AutoSave/AutoLoad call to its return:
+					// 630 ms, 550 ms more when data is modified, 50 ms per file read or written, 280 ms more per secure file
+					delay_save_until = op_start_time + 630'000 + (has_modified ? 550'000 : 0) + file_ops * 50'000 + secure_file_ops * 280'000;
 				}
 				else
 				{
@@ -1912,6 +1915,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		// TODO: Show progress if it's not an auto load/save
+
+		if (fileSet->fileOperation != CELL_SAVEDATA_FILEOP_DELETE)
+		{
+			file_ops++;
+			secure_file_ops += fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE;
+		}
 
 		std::string file_path;
 
