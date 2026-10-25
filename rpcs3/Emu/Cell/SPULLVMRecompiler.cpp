@@ -1741,26 +1741,30 @@ public:
 
 		std::string function_log;
 
-		this->dump(func, function_log);
 		bool to_log_func = false;
+
+		for (u32 data : func.data)
+		{
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(data)};
+
+			if (op.ra == SPU_RdDec && g_spu_itype.decode(op.opcode) == spu_itype::RDCH)
+			{
+				to_log_func = true;
+				break;
+			}
+		}
+
+		// The disassembly is expensive, only create it if it's going to be logged
+		if (g_cfg.core.spu_debug || to_log_func)
+		{
+			this->dump(func, function_log);
+		}
 
 		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
 			if (!fs::write_file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append, function_log))
 			{
 				// Fallback: write to main log
-				to_log_func = true;
-			}
-		}
-
-		for (u32 data : func.data)
-		{
-			const spu_opcode_t op{std::bit_cast<be_t<u32>>(data)};
-
-			const auto itype = g_spu_itype.decode(op.opcode);
-
-			if (itype == spu_itype::RDCH && op.ra == SPU_RdDec)
-			{
 				to_log_func = true;
 			}
 		}
@@ -4017,12 +4021,26 @@ public:
 		std::string& llvm_log = function_log;
 		raw_string_ostream out(llvm_log);
 
-		fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
-		out << *_module; // print IR
-		out << "\n\n";
-
-		if (verifyModule(*_module, &out))
+		// Printing the IR is expensive, only do it when it's needed (verification failure or debug log)
+		const auto print_ir = [&]()
 		{
+			fmt::append(llvm_log, "LLVM IR at 0x%x:\n", func.entry_point);
+			out << *_module; // print IR
+			out << "\n\n";
+		};
+
+		std::string verify_log;
+		raw_string_ostream verify_out(verify_log);
+
+		if (verifyModule(*_module, &verify_out))
+		{
+			if (function_log.empty())
+			{
+				this->dump(func, function_log);
+			}
+
+			print_ir();
+			out << verify_out.str();
 			out.flush();
 			spu_log.error("LLVM: Verification failed at 0x%x:\n%s", func.entry_point, llvm_log);
 
@@ -4040,6 +4058,11 @@ public:
 			}
 
 			fmt::throw_exception("Compilation failed");
+		}
+
+		if (g_cfg.core.spu_debug)
+		{
+			print_ir();
 		}
 
 #if defined(__APPLE__)
@@ -5581,9 +5604,9 @@ public:
 				// Get MFC slot, redirect to invalid memory address
 				llvm::Value* slot = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::mfc_size));
 				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
-				const auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
+				auto ptr0 = _ptr(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
 				const auto ptr1 = _ptr(m_memptr, 0xffdeadf0);
-				auto mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+				auto mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(g_cfg.core.mfc_transfers_shuffling != 0 ? std::min<u32>(+g_cfg.core.mfc_transfers_shuffling + 1, 16) : 16));
 
 				if (g_cfg.core.mfc_transfers_shuffling)
 				{
@@ -5607,6 +5630,9 @@ public:
 					slot_phi->addIncoming(old_slot, fail);
 					slot = slot_phi;
 					mfc_not_full = m_ir->CreateICmpULT(slot, m_ir->getInt32(16));
+
+					const auto off2 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
+					ptr0 = _ptr(m_thread, m_ir->CreateZExt(off2, get_type<u64>()));
 				}
 
 				const auto pmfc = m_ir->CreateSelect(mfc_not_full, ptr0, ptr1);

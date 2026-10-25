@@ -67,7 +67,6 @@ if (NOT ANDROID)
             3rdparty::wolfssl
             3rdparty::libcurl
             3rdparty::zlib
-            3rdparty::opencv
             3rdparty::fusion)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -102,6 +101,14 @@ if (NOT ANDROID)
     if(WIN32)
         target_sources(rpcs3 PRIVATE rpcs3.rc)
         target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
+
+        # Merged into the generated manifest by the MSVC linker (enables the segment heap)
+        if(MSVC)
+            target_sources(rpcs3 PRIVATE rpcs3.manifest)
+        else()
+            # MinGW linkers don't generate or merge manifests, so embed rpcs3.manifest as a resource
+            target_sources(rpcs3 PRIVATE rpcs3.mingw.rc)
+        endif()
     elseif(APPLE)
         target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
         set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -184,6 +191,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test.cpp
             tests/test_address_range.cpp
             tests/test_bit_set.cpp
+            tests/test_blob_detector.cpp
             tests/test_cctype.cpp
             tests/test_dmux_pamf.cpp
             tests/test_fmt.cpp

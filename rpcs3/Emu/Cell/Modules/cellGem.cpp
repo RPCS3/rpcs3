@@ -1706,9 +1706,13 @@ public:
 				const cfg_ps_move* config = g_cfg_move.move[gem_num];
 
 				m_tracker.set_active(gem_num, controller.enabled_tracking && controller.status == CELL_GEM_STATUS_READY);
-				m_tracker.set_hue(gem_num, g_cfg.io.allow_move_hue_set_by_game ? controller.hue : config->hue);
-				m_tracker.set_hue_threshold(gem_num, config->hue_threshold);
-				m_tracker.set_saturation_threshold(gem_num, config->saturation_threshold);
+				// The calibrated hue is only valid for the configured color
+				const u32 configured_hue = config->hue_calibrated ? config->calibrated_hue.get() : config->hue.get();
+
+				m_tracker.set_hue(gem_num, g_cfg.io.allow_move_hue_set_by_game ? controller.hue : configured_hue);
+				m_tracker.set_hue_threshold(gem_num, static_cast<u8>(config->hue_threshold.get()));
+				m_tracker.set_saturation_threshold(gem_num, static_cast<u8>(config->saturation_threshold.get()));
+				m_tracker.set_value_threshold(gem_num, static_cast<u8>(config->value_threshold.get()));
 			}
 
 			m_tracker.set_min_radius(static_cast<f32>(g_cfg_move.min_radius) / 100.0f);

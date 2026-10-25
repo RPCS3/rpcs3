@@ -13,6 +13,7 @@
 #include <QGuiApplication>
 
 #include "user_manager_dialog.h"
+#include "avatar_selection_dialog.h"
 #include "table_item_delegate.h"
 #include "main_application.h"
 #include "gui_settings.h"
@@ -54,6 +55,7 @@ void user_manager_dialog::Init()
 	m_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_table->horizontalHeader()->setStretchLastSection(true);
 	m_table->horizontalHeader()->setDefaultSectionSize(150);
+	m_table->setIconSize(QSize(32, 32));
 	m_table->installEventFilter(this);
 
 	QPushButton* push_remove_user = new QPushButton(tr("&Delete User"), this);
@@ -68,6 +70,9 @@ void user_manager_dialog::Init()
 	QPushButton* push_rename_user = new QPushButton(tr("&Rename User"), this);
 	push_rename_user->setAutoDefault(false);
 
+	QPushButton* push_avatar_user = new QPushButton(tr("Change &Avatar"), this);
+	push_avatar_user->setAutoDefault(false);
+
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
 	push_close->setAutoDefault(false);
 
@@ -76,6 +81,7 @@ void user_manager_dialog::Init()
 	hbox_buttons->addWidget(push_create_user);
 	hbox_buttons->addWidget(push_login_user);
 	hbox_buttons->addWidget(push_rename_user);
+	hbox_buttons->addWidget(push_avatar_user);
 	hbox_buttons->addWidget(push_remove_user);
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(push_close);
@@ -108,6 +114,7 @@ void user_manager_dialog::Init()
 		{
 			push_login_user->setEnabled(false);
 			push_rename_user->setEnabled(false);
+			push_avatar_user->setEnabled(false);
 			push_remove_user->setEnabled(false);
 			return;
 		}
@@ -116,6 +123,7 @@ void user_manager_dialog::Init()
 
 		push_login_user->setEnabled(enable);
 		push_rename_user->setEnabled(true);
+		push_avatar_user->setEnabled(true);
 		push_remove_user->setEnabled(enable);
 	};
 
@@ -125,6 +133,7 @@ void user_manager_dialog::Init()
 	connect(push_close, &QAbstractButton::clicked, this, &user_manager_dialog::close);
 	connect(push_remove_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserRemove);
 	connect(push_rename_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserRename);
+	connect(push_avatar_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserAvatar);
 	connect(push_create_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserCreate);
 	connect(push_login_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserLogin);
 	connect(this, &user_manager_dialog::OnUserLoginSuccess, this, enable_buttons);
@@ -182,6 +191,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 		QTableWidgetItem* username_item = new QTableWidgetItem(QString::fromStdString(account.GetUsername()));
 		username_item->setData(Qt::UserRole, id); // For sorting to work properly
 		username_item->setFlags(username_item->flags() & ~Qt::ItemIsEditable);
+		username_item->setIcon(QIcon(avatar_selection_dialog::get_user_avatar(account.GetUserId(), m_table->iconSize().height())));
 		m_table->setItem(row, 1, username_item);
 
 		// Compare current config value with the one in this user (only 8 digits in userId)
@@ -301,6 +311,20 @@ void user_manager_dialog::OnUserRename()
 	}
 }
 
+void user_manager_dialog::OnUserAvatar()
+{
+	const u32 key = GetUserKey();
+	if (key == 0)
+	{
+		return;
+	}
+
+	avatar_selection_dialog dialog(m_user_list[key].GetUserId(), this);
+	dialog.exec();
+
+	UpdateTable();
+}
+
 void user_manager_dialog::OnUserCreate()
 {
 	// Take the smallest user id > 0, then reformat the result into an 8-digit string.
@@ -408,6 +432,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 
 	QAction* remove_act = menu->addAction(tr("&Remove"));
 	QAction* rename_act = menu->addAction(tr("&Rename"));
+	QAction* avatar_act = menu->addAction(tr("Change &Avatar"));
 	QAction* login_act = menu->addAction(tr("&Login"));
 	QAction* show_dir_act = menu->addAction(tr("&Open User Directory"));
 
@@ -420,6 +445,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	// Connects and Events
 	connect(remove_act, &QAction::triggered, this, &user_manager_dialog::OnUserRemove);
 	connect(rename_act, &QAction::triggered, this, &user_manager_dialog::OnUserRename);
+	connect(avatar_act, &QAction::triggered, this, &user_manager_dialog::OnUserAvatar);
 	connect(login_act, &QAction::triggered, this, &user_manager_dialog::OnUserLogin);
 	connect(show_dir_act, &QAction::triggered, this, [this, key]()
 	{
