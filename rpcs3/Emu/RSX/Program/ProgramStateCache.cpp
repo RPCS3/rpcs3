@@ -635,7 +635,8 @@ bool fragment_program_compare::compare_properties(const RSXFragmentProgram& bina
 namespace rsx
 {
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
-	static inline void write_fragment_constants_to_buffer_sse2(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache, bool sanitize)
+	template <bool SanitizeNan = false>
+	void write_fragment_constants_to_buffer_sse2(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache)
 	{
 		f32* dst = buffer.data();
 		for (u32 offset_in_fragment_program : offsets_cache)
@@ -645,7 +646,7 @@ namespace rsx
 			const __m128i vector = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data));
 			const __m128i shuffled_vector = _mm_or_si128(_mm_slli_epi16(vector, 8), _mm_srli_epi16(vector, 8));
 
-			if (sanitize)
+			if constexpr (SanitizeNan)
 			{
 				// Zero NaNs as a host driver workaround, realhw keeps NaN and Inf as is
 				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
@@ -693,7 +694,10 @@ namespace rsx
 	void write_fragment_constants_to_buffer(const std::span<f32>& buffer, const RSXFragmentProgram& rsx_prog, const std::vector<u32>& offsets_cache, bool sanitize)
 	{
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
-		write_fragment_constants_to_buffer_sse2(buffer, rsx_prog, offsets_cache, sanitize);
+		auto write_fn = sanitize
+			? write_fragment_constants_to_buffer_sse2<true>
+			: write_fragment_constants_to_buffer_sse2<false>;
+		write_fn(buffer, rsx_prog, offsets_cache);
 #else
 		write_fragment_constants_to_buffer_fallback(buffer, rsx_prog, offsets_cache, sanitize);
 #endif

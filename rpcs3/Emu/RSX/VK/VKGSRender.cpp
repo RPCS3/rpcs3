@@ -2123,7 +2123,7 @@ void VKGSRender::load_program_env()
 			auto buf = m_fragment_constants_ring_info.map(m_fragment_constants_dynamic_offset, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-				*ensure(m_fragment_prog), m_ctx->program.fragment_program, true);
+				*ensure(m_fragment_prog), m_ctx->program.fragment_program, false);
 
 			m_fragment_constants_ring_info.unmap();
 
