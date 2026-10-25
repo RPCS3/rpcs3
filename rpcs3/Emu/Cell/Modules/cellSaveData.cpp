@@ -1279,16 +1279,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// UI returns -1 for new save games
 			if (selected == -1)
 			{
-				if (operation == SAVEDATA_OP_LIST_LOAD)
-				{
-					// Same title as the new data entry of the list
-					const auto icon = listSet->newData->icon;
-					message = get_localized_string(localized_string_id::CELL_SAVEDATA_LOAD, icon && icon->title ? icon->title.get_ptr() : get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE).c_str());
-				}
-				else
-				{
-					message = get_localized_string(localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION);
-				}
+				// Same title as the new data entry of the list
+				const auto icon = listSet->newData->icon;
+				const std::string title = icon && icon->title ? icon->title.get_ptr() : get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE);
+				message = get_localized_string(operation == SAVEDATA_OP_LIST_LOAD ? localized_string_id::CELL_SAVEDATA_LOAD : localized_string_id::CELL_SAVEDATA_SAVE, title.c_str());
 
 				save_entry.dirName = listSet->newData->dirName.get_ptr();
 				save_entry.escaped = vfs::escape(save_entry.dirName);
