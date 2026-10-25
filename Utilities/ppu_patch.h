@@ -15,9 +15,9 @@ struct ppu_patch_block_registry_t
     std::unordered_set<u32> block_addresses{};
     struct code_range
     {
-        u32 addr;
-        u32 size;
-        std::string patch;
+        u32 addr = 0;
+        u32 size = 0;
+        std::string patch{};
     };
 
     std::vector<code_range> code_ranges{};
