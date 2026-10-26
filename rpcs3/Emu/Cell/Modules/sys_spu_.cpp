@@ -334,6 +334,8 @@ error_code sys_spu_image_import(ppu_thread& ppu, vm::ptr<sys_spu_image> img, u32
 		img->nsegs       = num_segs;
 		img->entry_point = static_cast<u32>(ehdr->e_entry);
 
+		ppu.state += cpu_flag::wait;
+
 		vm::ptr<sys_spu_segment> segs = vm::cast(vm::alloc(num_segs * sizeof(sys_spu_segment), vm::main));
 
 		if (!segs)
@@ -347,6 +349,8 @@ error_code sys_spu_image_import(ppu_thread& ppu, vm::ptr<sys_spu_image> img, u32
 			return CELL_ENOEXEC;
 		}
 
+		ppu.check_state();
+
 		img->type = SYS_SPU_IMAGE_TYPE_USER;
 		img->segs = segs;
 		return CELL_OK;
@@ -359,8 +363,12 @@ error_code sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 
 	if (img->type == SYS_SPU_IMAGE_TYPE_USER)
 	{
+		ppu.state += cpu_flag::wait;
+
 		//_sys_free(img->segs.addr());
 		vm::dealloc(img->segs.addr(), vm::main);
+
+		ppu.check_state();
 	}
 	else if (img->type == SYS_SPU_IMAGE_TYPE_KERNEL)
 	{
