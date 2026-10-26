@@ -121,6 +121,10 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	{
 		required_extensions.emplace_back("GL_EXT_shader_explicit_arithmetic_types_float16");
 	}
+	else if (device_props.supports_spirv_intrinsics)
+	{
+		required_extensions.emplace_back("GL_EXT_spirv_intrinsics");
+	}
 
 	if (properties.multisampled_sampler_mask)
 	{
@@ -139,6 +143,9 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	}
 
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
+
+	// Capability DenormFlushToZero (4465), ExecutionMode DenormFlushToZero (4460), bit width 32
+	OS << "spirv_execution_mode(capabilities = [4465], 4460, 32);\n\n";
 
 	glsl::insert_subheader_block(OS);
 }
@@ -636,6 +643,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
 	decompiler.device_props.emulated_depth_storage = vk::emulate_extended_depth_range();
 	decompiler.device_props.has_low_precision_rounding = vk::is_NVIDIA(vk::get_driver_vendor());
+	decompiler.device_props.supports_spirv_intrinsics = true;
 	decompiler.Task();
 
 	constant_offsets = std::move(decompiler.properties.constant_offsets);

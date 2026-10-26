@@ -75,9 +75,10 @@ namespace vk
 	{
 		VkInstance parent = VK_NULL_HANDLE;
 		VkPhysicalDevice dev = VK_NULL_HANDLE;
-		VkPhysicalDeviceProperties props;
-		VkPhysicalDeviceFeatures features;
-		VkPhysicalDeviceMemoryProperties memory_properties;
+		VkPhysicalDeviceProperties props{};
+		VkPhysicalDeviceFeatures features{};
+		VkPhysicalDeviceMemoryProperties memory_properties{};
+		VkPhysicalDeviceVulkan12Properties props12{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
 		std::vector<VkQueueFamilyProperties> queue_props;
 
 		mutable std::unordered_map<VkFormat, VkFormatProperties> format_properties;
@@ -107,6 +108,7 @@ namespace vk
 			bool portability = false;
 			bool provoking_vertex_last = false;
 			bool shader_draw_parameters = false;
+			bool float_controls_daz = false;
 		} optional_features_support;
 
 		friend class render_device;

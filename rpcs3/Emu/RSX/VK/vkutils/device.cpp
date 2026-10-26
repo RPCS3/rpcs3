@@ -199,7 +199,7 @@ namespace vk
 
 		VkPhysicalDeviceProperties2KHR properties2;
 		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-		properties2.pNext = nullptr;
+		properties2.pNext = &props12;
 
 		VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
 		VkPhysicalDeviceMultiDrawPropertiesEXT multidraw_props{};
@@ -217,6 +217,8 @@ namespace vk
 
 		vkGetPhysicalDeviceProperties2(dev, &properties2);
 		props = properties2.properties;
+
+		optional_features_support.float_controls_daz = !!props12.shaderDenormFlushToZeroFloat32;
 
 		if (descriptor_indexing_support)
 		{
