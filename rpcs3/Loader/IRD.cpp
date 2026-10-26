@@ -16,6 +16,9 @@ static constexpr std::array<u8, 4> s_ird_magic = {'3', 'I', 'R', 'D'};
 static constexpr u8 s_ird_min_version = 6;
 static constexpr u8 s_ird_max_version = 9;
 
+// Upper bound on the size of a file read as an IRD, keeping a disc image picked by mistake from being loaded in memory
+static constexpr u64 s_ird_max_size = 256 * 1024 * 1024;
+
 namespace
 {
 	// Little endian cursor over the uncompressed IRD data: every read is bounds checked, so a truncated file
@@ -254,6 +257,15 @@ ird_file::ird_file(const std::string& path)
 	{
 		ird_log.error("ird_file: Failed to open file: '%s'", path);
 		m_status = ird_parse_status::ERROR_OPENING_FILE;
+		return;
+	}
+
+	// The whole file is loaded in memory, so a file too big to be an IRD (e.g. the ISO file of the game) is rejected
+	// before reading it
+	if (file.size() > s_ird_max_size)
+	{
+		ird_log.error("ird_file: File too big to be an IRD: '%s' (size: %u)", path, file.size());
+		m_status = ird_parse_status::ERROR_NOT_AN_IRD;
 		return;
 	}
 
