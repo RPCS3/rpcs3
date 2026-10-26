@@ -236,7 +236,7 @@ struct rec_info
 	vm::ptr<CellRecCallback> cb{};
 	vm::ptr<void> cbUserData{};
 	atomic_t<rec_state> state = rec_state::closed;
-	atomic_t<bool> cb_pending = false; // The callback of a successful cellRecOpen/cellRecClose has not run yet
+	atomic_t<bool> cb_pending = false; // The callback of a successful cellRecOpen/cellRecClose/cellRecStart/cellRecStop has not run yet
 	rec_param param{};
 
 	// These buffers are used by the game to inject one frame into the recording.
@@ -1432,10 +1432,12 @@ error_code cellRecStop()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::started)
+	if (rec.state != rec_state::started || rec.cb_pending)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
+
+	rec.cb_pending = true;
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
@@ -1452,6 +1454,7 @@ error_code cellRecStop()
 
 		rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
 		rec.state = rec_state::stopped;
+		rec.cb_pending = false;
 
 		rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
 		return CELL_OK;
@@ -1466,10 +1469,12 @@ error_code cellRecStart()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::stopped)
+	if (rec.state != rec_state::stopped || rec.cb_pending)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
+
+	rec.cb_pending = true;
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
@@ -1489,6 +1494,7 @@ error_code cellRecStart()
 			if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))
 			{
 				cellRec.error("Failed to set video sink");
+				rec.cb_pending = false;
 				rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
 				return CELL_OK;
 			}
@@ -1511,11 +1517,13 @@ error_code cellRecStart()
 
 		if (rec.encoder->has_error)
 		{
+			rec.cb_pending = false;
 			rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_OPEN, rec.cbUserData);
 		}
 		else
 		{
 			rec.state = rec_state::started;
+			rec.cb_pending = false;
 			rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
 		}
 		return CELL_OK;
