@@ -4762,7 +4762,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 }
 
 // Compile each startup calloc helper after validating its reachable instructions.
-static void ppu_initialize_patch_helpers(const ppu_module<lv2_obj>& owner)
+static void ppu_initialize_patch_helpers()
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm || !g_fxo->is_init<ppu_patch_block_registry_t>())
 	{
@@ -4910,9 +4910,11 @@ static void ppu_initialize_patch_helpers(const ppu_module<lv2_obj>& owner)
 
 		ppu_module<lv2_obj> helper;
 		helper.name = fmt::format("patch-helper-%x", start);
-		helper.path = owner.path;
-		helper.cache = owner.cache;
-		std::memcpy(helper.sha1, owner.sha1, sizeof(helper.sha1));
+		helper.cache = rpcs3::utils::get_cache_dir() + "patches/";
+		if (!fs::create_path(helper.cache))
+		{
+			fmt::throw_exception("Failed to create cache directory: %s (%s)", helper.cache, fs::g_tls_error);
+		}
 		helper.segs.push_back({start, size, 1, 5, size, vm::base(start)});
 		helper.addr_to_seg_index.emplace(start, 0);
 
@@ -5087,7 +5089,7 @@ extern void ppu_initialize()
 		ppu_initialize(*ptr);
 	}
 
-	ppu_initialize_patch_helpers(_main);
+	ppu_initialize_patch_helpers();
 }
 
 template <u32 (*Estimate)(u32, bool)>
