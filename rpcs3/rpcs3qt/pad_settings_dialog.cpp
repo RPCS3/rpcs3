@@ -1,5 +1,4 @@
 #include <QCheckBox>
-#include <QCollator>
 #include <QPushButton>
 #include <QPainter>
 #include <QPainterPath>
@@ -31,29 +30,6 @@
 LOG_CHANNEL(cfg_log, "CFG");
 
 cfg_input_configurations g_cfg_input_configs;
-
-// The default configuration is always listed first, the custom configurations follow in natural order
-inline bool config_file_less_than(const QString& lhs, const QString& rhs)
-{
-	static const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
-
-	if (lhs == default_config_file || rhs == default_config_file)
-	{
-		return lhs != rhs && lhs == default_config_file;
-	}
-
-	// Sort numbers by value instead of by digit, e.g. "Config 2" before "Config 10"
-	static QCollator collator = []()
-	{
-		QCollator col;
-		col.setNumericMode(true);
-		col.setCaseSensitivity(Qt::CaseInsensitive);
-		return col;
-	}();
-
-	const int result = collator.compare(lhs, rhs);
-	return result ? result < 0 : QString::compare(lhs, rhs) < 0;
-}
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
@@ -318,22 +294,27 @@ void pad_settings_dialog::showEvent(QShowEvent* event)
 std::pair<QStringList, QString> pad_settings_dialog::get_config_files()
 {
 	const QString input_config_dir = QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id));
+	const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
 	QStringList config_files = gui::utils::get_dir_entries(QDir(input_config_dir), QStringList() << "*.yml");
 	QString active_config_file = QString::fromStdString(g_cfg_input_configs.active_configs.get_value(g_cfg_input_configs.global_key));
 
+	if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
+	{
+		config_files.append(default_config_file);
+	}
+
 	if (!config_files.contains(active_config_file))
 	{
-		const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
-
-		if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
-		{
-			config_files.prepend(default_config_file);
-		}
-
 		active_config_file = default_config_file;
 	}
 
-	std::sort(config_files.begin(), config_files.end(), config_file_less_than);
+	// The default configuration is always listed first, the custom configurations follow in natural order
+	std::sort(config_files.begin(), config_files.end(), gui::utils::natural_less);
+
+	if (config_files.removeAll(default_config_file))
+	{
+		config_files.prepend(default_config_file);
+	}
 
 	return std::make_pair<QStringList, QString>(std::move(config_files), std::move(active_config_file));
 }
@@ -2113,14 +2094,7 @@ void pad_settings_dialog::AddConfigFile()
 		if (CreateConfigFile(QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id)), config_name))
 		{
 			// Insert the new configuration at its sorted position
-			int index = 0;
-
-			while (index < ui->chooseConfig->count() && config_file_less_than(ui->chooseConfig->itemText(index), config_name))
-			{
-				index++;
-			}
-
-			ui->chooseConfig->insertItem(index, config_name);
+			ui->chooseConfig->insertItem(get_config_files().first.indexOf(config_name), config_name);
 			ui->chooseConfig->setCurrentText(config_name);
 		}
 		break;
