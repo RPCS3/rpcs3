@@ -227,6 +227,7 @@ int gui_application::exec()
 		steps->push_back([this]()
 		{
 			welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
+			connect(welcome, &welcome_dialog::request_stylesheet_change, this, &gui_application::OnChangeStyleSheetRequest);
 			connect(welcome, &QDialog::finished, this, [this](int result)
 			{
 				if (result == QDialog::Rejected)
@@ -236,6 +237,7 @@ int gui_application::exec()
 				}
 				m_show_next_dialog();
 			});
+			welcome->init_stylesheet();
 			welcome->open();
 		});
 	}
