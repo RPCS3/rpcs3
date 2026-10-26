@@ -1110,8 +1110,10 @@ error_code cellGcmMapEaIoAddressWithFlags(ppu_thread& ppu, u32 ea, u32 io, u32 s
 	return gcmMapEaIoAddress(ppu, ea, io, size, true);
 }
 
-error_code cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
+error_code cellGcmMapLocalMemory(ppu_thread& ppu, vm::ptr<u32> address, vm::ptr<u32> size)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGcmSys.warning("cellGcmMapLocalMemory(address=*0x%x, size=*0x%x)", address, size);
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
