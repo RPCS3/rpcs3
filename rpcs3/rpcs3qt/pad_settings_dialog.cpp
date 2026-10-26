@@ -129,11 +129,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	{
 		const auto [config_files, active_config_file] = get_config_files();
 
-		for (const QString& profile : config_files)
-		{
-			ui->chooseConfig->addItem(profile);
-		}
-
+		ui->chooseConfig->addItems(config_files);
 		ui->chooseConfig->setCurrentText(active_config_file);
 	}
 	else
