@@ -5,7 +5,7 @@
 
 LOG_CHANNEL(cellFontFT);
 
-error_code cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
+error_code cellFontInitLibraryFreeTypeWithRevision(ppu_thread& ppu, u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
 	cellFontFT.todo("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config=*0x%x, lib=**0x%x)", revisionFlags, config, lib);
 
@@ -26,18 +26,22 @@ error_code cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<Ce
 		return CELL_FONT_ERROR_UNINITIALIZED;
 	}
 
+	ppu.state += cpu_flag::wait;
+
 	lib->set(vm::alloc(sizeof(CellFontLibrary), vm::main));
+
+	ppu.check_state();
 
 	return CELL_OK;
 }
 
-error_code cellFontInitLibraryFreeType(vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
+error_code cellFontInitLibraryFreeType(ppu_thread& ppu, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
 	cellFontFT.todo("cellFontInitLibraryFreeType(config=*0x%x, lib=**0x%x)", config, lib);
 
 	uint64_t revisionFlags = 0LL;
 	//cellFontFTGetStubRevisionFlags(&revisionFlags);
-	return cellFontInitLibraryFreeTypeWithRevision(revisionFlags, config, lib);
+	return cellFontInitLibraryFreeTypeWithRevision(ppu, revisionFlags, config, lib);
 }
 
 void cellFontFTGetRevisionFlags(vm::ptr<u64> revisionFlags)
