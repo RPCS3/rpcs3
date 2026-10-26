@@ -81,17 +81,17 @@ namespace glsl
 			switch (f)
 			{
 			case COMPARE::SEQ:
-				return fmt::format("CMP_FIXUP(%s) == CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s == %s", Op0, Op1);
 			case COMPARE::SGE:
-				return fmt::format("CMP_FIXUP(%s) >= CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s >= %s", Op0, Op1);
 			case COMPARE::SGT:
-				return fmt::format("CMP_FIXUP(%s) > CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s > %s", Op0, Op1);
 			case COMPARE::SLE:
-				return fmt::format("CMP_FIXUP(%s) <= CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s <= %s", Op0, Op1);
 			case COMPARE::SLT:
-				return fmt::format("CMP_FIXUP(%s) < CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s < %s", Op0, Op1);
 			case COMPARE::SNE:
-				return fmt::format("CMP_FIXUP(%s) != CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s != %s", Op0, Op1);
 			}
 		}
 		else
@@ -99,17 +99,17 @@ namespace glsl
 			switch (f)
 			{
 			case COMPARE::SEQ:
-				return fmt::format("equal(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("equal(%s, %s)", Op0, Op1);
 			case COMPARE::SGE:
-				return fmt::format("greaterThanEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("greaterThanEqual(%s, %s)", Op0, Op1);
 			case COMPARE::SGT:
-				return fmt::format("greaterThan(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("greaterThan(%s, %s)", Op0, Op1);
 			case COMPARE::SLE:
-				return fmt::format("lessThanEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("lessThanEqual(%s, %s)", Op0, Op1);
 			case COMPARE::SLT:
-				return fmt::format("lessThan(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("lessThan(%s, %s)", Op0, Op1);
 			case COMPARE::SNE:
-				return fmt::format("notEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("notEqual(%s, %s)", Op0, Op1);
 			}
 		}
 

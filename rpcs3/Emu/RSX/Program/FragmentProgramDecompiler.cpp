@@ -932,23 +932,26 @@ std::string FragmentProgramDecompiler::BuildCode()
 	{
 		// Accurate float to half clamping (preserves IEEE-754 NaN)
 		std::string clamp_func;
-		if (glsl)
+		if (false) //device_props.supports_spirv_intrinsics)
 		{
 			clamp_func +=
-			"vec2 clamp16(vec2 val){ return unpackHalf2x16(packHalf2x16(val)); }\n"
+				"#define clamp16 _builtin_f16_quantize\n\n";
+		}
+		else if (glsl)
+		{
+			clamp_func +=
+			"vec2 clamp16(vec2 val)\n"
+			"{\n"
+			"	precise uint packed = packHalf2x16(val);\n"
+			"	precise vec2 unpacked = unpackHalf2x16(packed);\n"
+			"	return unpacked;\n"
+			"}\n"
 			"vec4 clamp16(vec4 val){ return vec4(clamp16(val.xy), clamp16(val.zw)); }\n\n";
 		}
 		else
 		{
-			clamp_func +=
-			"$float4 clamp16($float4 x)\n"
-			"{\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	return x;\n"
-			"}\n\n";
+			// Unimplemented
+			clamp_func += "#define clamp16(x) (x)\n";
 		}
 
 		OS << Format(clamp_func);
@@ -1055,6 +1058,15 @@ std::string FragmentProgramDecompiler::BuildCode()
 		"	}\n"
 		"	return vec4(0., 0., 0., 1.);\n"
 		"}\n\n";
+	}
+
+	if (device_props.supports_spirv_intrinsics &&
+		!device_props.has_native_half_support)
+	{
+		OS <<
+		"spirv_instruction(id = 116) float _builtin_f16_quantize(float x);\n"
+		"spirv_instruction(id = 116) vec2 _builtin_f16_quantize(vec2 x);\n"
+		"spirv_instruction(id = 116) vec4 _builtin_f16_quantize(vec4 x);\n\n";
 	}
 
 	insertMainStart(OS);
