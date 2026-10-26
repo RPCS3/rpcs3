@@ -189,10 +189,22 @@ error_code cellFontOpenFontFile(ppu_thread& ppu, vm::ptr<CellFontLibrary> librar
 
 	u32 bufferAddr = vm::alloc(fileSize, vm::main); // Freed in cellFontCloseFont
 
-	ppu.check_state();
+	if (!bufferAddr)
+	{
+		return CELL_FONT_ERROR_ALLOCATION_FAILED;
+	}
 
 	f.read(vm::base(bufferAddr), fileSize);
 	s32 ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
+
+	if (ret != CELL_OK)
+	{
+		vm::dealloc(bufferAddr, vm::main);
+		return ret;
+	}
+
+	ppu.check_state();
+
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
 
 	return ret;
@@ -292,7 +304,11 @@ error_code cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library
 	}
 
 	error_code ret = cellFontOpenFontFile(ppu, library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
-	font->origin = CELL_FONT_OPEN_FONTSET;
+
+	if (ret == CELL_OK)
+	{
+		font->origin = CELL_FONT_OPEN_FONTSET;
+	}
 
 	return ret;
 }
@@ -748,13 +764,23 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 	return CELL_OK;
 }
 
-error_code cellFontEndLibrary(vm::cptr<CellFontLibrary> library)
+error_code cellFontEndLibrary(ppu_thread& ppu, vm::cptr<CellFontLibrary> library)
 {
 	cellFont.todo("cellFontEndLibrary(library=*0x%x)", library);
 
 	if (false) // TODO
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (library)
+	{
+		// Allocated in cellFontInitLibraryFreeTypeWithRevision
+		ppu.state += cpu_flag::wait;
+
+		vm::dealloc(library.addr(), vm::main);
+
+		ppu.check_state();
 	}
 
 	return CELL_OK;
@@ -861,15 +887,17 @@ error_code cellFontCloseFont(ppu_thread& ppu, vm::ptr<CellFont> font)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
+	// The memory of CELL_FONT_OPEN_MEMORY fonts belongs to the game
 	if (font->origin == CELL_FONT_OPEN_FONTSET ||
-		font->origin == CELL_FONT_OPEN_FONT_FILE ||
-		font->origin == CELL_FONT_OPEN_MEMORY)
+		font->origin == CELL_FONT_OPEN_FONT_FILE)
 	{
 		ppu.state += cpu_flag::wait;
 
 		vm::dealloc(font->fontdata_addr, vm::main);
 
 		ppu.check_state();
+
+		font->fontdata_addr = 0;
 	}
 
 	return CELL_OK;

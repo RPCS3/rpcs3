@@ -647,6 +647,19 @@ error_code cellCameraOpenEx(ppu_thread& ppu, s32 dev_num, vm::ptr<CellCameraInfo
 
 	if (!g_camera.open_camera())
 	{
+		if (info->read_mode == CELL_CAMERA_READ_DIRECT)
+		{
+			vm::dealloc(info->pbuf[0].addr(), vm::main);
+			vm::dealloc(info->pbuf[1].addr(), vm::main);
+			info->pbuf[0] = vm::null;
+			info->pbuf[1] = vm::null;
+		}
+		else
+		{
+			vm::dealloc(info->buffer.addr(), vm::main);
+			info->buffer = vm::null;
+		}
+
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
