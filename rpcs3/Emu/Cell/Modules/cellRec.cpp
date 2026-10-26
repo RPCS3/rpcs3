@@ -912,7 +912,7 @@ bool create_path(std::string& out, std::string dir_name, const std::string& file
 
 u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam); // Forward declaration
 
-error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cptr<CellRecParam> pParam, u32 container, vm::ptr<CellRecCallback> cb, vm::ptr<void> cbUserData)
+error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cptr<CellRecParam> pParam, u32 container, vm::ptr<CellRecCallback> cb, vm::ptr<void> cbUserData)
 {
 	cellRec.todo("cellRecOpen(pDirName=%s, pFileName=%s, pParam=*0x%x, container=0x%x, cb=*0x%x, cbUserData=*0x%x)", pDirName, pFileName, pParam, container, cb, cbUserData);
 
@@ -951,8 +951,12 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	{
 		// NOTE: Most likely tries to allocate a complete container. But we use g_fxo instead.
 		// TODO: how much data do we actually need ?
+		ppu.state += cpu_flag::wait;
+
 		rec.video_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
 		rec.audio_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
+
+		ppu.check_state();
 
 		if (!rec.video_input_buffer || !rec.audio_input_buffer)
 		{
@@ -1362,8 +1366,12 @@ error_code cellRecClose(s32 isDiscard)
 			is_valid_range = start_pts >= 0 && end_pts <= last_pts;
 		}
 
+		ppu.state += cpu_flag::wait;
+
 		vm::dealloc(rec.video_input_buffer.addr(), vm::main);
 		vm::dealloc(rec.audio_input_buffer.addr(), vm::main);
+
+		ppu.check_state();
 
 		// Release the video sink if it was used
 		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
