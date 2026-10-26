@@ -612,7 +612,7 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 	if (DWORD error = GetLastError())
 	{
-		fmt::append(out, " (error=%s)", error, fmt::win_error_to_string(error));
+		fmt::append(out, " (error=%s)", fmt::win_error_to_string(error));
 	}
 #else
 	if (int error = errno)

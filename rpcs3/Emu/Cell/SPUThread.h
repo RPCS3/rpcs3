@@ -93,7 +93,7 @@ enum : u32
 	SPU_EVENT_SN = 0x2,    // MFC List Command stall-and-notify event
 	SPU_EVENT_TG = 0x1,    // MFC Tag Group status update event
 
-	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2, // Mask of implemented events
+	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2 | SPU_EVENT_MB, // Mask of implemented events
 	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
 	SPU_EVENT_INTR_BUSY_CHECK = SPU_EVENT_IMPLEMENTED & ~SPU_EVENT_INTR_IMPLEMENTED,
 };
@@ -275,7 +275,7 @@ public:
 			}
 
 			// Return true if count has changed from 0 to 1, this condition is considered satisfied even if we pushed a value directly to the special storage for waiting SPUs
-			return { (old & bit_count) == 0, 1, (old & bit_wait) != 0, true };
+			return { (old & bit_count) != 0, 1, (old & bit_wait) != 0, true };
 		}
 	}
 
@@ -689,13 +689,12 @@ public:
 	u32 mfc_barrier = -1;
 	u32 mfc_fence = -1;
 
-	// Timestamp of the first postponed command (transfers shuffling related)
-	u64 mfc_last_timestamp = 0;
-
 	// MFC proxy command data
 	spu_mfc_cmd mfc_prxy_cmd{};
 	shared_mutex mfc_prxy_mtx;
 	atomic_t<u32> mfc_prxy_mask = 0;
+
+	u64 mfc_queued_ops_timeout = 0;
 
 	// Tracks writes to MFC proxy command data
 	union
@@ -858,6 +857,7 @@ public:
 	std::array<std::array<u8, 16>, SPU_LS_SIZE / 128> eventstat_wait_time{};
  
 	void push_snr(u32 number, u32 value);
+	void push_in_mbox(u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
 	bool do_dma_check(const spu_mfc_cmd& args);
 	bool do_list_transfer(spu_mfc_cmd& args);

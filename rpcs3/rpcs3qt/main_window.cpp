@@ -33,8 +33,10 @@
 #include "gui_settings.h"
 #include "input_dialog.h"
 #include "camera_settings_dialog.h"
+#include "wiimote_settings_dialog.h"
 #include "ps_move_tracker_dialog.h"
 #include "ipc_settings_dialog.h"
+#include "sky_ipc_settings_dialog.h"
 #include "config_checker.h"
 #include "shortcut_dialog.h"
 #include "steam_utils.h"
@@ -348,12 +350,6 @@ QString main_window::GetCurrentTitle()
 	return QString::fromStdString(title);
 }
 
-// returns appIcon
-QIcon main_window::GetAppIcon() const
-{
-	return m_app_icon;
-}
-
 void main_window::OnMissingFw()
 {
 	const QString title = tr("Missing Firmware Detected!");
@@ -503,8 +499,6 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	Emu.GracefulShutdown(false);
 
-	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
-
 	std::optional<std::string> db_config = std::nullopt;
 
 	// Get database config if possible or if we are in database_config mode (to ensure we see an error on invalid use)
@@ -613,10 +607,8 @@ void main_window::BootTest()
 
 #ifdef _WIN32
 	const QString path_tests = QString::fromStdString(fs::get_config_dir()) + "/test/";
-#elif defined(__linux__)
-	const QString path_tests = QCoreApplication::applicationDirPath() + "/../share/rpcs3/test/";
 #else
-	const QString path_tests = QCoreApplication::applicationDirPath() + "/../Resources/test/";
+	const QString path_tests = QString::fromStdString(fs::get_resources_dir()) + "/test/";
 #endif
 
 	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select (S)ELF To Boot"), path_tests, tr(
@@ -3134,6 +3126,12 @@ void main_window::CreateConnects()
 		dlg->open();
 	});
 
+	connect(ui->confWiimoteAct, &QAction::triggered, this, [this]()
+	{
+		wiimote_settings_dialog* dlg = new wiimote_settings_dialog(this);
+		dlg->show();
+	});
+
 	const auto open_rpcn_settings = [this]
 	{
 		rpcn_settings_dialog dlg(this);
@@ -3160,6 +3158,12 @@ void main_window::CreateConnects()
 		dlg.exec();
 	});
 
+	connect(ui->confSkyIPCAct, &QAction::triggered, this, [this]()
+	{
+		sky_ipc_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
 	connect(ui->confAutopauseManagerAct, &QAction::triggered, this, [this]()
 	{
 		auto_pause_settings_dialog dlg(this);
@@ -3169,9 +3173,11 @@ void main_window::CreateConnects()
 	connect(ui->confVFSDialogAct, &QAction::triggered, this, [this]()
 	{
 		vfs_dialog dlg(m_gui_settings, this);
-		dlg.exec();
-		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
-		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
+		if (dlg.exec() == QDialog::Accepted)
+		{
+			ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
+			m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
+		}
 	});
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, this, [this]
@@ -3240,9 +3246,14 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, this, [this]
 	{
+		const u32 user_id = Emu.GetUsrId();
 		user_manager_dialog user_manager(m_gui_settings, m_persistent_settings, this);
 		user_manager.exec();
-		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+
+		if (user_id != Emu.GetUsrId() || user_manager.original_user_removed())
+		{
+			m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+		}
 	});
 
 	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]

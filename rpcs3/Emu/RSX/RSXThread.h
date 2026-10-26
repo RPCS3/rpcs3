@@ -79,20 +79,22 @@ namespace rsx
 
 	struct backend_configuration
 	{
-		bool supports_multidraw;               // Draw call batching
-		bool supports_hw_a2c;                  // Alpha to coverage
-		bool supports_hw_a2c_1spp;             // Alpha to coverage at 1 sample per pixel
-		bool supports_hw_renormalization;      // Should be true on NV hardware which matches PS3 texture renormalization behaviour
-		bool supports_hw_msaa;                 // MSAA support
-		bool supports_hw_a2one;                // Alpha to one
-		bool supports_hw_conditional_render;   // Conditional render
-		bool supports_hw_instanced_rendering;  // Instanced draws
-		bool supports_passthrough_dma;         // DMA passthrough
-		bool supports_asynchronous_compute;    // Async compute
-		bool supports_host_gpu_labels;         // Advanced host synchronization
-		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
-		bool supports_last_provoking_vertex;   // Flat shading using RSX's last-vertex convention
-		bool supports_programmable_blending;   // Can handle programmable blending requests
+		bool supports_multidraw;                 // Draw call batching
+		bool supports_hw_a2c;                    // Alpha to coverage
+		bool supports_hw_a2c_1spp;               // Alpha to coverage at 1 sample per pixel
+		bool supports_hw_renormalization;        // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;                   // MSAA support
+		bool supports_hw_a2one;                  // Alpha to one
+		bool supports_hw_conditional_render;     // Conditional render
+		bool supports_hw_instanced_rendering;    // Instanced draws
+		bool supports_passthrough_dma;           // DMA passthrough
+		bool supports_asynchronous_compute;      // Async compute
+		bool supports_host_gpu_labels;           // Advanced host synchronization
+		bool supports_normalized_barycentrics;   // Basically all GPUs except NVIDIA have properly normalized barycentrics
+		bool supports_last_provoking_vertex;     // Flat shading using RSX's last-vertex convention
+		bool supports_programmable_blending;     // Can handle programmable blending requests
+		bool supports_extended_depth_range;      // Depth values above 1 can be stored and tested. Float depth targets are emulated otherwise.
+		bool supports_framebufferless_rendering; // Can rasterize without any attachments bound (e.g for occlusion queries)
 	};
 
 	struct desync_fifo_cmd_info
@@ -133,6 +135,7 @@ namespace rsx
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 		u32 restore_fifo_cmd = 0;
 		u32 restore_fifo_count = 0;
+		u32 restore_fifo_position  = 0;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -175,6 +178,9 @@ namespace rsx
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
+		u32 last_code_jump = 0;
+		u32 last_sema_cmd = 0;
+		u32 last_sema_addr = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
@@ -261,6 +267,7 @@ namespace rsx
 	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
+		bool requires_depth_range_emulation() const;
 
 		// Notify framebuffer layout has been committed.
 		// FIXME: This should not be here
@@ -358,6 +365,7 @@ namespace rsx
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
+		bool should_skip_draw() const;
 
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);

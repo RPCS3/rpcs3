@@ -2392,6 +2392,12 @@ namespace rsx
 					if (desc.op == deferred_request_command::copy_image_dynamic)
 						update_image_contents(cmd, It->second.second, desc);
 
+					if (It->second.first.remap.encoded != desc.remap.encoded)
+					{
+						auto image = static_cast<viewable_image_type>(It->second.second->image());
+						return image->get_view(desc.remap);
+					}
+
 					return It->second.second;
 				}
 			}

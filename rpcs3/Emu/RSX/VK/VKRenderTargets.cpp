@@ -873,6 +873,12 @@ namespace vk
 			return;
 		}
 
+		if (msaa_flags & rsx::surface_state_flags::require_unresolve)
+		{
+			// Emit an early write barrier here to commit any resolve operations
+			write_barrier(cmd);
+		}
+
 		vk::insert_texture_barrier(cmd, this, optimal_layout);
 		m_cyclic_ref_tracker.on_insert_texture_barrier();
 

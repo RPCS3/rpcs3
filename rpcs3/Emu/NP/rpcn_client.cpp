@@ -164,6 +164,7 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::UnlockTrophy: return "UnlockTrophy";
 			case rpcn::CommandType::SyncTrophies: return "SyncTrophies";
 			case rpcn::CommandType::DeleteTrophies: return "DeleteTrophies";
+			case rpcn::CommandType::GetTss: return "GetTss";
 			}
 
 			return unknown;
@@ -260,7 +261,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 32;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 34;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -1253,7 +1254,7 @@ namespace rpcn
 		auto get_usernames = [](vec_stream& stream, std::set<std::string>& usernames)
 		{
 			u32 num_usernames = stream.get<u32>();
-			for (u32 i = 0; i < num_usernames; i++)
+			for (u32 i = 0; i < num_usernames && !stream.is_error(); i++)
 			{
 				std::string username = stream.get_string(false);
 				usernames.insert(std::move(username));
@@ -2636,6 +2637,15 @@ namespace rpcn
 		return forge_request_with_com_id(serialized, communication_id, CommandType::TusDeleteMultiSlotData, req_id);
 	}
 
+	bool rpcn_client::get_tss(u32 req_id, const SceNpCommunicationId& communication_id, s32 slot_id, u64 timestamp)
+	{
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(s32) + sizeof(u64));
+		rpcn_client::write_communication_id(communication_id, data);
+		write_to_ptr<le_t<s32>>(data, COMMUNICATION_ID_SIZE, slot_id);
+		write_to_ptr<le_t<u64>>(data, COMMUNICATION_ID_SIZE + sizeof(s32), timestamp);
+		return forge_send(CommandType::GetTss, req_id, data);
+	}
+
 	bool rpcn_client::send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data)
 	{
 		np2_structs::SetPresenceRequest pb_req;
@@ -3249,10 +3259,19 @@ namespace rpcn
 			return;
 		}
 
+		const u32 main_type = pb_mdata->maintype().value();
+		const u32 sub_type = pb_mdata->subtype().value();
+
+		if (main_type > std::numeric_limits<u16>::max() || sub_type > std::numeric_limits<u16>::max())
+		{
+			rpcn_log.warning("Discarded message with invalid type! (main_type=%u, sub_type=%u)", main_type, sub_type);
+			return;
+		}
+
 		message_data mdata = {
 			.msgId = message_counter,
-			.mainType = ::narrow<u16>(pb_mdata->maintype().value()),
-			.subType = ::narrow<u16>(pb_mdata->subtype().value()),
+			.mainType = static_cast<u16>(main_type),
+			.subType = static_cast<u16>(sub_type),
 			.msgFeatures = pb_mdata->msgfeatures(),
 			.subject = pb_mdata->subject(),
 			.body = pb_mdata->body()};

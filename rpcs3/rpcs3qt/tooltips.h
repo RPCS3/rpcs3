@@ -26,6 +26,7 @@ public:
 		const QString lib_default_lle              = tr("Select to HLE. (LLE by default)");
 
 		const QString debug_console_mode           = tr("Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.");
+		const QString accurate_ppuvest             = tr("Computes PPU vector reciprocal and reciprocal square root estimates exactly as the PS3 does.\nSome games compare these results with a real console, for example in online play. Comes at a performance cost.\nIf unsure, do not modify this setting.");
 		const QString accurate_rsx_access          = tr("Forces RSX pauses on SPU MFC_GETLLAR and SPU MFC_PUTLLUC operations.");
 		const QString accurate_spu_dma             = tr("Accurately processes SPU DMA operations.");
 		const QString silence_all_logs             = tr("Stop writing any logs after game startup. Don't use unless you believe it's necessary.");
@@ -41,6 +42,7 @@ public:
 		const QString disable_spin_optimization    = tr("Disable SPU GETLLAR spin optimization.\nThis can cause severe performance degradation and stuttering in many games.\nThis option is only needed for a select number of games.");
 		const QString emulate_depth_compare        = tr("Emulate depth comparison operations where desktop hardware behavior differs from PS3, usually EQUAL comparison modes.\nFixes excessive shadow flickering and Z-fighting in some games.\nThis is most obvious in some games where the Z prepass depth format is different from the rasterization depth format, a scenario that will never work out correctly on compliant desktop hardware.");
 		const QString emulate_hdd_speed            = tr("May fix games that break when data loads faster than on a PS3 at the cost of longer loading times.\nIf unsure, do not use this option.");
+		const QString emulate_bdvd_speed           = tr("Approximates the read speed of the PS3 Blu-ray drive for games run from disc.\nMay fix games that break when disc data loads faster than on a PS3, such as videos with corrupted blocks, at the cost of longer loading times.\nIf unsure, do not use this option.");
 		const QString enable_spu_events_busy_loop  = tr("Enable SPU RdEventStat spin.\nThis increases CPU usage, this setting is beneficial for high-threaded CPUs (12+) with select number of games.");
 		const QString zcull_operation_mode         = tr("Changes ZCULL report synchronization behaviour. Experiment to find the best option for your game. Approximate mode is recommended for most games.\n· Precise is the most accurate to PS3 behaviour. Required for accurate visuals in some titles such as Demon's Souls and The Darkness.\n· Approximate is a much faster way to generate occlusion data which may not always match what the PS3 would generate. Works well with most PS3 games.\n· Relaxed changes the synchronization method completely and can greatly improve performance in some games or completely break others.");
 		const QString max_spurs_threads            = tr("Limits the maximum number of SPURS threads in each thread group.\nMay improve performance in some cases, especially on systems with limited number of hardware threads.\nLimiting the number of threads is likely to cause crashes; it's recommended to keep this at the default value.");
@@ -48,7 +50,8 @@ public:
 		const QString rsx_fifo_accuracy            = tr("\"Fast\" is the least accurate setting, RSX does not emulate atomic FIFO buffer.\n\"Atomic\" benefits stability greatly in many games with little performance penalty.\n\"Atomic & Ordered\" is the most accurate but it is the slowest and without much stability benefit in games.");
 		const QString vblank_rate                  = tr("Adjusts the frequency of vertical blanking signals that the emulator sends.\nAffects timing of events which rely on these signals.");
 		const QString clocks_scale                 = tr("Changes the scale of emulated system time.\nAffects software which uses system time to calculate things such as dynamic timesteps.");
-		const QString wake_up_delay                = tr("Controls how much time it takes for RSX to start processing after waking up by the Cell processor.\nIncreasing wakeup delay improves stability, but very high values can lower RSX/GPU performance.\nIt is recommend to adjust this at 20µs to 40µs increments until the best value for optimal stability is reached.");
+		const QString wake_up_delay                = tr("Controls how much time it takes for RSX to start processing after waking up by the Cell processor.\nIncreasing wakeup delay improves stability, but very high values can lower RSX/GPU performance.\nIt is recommended to adjust this at 20µs to 40µs increments until the best value for optimal stability is reached.");
+		const QString ppu_event_wake_up_delay      = tr("Controls how much time it takes for a PPU thread to resume after an SPU sends it an event.\nIncreasing wakeup delay may improve stability, but very high values can lower performance. It is recommended to adjust this at 20µs to 40µs increments until the best value for optimal stability is reached.");
 		const QString disabled_from_global         = tr("Do not change this setting globally.\nRight-click a game in the game list and choose \"Configure\" instead.");
 		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Safe' mode for more spec compliant behavior at the cost of some CPU overhead. This setting works with all devices.\nUse 'Fast' to use a faster but hacky version. This option is internally disabled for NVIDIA GPUs due to causing GPU hangs.");
 		const QString disable_msl_fast_math        = tr("Disables Fast Math for MSL shaders, which may violate the IEEE 754 standard.\nDisabling it may fix some artifacts, especially on Apple GPUs, at the cost of performance.");
@@ -95,6 +98,7 @@ public:
 		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 		const QString ppu_reservation_priority  = tr("Give PPUs an execution advantage when the SPUs are using reservations.\nThis setting is recommended only for a few game for improving performance.\nDO NOT use it without being advised to due to potential performance degradation.");
 		const QString accurate_spu_reservations = tr("Accurately emulates SPU reservations.\nDisabling it can greatly improve performance.\nStability may be compromised in some games but not in others, disable only if advised.");
+		const QString spu_mmio_delay            = tr("Compensate for hardware MMIO SPU performance not having thread delays by slowing down PPU instead.\nEnable only if advised.");
 
 		// debug
 
@@ -108,7 +112,7 @@ public:
 		const QString accurate_ppuvnan             = tr("Accurately set NaN results in vector instructions in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString accurate_ppufpcc             = tr("Accurately set FPCC Bits in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString accurate_cache_line_stores   = tr("Accurately processes PPU DCBZ instruction.\nIn addition, when combined with Accurate SPU DMA, SPU PUT cache line accesses will be processed atomically.");
-		const QString mfc_delay_command            = tr("Forces delaying any odd MFC command, waits for at least 2 pending commands to execute them in a random order.\nMust be used with either SPU interpreters currently.\nSeverely degrades performance! If unsure, don't use this option.");
+		const QString mfc_delay_command            = tr("Forces delaying any odd MFC command, waits for at least 2 pending commands to execute them in a random order.\nSeverely degrades performance! If unsure, don't use this option.");
 		const QString hook_static_functions        = tr("Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.");
 		const QString renderdoc_compatibility      = tr("Enables use of classic OpenGL buffers which allows capturing tools to work with RPCS3 e.g RenderDoc.\nAlso allows Vulkan to use debug markers for nicer Renderdoc captures.\nIf unsure, don't use this option.");
 		const QString force_high_pz                = tr("Only useful when debugging differences in GPU hardware.\nNot necessary for average users.\nIf unsure, don't use this option.");
@@ -254,6 +258,7 @@ public:
 		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
 		const QString turntable         = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
+		const QString usio              = tr("USIO support.\nFighting Games: Emulate USIO for fighting games.\nShooter Games: Emulate USIO for shooter games.\nNote that rhythm games (such as Taiko no Tatsujin series) are always supported no matter which of the 2 options above is chosen.");
 		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");
@@ -285,6 +290,8 @@ public:
 		const QString empty_hdd0_tmp          = tr("Required for some Homebrew or Game Mods.\nIf unsure, do not use this option");
 		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.\n\nThis setting is only available in the global configuration.");
 		const QString console_time_offset     = tr("Sets the time to be used within the console. This will be applied as an offset that tracks wall clock time.\nCan be reset to current wall clock time by clicking \"Set to Now\".");
+		const QString hdd_model               = tr("Set the Model Name for the emulated HDD.\nChecked by System 357 games.\nIf unsure, leave this field empty.");
+		const QString hdd_serial              = tr("Set the Serial Number for the emulated HDD.\nChecked by System 357 games.\nIf unsure, leave this field empty.");
 	} settings;
 
 	const struct gamepad_settings

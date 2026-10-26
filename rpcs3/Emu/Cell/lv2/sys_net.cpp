@@ -704,6 +704,7 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		break;
 	}
 
+	// getsockopt can succeed with a len < expected len, it will just copy a limited number of the bytes
 	if (!optval || !optlen)
 	{
 		return -SYS_NET_EINVAL;
@@ -718,17 +719,13 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 
 	const auto sock = idm::check<lv2_socket>(s, [&, notify = lv2_obj::notify_all_t()](lv2_socket& sock) -> s32
 		{
-			if (len < sizeof(s32))
-			{
-				return -SYS_NET_EINVAL;
-			}
-
 			const auto& [res, out_val, out_len] = sock.getsockopt(level, optname, *optlen);
 
 			if (res == CELL_OK)
 			{
-				std::memcpy(optval.get_ptr(), out_val.ch, out_len);
-				*optlen = out_len;
+				const u32 len_copied = std::min(out_len, len);
+				std::memcpy(optval.get_ptr(), out_val.ch, len_copied);
+				*optlen = len_copied;
 			}
 
 			return res;
@@ -790,7 +787,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	s32 result = 0;
@@ -919,12 +916,12 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 
 	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_sendmsg(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_sendmsg(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	s32 result{};
 
-	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
+	const auto sock = idm::check<lv2_socket>(s, [&, notify = lv2_obj::notify_all_t()](lv2_socket& sock)
 		{
 			auto netmsg = msg.get_ptr();
 			const auto success = sock.sendmsg(flags, *netmsg);
@@ -935,6 +932,8 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 
 				return true;
 			}
+
+			auto lock = sock.lock();
 
 			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::write, [&](bs_t<lv2_socket::poll_t> events) -> bool
 				{
@@ -950,10 +949,18 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 						}
 					}
 
+					if (sock.so_sendtimeo && get_guest_system_time() - ppu.start_time > sock.so_sendtimeo)
+					{
+						result = -SYS_NET_EWOULDBLOCK;
+						lv2_obj::awake(&ppu);
+						return true;
+					}
+
 					sock.set_poll_event(lv2_socket::poll_t::write);
 					return false;
 				});
 
+			lv2_obj::prepare_for_sleep(ppu);
 			lv2_obj::sleep(ppu);
 			return false;
 		});
@@ -972,7 +979,7 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 			{
 				break;
 			}
-			thread_ctrl::wait_on(ppu.state, state);
+			ppu.state.wait(state);
 		}
 
 		if (ppu.gpr[3] == static_cast<u64>(-SYS_NET_EINTR))
@@ -998,7 +1005,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	if (addr && addrlen < sizeof(sys_net_sockaddr))
@@ -1128,6 +1135,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 		break;
 	}
 
+	// setsockopt will succeed for any len >= expected len
 	if (optlen < sizeof(s32))
 	{
 		return -SYS_NET_EINVAL;

@@ -11,6 +11,7 @@
 #include <QSpinBox>
 #include <QTimer>
 #include <QScreen>
+#include <QShortcut>
 #include <QStyleFactory>
 
 #include "gui_settings.h"
@@ -97,7 +98,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	, m_emu_settings(std::move(emu_settings))
 {
 	ui->setupUi(this);
-	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
+	ui->buttonBox->button(QDialogButtonBox::StandardButton::Cancel)->setFocus();
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
@@ -234,8 +235,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, this, [this]()
 	{
-		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
+		ui->buttonBox->button(QDialogButtonBox::StandardButton::Cancel)->setFocus();
 	});
+
+	// Qt only cycles tabs on Ctrl+Tab/Ctrl+Shift+Tab while the tab widget itself has focus, so it stops
+	// working as soon as a widget inside the current tab (or the Close button above) grabs focus. Use
+	// dedicated window-wide shortcuts instead, so tab cycling keeps working no matter what has focus.
+	const auto cycle_tab = [this](int direction)
+	{
+		QTabWidget* const tabs = ui->tab_widget_settings;
+		if (const int count = tabs->count())
+		{
+			tabs->setCurrentIndex((tabs->currentIndex() + direction + count) % count);
+		}
+	};
+
+	QShortcut* const next_tab_shortcut = new QShortcut(QKeySequence("Ctrl+Tab"), this);
+	next_tab_shortcut->setContext(Qt::WindowShortcut);
+	connect(next_tab_shortcut, &QShortcut::activated, this, [cycle_tab]() { cycle_tab(1); });
+
+	QShortcut* const prev_tab_shortcut = new QShortcut(QKeySequence("Ctrl+Shift+Tab"), this);
+	prev_tab_shortcut->setContext(Qt::WindowShortcut);
+	connect(prev_tab_shortcut, &QShortcut::activated, this, [cycle_tab]() { cycle_tab(-1); });
 
 	//     _____ _____  _    _   _______    _
 	//    / ____|  __ \| |  | | |__   __|  | |
@@ -249,6 +270,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::SPULoopDetection, ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 	EnhanceCheckBox(emu_settings_type::PPUReservationPriorityOverSPUs, ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuReservations, ui->accurateSpuReservations, tooltips.settings.accurate_spu_reservations);
+	EnhanceCheckBox(emu_settings_type::SPUMmioDelay, ui->spuMmioDelay, tooltips.settings.spu_mmio_delay);
 
 	// Comboboxes
 	EnhanceComboBox(emu_settings_type::XFloatAccuracy, ui->xfloatAccuracy, tooltips.settings.xfloat, ui->gb_xfloat_accuracy);
@@ -1071,7 +1093,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->m_microphone_creator.refresh_list();
 	propagate_used_devices(); // Fills comboboxes list
 
-	m_emu_settings->m_microphone_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MicrophoneDevices));
+	m_emu_settings->m_microphone_creator.update_device_selection(m_emu_settings->GetSetting(emu_settings_type::MicrophoneDevices));
 
 	const std::array<std::string, 4>& mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
 
@@ -1166,6 +1188,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceComboBox(emu_settings_type::Buzz, ui->buzzBox, tooltips.settings.buzz, ui->gb_buzz_emulated);
 	EnhanceComboBox(emu_settings_type::Turntable, ui->turntableBox, tooltips.settings.turntable, ui->gb_turntable_emulated);
 	EnhanceComboBox(emu_settings_type::GHLtar, ui->ghltarBox, tooltips.settings.ghltar, ui->gb_ghltar_emulated);
+	EnhanceComboBox(emu_settings_type::USIO, ui->usioBox, tooltips.settings.usio, ui->gb_usio_emulated);
 
 	EnhanceCheckBox(emu_settings_type::BackgroundInput, ui->backgroundInputBox, tooltips.settings.background_input);
 	EnhanceCheckBox(emu_settings_type::PadConnection, ui->padConnectionBox, tooltips.settings.pad_connection);
@@ -1254,7 +1277,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->m_midi_creator.refresh_list();
 	propagate_midi_devices(); // Fills comboboxes list
 
-	m_emu_settings->m_midi_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
+	m_emu_settings->m_midi_creator.update_device_selection(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
 
 	const std::array<midi_device, max_midi_devices>& midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
 
@@ -1327,6 +1350,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceRadioButton(enter_button_assignment_bg, emu_settings_type::EnterButtonAssignment);
 	SubscribeTooltip(ui->gb_enterButtonAssignment, tooltips.settings.enter_button_assignment);
+
+	// Edits
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_model, emu_settings_type::HDDModelName);
+	SubscribeTooltip(ui->gb_edit_hdd_model, tooltips.settings.hdd_model);
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_serial, emu_settings_type::HDDSerialNumber);
+	SubscribeTooltip(ui->gb_edit_hdd_serial, tooltips.settings.hdd_serial);
 
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
@@ -1412,6 +1443,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes
 
 	EnhanceCheckBox(emu_settings_type::DebugConsoleMode, ui->debugConsoleMode, tooltips.settings.debug_console_mode);
+	EnhanceCheckBox(emu_settings_type::AccuratePPUVEST, ui->accuratePPUVEST, tooltips.settings.accurate_ppuvest);
 	EnhanceCheckBox(emu_settings_type::AccurateRSXAccess, ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuDMA, ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
 	EnhanceCheckBox(emu_settings_type::LLVMPrecompilation, ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
@@ -1441,6 +1473,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::DisableAsyncHostMM, ui->disableAsyncHostMM, tooltips.settings.disable_async_host_mm);
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
 	EnhanceCheckBox(emu_settings_type::EmulateHddSpeed, ui->emulateHddSpeed, tooltips.settings.emulate_hdd_speed);
+	EnhanceCheckBox(emu_settings_type::EmulateBdvdSpeed, ui->emulateBdvdSpeed, tooltips.settings.emulate_bdvd_speed);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
 	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 
@@ -1477,6 +1510,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vblank->setValue(vblank_def);
 	});
 
+	EnhanceSlider(emu_settings_type::PPUEventWakeUpDelay, ui->ppuEventWakeupDelay, ui->ppuEventWakeupText, tr(reinterpret_cast<const char*>(u8"%0 µs"), "PPU event wake up delay"));
+	const int ppu_event_wakeup_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::PPUEventWakeUpDelay));
+	connect(ui->ppuEventWakeupReset, &QAbstractButton::clicked, [ppu_event_wakeup_def, this]()
+	{
+		ui->ppuEventWakeupDelay->setValue(ppu_event_wakeup_def);
+	});
+
 	EnhanceSlider(emu_settings_type::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %", "Clocks scale"));
 	SnapSlider(ui->clockScale, 10);
 	ui->clockScale->setPageStep(50);
@@ -1508,6 +1548,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_vblank->setDisabled(true);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.disabled_from_global);
+		ui->gb_ppuEventWakeupDelay->setDisabled(true);
+		SubscribeTooltip(ui->gb_ppuEventWakeupDelay, tooltips.settings.disabled_from_global);
 		ui->gb_clockScale->setDisabled(true);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.disabled_from_global);
 		ui->gb_wakeupDelay->setDisabled(true);
@@ -1516,6 +1558,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	else
 	{
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
+		SubscribeTooltip(ui->gb_ppuEventWakeupDelay, tooltips.settings.ppu_event_wake_up_delay);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
 	}

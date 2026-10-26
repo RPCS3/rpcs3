@@ -32,7 +32,7 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 	usb_device_emulated::add_string("Harmonix RB3 MIDI Guitar Interface for PlayStation®3");
 
 	// connect to midi device
-	midi_in = rtmidi_in_create_default();
+	midi_in.reset(rtmidi_in_create_default());
 	ensure(midi_in);
 
 	if (!midi_in->ok)
@@ -41,7 +41,7 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 		return;
 	}
 
-	const RtMidiApi api = rtmidi_in_get_current_api(midi_in);
+	const RtMidiApi api = rtmidi_in_get_current_api(midi_in.get());
 
 	if (!midi_in->ok)
 	{
@@ -58,9 +58,9 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 		rb3_midi_guitar_log.warning("Could not get MIDI api name");
 	}
 
-	rtmidi_in_ignore_types(midi_in, false, true, true);
+	rtmidi_in_ignore_types(midi_in.get(), false, true, true);
 
-	const u32 port_count = rtmidi_get_port_count(midi_in);
+	const u32 port_count = rtmidi_get_port_count(midi_in.get());
 
 	if (!midi_in->ok || port_count == umax)
 	{
@@ -72,7 +72,7 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 	{
 		char buf[128]{};
 		s32 size = sizeof(buf);
-		if (rtmidi_get_port_name(midi_in, port_number, buf, &size) == -1 || !midi_in->ok)
+		if (rtmidi_get_port_name(midi_in.get(), port_number, buf, &size) == -1 || !midi_in->ok)
 		{
 			rb3_midi_guitar_log.error("Error getting port name for port %d: %s", port_number, midi_in->msg);
 			return;
@@ -82,7 +82,7 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 
 		if (device_name == buf)
 		{
-			rtmidi_open_port(midi_in, port_number, "RPCS3 MIDI Guitar Input");
+			rtmidi_open_port(midi_in.get(), port_number, "RPCS3 MIDI Guitar Input");
 
 			if (!midi_in->ok)
 			{
@@ -100,10 +100,6 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 
 usb_device_rb3_midi_guitar::~usb_device_rb3_midi_guitar()
 {
-	if (midi_in)
-	{
-		rtmidi_in_free(midi_in);
-	}
 }
 
 static const std::array<u8, 40> disabled_response = {
@@ -214,7 +210,7 @@ void usb_device_rb3_midi_guitar::interrupt_transfer(u32 buf_size, u8* buf, u32 /
 
 		// this returns a double as some sort of delta time, with -1.0
 		// being used to signal an error
-		if (rtmidi_in_get_message(midi_in, midi_msg, &size) == -1.0)
+		if (rtmidi_in_get_message(midi_in.get(), midi_msg, &size) == -1.0 || !midi_in->ok)
 		{
 			rb3_midi_guitar_log.error("Error getting MIDI message: %s", midi_in->msg);
 			return;

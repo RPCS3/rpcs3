@@ -56,6 +56,7 @@
         -DCURL_USE_OPENSSL=OFF ^
         -DCURL_USE_LIBPSL=OFF ^
         -DCURL_ZLIB=OFF ^
+        -DCURL_ZSTD=OFF ^
         -DCURL_USE_LIBSSH2=OFF ^
         -DCMAKE_C_FLAGS="/DWOLFSSL_ALT_CERT_CHAINS /DHAVE_SNI /DNO_MD4 /DWOLFSSL_USER_SETTINGS /DUSE_IPV6 /I\"$(SolutionDir)3rdparty\curl\extra\" /I\"$(SolutionDir)3rdparty\wolfssl\wolfssl\" /I\"$(SolutionDir)3rdparty\wolfssl\wolfssl\wolfssl\" /I\"$(SolutionDir)3rdparty\wolfssl\extra\win32\"" ^
         -DCMAKE_C_FLAGS_RELEASE="/O2 /Ob1 /GF /Gy" ^

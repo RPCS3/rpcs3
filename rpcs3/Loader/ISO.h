@@ -103,6 +103,12 @@ public:
 
 	bool init(const std::string& path, iso_archive* archive = nullptr);
 
+	// Sets the decryption key out of the "D1" of the disc, for an encrypted image no key file was found for
+	// (an IRD file stores that very field, so a game checked against one can be read back without a ".dkey").
+	// The key is put through the very same test a key file goes through, so one belonging to another disc is
+	// refused instead of turning every read into garbage
+	bool set_key_from_d1(iso_archive& archive, const std::array<u8, 16>& disc_key);
+
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	// Tells whether the content of the image can be read back at all, and if not what is wrong with its key.
@@ -209,7 +215,17 @@ private:
 	std::shared_ptr<iso_file_decryption> m_dec;
 
 public:
+	// Parses the volume descriptor set and the directory records of an ISO9660 file system out of an already
+	// opened stream, filling in the hierarchy rooted at "root" ("path" is only used for logging).
+	// It works on any stream holding the ECMA-119 structures at the sector positions they lie at on the disc,
+	// so it serves both a whole ISO image and the ISO header an IRD file stores
+	static bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string& path);
+
 	iso_archive(const std::string& path);
+
+	// Hands the decryption the "D1" of the disc, so that an encrypted image whose key file is missing can still
+	// be read back. Only worth calling when the image turned out to be unreadable as it is
+	bool set_disc_key(const std::array<u8, 16>& disc_key);
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }
