@@ -204,6 +204,9 @@ namespace gui
 		// Convert a timestamp to a readable string
 		QString format_timestamp(s64 time, const QString& fmt = "yyyy-MM-dd HH:mm:ss");
 
+		// Compare strings with numbers by value instead of by digit, e.g. "Config 2" before "Config 10"
+		bool natural_less(const QString& lhs, const QString& rhs);
+
 		static inline Qt::ColorScheme color_scheme()
 		{
 			// use the QGuiApplication's properties to report the default GUI color scheme
