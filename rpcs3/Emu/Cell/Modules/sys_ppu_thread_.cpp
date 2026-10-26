@@ -144,6 +144,7 @@ error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 en
 	// Call the syscall
 	if (error_code res = _sys_ppu_thread_create(ppu, thread_id, vm::make_var(ppu_thread_param_t{ vm::cast(entry), tls_addr + 0x7030 }), arg, 0, prio, stacksize, flags, threadname))
 	{
+		ppu_free_tls(tls_addr);
 		return res;
 	}
 
