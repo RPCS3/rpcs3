@@ -821,6 +821,11 @@ u32 signaling_handler::init_sig1(const SceNpId& npid)
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.req_sign_infos(np::npid_to_string(npid), conn_id);
 	}
+	else if (sig_peers[conn_id]->conn_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
+	{
+		// If connection exists from prior state notify
+		signal_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED, CELL_OK);
+	}
 
 	return conn_id;
 }
