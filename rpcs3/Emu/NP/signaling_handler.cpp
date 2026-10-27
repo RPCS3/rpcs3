@@ -618,10 +618,9 @@ void signaling_handler::update_ext_si_status(std::shared_ptr<signaling_info>& si
 	if (op_activated && !si->op_activated)
 	{
 		si->op_activated = true;
+		signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED, CELL_OK);
 
-		if (si->conn_status != SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
-			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED, CELL_OK);
-		else
+		if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
 			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED, CELL_OK);
 	}
 	else if (!op_activated && si->op_activated)
