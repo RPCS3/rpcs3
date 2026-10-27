@@ -3211,6 +3211,24 @@ error_code sceNpFriendlistAbortGui()
 	return CELL_OK;
 }
 
+static error_code complete_lookup_async(s32 transId, error_code result)
+{
+	if (result + 0u == SCE_NP_COMMUNITY_ERROR_INVALID_ID)
+	{
+		return result;
+	}
+
+	if (const auto trans = get_lookup_transaction_context(transId))
+	{
+		std::lock_guard lock(trans->mutex);
+		trans->set_result_and_wake(result);
+		trans->completion_cond.notify_one();
+		return CELL_OK;
+	}
+
+	return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
+}
+
 error_code sceNpLookupInit()
 {
 	sceNp.warning("sceNpLookupInit()");
@@ -3450,10 +3468,8 @@ error_code sceNpLookupPollAsync(s32 transId, vm::ptr<s32> result)
 	return CELL_OK;
 }
 
-error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
+static error_code lookup_npid(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
 {
-	sceNp.todo("sceNpLookupNpId(transId=%d, onlineId=*0x%x, npId=*0x%x, option=*0x%x)", transId, onlineId, npId, option);
-
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 	if (!nph.is_NP_Lookup_init)
@@ -3461,14 +3477,15 @@ error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::pt
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!onlineId || !npId)
+	if (!onlineId)
 	{
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	if (option) // option check at least until fw 4.71
+	const auto trans = get_lookup_transaction_context(transId);
+	if (!trans) // catches 0 value too
 	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -3477,43 +3494,29 @@ error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::pt
 	}
 
 	// Hack - better than nothing for now
-	memset(npId.get_ptr(), 0, sizeof(SceNpId));
-	memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
+	if (npId)
+	{
+		memset(npId.get_ptr(), 0, sizeof(SceNpId));
+		memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
+	}
 
 	return CELL_OK;
+}
+
+error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
+{
+	sceNp.todo("sceNpLookupNpId(transId=%d, onlineId=*0x%x, npId=*0x%x, option=*0x%x)", transId, onlineId, npId, option);
+	return lookup_npid(transId, onlineId, npId, option);
 }
 
 error_code sceNpLookupNpIdAsync(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, s32 prio, vm::ptr<void> option)
 {
 	sceNp.todo("sceNpLookupNpIdAsync(transId=%d, onlineId=*0x%x, npId=*0x%x, prio=%d, option=*0x%x)", transId, onlineId, npId, prio, option);
 
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+	if (const error_code res = lookup_npid(transId, onlineId, npId, option); res != CELL_OK)
+		return res;
 
-	if (!nph.is_NP_Lookup_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (!onlineId || !npId)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	if (option) // option check at least until fw 4.71
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	// Hack - better than nothing for now
-	memset(npId.get_ptr(), 0, sizeof(SceNpId));
-	memcpy(npId->handle.data, onlineId->data, sizeof(npId->handle.data) - 1);
-
-	return CELL_OK;
+	return complete_lookup_async(transId, CELL_OK);
 }
 
 static error_code lookup_user_profile(s32 transId, s32 avatarSizeType, vm::cptr<SceNpId> npId, vm::ptr<SceNpUserInfo> userInfo, vm::ptr<SceNpAboutMe> aboutMe,
@@ -3620,24 +3623,6 @@ static error_code lookup_avatar_image(s32 transId, vm::ptr<SceNpAvatarUrl> avata
 	avatarImage->size = ::size32(image);
 
 	return CELL_OK;
-}
-
-static error_code complete_lookup_async(s32 transId, error_code result)
-{
-	if (result + 0u == SCE_NP_COMMUNITY_ERROR_INVALID_ID)
-	{
-		return result;
-	}
-
-	if (const auto trans = get_lookup_transaction_context(transId))
-	{
-		std::lock_guard lock(trans->mutex);
-		trans->set_result_and_wake(result);
-		trans->completion_cond.notify_one();
-		return CELL_OK;
-	}
-
-	return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 }
 
 error_code sceNpLookupUserProfile(s32 transId, vm::cptr<SceNpId> npId, vm::ptr<SceNpUserInfo> userInfo, vm::ptr<SceNpAboutMe> aboutMe, vm::ptr<SceNpMyLanguages> languages,
