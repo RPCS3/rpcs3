@@ -56,6 +56,11 @@ public:
 		m_with_cli_boot = with_cli_boot;
 	}
 
+	void SetStartBigPictureMode(bool start_big_picture_mode = true)
+	{
+		m_start_big_picture_mode = start_big_picture_mode;
+	}
+
 	void SetStartGamesFullscreen(bool start_games_fullscreen = false)
 	{
 		m_start_games_fullscreen = start_games_fullscreen;
@@ -122,6 +127,7 @@ private:
 	bool m_show_gui = true;
 	bool m_use_cli_style = false;
 	bool m_with_cli_boot = false;
+	bool m_start_big_picture_mode = false;
 	bool m_start_games_fullscreen = false;
 	int m_game_screen_index = -1;
 
