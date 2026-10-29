@@ -12,7 +12,10 @@ namespace voice_firmware
 {
 	struct config
 	{
-		u32 bitrate, configuration, samples, bytes;
+		u32 bitrate = 0;
+		u32 configuration = 0;
+		u32 samples = 0;
+		u32 bytes = 0;
 	};
 
 	const config* find_config(u32 bitrate);
