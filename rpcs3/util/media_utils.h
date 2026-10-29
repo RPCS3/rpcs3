@@ -60,7 +60,7 @@ namespace utils
 	class audio_decoder
 	{
 	public:
-		audio_decoder();
+		explicit audio_decoder(s32 output_rate = 48000, bool mono = false, u64 max_bytes = 0);
 		~audio_decoder();
 
 		void set_context(music_selection_context&& context);
@@ -83,7 +83,9 @@ namespace utils
 	private:
 		shared_mutex m_data_mtx;
 
-		static constexpr s32 sample_rate = 48000;
+		const s32 sample_rate;
+		const bool m_mono;
+		const u64 m_max_bytes;
 		std::vector<u8> m_data;
 		atomic_t<u32> m_track_fully_decoded{0};
 		atomic_t<u32> m_track_fully_consumed{0};

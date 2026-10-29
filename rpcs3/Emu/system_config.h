@@ -277,8 +277,12 @@ struct cfg_root : cfg::node
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_bool disable_sampling_skip{ this, "Disable Sampling Skip", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
-		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
-		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
+		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null, true };
+		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@", true };
+		cfg::_bool voice_push_to_talk{ this, "Voice Push To Talk", false, true };
+		cfg::string voice_push_to_talk_key{ this, "Voice Push To Talk Key", "V", true };
+		cfg::_bool voice_test_file_enabled{ this, "Voice Test File Enabled", false, true };
+		cfg::string voice_test_file{ this, "Voice Test File", "", true };
 		cfg::_enum<music_handler> music{ this, "Music Handler", music_handler::qt };
 	} audio{ this };
 

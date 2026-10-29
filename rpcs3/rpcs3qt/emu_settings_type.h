@@ -164,6 +164,10 @@ enum class emu_settings_type
 	TimeStretchingThreshold,
 	MicrophoneType,
 	MicrophoneDevices,
+	VoicePushToTalk,
+	VoicePushToTalkKey,
+	VoiceTestFileEnabled,
+	VoiceTestFile,
 	MusicHandler,
 
 	// Input / Output

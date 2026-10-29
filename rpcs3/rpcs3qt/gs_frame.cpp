@@ -27,6 +27,7 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QKeyEvent>
+#include "Emu/Audio/voice_input.h"
 #include <QMessageBox>
 #include <QPainter>
 #include <QScreen>
@@ -144,6 +145,11 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	connect(this, &QWindow::activeChanged, this, [this]()
 	{
 		g_game_window_focused = isActive();
+		if (!isActive())
+		{
+			m_voice_talk_key = 0;
+			voice_input::set_talk_key({});
+		}
 		handle_cursor(visibility(), false, true, true);
 	});
 
@@ -156,6 +162,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 
 gs_frame::~gs_frame()
 {
+	voice_input::set_talk_key({});
 	g_user_asked_for_screenshot = false;
 	g_user_asked_for_recording = false;
 	g_user_asked_for_frame_capture = false;
@@ -1205,6 +1212,39 @@ void gs_frame::mouse_hide_timeout()
 
 bool gs_frame::event(QEvent* ev)
 {
+	if (ev->type() == QEvent::FocusOut || ev->type() == QEvent::WindowDeactivate ||
+		ev->type() == QEvent::Hide || ev->type() == QEvent::Close)
+	{
+		m_voice_talk_key = 0;
+		voice_input::set_talk_key({});
+	}
+	else if (ev->type() == QEvent::KeyPress || ev->type() == QEvent::KeyRelease || ev->type() == QEvent::ShortcutOverride)
+	{
+		const auto* key = static_cast<QKeyEvent*>(ev);
+		if (!key->isAutoRepeat())
+		{
+			const std::string binding = g_cfg.audio.voice_push_to_talk_key.get();
+			const QKeySequence sequence(QString::fromStdString(binding), QKeySequence::PortableText);
+			const bool matches = sequence.count() == 1 && sequence[0] == key->keyCombination();
+			if (ev->type() == QEvent::ShortcutOverride && g_cfg.audio.voice_push_to_talk && matches)
+			{
+				ev->accept();
+				return true;
+			}
+			if (ev->type() == QEvent::KeyPress && matches && isActive() && Emu.IsRunning())
+			{
+				m_voice_talk_key = key->key();
+				voice_input::set_talk_key(binding);
+			}
+			else if (ev->type() == QEvent::KeyRelease && (key->key() == m_voice_talk_key ||
+				key->key() == Qt::Key_Control || key->key() == Qt::Key_Shift || key->key() == Qt::Key_Alt || key->key() == Qt::Key_Meta))
+			{
+				m_voice_talk_key = 0;
+				voice_input::set_talk_key({});
+			}
+		}
+	}
+
 	if (ev->type() == QEvent::Close)
 	{
 		if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool())

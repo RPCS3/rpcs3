@@ -651,6 +651,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellVoice_firmware.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -2146,6 +2149,9 @@
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellVoice.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellVoice_firmware.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellCelp8Enc.h">

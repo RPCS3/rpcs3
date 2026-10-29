@@ -185,6 +185,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test_bit_set.cpp
             tests/test_blob_detector.cpp
             tests/test_cctype.cpp
+            tests/test_cell_voice.cpp
             tests/test_dmux_pamf.cpp
             tests/test_fmt.cpp
             tests/test_iso_open.cpp

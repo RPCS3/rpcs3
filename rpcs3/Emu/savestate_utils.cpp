@@ -78,7 +78,7 @@ SERIALIZATION_VER(cellCamera, 14,                               1, 2/*gem_camera
 SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/, 3/*video_conversion*/)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
 SERIALIZATION_VER(cellMusic, 17,                                1)
-SERIALIZATION_VER(cellVoice, 18,                                1)
+SERIALIZATION_VER(cellVoice, 18,                                1, 2/*firmware worker ownership and service state*/)
 SERIALIZATION_VER(cellGcm, 19,                                  1)
 SERIALIZATION_VER(sysPrxForUser, 20,                            1)
 SERIALIZATION_VER(cellSaveData, 21,                             1)
