@@ -2320,14 +2320,18 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	dst->fs_texture_base_index = fs_texture_base_index;
 	dst->fs_stipple_pattern_offset = fs_stipple_pattern_offset;
 
-	const u32 push_val = vertex_layout_offset + id;
-	vkCmdPushConstants(
-		*m_current_command_buffer,
-		m_program->layout(),
-		VK_SHADER_STAGE_VERTEX_BIT,
-		0,
-		4,
-		&push_val);
+	// NOTE: The vertex shader reads the draw parameters index from the instance base when possible.
+	m_draw_parameters_index = vertex_layout_offset + id;
+	if (!m_device->get_shader_draw_parameters_support())
+	{
+		vkCmdPushConstants(
+			*m_current_command_buffer,
+			m_program->layout(),
+			VK_SHADER_STAGE_VERTEX_BIT,
+			0,
+			4,
+			&m_draw_parameters_index);
+	}
 
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{

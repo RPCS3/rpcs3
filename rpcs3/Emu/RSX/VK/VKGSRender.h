@@ -161,6 +161,7 @@ private:
 	VkDescriptorBufferInfoEx m_fragment_instructions_buffer_info {};
 
 	rsx::simple_array<u8> m_multidraw_parameters_buffer;
+	u32 m_draw_parameters_index = 0;                   // Cached - current subdraw id + layout offset id
 	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.
 	u64 m_vertex_env_dynamic_offset = 0;
 	u64 m_vertex_layout_dynamic_offset = 0;
