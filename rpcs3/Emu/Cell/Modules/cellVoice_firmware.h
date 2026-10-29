@@ -40,7 +40,7 @@ namespace voice_firmware
 
 	struct result
 	{
-		key codec;
+		key codec {};
 		u32 error = 0;
 		std::vector<f32> pcm; // 8 kHz mono, s16 scale
 		std::vector<u8> packet;
