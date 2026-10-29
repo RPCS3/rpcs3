@@ -24,6 +24,7 @@
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
 
+#include <algorithm>
 #include <thread>
 
 LOG_CHANNEL(cfg_log, "CFG");
@@ -104,11 +105,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	{
 		const auto [config_files, active_config_file] = get_config_files();
 
-		for (const QString& profile : config_files)
-		{
-			ui->chooseConfig->addItem(profile);
-		}
-
+		ui->chooseConfig->addItems(config_files);
 		ui->chooseConfig->setCurrentText(active_config_file);
 	}
 	else
@@ -238,6 +235,18 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	ui->left_stack->setCurrentIndex(0);
 	ui->right_stack->setCurrentIndex(0);
 
+	// Set slider label width
+	const int slider_label_width = gui::utils::get_label_width(QStringLiteral("100"));
+	ui->slider_label_stick_left->setFixedWidth(slider_label_width);
+	ui->slider_label_stick_right->setFixedWidth(slider_label_width);
+	ui->anti_deadzone_slider_label_stick_left->setFixedWidth(slider_label_width);
+	ui->anti_deadzone_slider_label_stick_right->setFixedWidth(slider_label_width);
+	ui->pressure_intensity_deadzone_label->setFixedWidth(slider_label_width);
+	ui->slider_trigger_left_label->setFixedWidth(slider_label_width);
+	ui->slider_trigger_right_label->setFixedWidth(slider_label_width);
+	ui->preview_trigger_left_label->setFixedWidth(slider_label_width);
+	ui->preview_trigger_right_label->setFixedWidth(slider_label_width);
+
 	// Set up first tab
 	OnTabChanged(0);
 	ChangeConfig(ui->chooseConfig->currentText());
@@ -285,19 +294,26 @@ void pad_settings_dialog::showEvent(QShowEvent* event)
 std::pair<QStringList, QString> pad_settings_dialog::get_config_files()
 {
 	const QString input_config_dir = QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id));
+	const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
 	QStringList config_files = gui::utils::get_dir_entries(QDir(input_config_dir), QStringList() << "*.yml");
 	QString active_config_file = QString::fromStdString(g_cfg_input_configs.active_configs.get_value(g_cfg_input_configs.global_key));
 
+	if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
+	{
+		config_files.append(default_config_file);
+	}
+
 	if (!config_files.contains(active_config_file))
 	{
-		const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
-
-		if (!config_files.contains(default_config_file) && CreateConfigFile(input_config_dir, default_config_file))
-		{
-			config_files.prepend(default_config_file);
-		}
-
 		active_config_file = default_config_file;
+	}
+
+	// The default configuration is always listed first, the custom configurations follow in natural order
+	std::sort(config_files.begin(), config_files.end(), gui::utils::natural_less);
+
+	if (config_files.removeAll(default_config_file))
+	{
+		config_files.prepend(default_config_file);
 	}
 
 	return std::make_pair<QStringList, QString>(std::move(config_files), std::move(active_config_file));
@@ -410,24 +426,53 @@ void pad_settings_dialog::InitButtons()
 		});
 	});
 
-	connect(ui->slider_stick_left, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->slider_stick_left, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->slider_label_stick_left->setText(QString::number(std::round((value * 100.0f) / ui->slider_stick_left->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_left, value, ui->anti_deadzone_slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
-	connect(ui->slider_stick_right, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->slider_stick_right, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->slider_label_stick_right->setText(QString::number(std::round((value * 100.0f) / ui->slider_stick_right->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->anti_deadzone_slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 	});
 
-	connect(ui->anti_deadzone_slider_stick_left, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->anti_deadzone_slider_stick_left, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->anti_deadzone_slider_label_stick_left->setText(QString::number(std::round((value * 100.0f) / ui->anti_deadzone_slider_stick_left->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), value, ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 	});
 
-	connect(ui->anti_deadzone_slider_stick_right, &QSlider::valueChanged, this, [&](int value)
+	connect(ui->anti_deadzone_slider_stick_right, &QSlider::valueChanged, this, [this](int value)
 	{
+		ui->anti_deadzone_slider_label_stick_right->setText(QString::number(std::round((value * 100.0f) / ui->anti_deadzone_slider_stick_right->maximum())));
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), value, ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
+	});
+
+	connect(ui->pressure_intensity_deadzone, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->pressure_intensity_deadzone_label->setText(QString::number(std::round((value * 100.0f) / ui->pressure_intensity_deadzone->maximum())));
+	});
+
+	connect(ui->slider_trigger_left, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->slider_trigger_left_label->setText(QString::number(std::round((value * 100.0f) / ui->slider_trigger_left->maximum())));
+	});
+
+	connect(ui->slider_trigger_right, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->slider_trigger_right_label->setText(QString::number(std::round((value * 100.0f) / ui->slider_trigger_right->maximum())));
+	});
+
+	connect(ui->preview_trigger_left, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->preview_trigger_left_label->setText(QString::number(std::round((value * 100.0f) / ui->preview_trigger_left->maximum())));
+	});
+
+	connect(ui->preview_trigger_right, &QSlider::valueChanged, this, [this](int value)
+	{
+		ui->preview_trigger_right_label->setText(QString::number(std::round((value * 100.0f) / ui->preview_trigger_right->maximum())));
 	});
 
 	// Open LED settings
@@ -953,7 +998,8 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* label, int deadzone, int a
 			const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
 			const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
 			const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
-			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, anti_deadzone, squircle);
+			[[maybe_unused]] f32 angle, distance_to_center;
+			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, anti_deadzone, squircle, angle, distance_to_center);
 		}
 
 		constexpr qreal real_max = 126;
@@ -1176,7 +1222,10 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	case QEvent::MouseButtonPress:
 	{
 		// Save object on rightclick if we are not remapping a button in order to allow clearing a binding
-		m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		if (const auto button = qobject_cast<QPushButton*>(object); button && button->isEnabled() && m_cfg_entries.contains(m_pad_buttons->id(button)))
+		{
+			m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		}
 		break;
 	}
 	case QEvent::MouseButtonRelease:
@@ -1535,8 +1584,6 @@ void pad_settings_dialog::ChangeHandler()
 	else
 	{
 		handler = ui->chooseHandler->currentData().toString().toStdString();
-		device = player_config->device.to_string();
-		buddy_device = player_config->buddy_device.to_string();
 	}
 
 	cfg_pad& cfg = player_config->config;
@@ -1544,6 +1591,13 @@ void pad_settings_dialog::ChangeHandler()
 	// Change and get this player's current handler.
 	if (auto& cfg_handler = player_config->handler; handler != cfg_handler.to_string())
 	{
+		// Save the config of the old handler, so the user doesn't lose their bindings.
+		// Make sure to apply the current GUI values to the config first.
+		// The device dropdown still contains the devices of the old handler, and its first entry is the one
+		// that gets selected automatically, so it doesn't have to be saved on its own.
+		ApplyCurrentPlayerConfig(m_last_player_id);
+		player_config->backup_config(ui->chooseDevice->count() > 0 ? get_pad_info(ui->chooseDevice, 0).name : std::string{});
+
 		if (!cfg_handler.from_string(handler))
 		{
 			cfg_log.error("Failed to convert input string: %s", handler);
@@ -1553,6 +1607,9 @@ void pad_settings_dialog::ChangeHandler()
 		// Initialize the new pad config's defaults
 		m_handler = pad_thread::GetHandler(player_config->handler);
 		pad_thread::InitPadConfig(cfg, cfg_handler, m_handler);
+
+		// Restore the config of the new handler if the user configured it before
+		player_config->restore_config(cfg_handler.get());
 	}
 	else
 	{
@@ -1560,6 +1617,13 @@ void pad_settings_dialog::ChangeHandler()
 	}
 
 	ensure(m_handler);
+
+	if (!is_ldd_pad)
+	{
+		// This may be a restored device if the handler changed
+		device = player_config->device.to_string();
+		buddy_device = player_config->buddy_device.to_string();
+	}
 
 	// Get the handler's currently available devices.
 	const std::vector<pad_list_entry> device_list = m_handler->list_devices();
@@ -2029,7 +2093,8 @@ void pad_settings_dialog::AddConfigFile()
 		}
 		if (CreateConfigFile(QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id)), config_name))
 		{
-			ui->chooseConfig->addItem(config_name);
+			// Insert the new configuration at its sorted position
+			ui->chooseConfig->insertItem(get_config_files().first.indexOf(config_name), config_name);
 			ui->chooseConfig->setCurrentText(config_name);
 		}
 		break;

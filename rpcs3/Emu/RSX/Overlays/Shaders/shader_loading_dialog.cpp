@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "shader_loading_dialog.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
@@ -9,7 +10,7 @@ namespace rsx
 {
 	void shader_loading_dialog::create(const std::string& msg, const std::string& title)
 	{
-		dlg = Emu.GetCallbacks().get_msg_dialog();
+		dlg = g_emu_callbacks.get_msg_dialog();
 		if (dlg)
 		{
 			dlg->type.se_normal = true;

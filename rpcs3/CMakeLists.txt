@@ -67,7 +67,6 @@ if (NOT ANDROID)
             3rdparty::wolfssl
             3rdparty::libcurl
             3rdparty::zlib
-            3rdparty::opencv
             3rdparty::fusion)
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -102,6 +101,14 @@ if (NOT ANDROID)
     if(WIN32)
         target_sources(rpcs3 PRIVATE rpcs3.rc)
         target_compile_definitions(rpcs3 PRIVATE UNICODE _UNICODE)
+
+        # Merged into the generated manifest by the MSVC linker (enables the segment heap)
+        if(MSVC)
+            target_sources(rpcs3 PRIVATE rpcs3.manifest)
+        else()
+            # MinGW linkers don't generate or merge manifests, so embed rpcs3.manifest as a resource
+            target_sources(rpcs3 PRIVATE rpcs3.mingw.rc)
+        endif()
     elseif(APPLE)
         target_sources(rpcs3 PRIVATE rpcs3.icns update_helper.sh)
         set_source_files_properties(update_helper.sh PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -182,17 +189,22 @@ if(BUILD_RPCS3_TESTS)
     target_sources(rpcs3_test
         PRIVATE
             tests/test.cpp
-            tests/test_bit_set.cpp
-            tests/test_fmt.cpp
-            tests/test_pair.cpp
-            tests/test_tuple.cpp
-            tests/test_simple_array.cpp
             tests/test_address_range.cpp
-            tests/test_sys_fs.cpp
+            tests/test_bit_set.cpp
+            tests/test_blob_detector.cpp
+            tests/test_cctype.cpp
+            tests/test_dmux_pamf.cpp
+            tests/test_fmt.cpp
+            tests/test_iso_open.cpp
+            tests/test_iso_extent.cpp
+            tests/test_pair.cpp
             tests/test_rsx_cfg.cpp
             tests/test_rsx_fp_asm.cpp
-            tests/test_dmux_pamf.cpp
+            tests/test_rsx_mm_queue.cpp
+            tests/test_simple_array.cpp
             tests/test_spu_analyser.cpp
+            tests/test_sys_fs.cpp
+            tests/test_tuple.cpp
             tests/test_types_util.cpp
     )
 
@@ -219,5 +231,16 @@ if(BUILD_RPCS3_TESTS)
             COMMAND ${CMAKE_CTEST_COMMAND} -j -VV --output-on-failure
             DEPENDS rpcs3_test
      )
+    endif()
+endif()
+
+# Udev rules, per platform
+if (BUNDLE_UDEV_RULES)
+    if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+        install(FILES ../config/udev/udev.rules
+            DESTINATION ${CMAKE_INSTALL_LIBDIR}/udev/rules.d/ RENAME 99-rpcs3.rules)
+    elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+        install(FILES ../config/udev/devd.conf
+            DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/devd/ RENAME rpcs3.conf)
     endif()
 endif()

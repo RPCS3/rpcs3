@@ -318,44 +318,60 @@ namespace rpcs3::utils
 		return fs::get_config_dir() + "screenshots/";
 	}
 
+	static std::string escape_path_component(std::string_view component)
+	{
+		if (component == ".")
+		{
+			return reinterpret_cast<const char*>(u8"．");
+		}
+
+		if (component == "..")
+		{
+			return reinterpret_cast<const char*>(u8"．．");
+		}
+
+		return vfs::escape(component, true);
+	}
+
 	std::string get_cache_dir_by_serial(const std::string& serial)
 	{
-		return get_cache_dir() + (serial == "vsh.self" ? "vsh" : serial);
+		return get_cache_dir() + escape_path_component(serial == "vsh.self" ? "vsh" : serial);
 	}
 
 	std::string get_data_dir(const std::string& serial)
 	{
-		return get_data_dir() + serial;
+		return get_data_dir() + escape_path_component(serial);
 	}
 
 	std::string get_icons_dir(const std::string& serial)
 	{
-		return get_icons_dir() + serial;
+		return get_icons_dir() + escape_path_component(serial);
 	}
 
 	std::string get_savestates_dir(const std::string& serial)
 	{
-		return get_savestates_dir() + serial;
+		return get_savestates_dir() + escape_path_component(serial);
 	}
 
 	std::string get_recordings_dir(const std::string& serial)
 	{
-		return get_recordings_dir() + serial;
+		return get_recordings_dir() + escape_path_component(serial);
 	}
 
 	std::string get_screenshots_dir(const std::string& serial)
 	{
-		return get_screenshots_dir() + serial;
+		return get_screenshots_dir() + escape_path_component(serial);
 	}
 
 	std::set<std::string> get_dir_list(const std::string& base_dir, const std::string& serial)
 	{
 		std::set<std::string> dir_list;
+		const std::string serial_prefix = serial + "_";
 
 		for (const auto& entry : fs::dir(base_dir))
 		{
-			// Check for sub folder starting with serial (e.g. BCES01118_BCES01118)
-			if (entry.is_directory && entry.name.starts_with(serial))
+			// Check for the serial or a suffixed entry (e.g. BCES01118_BCES01118)
+			if (entry.is_directory && (entry.name == serial || entry.name.starts_with(serial_prefix)))
 			{
 				dir_list.insert(base_dir + entry.name);
 			}
@@ -367,11 +383,12 @@ namespace rpcs3::utils
 	std::set<std::string> get_file_list(const std::string& base_dir, const std::string& serial)
 	{
 		std::set<std::string> file_list;
+		const std::string serial_prefix = serial + "_";
 
 		for (const auto& entry : fs::dir(base_dir))
 		{
-			// Check for files starting with serial (e.g. BCES01118_BCES01118)
-			if (!entry.is_directory && entry.name.starts_with(serial))
+			// Check for the serial or a suffixed entry (e.g. BCES01118_BCES01118)
+			if (!entry.is_directory && (entry.name == serial || entry.name.starts_with(serial_prefix)))
 			{
 				file_list.insert(base_dir + entry.name);
 			}
@@ -577,7 +594,7 @@ namespace rpcs3::utils
 			return {};
 		}
 
-		return get_custom_config_dir() + "config_" + identifier + ".yml";
+		return get_custom_config_dir() + "config_" + escape_path_component(identifier) + ".yml";
 	}
 
 	std::string get_input_config_root()
@@ -587,7 +604,7 @@ namespace rpcs3::utils
 
 	std::string get_input_config_dir(const std::string& title_id)
 	{
-		return get_input_config_root() + (title_id.empty() ? "global" : title_id) + "/";
+		return get_input_config_root() + (title_id.empty() ? "global" : escape_path_component(title_id)) + "/";
 	}
 
 	std::string get_custom_input_config_path(const std::string& title_id)
@@ -596,7 +613,7 @@ namespace rpcs3::utils
 		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
 	}
 
-	std::string get_game_content_path(game_content_type type, const std::string& serial, std::string sfo_dir, const std::string& disc_dir, const std::string& archive_path, const std::string& game_dir, bool* in_archive)
+	std::string get_game_content_path(game_content_type type, const std::string& serial, std::string sfo_dir, const std::string& disc_dir, const std::string& archive_path, bool* in_archive)
 	{
 		if (in_archive) *in_archive = false;
 
@@ -678,7 +695,7 @@ namespace rpcs3::utils
 		case game_content_type::background_picture_2:
 		{
 			// Try to find a custom background first
-			if (std::string path = fs::get_config_dir() + "/Icons/game_icons/" + serial + "/PIC1.PNG"; fs::is_file(path))
+			if (std::string path = get_icons_dir(serial) + "/PIC1.PNG"; fs::is_file(path))
 			{
 				return path;
 			}
@@ -695,13 +712,13 @@ namespace rpcs3::utils
 	{
 		const std::string sfo_dir = info.is_iso_file ? (info.game_dir.empty() ? "PS3_GAME" : info.game_dir) : rpcs3::utils::get_sfo_dir_from_game_path(info.path, info.serial);
 		bool in_archive = false;
-		std::string path = get_game_content_path(type, info.serial, sfo_dir, {}, info.is_iso_file ? info.path : "", info.game_dir, &in_archive);
+		std::string path = get_game_content_path(type, info.serial, sfo_dir, {}, info.is_iso_file ? info.path : "", &in_archive);
 		return { std::move(path), in_archive };
 	}
 
 	std::string get_game_content_path(game_content_type type)
 	{
-		return get_game_content_path(type, Emu.GetTitleID(), Emu.GetSfoDir(false), vfs::get("/dev_bdvd/PS3_GAME"), {}, {}, nullptr);
+		return get_game_content_path(type, Emu.GetTitleID(), Emu.GetSfoDir(false), vfs::get("/dev_bdvd/PS3_GAME"), {}, nullptr);
 	}
 
 	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw)

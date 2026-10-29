@@ -7,6 +7,8 @@
 
 #include "Emu/RSX/Common/tiled_dma_copy.hpp"
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace vk
 {
 	namespace surface_cache_utils
@@ -861,7 +863,7 @@ namespace vk
 
 	void render_target::texture_barrier(vk::command_buffer& cmd)
 	{
-		const auto is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
+		const auto is_framebuffer_read_only = is_depth_surface() && !REGS(ctx)->depth_write_enabled();
 		const auto supports_fbo_loops = cmd.get_command_pool().get_owner().get_framebuffer_loops_support();
 		const auto optimal_layout = supports_fbo_loops ? VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT
 			: VK_IMAGE_LAYOUT_GENERAL;
@@ -871,6 +873,12 @@ namespace vk
 			// If we have back-to-back depth-read barriers, skip subsequent ones
 			// If an actual write is happening, this flag will be automatically reset
 			return;
+		}
+
+		if (msaa_flags & rsx::surface_state_flags::require_unresolve)
+		{
+			// Emit an early write barrier here to commit any resolve operations
+			write_barrier(cmd);
 		}
 
 		vk::insert_texture_barrier(cmd, this, optimal_layout);
@@ -886,7 +894,7 @@ namespace vk
 	{
 		// This is a fall-out barrier after a cyclic ref when the same surface is still bound.
 		// In this case, we're just checking that the previous read completes before the next write.
-		const bool is_framebuffer_read_only = is_depth_surface() && !rsx::method_registers.depth_write_enabled();
+		const bool is_framebuffer_read_only = is_depth_surface() && !REGS(ctx)->depth_write_enabled();
 		if (m_cyclic_ref_tracker.can_skip() && is_framebuffer_read_only)
 		{
 			// Barrier ellided if triggered by a chain of cyclic references with no actual writes

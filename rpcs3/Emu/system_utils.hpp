@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include <string>
+#include <string_view>
 #include <set>
 #include <vector>
 
@@ -79,6 +80,13 @@ namespace rpcs3::utils
 	std::string get_rap_file_path(const std::string_view& rap);
 	bool verify_c00_unlock_edat(const std::string_view& content_id, bool fast = false);
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id = "");
+
+	// Check whether "name" is the name of an additional disc game directory (e.g. "PS3_GM01"), the counterpart of "PS3_GAME".
+	// NOTE: equivalent to the "^PS3_GM[[:digit:]]{2}$" regular expression, without building one for each checked name
+	inline bool is_ps3_gm_dir_name(std::string_view name)
+	{
+		return name.size() == 8 && name.starts_with("PS3_GM") && name[6] >= '0' && name[6] <= '9' && name[7] >= '0' && name[7] <= '9';
+	}
 
 	std::string get_custom_config_dir();
 	std::string get_custom_config_path(const std::string& identifier);

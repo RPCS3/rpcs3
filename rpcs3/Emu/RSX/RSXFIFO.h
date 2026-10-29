@@ -126,13 +126,32 @@ namespace rsx
 			inline flatten_op test(register_pair& command);
 		};
 
+		// A context's virtual FIFO channel while the puller runs another one.
+		// Real hardware construct. PFIFO keeps these in RAMFC.
+		struct channel_state
+		{
+			RsxDmaControl* ctrl = nullptr;
+			u32 dma_address = 0;
+
+			// Where the puller stopped. Channels only switch between packets.
+			u32 get = 0;
+
+			// Call stack and rollback point
+			u32 ret_addr = RSX_CALL_STACK_EMPTY;
+			u32 saved_ret_addr = RSX_CALL_STACK_EMPTY;
+			u32 restore_point = 0;
+
+			state puller_state = state::running;
+			flattening_helper flattener;
+		};
+
 		class FIFO_control
 		{
 		private:
 			mutable rsx::thread* m_thread;
 			RsxDmaControl* m_ctrl = nullptr;
 			const rsx::rsx_iomap_table* m_iotable;
-			u32 m_internal_get = 0;
+			u32 m_fifo_pos = 0;
 
 			u32 m_memwatch_addr = 0;
 			u32 m_memwatch_cmp = 0;
@@ -142,6 +161,7 @@ namespace rsx
 			u32 m_remaining_commands = 0;
 			u32 m_args_ptr = 0;
 			u32 m_cmd = ~0u;
+			u32 m_next_cmd_entry = ~0u;
 
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;
@@ -156,14 +176,17 @@ namespace rsx
 			std::pair<bool, u32> fetch_u32(u32 addr);
 			void invalidate_cache() { m_cache_size = 0; }
 
-			u32 get_pos() const { return m_internal_get; }
+			u32 get_pos() const { return m_fifo_pos; }
 			u32 last_cmd() const { return m_cmd; }
 			void sync_get() const;
 			std::span<const u32> get_current_arg_ptr(u32 length_in_words) const;
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
-			void restore_state(u32 cmd, u32 count);
-			void inc_get(bool wait);
+			void restore_state(u32 cmd, u32 count, u32 position);
 
+			// Channel switch. The caller is expected to manually set GET afterwards.
+			void set_channel(RsxDmaControl* ctrl);
+
+			void inc_get(bool wait);
 			void set_get(u32 get, u32 spin_cmd = 0);
 			void abort();
 

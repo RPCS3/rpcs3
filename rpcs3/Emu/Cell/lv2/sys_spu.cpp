@@ -2,6 +2,7 @@
 #include "sys_spu.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
@@ -11,6 +12,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "sys_interrupt.h"
@@ -95,7 +97,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::reserve_map(vm::user64k, 0, 0x10000000)->alloc(mem_size));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(mem_size, 0x10000));
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -116,7 +118,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	this->nsegs = 0;
 	this->segs = vm::null;
 
-	vm::page_protect(segs.addr(), utils::align(mem_size, 4096), 0, 0, vm::page_writable);
+	vm::page_protect(segs.addr(), utils::align(mem_size, 0x10000), 0, 0, vm::page_writable);
 	return true;
 }
 
@@ -622,7 +624,7 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 		return CELL_ESRCH;
 	}
 
-	ensure(vm::dealloc(handle->segs.addr(), vm::user64k));
+	ensure(vm::dealloc(handle->segs.addr()));
 	return CELL_OK;
 }
 
@@ -867,7 +869,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	// alloc_hidden indicates falloc to allocate page with no access rights in base memory
 	auto& spu = group->threads[inited];
-	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, static_cast<u64>(vm::page_size_64k) | static_cast<u64>(vm::alloc_hidden)));
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, static_cast<u64>(vm::block_size_64k) | static_cast<u64>(vm::alloc_hidden)));
 	spu->map_ls(*spu->shm, spu->ls);
 
 	group->args[inited] = {args.arg1, args.arg2, args.arg3, args.arg4};
@@ -1198,6 +1200,71 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	return CELL_OK;
 }
 
+// lv2 leaves its loader and arguments in LS, image segments only overwrite the ranges they cover
+static void write_spu_thread_loader(u8* ls, const std::array<u64, 4>& args)
+{
+	using namespace spu_instructions;
+
+	std::memset(ls, 0, SPU_LS_SIZE);
+
+	const auto code = reinterpret_cast<be_t<u32>*>(ls);
+	u32 pos = 0;
+
+	// load r3-r6 from the argument quadwords, signal the PPU and wait
+	for (u32 i = 0; i < 4; i++)
+	{
+		code[pos++] = ILA(0, 0x30 + i * 0x10);
+		code[pos++] = LQD(3 + i, 0, 0);
+	}
+
+	code[pos++] = XOR(0, 0, 0);
+	code[pos++] = WRCH(SPU_WrOutMbox, 0);
+	code[pos++] = NOP();
+	code[pos++] = BR(0);
+
+	// arguments occupy the first half of each quadword
+	const auto arg_qwords = reinterpret_cast<be_t<u64>*>(ls + 0x30);
+
+	for (u32 i = 0; i < 4; i++)
+	{
+		arg_qwords[i * 2] = args[i];
+	}
+
+	// clear r25-r120
+	pos = 0x70 / 4;
+
+	for (u32 r = 25; r < 121; r += 2)
+	{
+		code[pos++] = XOR(r, r, r);
+		code[pos++] = ORX(r + 1, 0);
+	}
+
+	// clear r121-r127 and LS from 0x300 up, 256 bytes per iteration from the top, then stop
+	code[pos++] = ILA(127, 0x300);
+	code[pos++] = ORX(121, 0);
+	code[pos++] = ILA(1, 0x3ff00);
+	code[pos++] = ORX(122, 0);
+	code[pos++] = XOR(123, 123, 123);
+	code[pos++] = ORX(124, 0);
+	code[pos++] = XOR(125, 125, 125);
+	code[pos++] = ORX(126, 0);
+	code[pos++] = SF(127, 127, 1);
+	code[pos++] = HBRA(0x54, 0x220);
+	code[pos++] = NOP();
+	code[pos++] = LNOP();
+	code[pos++] = CGTI(1, 127, 0);
+
+	for (u32 offset = 0x300; offset < 0x400; offset += 0x10)
+	{
+		code[pos++] = STQD(0, 127, offset);
+	}
+
+	code[pos++] = AI(127, 127, -0x100);
+	code[pos++] = BRNZ(1, -0x48);
+	code[pos++] = XOR(127, 127, 127);
+	code[pos++] = STOP(0x1004);
+}
+
 error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 {
 	ppu.state += cpu_flag::wait;
@@ -1249,6 +1316,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->lv2_id >> 24];
 			auto& img = group->imgs[thread->lv2_id >> 24];
 
+			write_spu_thread_loader(thread->ls, args);
 			sys_spu_image::deploy(thread->ls, std::span(img.second.data(), img.second.size()), group->stop_count < 5);
 
 			thread->cpu_init();
@@ -1579,7 +1647,12 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	for (auto& thread : group->threads)
 	{
-		while (thread && group->running && thread->state & cpu_flag::wait)
+		if (!group->running)
+		{
+			break;
+		}
+
+		if (thread && thread->state & cpu_flag::wait)
 		{
 			thread_ctrl::notify(*thread);
 
@@ -1949,24 +2022,7 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 		return CELL_ESRCH;
 	}
 
-	spu_channel_op_state state{};
-	{
-		std::lock_guard lock(group->mutex);
-
-		state = thread->ch_in_mbox.push(value, true);
-	}
-
-	if (!state.op_done)
-	{
-		ppu.state += cpu_flag::again;
-		return {};
-	}
-
-	if (state.notify)
-	{
-		thread->ch_in_mbox.notify();
-	}
-
+	thread->push_in_mbox(value);
 	return CELL_OK;
 }
 
@@ -2484,7 +2540,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 	}
 
 	const auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index);
-	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::block_size_64k));
 	spu->map_ls(*spu->shm, spu->ls);
 
 	spu_thread::g_raw_spu_id[index] = idm::last_id();
@@ -2543,7 +2599,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 
 	const auto thread = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index, true);
 
-	ensure(vm::get(vm::spu)->falloc(thread->vm_offset(), SPU_LS_SIZE, &thread->shm, vm::page_size_64k));
+	ensure(vm::get(vm::spu)->falloc(thread->vm_offset(), SPU_LS_SIZE, &thread->shm, vm::block_size_64k));
 	thread->map_ls(*thread->shm, thread->ls);
 
 	thread->gpr[3] = v128::from64(0, arg1);

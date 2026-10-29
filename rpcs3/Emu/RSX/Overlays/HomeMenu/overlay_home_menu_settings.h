@@ -3,7 +3,7 @@
 #include "overlay_home_menu_page.h"
 #include "../overlay_tabs.h"
 
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Utilities/Config.h"
 
 namespace rsx
@@ -60,7 +60,7 @@ namespace rsx
 						{
 							rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
 							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
+							g_emu_callbacks.update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}
@@ -146,7 +146,7 @@ namespace rsx
 
 							if (next_value != previous)
 							{
-								Emu.GetCallbacks().update_emu_settings();
+								g_emu_callbacks.update_emu_settings();
 								if (m_config_changed)
 								{
 									*m_config_changed = true;
@@ -204,7 +204,7 @@ namespace rsx
 						{
 							rsx_log.notice("User toggled signed slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
 							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
+							g_emu_callbacks.update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}
@@ -258,7 +258,7 @@ namespace rsx
 						{
 							rsx_log.notice("User toggled unsigned slider in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
 							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
+							g_emu_callbacks.update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}
@@ -303,7 +303,7 @@ namespace rsx
 						{
 							rsx_log.notice("User toggled float slider in '%s'. Setting '%s' to %.2f", title, setting->get_name(), value);
 							setting->set(value);
-							Emu.GetCallbacks().update_emu_settings();
+							g_emu_callbacks.update_emu_settings();
 							if (m_config_changed) *m_config_changed = true;
 							refresh();
 						}

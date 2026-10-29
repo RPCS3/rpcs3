@@ -9,22 +9,23 @@ AVVER="${COMM_TAG}-${COMM_COUNT}"
 export LVER="${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}"
 echo "AVVER=$AVVER" >> .ci/ci-vars.env
 
-export HOMEBREW_NO_AUTO_UPDATE=1
-export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
-export HOMEBREW_NO_ENV_HINTS=1
-export HOMEBREW_NO_INSTALL_CLEANUP=1
-brew install -f --overwrite --quiet ccache "llvm@$LLVM_COMPILER_VER"
-brew link -f --overwrite --quiet "llvm@$LLVM_COMPILER_VER"
-brew install -f --overwrite --quiet googletest opencv@4 sdl3 vulkan-headers vulkan-loader molten-vk
-brew unlink --quiet ffmpeg fmt qtbase qtsvg qtdeclarative protobuf || true
+# Due to issues with getting this running under MacPorts, I'm reluctantly going to let this depend on brew for now.
+if [ "$(arch)" = "arm64" ]; then
+  git clone https://gitlab.freedesktop.org/mesa/mesa.git kosmickrisp; cd kosmickrisp
+  brew install meson spirv-llvm-translator spirv-tools
+  pip3 install mako packaging pyyaml --break-system-packages
+  export PATH_OLD="$PATH"
+  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+  meson setup build --prefix=/opt/homebrew --buildtype=release -Dplatforms=macos -Dvulkan-drivers=kosmickrisp -Dgallium-drivers= -Dopengl=false -Dzstd=disabled
+  ninja -C build; cd ../
+  export PATH="$PATH_OLD"
+fi
+  
+# Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
+sudo port install "clang-$LLVM_COMPILER_VER"
 
 export CXX=clang++
 export CC=clang
-
-export BREW_PATH;
-BREW_PATH="$(brew --prefix)"
-export BREW_BIN="$BREW_PATH/bin"
-export BREW_SBIN="$BREW_PATH/sbin"
 
 export WORKDIR;
 WORKDIR="$(pwd)"
@@ -53,25 +54,17 @@ cd "$WORKDIR"
 ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
 
 export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN"
-export SDL3_DIR="$BREW_PATH/opt/sdl3/lib/cmake/SDL3"
+export SDL3_DIR="/opt/local/lib/cmake/SDL3"
+export PATH="/opt/local/libexec/llvm-$LLVM_COMPILER_VER/bin:/$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:/opt/local/bin:/opt/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
+export LDFLAGS="-L/opt/local/lib -Wl,-rpath,/opt/local/lib"
+export VULKAN_SDK="/opt/local"
+export LLVM_DIR="/opt/local/libexec/llvm-$LLVM_COMPILER_VER"
 
-export PATH="$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/bin:$PATH"
-export LDFLAGS="-L$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/c++ -L$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/unwind -lunwind"
-
-export VULKAN_SDK
-VULKAN_SDK="$BREW_PATH/opt/molten-vk"
-ln -s "$BREW_PATH/opt/vulkan-loader/lib/libvulkan.dylib" "$VULKAN_SDK/lib/libvulkan.dylib"
-
-export LLVM_DIR
-LLVM_DIR="$BREW_PATH/opt/llvm@$LLVM_COMPILER_VER"
 # Pull all the submodules except some
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/opencv/ && !/SDL/ && !/feralinteractive/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/libsdl-org/ && !/feralinteractive/ && !/curl/ && !/zlib/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
-# The below should be uncommented once bugs with Qt 6 QListWidgets when using the OS 26 visual style are resolved.
-# sudo xcode-select -switch /Applications/Xcode_26.3.app/Contents/Developer
-
 cmake .. \
     -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
     -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
@@ -88,10 +81,9 @@ cmake .. \
     -DUSE_PRECOMPILED_HEADERS=OFF \
     -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_SDL=ON \
-    -DUSE_SYSTEM_OPENCV=ON \
     -G Ninja
 
-ninja -j4; build_status=$?;
+ninja; build_status=$?;
 
 cd ..
 

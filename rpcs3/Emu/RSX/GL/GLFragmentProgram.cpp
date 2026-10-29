@@ -3,8 +3,8 @@
 
 #include "Emu/system_config.h"
 #include "GLCommonDecompiler.h"
+#include "GLHelpers.h"
 #include "../Program/GLSLCommon.h"
-#include "../RSXThread.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {
@@ -87,6 +87,11 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 		},
 		gl::get_varying_register_location
 	);
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+	{
+		OS << "layout(location=" << gl::get_varying_register_location("depth_range") << ") in flat vec2 depth_range;\n";
+	}
 }
 
 void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
@@ -169,7 +174,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
-		const auto frag_depth_type = (m_prog.ctrl & RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER)
+		const auto frag_depth_type = (m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED)
 			? "sampler2DMS"
 			: "sampler2D";
 
@@ -228,7 +233,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
-	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
+	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare || device_props.emulated_depth_storage;
 
 	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
@@ -249,7 +254,10 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_alpha_kill = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL);
 	m_shader_props.require_color_format_convert = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT);
 	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
-	m_shader_props.depth_buffer_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER);
+	m_shader_props.ROP_output_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
+	m_shader_props.ROP_emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+	m_shader_props.ROP_depth_export = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) && m_shader_props.ROP_emulate_depth_range;
+	m_shader_props.emulated_depth_storage = device_props.emulated_depth_storage;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -344,7 +352,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	::glsl::insert_rop_init(OS);
+	::glsl::insert_rop_init(OS, m_prog.mrt_buffers_count);
 
 	OS << "\n" << "	fs_main();\n\n";
 
@@ -372,6 +380,8 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			OS << "	// gl_FragDepth = r1.z;\n";
 		}
 	}
+
+	glsl::insert_fragment_epilogue(OS, m_shader_props);
 
 	OS << "}\n";
 }
@@ -401,6 +411,7 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 		decompiler.device_props.has_low_precision_rounding = driver_caps.vendor_NVIDIA;
 	}
 
+	decompiler.device_props.emulated_depth_storage = gl::emulate_extended_depth_range();
 	decompiler.Task();
 
 	constant_offsets = std::move(decompiler.properties.constant_offsets);

@@ -45,8 +45,14 @@ namespace vk
 			return query.ready;
 		}
 		default:
-			die_with_error(error);
-			return false;
+			if (!die_with_error(error))
+				return false;
+
+			// The query will never complete. Report everything as visible, as if there was no host query.
+			query.any_passed = true;
+			query.ready = true;
+			query.data = umax;
+			return true;
 		}
 	}
 
@@ -82,6 +88,7 @@ namespace vk
 			if (m_query_pool_cache.size() > 0)
 			{
 				m_current_query_pool = std::move(m_query_pool_cache.front());
+				m_current_query_pool->reset_refs();
 				m_query_pool_cache.pop_front();
 			}
 			else

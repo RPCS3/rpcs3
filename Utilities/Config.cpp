@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "util/types.hpp"
 #include "util/yaml.hpp"
+#include "util/cctype.hpp"
 
 #include <charconv>
 
@@ -389,6 +390,12 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::BeginMap;
 		for (const auto& node : static_cast<const node&>(rhs).get_nodes())
 		{
+			// Skip nodes without entries. Only nodes with dynamic entries can be empty, and they hold nothing to save.
+			if (node->get_type() == type::node && static_cast<const class node*>(node)->get_nodes().empty())
+			{
+				continue;
+			}
+
 			out << YAML::Key << node->get_name();
 			out << YAML::Value;
 			encode(out, *node);
@@ -488,11 +495,12 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 		{
 			if (!pair.first.IsScalar()) continue;
 
-			// Find the key among existing nodes
+			// Find the key among existing nodes. Nodes with dynamic entries may create it on the fly.
 			const auto& nodes = static_cast<node&>(rhs).get_nodes();
 			const auto it = std::find_if(nodes.cbegin(), nodes.cend(), [&pair](const auto& node) { return ensure(node)->get_name() == pair.first.Scalar(); });
+			_base* entry = it != nodes.cend() ? *it : static_cast<node&>(rhs).create_node(pair.first.Scalar()); // NOTE: create_node invalidates the iterators above
 
-			if (it == nodes.cend())
+			if (!entry)
 			{
 				if (strict)
 				{
@@ -502,7 +510,7 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 				continue;
 			}
 
-			if (!decode(pair.second, *ensure(*it), dynamic, strict) && strict)
+			if (!decode(pair.second, *entry, dynamic, strict) && strict)
 			{
 				success = false;
 			}
@@ -699,6 +707,14 @@ void cfg::node::restore_defaults()
 	}
 }
 
+void cfg::node::remove_node(const _base* node)
+{
+	if (const auto it = std::find(m_nodes.cbegin(), m_nodes.cend(), node); it != m_nodes.cend())
+	{
+		m_nodes.erase(it);
+	}
+}
+
 bool cfg::node::validate(std::string_view value)
 {
 	auto [result, error] = yaml_load(std::string(value));
@@ -710,6 +726,26 @@ bool cfg::node::validate(std::string_view value)
 
 	cfg_log.error("Failed to load node: %s", error);
 	return false;
+}
+
+bool cfg::_bool::from_string(std::string_view value, bool /*dynamic*/)
+{
+	if (value.size() != 4 && value.size() != 5)
+	{
+		return false;
+	}
+
+	char copy[5];
+	std::transform(value.begin(), value.end(), std::begin(copy), utils::tolower<char>);
+
+	if (value.size() == 5 && std::string_view{copy, 5} == "false")
+		m_value = false;
+	else if (value.size() == 4 && std::string_view{copy, 4} == "true")
+		m_value = true;
+	else
+		return false;
+
+	return true;
 }
 
 std::string cfg::map_entry::get_value(std::string_view key)

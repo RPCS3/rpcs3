@@ -265,7 +265,7 @@ namespace vk
 
 	bool vmm_handle_memory_pressure(rsx::problem_severity severity)
 	{
-		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_renderer()))
+		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_render_backend()))
 		{
 			return vkthr->on_vram_exhausted(severity);
 		}

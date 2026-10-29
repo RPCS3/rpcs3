@@ -350,14 +350,15 @@ void kernel_explorer::update()
 		{
 			auto& mem = static_cast<lv2_memory&>(obj);
 			const f64 size_mb = mem.size * 1. / (1024 * 1024);
+			const std::string container = mem.ct ? fmt::format("%s", mem.ct->id) : "System";
 
 			if (mem.pshared)
 			{
-				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.ct->id, mem.key)));
+				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, container, mem.key)));
 				break;
 			}
 
-			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", mem.ct->id, +mem.counter)));
+			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", container, +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:
@@ -837,30 +838,36 @@ void kernel_explorer::update()
 			break;
 		}
 
-		const auto base = rsx->dma_address;
-
-		if (!base)
+		// Safety - read the context data under lock to avoid potential UAF crashes
+		u32 base = 0;
+		u32 handlers = 0;
+		decltype(rsx->iomap_table) table;
+		decltype(rsx->get_context()->display_buffers) dbs;
+		decltype(rsx->zculls) zcs;
 		{
-			break;
+			reader_lock lock(rsx->sys_rsx_mtx);
+
+			const auto lv2_ctx = rsx->find_context(0x5555'5555);
+			base = lv2_ctx ? lv2_ctx->fifo.dma_address : 0;
+
+			if (!base)
+			{
+				break;
+			}
+
+			handlers = vm::_ref<RsxDriverInfo>(lv2_ctx->fw.driver_info).handlers;
+			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
+			std::memcpy(&dbs, lv2_ctx->display_buffers, sizeof(dbs));
+			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));
 		}
 
 		const QString branch_name = "RSX Context 0x55555555";
 		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
-			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, +vm::_ref<RsxDriverInfo>(rsx->driver_info).handlers)));
+			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
 		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
 		QTreeWidgetItem* db_tree = add_volatile_node(rsx_tree, tr("Display Buffers"));
-
-		decltype(rsx->iomap_table) table;
-		decltype(rsx->display_buffers) dbs;
-		decltype(rsx->zculls) zcs;
-		{
-			reader_lock lock(rsx->sys_rsx_mtx);
-			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
-			std::memcpy(&dbs, rsx->display_buffers, sizeof(dbs));
-			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));
-		}
 
 		for (u32 i = 0, size_block = 0, first_ea = 0, first_io = 0;;)
 		{
@@ -916,7 +923,7 @@ void kernel_explorer::update()
 			if (zc.bound)
 			{
 				add_leaf(zc_tree, QString::fromStdString(fmt::format("O: %07x, W: %u, H: %u, Zformat: 0x%x, AAformat: 0x%x, Dir: 0x%x, sFunc: 0x%x, sRef: %02x, sMask: %02x"
-					, zc.offset, zc.height, zc.width, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
+					, zc.offset, zc.width, zc.height, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
 			}
 		}
 
@@ -925,7 +932,7 @@ void kernel_explorer::update()
 			if (db.valid())
 			{
 				add_leaf(db_tree, QString::fromStdString(fmt::format("Offset: %07x, Width: %u, Height: %u, Pitch: %u"
-					, db.offset, db.height, db.width, db.pitch)));
+					, db.offset, db.width, db.height, db.pitch)));
 			}
 		}
 	}

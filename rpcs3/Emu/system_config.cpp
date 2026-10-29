@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "system_config.h"
 
-#include "util/sysinfo.hpp"
-
 #include <random>
 
 cfg_root g_cfg{};

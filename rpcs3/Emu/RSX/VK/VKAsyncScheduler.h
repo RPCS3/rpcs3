@@ -3,6 +3,7 @@
 #include "vkutils/commands.h"
 #include "vkutils/sync.h"
 #include "Utilities/mutex.h"
+#include "Emu/system_config_types.h"
 
 #define VK_MAX_ASYNC_COMPUTE_QUEUES 256
 
@@ -46,6 +47,9 @@ namespace vk
 	public:
 		AsyncTaskScheduler(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency);
 		~AsyncTaskScheduler();
+
+		// Reuse the scheduler with a new renderer.
+		void reset(vk_gpu_scheduler_mode mode, const VkDependencyInfoKHR& queue_dependency);
 
 		command_buffer* get_current();
 		event* get_primary_sync_label();

@@ -1,53 +1,31 @@
 #include "stdafx.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/rsx_methods.h"
 #include "RSXContext.h"
 
 namespace rsx
 {
-	GCM_tile_reference GCM_context::get_tiled_memory_region(const utils::address_range32& range) const
+	context::context(u32 id, thread* owner)
+		: rsxthr(owner)
+		, m_id(id)
+		, m_owned_register_state(std::make_unique<rsx_state>())
 	{
-		if (rsx::get_location(range.start) != CELL_GCM_LOCATION_MAIN)
-		{
-			// Local mem can be tiled but access is transparent from the memory controller
-			return {};
-		}
+		register_state = m_owned_register_state.get();
+		register_state->init();
 
-		if (!g_cfg.video.handle_tiled_memory)
-		{
-			// Tiled memory sections will simply be ignored if the option is disabled.
-			// TODO: This option should never be needed.
-			return {};
-		}
+		core.init(this);
+		draw_processor.init(this);
 
-		for (const auto& tile : tiles)
-		{
-			if (!tile.bound || tile.location != CELL_GCM_LOCATION_MAIN)
-			{
-				continue;
-			}
-
-			const auto tile_base_address = iomap_table.get_addr(tile.offset);
-			const auto tile_range = utils::address_range32::start_length(tile_base_address, tile.size);
-
-			// NOTE: Some games will use contiguous ranges over multiple tiles.
-			// For such reasons, checking range.inside(tile_range) is not good enough.
-			// Instead, check for the first tile in the sequence.
-			if (range.overlaps(tile_range) && tile_range.overlaps(range.start))
-			{
-				ensure(tile_base_address + 1);
-				return { .base_address = tile_base_address, .tile = &tile };
-			}
-		}
-
-		return {};
+		mark_all_dirty();
 	}
 
-	utils::address_range32 GCM_tile_reference::tile_align(const utils::address_range32& range) const
+	void context::mark_all_dirty()
 	{
-		const auto alignment = 64 * tile->pitch;
-		const u32 start_offset = rsx::align_down2(range.start - base_address, alignment);
-		const u32 end_offset = rsx::align2(range.end - base_address + 1, alignment);
-
-		return utils::address_range32::start_length(start_offset + base_address, end_offset - start_offset);
+		graphics_state.set(pipeline_state::all_dirty);
+		draw_state.dirty.set(draw_state_t::group::all);
+		draw_state.pending.set(draw_state_t::group::all);
+		textures.fragment_textures_dirty = (1u << limits::fragment_textures_count) - 1;
+		textures.vertex_textures_dirty = (1u << limits::vertex_textures_count) - 1;
 	}
+
+	context::~context() = default;
 }

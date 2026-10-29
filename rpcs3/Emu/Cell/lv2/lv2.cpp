@@ -51,6 +51,7 @@
 #include "sys_storage.h"
 #include "sys_uart.h"
 #include "sys_crypto_engine.h"
+#include "sys_bluetooth.h"
 
 #include <algorithm>
 #include <optional>
@@ -59,6 +60,7 @@
 #include "util/tsc.hpp"
 #include "util/sysinfo.hpp"
 #include "util/init_mutex.hpp"
+#include "util/cctype.hpp"
 
 #if defined(ARCH_X64)
 #ifdef _MSC_VER
@@ -71,11 +73,6 @@
 
 
 extern std::string ppu_get_syscall_name(u64 code);
-
-namespace rsx
-{
-	void set_rsx_yield_flag() noexcept;
-}
 
 using spu_rdata_t = decltype(spu_thread::rdata);
 extern u32 compute_rdata_hash32(const spu_rdata_t& _src);
@@ -622,7 +619,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	uns_func,                                               //576 (0x240)  UNS
 	null_func,//BIND_SYSC(sys_pad_manager_...),             //577 (0x241)  ROOT  PM
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //578 (0x242)
-	null_func,//BIND_SYSC(sys_bluetooth_aud_serial_...),    //579 (0x243)
+	BIND_SYSC(sys_bluetooth_aud_serial_get_event_579),      //579 (0x243)
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //580 (0x244)  ROOT
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //581 (0x245)  ROOT
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //582 (0x246)  ROOT
@@ -976,6 +973,7 @@ enum CellAudioError : u32;
 enum CellAudioOutError : u32;
 enum CellAudioInError : u32;
 
+enum CellVdecError : u32;
 enum CellVideoOutError : u32;
 
 enum CellSpursCoreError : u32;
@@ -983,6 +981,7 @@ enum CellSpursPolicyModuleError : u32;
 enum CellSpursTaskError : u32;
 enum CellSpursJobError : u32;
 enum CellSyncError : u32;
+enum CellSync2Error : u32;
 
 enum CellGameError : u32;
 enum CellSysutilError : u32;
@@ -998,6 +997,9 @@ enum CellKbError : u32;
 enum CellPadError : u32;
 enum CellMouseError : u32;
 
+enum CellGcmError : u32;
+enum CellRescError : u32;
+
 enum SceNpTrophyError : u32;
 enum SceNpError : u32;
 
@@ -1006,16 +1008,26 @@ constexpr auto formatter_of = std::make_pair(EnumMin, &fmt_class_string<E>::form
 
 const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
 {
-	formatter_of<0x80610000, CellAdecError>,
-	formatter_of<0x80612100, CellAdecError>,
 	formatter_of<0x80610300, CellAtracError>,
 	formatter_of<0x80610b00, CellAtracMultiError>,
 	formatter_of<0x80310700, CellAudioError>,
 	formatter_of<0x8002b240, CellAudioOutError>,
 	formatter_of<0x8002b260, CellAudioInError>,
 	formatter_of<0x8002b220, CellVideoOutError>,
+	formatter_of<0x80610100, CellVdecError>,
+
+	formatter_of<0x80610000, CellAdecError>,
+	formatter_of<0x80612000, CellAdecError>,
+	formatter_of<0x80612100, CellAdecError>,
+	formatter_of<0x80612400, CellAdecError>,
+	formatter_of<0x80612500, CellAdecError>,
+	formatter_of<0x80612700, CellAdecError>,
+	formatter_of<0x80612b00, CellAdecError>,
+	formatter_of<0x80612e00, CellAdecError>,
 
 	formatter_of<0x80410100, CellSyncError>,
+	formatter_of<0x80410C00, CellSync2Error>,
+
 	formatter_of<0x80410700, CellSpursCoreError>,
 	formatter_of<0x80410800, CellSpursPolicyModuleError>,
 	formatter_of<0x80410900, CellSpursTaskError>,
@@ -1035,8 +1047,31 @@ const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
 	formatter_of<0x80121100, CellPadError>,
 	formatter_of<0x80121200, CellMouseError>,
 
+	formatter_of<0x80210000, CellGcmError>,
+	formatter_of<0x80210300, CellRescError>,
+
 	formatter_of<0x80022900, SceNpTrophyError>,
 	formatter_of<0x80029500, SceNpError>,
+	formatter_of<0x80023b00, SceNpError>,
+	formatter_of<0x80028f00, SceNpError>,
+	formatter_of<0x80029400, SceNpError>,
+	formatter_of<0x80029600, SceNpError>,
+	formatter_of<0x80029700, SceNpError>,
+	formatter_of<0x80029d00, SceNpError>,
+	formatter_of<0x80029e00, SceNpError>,
+	formatter_of<0x8002a000, SceNpError>,
+	formatter_of<0x8002a100, SceNpError>,
+	formatter_of<0x8002a200, SceNpError>,
+	formatter_of<0x8002a300, SceNpError>,
+	formatter_of<0x8002a400, SceNpError>,
+	formatter_of<0x8002a500, SceNpError>,
+	formatter_of<0x8002a600, SceNpError>,
+	formatter_of<0x8002a700, SceNpError>,
+	formatter_of<0x8002a800, SceNpError>,
+	formatter_of<0x8002aa00, SceNpError>,
+	formatter_of<0x8002ab00, SceNpError>,
+	formatter_of<0x8002af00, SceNpError>,
+	formatter_of<0x8002e500, SceNpError>,
 };
 
 template <>
@@ -1341,7 +1376,7 @@ std::string lv2_obj::name64(u64 name_u64)
 	// NTS string, ignore invalid/newline characters
 	// Example: "lv2\n\0tx" will be printed as "lv2"
 	std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
-	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
+	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !utils::isprint(c); }), str.end());
 
 	return str;
 }
@@ -1820,18 +1855,22 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// While signaling to the other hardware thread to execute the caller's code.
 	// Resulting in a delay to the caller after such thread is signaled
 
-	if (current_ppu && changed_queue && has_free_hw_thread_space)
+	if (current_ppu && cpu != current_ppu && changed_queue && has_free_hw_thread_space)
 	{
 		if (current_ppu->prio.load().prio > lowest_new_priority)
 		{
-			const bool is_create_thread = current_ppu->gpr[11] == 0x35;
+			const bool is_create_thread = current_ppu->current_function && current_ppu->gpr[11] == 0x35;
 
 			// When not being set to All timers - activate only for sys_ppu_thread_start
 			if (is_create_thread || g_cfg.core.sleep_timers_accuracy == sleep_timers_accuracy_level::_all_timers)
 			{
 				if (!current_ppu->state.test_and_set(cpu_flag::yield) || current_ppu->hw_sleep_time != 0)
 				{
-					current_ppu->hw_sleep_time += (is_create_thread ? 51 : 35);
+#ifdef _WIN32
+					current_ppu->hw_sleep_time += (is_create_thread ? 600 : 200);
+#else
+					current_ppu->hw_sleep_time += 100;
+#endif
 				}
 				else
 				{
@@ -1977,7 +2016,7 @@ void lv2_obj::schedule_all(u64 current_time)
 			{
 				s_last_yield_tsc = tsc;
 				g_lv2_preempts_taken.release(g_lv2_preempts_taken.load() + 1); // Has a minor race but performance is more important
-				rsx::set_rsx_yield_flag();
+				rsx::yield_rsx_ctx_thread();
 			}
 		}
 	}
@@ -2296,7 +2335,7 @@ void lv2_obj::notify_all() noexcept
 	u32 notifies[total_waiters]{};
 	u64 notifies_time[total_waiters]{};
 
-	// There may be 6 waiters, but checking them all may be performance expensive 
+	// There may be 6 waiters, but checking them all may be performance expensive
 	// Instead, check 2 at max, but use the CPU ID index to tell which index to start checking so the work would be distributed across all threads
 
 	atomic_t<u64, 128>* range_lock = nullptr;

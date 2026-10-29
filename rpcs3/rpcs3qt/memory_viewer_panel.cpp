@@ -7,7 +7,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include <QVBoxLayout>
@@ -27,6 +27,7 @@
 
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 #include "debugger_frame.h"
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -755,7 +756,11 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 
 		for (u32 i = addr; i >> 20 <= (addr + size - 1) >> 20; i += 0x100000)
 		{
-			const u32 temp = rsx::get_address(i - (i >= local_mem ? local_mem : 0), i < local_mem ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL, true);
+			const u32 temp = rsx::get_address(
+				rsx::get_current_renderer()->get_context(),
+				i - (i >= local_mem ? local_mem : 0),
+				i < local_mem ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL,
+				true);
 
 			if (!temp)
 			{
@@ -876,7 +881,7 @@ void memory_viewer_panel::ShowMemory()
 
 				for (auto& ch : str)
 				{
-					if (!std::isprint(static_cast<u8>(ch))) ch = '.';
+					if (!utils::isprint(ch)) ch = '.';
 				}
 
 				t_mem_ascii_str += QString::fromStdString(std::move(str));

@@ -763,7 +763,7 @@ void save_manager_dialog::text_changed(const QString& text)
 		if (is_hidden != hide)
 		{
 			m_list->setRowHidden(i, hide);
-			new_row_visible = !hide;
+			new_row_visible |= !hide;
 		}
 	}
 

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../rsx_utils.h"
 #include "simple_array.hpp"
 #include "TextureUtils.h"
+#include "Emu/RSX/RSXThread.h"
+#include "../Utils/rsx_utils.h"
 
 namespace rsx
 {
@@ -49,16 +50,10 @@ namespace rsx
 	struct blit_op_result
 	{
 		bool succeeded = false;
-		u32 real_dst_address = 0;
-		u32 real_dst_size = 0;
+		utils::address_range32 dst_range{};
 
 		blit_op_result(bool success) : succeeded(success)
 		{}
-
-		inline address_range32 to_address_range() const
-		{
-			return address_range32::start_length(real_dst_address, real_dst_size);
-		}
 	};
 
 	struct blit_target_properties
@@ -167,6 +162,7 @@ namespace rsx
 		}
 
 		static inline blit_target_properties get_optimal_blit_target_properties(
+			const rsx::context* ctx,
 			bool src_is_render_target,
 			address_range32 dst_range,
 			u32 dst_pitch,
@@ -179,10 +175,9 @@ namespace rsx
 			{
 				// Check if this is a blit to the output buffer
 				// TODO: This can be used to implement reference tracking to possibly avoid downscaling
-				const auto renderer = rsx::get_current_renderer();
-				for (u32 i = 0; i < renderer->display_buffers_count; ++i)
+				for (u32 i = 0; i < ctx->display_buffers_count; ++i)
 				{
-					const auto& buffer = renderer->display_buffers[i];
+					const auto& buffer = ctx->display_buffers[i];
 
 					if (!buffer.valid())
 					{
@@ -197,7 +192,7 @@ namespace rsx
 						continue;
 					}
 
-					const auto buffer_range = address_range32::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
+					const auto buffer_range = address_range32::start_length(rsx::get_address(ctx, buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "VKHelpers.h"
 #include "VKGSRender.h"
 #include "VKCompute.h"
@@ -143,11 +144,21 @@ namespace vk
 		case driver_vendor::HONEYKRISP:
 			// Needs more testing
 			break;
+		case driver_vendor::KOSMICKRISP:
+			 // Needs more testing
+			 break;
 		case driver_vendor::PANVK:
 			// Needs more testing
 			break;
 		case driver_vendor::ARM_MALI:
 			// Needs more testing
+			break;
+		case driver_vendor::QUALCOMM:
+			// Needs more testing
+			break;
+		case driver_vendor::TURNIP:
+			// GPU hangs in some titles due to waiting for a query result
+			g_drv_strict_query_scopes = true;
 			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
@@ -238,6 +249,11 @@ namespace vk
 		return g_drv_emulate_cond_render;
 	}
 
+	bool emulate_extended_depth_range()
+	{
+		return !g_render_device->get_unrestricted_depth_range_support() && g_cfg.video.emulate_extended_depth_range;
+	}
+
 	bool use_strict_query_scopes()
 	{
 		return g_drv_strict_query_scopes;
@@ -301,7 +317,7 @@ namespace vk
 
 	void do_query_cleanup(vk::command_buffer& cmd)
 	{
-		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
+		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_render_backend());
 		ensure(renderer);
 
 		renderer->emergency_query_cleanup(&cmd);
@@ -309,7 +325,7 @@ namespace vk
 
 	void on_descriptor_pool_fragmentation(bool is_fatal)
 	{
-		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_renderer()))
+		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_render_backend()))
 		{
 			vkthr->on_descriptor_pool_fragmentation(is_fatal);
 		}

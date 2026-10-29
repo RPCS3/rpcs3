@@ -1,58 +1,83 @@
 #pragma once
 
 #include <util/types.hpp>
-#include "Emu/Cell/lv2/sys_rsx.h"
-#include "Emu/RSX/GCM.h"
-#include "Emu/RSX/rsx_utils.h"
-#include "RSXIOMap.hpp"
+#include <memory>
+#include "Emu/RSX/Common/bitfield.hpp"
+#include "Emu/RSX/NV47/FW/context.h"
+#include "Emu/RSX/NV47/HW/context.h"
+#include "Emu/RSX/RSXFIFO.h"
+#include "Emu/RSX/RSXZCULL.h"
+#include "RSXContextResources.h"
+#include "RSXCoreRenderer.h"
+#include "RSXDisplay.h"
+#include "RSXDrawCommands.h"
+#include "RSXDrawState.h"
+#include "RSXDriverState.h"
+#include "RSXFrameBuffer.h"
+#include "RSXProgramState.h"
+#include "RSXTextureState.h"
 
 namespace rsx
 {
-	namespace gcm
+	class thread;
+	struct rsx_state;
+
+	// Master RSX context. Aggregates the domain-specific sub-objects from HW and FW context information.
+	struct context
 	{
-		enum limits
-		{
-			tiles_count = 15,
-			zculls_count = 8
-		};
-	}
+		thread* rsxthr = nullptr;
+		rsx_state* register_state = nullptr;
+		core_renderer core{};
 
-	struct GCM_tile_reference
-	{
-		u32 base_address = 0;
-		const GcmTileInfo* tile = nullptr;
+		// lv2 driver state of this context
+		fw_context fw;
 
-		operator bool() const
-		{
-			return !!tile;
-		}
+		// Draw sequencing and the immediate-mode push buffers of this context
+		draw_command_processor draw_processor;
 
-		utils::address_range32 tile_align(const rsx::address_range32& range) const;
-	};
+		// Virtual FIFO channel. Saved here while the context is not active.
+		FIFO::channel_state fifo{};
 
-	struct GCM_context
-	{
-		RsxDmaControl* ctrl = nullptr;
-		u32 dma_address{ 0 };
-		rsx_iomap_table iomap_table;
+		// Pipeline state
+		bitmask_t<pipeline_state> graphics_state;
+		bool in_begin_end = false;
 
-		GcmTileInfo tiles[gcm::limits::tiles_count];
-		GcmZcullInfo zculls[gcm::limits::zculls_count];
+		// Decoded pipeline state for the backend
+		draw_state_t draw_state;
 
+		framebuffer_state fb;
+		program_state program;
+		texture_state textures;
+		reports::conditional_render_eval cond_render;
+
+		frame_statistics_t stats{};
+		frame_skip_state frame_skip;
+
+		// Last draw timestamp as a monotonic tag. Mostly used to invalidate caches.
+		u64 ROP_sync_timestamp = 0;
+
+		// Display buffers registered by the lv2 driver. Per-context.
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{ 0 };
 		u32 current_display_buffer{ 0 };
 
-		shared_mutex sys_rsx_mtx;
-		u32 device_addr{ 0 };
-		u32 label_addr{ 0 };
-		u32 main_mem_size{ 0 };
-		u32 local_mem_size{ 0 };
-		u32 rsx_event_port{ 0 };
-		u32 driver_info{ 0 };
+		// Host resources of the render backend. Core manages lifetime.
+		std::unique_ptr<context_resources> resources;
 
-		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+		context(u32 id, thread* owner);
+		~context();
 
-		GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
+		context(const context&) = delete;
+		context& operator=(const context&) = delete;
+
+		// Stable identity. 0 is reserved for the primary context.
+		u32 id() const { return m_id; }
+
+		// Use to invalidate all state decoder caching flags. This is what makes a context switch expensive.
+		void mark_all_dirty();
+
+	private:
+		u32 m_id = 0;
+		std::unique_ptr<rsx_state> m_owned_register_state;
 	};
 }

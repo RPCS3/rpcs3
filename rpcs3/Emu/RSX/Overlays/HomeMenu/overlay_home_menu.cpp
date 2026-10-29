@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
 #include "../overlay_manager.h"
+#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/date_time.h"
 
@@ -23,13 +24,13 @@ namespace rsx
 			m_dim_background.set_size(virtual_width, virtual_height);
 			m_dim_background.back_color.a = 0.85f;
 
-			m_description.set_font("Arial", 20);
+			m_description.set_font(20);
 			m_description.set_pos(20, 37);
 			m_description.set_text(m_main_menu.title);
 			m_description.auto_resize();
 			m_description.back_color.a = 0.f;
 
-			m_time_display.set_font("Arial", 14);
+			m_time_display.set_font(14);
 			m_time_display.set_text(get_time_string());
 			m_time_display.auto_resize();
 			m_time_display.set_pos(virtual_width - (20 + m_time_display.w), (m_description.y + m_description.h) - m_time_display.h);

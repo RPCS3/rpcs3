@@ -3,6 +3,7 @@
 #include "state_tracker.hpp"
 
 #include "Emu/system_config.h"
+#include "util/cctype.hpp"
 
 namespace gl
 {
@@ -15,8 +16,8 @@ namespace gl
 				size_t string_begin = std::string::npos, i = start;
 				for (size_t count = 0; i < source.length(); ++i)
 				{
-					const auto& c = source[i];
-					const auto is_space = std::isspace(c);
+					const char c = source[i];
+					const auto is_space = utils::isspace(c);
 
 					if (string_begin == std::string::npos)
 					{

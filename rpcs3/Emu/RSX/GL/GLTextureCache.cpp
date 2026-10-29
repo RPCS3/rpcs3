@@ -2,6 +2,7 @@
 #include "GLTexture.h"
 #include "GLTextureCache.h"
 #include "../Common/BufferUtils.h"
+#include "../Utils/image_utils.hpp"
 
 #include "util/asm.hpp"
 
@@ -12,11 +13,12 @@ namespace gl
 		// Generate cache key
 		// 00..13 = width
 		// 14..27 = height
-		// 28..35 = depth
-		// 36..39 = mipmaps
-		// 40..41 = type
-		// 42..57 = format
+		// 28..36 = depth - 1
+		// 37..40 = mipmaps
+		// 41..42 = type
+		// 43..58 = format
 		ensure(((width | height) & ~0x3fff) == 0, "Image dimensions are too large - lower your resolution scale.");
+		ensure(depth >= 1 && depth <= 512);
 		ensure(mipmaps <= 13);
 
 		GLuint target_encoding = 0;
@@ -37,10 +39,10 @@ namespace gl
 		const u64 key =
 			(static_cast<u64>(width) << 0) |
 			(static_cast<u64>(height) << 14) |
-			(static_cast<u64>(depth) << 28) |
-			(static_cast<u64>(mipmaps) << 36) |
-			(static_cast<u64>(target_encoding) << 40) |
-			(static_cast<u64>(sized_internal_fmt) << 42);
+			(static_cast<u64>(depth - 1) << 28) |
+			(static_cast<u64>(mipmaps) << 37) |
+			(static_cast<u64>(target_encoding) << 41) |
+			(static_cast<u64>(sized_internal_fmt) << 43);
 
 		return key;
 	}

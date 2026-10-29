@@ -75,6 +75,11 @@ namespace rsx
 			m_data.fetch_or(static_cast<bitmask_type>(mask));
 		}
 
+		bool test(T mask) const
+		{
+			return ((m_data.load() & static_cast<bitmask_type>(mask)) != 0);
+		}
+
 		bool test_and_set(T mask)
 		{
 			const auto old = m_data.fetch_or(static_cast<bitmask_type>(mask));
@@ -133,7 +138,7 @@ namespace rsx
 			m_data |= mask;
 		}
 
-		bool test(T mask)
+		bool test(T mask) const
 		{
 			return !!(m_data & static_cast<bitmask_type>(mask));
 		}

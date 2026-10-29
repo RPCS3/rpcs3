@@ -8,6 +8,7 @@
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/Core/RSXRendererFactory.h"
 #include "Emu/RSX/Host/MM.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
@@ -33,32 +34,25 @@ namespace
 	}
 }
 
-u64 GLGSRender::get_cycles()
+GLGSRender::GLGSRender(rsx::context* ctx, rsx::display_output* output) noexcept : render_backend(ctx, output)
 {
-	return thread_ctrl::get_cycles(static_cast<named_thread<GLGSRender>&>(*this));
-}
+	on_bind_context(m_ctx);
 
-GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
-{
 	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.95");
 
-	if (g_cfg.video.disable_vertex_cache)
-		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
-	else
-		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
-
-	backend_config.supports_multidraw = true;
-	backend_config.supports_normalized_barycentrics = true;
-	backend_config.supports_hw_instanced_rendering = true;
+	m_config.supports_multidraw = true;
+	m_config.supports_normalized_barycentrics = true;
+	m_config.supports_hw_instanced_rendering = true;
 	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
-	backend_config.supports_last_provoking_vertex = true;
+	m_config.supports_last_provoking_vertex = true;
+	m_config.supports_extended_depth_range = gl::get_driver_caps().NV_depth_buffer_float_supported;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
-		backend_config.supports_hw_msaa = true;
-		backend_config.supports_hw_a2c = true;
-		backend_config.supports_hw_a2c_1spp = false; // In OGL A2C is implicitly disabled at 1spp
-		backend_config.supports_hw_a2one = true;
+		m_config.supports_hw_msaa = true;
+		m_config.supports_hw_a2c = true;
+		m_config.supports_hw_a2c_1spp = false; // In OGL A2C is implicitly disabled at 1spp
+		m_config.supports_hw_a2one = true;
 	}
 }
 
@@ -70,31 +64,46 @@ GLGSRender::~GLGSRender()
 	}
 }
 
+std::string GLGSRender::configured_logical_id() const
+{
+	return (rsx::resolve_render_backend_type(g_cfg.video.renderer) == video_renderer::opengl)
+		? "OpenGL"
+		: "";
+}
+
 extern CellGcmContextData current_context;
 
 void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
+	const auto& viewport = m_ctx->draw_state.viewport;
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
-		resolution_scaling_config,
-		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+		RSX(m_ctx)->resolution_scaling_config,
+		viewport.clip_width, viewport.clip_height);
 
 	glViewport(0, 0, clip_width, clip_height);
 }
 
-void GLGSRender::set_scissor(bool clip_viewport)
+void GLGSRender::set_scissor(bool force)
 {
-	areau scissor;
-	if (get_scissor(scissor, clip_viewport))
+	if (!force && !m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::scissor))
 	{
-		// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
-		// See LIMBO [NPUB-30373] which uses shader window origin = top
-		glScissor(scissor.x1, scissor.y1, scissor.width(), scissor.height());
-		gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
+		return;
 	}
+
+	const auto& region = m_ctx->draw_state.scissor;
+
+	areau scissor;
+	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(RSX(m_ctx)->resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+
+	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+	// See LIMBO [NPUB-30373] which uses shader window origin = top
+	glScissor(scissor.x1, scissor.y1, scissor.width(), scissor.height());
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
-void GLGSRender::on_init_thread()
+void GLGSRender::on_init()
 {
 	ensure(m_frame);
 
@@ -136,7 +145,6 @@ void GLGSRender::on_init_thread()
 	m_frame->set_current(m_context);
 	gl::set_primary_context_thread();
 
-	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 	m_occlusion_type = g_cfg.video.precise_zpass_count ? GL_SAMPLES_PASSED : GL_ANY_SAMPLES_PASSED;
 
 	gl::init();
@@ -153,6 +161,8 @@ void GLGSRender::on_init_thread()
 
 	// Update frame title after GL was initialized in order to show the proper GPU
 	m_frame->update_title();
+
+	gl::command_context::init();
 
 	const auto& gl_caps = gl::get_driver_caps();
 
@@ -185,7 +195,12 @@ void GLGSRender::on_init_thread()
 	if (!gl_caps.ARB_shader_storage_buffer_object_supported)
 	{
 		rsx_log.warning("[PERFORMANCE WARNING] SSBOs are not supported by your GPU. Some functionality such as hardware instancing will be unavailable.");
-		backend_config.supports_hw_instanced_rendering = false;
+		m_config.supports_hw_instanced_rendering = false;
+	}
+
+	if (gl_caps.ARB_framebuffer_no_attachments_supported)
+	{
+		m_config.supports_framebufferless_rendering = true;
 	}
 
 	if (!gl_caps.ARB_bindless_texture_supported)
@@ -207,12 +222,12 @@ void GLGSRender::on_init_thread()
 		g_cfg.video.shader_precision != gpu_preset_level::low)
 	{
 		// NVIDIA's attribute interpolation requires some workarounds
-		backend_config.supports_normalized_barycentrics = false;
+		m_config.supports_normalized_barycentrics = false;
 	}
 
 	if (gl_caps.AMD_pinned_memory_supported && g_cfg.video.host_label_synchronization)
 	{
-		backend_config.supports_host_gpu_labels = true;
+		m_config.supports_host_gpu_labels = true;
 
 		m_host_gpu_context_data = std::make_unique<gl::buffer>();
 		m_host_gpu_context_data->create(gl::buffer::target::array, 4096, nullptr, gl::buffer::memory_type::host_visible,
@@ -339,7 +354,7 @@ void GLGSRender::on_init_thread()
 	m_raster_env_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_scratch_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
-	if (backend_config.supports_hw_instanced_rendering)
+	if (m_config.supports_hw_instanced_rendering)
 	{
 		ensure(gl_caps.ARB_shader_storage_buffer_object_supported);
 		m_instancing_ring_buffer->create(gl::buffer::target::ssbo, 128 * 0x100000);
@@ -368,7 +383,7 @@ void GLGSRender::on_init_thread()
 	{
 		// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 		// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
-		backend_config.supports_hw_renormalization = true;
+		m_config.supports_hw_renormalization = true;
 	}
 
 	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>(static_cast<u32>(m_attrib_ring_buffer->size()), m_max_texbuffer_size));
@@ -398,24 +413,20 @@ void GLGSRender::on_init_thread()
 		sampler.bind(image_unit++);
 	}
 
-	//Occlusion query
-	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
-	{
-		GLuint handle = 0;
-		auto &query = m_occlusion_query_data[i];
-		glGenQueries(1, &handle);
-
-		query.driver_handle = handle;
-		query.pending = false;
-		query.active = false;
-		query.result = 0;
-	}
+	// Occlusion query
+	glGenQueries(::size32(m_occlusion_query_handles), m_occlusion_query_handles.data());
 
 	m_ui_renderer.create();
 	m_video_output_pass.create();
 
 	gl::init_global_texture_resources();
-	m_gl_texture_cache.initialize();
+
+	// Workaround. Clear the screen buffers and ensure the window is prepped for display.
+	for (int i = 0; i < 3; ++i)
+	{
+		present_frame({});
+		std::this_thread::sleep_for(16ms);
+	}
 
 	m_prog_buffer.initialize
 	(
@@ -429,16 +440,16 @@ void GLGSRender::on_init_thread()
 	if (shadermode == shader_mode::async_with_interpreter ||
 		shadermode == shader_mode::interpreter_only)
 	{
-		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
-			? std::make_unique<rsx::shader_loading_dialog_native>(this)
+		std::unique_ptr<rsx::shader_loading_dialog> dlg = RSX(m_ctx)->overlay_manager()
+			? std::make_unique<rsx::shader_loading_dialog_native>(RSX(m_ctx))
 			: std::make_unique<rsx::shader_loading_dialog>();
-		m_shader_interpreter.create(dlg.get());
+		m_shader_interpreter.create(m_ctx, dlg.get());
 		dlg->close();
 	}
 
 	if (shadermode != shader_mode::interpreter_only)
 	{
-		if (!m_overlay_manager)
+		if (!RSX(m_ctx)->overlay_manager())
 		{
 			m_frame->hide();
 			m_shaders_cache->load(nullptr);
@@ -446,16 +457,77 @@ void GLGSRender::on_init_thread()
 		}
 		else
 		{
-			rsx::shader_loading_dialog_native dlg(this);
+			rsx::shader_loading_dialog_native dlg(RSX(m_ctx));
 			m_shaders_cache->load(&dlg);
 		}
 	}
 }
 
-void GLGSRender::on_exit()
+rsx::device_status GLGSRender::check_device_status() const
 {
-	// Destroy internal RSX state, may call upon this->do_local_task
-	GSRender::on_exit();
+	return gl::command_context::is_lost()
+		? rsx::device_status::lost
+		: rsx::device_status::ok;
+}
+
+std::unique_ptr<rsx::context_resources> GLGSRender::create_context_resources(rsx::context* ctx)
+{
+	auto resources = std::make_unique<gl::context_resources>();
+
+	if (g_cfg.video.disable_vertex_cache)
+		resources->vertex_cache = std::make_unique<gl::null_vertex_cache>();
+	else
+		resources->vertex_cache = std::make_unique<gl::weak_vertex_cache>();
+
+	resources->surface_cache.set_context(ctx);
+	resources->texture_cache.set_context(ctx);
+	resources->texture_cache.initialize();
+
+	return resources;
+}
+
+void GLGSRender::on_bind_context(rsx::context* ctx)
+{
+	m_vertex_layout.set_context(ctx);
+	m_shader_interpreter.set_context(ctx);
+
+	// The scaling can have changed while this context was not bound
+	if (const auto resources = res(ctx);
+		resources && resources->surface_cache.scaling_config() != RSX(ctx)->resolution_scaling_config)
+	{
+		gl::command_context cmd{ gl_state };
+		resources->surface_cache.sync_scaling_config(cmd, RSX(ctx)->resolution_scaling_config);
+	}
+}
+
+void GLGSRender::on_release_context_resources(rsx::context* ctx)
+{
+	const auto resources = res(ctx);
+	resources->texture_cache.destroy(); // NOTE: Always destroy this first because surface cache owns some of the resources.
+	resources->surface_cache.destroy();
+}
+
+void GLGSRender::on_unbind_context(rsx::context* ctx)
+{
+	if (const auto resources = res(ctx))
+	{
+		resources->vertex_cache->purge();
+	}
+
+	// Every cached framebuffer has this context's surfaces attached
+	m_draw_fbo = nullptr;
+
+	for (auto& fbo : m_framebuffer_cache)
+	{
+		fbo.remove();
+	}
+
+	m_framebuffer_cache.clear();
+}
+
+void GLGSRender::on_shutdown()
+{
+	destroy_frame_context();
 
 	// Globals
 	// TODO: Move these
@@ -471,7 +543,6 @@ void GLGSRender::on_exit()
 	gl::destroy_pipe_compiler();
 
 	m_prog_buffer.clear();
-	m_rtts.destroy();
 
 	m_host_dma_ctrl.reset();
 	m_host_gpu_context_data.reset();
@@ -585,24 +656,13 @@ void GLGSRender::on_exit()
 	}
 
 	m_null_textures.clear();
-	m_gl_texture_cache.destroy();
 	m_ui_renderer.destroy();
 	m_video_output_pass.destroy();
 
 	m_shader_interpreter.destroy();
 
-	for (u32 i = 0; i < rsx::reports::occlusion_query_count; ++i)
-	{
-		auto &query = m_occlusion_query_data[i];
-		query.active = false;
-		query.pending = false;
-
-		GLuint handle = query.driver_handle;
-		glDeleteQueries(1, &handle);
-		query.driver_handle = 0;
-	}
-
-	zcull_ctrl.release();
+	glDeleteQueries(::size32(m_occlusion_query_handles), m_occlusion_query_handles.data());
+	m_occlusion_query_handles.fill(0);
 
 	gl::set_primary_context_thread(false);
 }
@@ -634,83 +694,70 @@ void GLGSRender::update_swap_interval()
 	m_vsync_mode = current_mode;
 }
 
-void GLGSRender::clear_surface(u32 arg)
+void GLGSRender::clear()
 {
-	if (skip_current_frame) return;
+	// Frameskip, a disabled stencil write mask and invalid flags have been handled by the core
+	const auto& info = m_ctx->draw_state.clear;
+	const auto arg = info.mask;
 
-	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
-
-	// Ignore invalid clear flags
-	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
-
-	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (arg & RSX_GCM_CLEAR_COLOR_RGBA_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
-
-	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
-
-	if (!m_graphics_state.test(rsx::rtt_config_valid)) return;
+	set_scissor();
 
 	gl::clear_cmd_info clear_cmd{};
 
 	gl::command_context cmd{ gl_state };
-	const bool full_frame =
-		rsx::method_registers.scissor_origin_x() == 0 &&
-		rsx::method_registers.scissor_origin_y() == 0 &&
-		rsx::method_registers.scissor_width() >= rsx::method_registers.surface_clip_width() &&
-		rsx::method_registers.scissor_height() >= rsx::method_registers.surface_clip_height();
+	const bool full_frame = info.scissor_covers_surface;
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	const rsx::surface_depth_format2 surface_depth_format = info.depth_format;
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
+			clear_cmd.clear_depth.value = info.depth_value;
+      clear_cmd.aspect_mask |= gl::image_aspect::depth;
 
-			clear_cmd.clear_depth.value = f32(clear_depth) / max_depth_value;
-			clear_cmd.aspect_mask |= gl::image_aspect::depth;
+			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				clear_cmd.clear_depth.value = rsx::encode_emulated_depth(clear_cmd.clear_depth.value);
+			}
 		}
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
 			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				clear_cmd.clear_stencil.mask = rsx::method_registers.stencil_mask();
-				clear_cmd.clear_stencil.value = rsx::method_registers.stencil_clear_value();
+				clear_cmd.clear_stencil.mask = info.stencil_write_mask;
+				clear_cmd.clear_stencil.value = info.stencil_value;
 				clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 			}
+		}
 
-			if (const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
-				ds_mask != RSX_GCM_CLEAR_DEPTH_STENCIL_MASK || !full_frame)
+		if (clear_cmd.aspect_mask && (clear_cmd.aspect_mask != ds->aspect() || !full_frame))
+		{
+			const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+
+			if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
+				ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 			{
-				ensure(clear_cmd.aspect_mask);
-
-				if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
-					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
+				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
+				if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
 				{
-					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-					if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
-					{
-						// Depth was cleared, initialize stencil
-						clear_cmd.clear_stencil.mask = 0xff;
-						clear_cmd.clear_stencil.value = 0xff;
-						clear_cmd.aspect_mask |= gl::image_aspect::stencil;
-					}
-					else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
-					{
-						// Stencil was cleared, initialize depth
-						clear_cmd.clear_depth.value = 1.f;
-						clear_cmd.aspect_mask |= gl::image_aspect::depth;
-					}
+					// Depth was cleared, initialize stencil
+					clear_cmd.clear_stencil.mask = 0xff;
+					clear_cmd.clear_stencil.value = 0xff;
+					clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 				}
-				else
+				else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 				{
-					ds->write_barrier(cmd);
+					// Stencil was cleared, initialize depth
+					clear_cmd.clear_depth.value = 1.f;
+					clear_cmd.aspect_mask |= gl::image_aspect::depth;
 				}
+			}
+			else
+			{
+				ds->write_barrier(cmd);
 			}
 		}
 
@@ -721,89 +768,31 @@ void GLGSRender::clear_surface(u32 arg)
 		}
 	}
 
-	if (auto colormask = (arg & 0xf0))
+	// The color mask and value are already remapped to the surface format, and the mask is zero if the format cannot be cleared
+	if (const auto colormask = info.color_mask)
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
+		clear_cmd.clear_color.mask = colormask;
+		clear_cmd.clear_color.attachment_count = static_cast<u8>(res()->surface_cache.m_bound_render_target_ids.size());
+		clear_cmd.clear_color.r = info.color_r;
+		clear_cmd.clear_color.g = info.color_g;
+		clear_cmd.clear_color.b = info.color_b;
+		clear_cmd.clear_color.a = info.color_a;
+		clear_cmd.aspect_mask |= gl::image_aspect::color;
 
-		switch (rsx::method_registers.surface_color())
+		if (!full_frame)
 		{
-		case rsx::surface_color_format::x32:
-		case rsx::surface_color_format::w16z16y16x16:
-		case rsx::surface_color_format::w32z32y32x32:
-		{
-			// Nop
-			colormask = 0;
-			break;
-		}
-		case rsx::surface_color_format::b8:
-		{
-			rsx::get_b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_b8_clearmask(colormask);
-			break;
-		}
-		case rsx::surface_color_format::g8b8:
-		{
-			rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_g8b8_r8g8_clearmask(colormask);
-			break;
-		}
-		case rsx::surface_color_format::r5g6b5:
-		{
-			rsx::get_rgb565_clear_color(clear_r, clear_g, clear_b, clear_a);
-			break;
-		}
-		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		{
-			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 255);
-			break;
-		}
-		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		{
-			rsx::get_a1rgb555_clear_color(clear_r, clear_g, clear_b, clear_a, 0);
-			break;
-		}
-		case rsx::surface_color_format::a8b8g8r8:
-		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-		{
-			rsx::get_abgr8_clear_color(clear_r, clear_g, clear_b, clear_a);
-			colormask = rsx::get_abgr8_clearmask(colormask);
-			break;
-		}
-		default:
-		{
-			break;
-		}
-		}
-
-		if (colormask)
-		{
-			clear_cmd.clear_color.mask = colormask;
-			clear_cmd.clear_color.attachment_count = static_cast<u8>(m_rtts.m_bound_render_target_ids.size());
-			clear_cmd.clear_color.r = clear_r;
-			clear_cmd.clear_color.g = clear_g;
-			clear_cmd.clear_color.b = clear_b;
-			clear_cmd.clear_color.a = clear_a;
-			clear_cmd.aspect_mask |= gl::image_aspect::color;
-
-			if (!full_frame)
+			for (const auto& index : res()->surface_cache.m_bound_render_target_ids)
 			{
-				for (const auto& index : m_rtts.m_bound_render_target_ids)
-				{
-					m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
-				}
+				res()->surface_cache.m_bound_render_targets[index].second->write_barrier(cmd);
 			}
-
-			update_color = true;
 		}
+
+		update_color = true;
 	}
 
 	if (update_color || update_z)
 	{
-		m_rtts.on_write({ update_color, update_color, update_color, update_color }, update_z);
+		res()->surface_cache.on_write({ update_color, update_color, update_color, update_color }, update_z);
 	}
 
 	if (!full_frame)
@@ -818,14 +807,8 @@ bool GLGSRender::load_program()
 {
 	const auto shadermode = g_cfg.video.shadermode.get();
 
-	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
-	{
-		get_current_fragment_program(fs_sampler_state);
-		ensure(current_fragment_program.valid);
-
-		get_current_vertex_program(vs_sampler_state);
-	}
-	else if (m_program)
+	// The core has resolved the programs for this draw if any of them changed
+	if (!m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs) && m_program)
 	{
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 		{
@@ -835,9 +818,9 @@ bool GLGSRender::load_program()
 		if (shadermode == shader_mode::interpreter_only)
 		{
 			m_program = m_shader_interpreter.get(
-				current_fp_metadata,
-				current_vertex_program.ctrl,
-				current_fragment_program.ctrl);
+				m_ctx->program.fp_metadata,
+				m_ctx->program.vertex_program.ctrl,
+				m_ctx->program.fragment_program.ctrl);
 			return true;
 		}
 	}
@@ -849,24 +832,28 @@ bool GLGSRender::load_program()
 	{
 		if (g_cfg.video.debug_overlay)
 		{
-			m_frame_stats.program_cache_lookups_total += 2;
-			if (m_program_cache_hint.has_fragment_program())
+			m_ctx->stats.program_cache_lookups_total += 2;
+			if (m_ctx->program.cache_hint.has_fragment_program())
 			{
-				m_frame_stats.program_cache_lookups_ellided++;
+				m_ctx->stats.program_cache_lookups_ellided++;
 			}
-			if (m_program_cache_hint.has_vertex_program())
+			if (m_ctx->program.cache_hint.has_vertex_program())
 			{
-				m_frame_stats.program_cache_lookups_ellided++;
+				m_ctx->stats.program_cache_lookups_ellided++;
 			}
 		}
 
 		void* pipeline_properties = nullptr;
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(
-			&m_program_cache_hint,
-			current_vertex_program,
-			current_fragment_program,
+			&m_ctx->program.cache_hint,
+			m_ctx->program.vertex_program,
+			m_ctx->program.fragment_program,
 			pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{
@@ -896,24 +883,24 @@ bool GLGSRender::load_program()
 		if (!m_program)
 		{
 			m_program = m_shader_interpreter.get(
-				current_fp_metadata,
-				current_vertex_program.ctrl,
-				current_fragment_program.ctrl);
+				m_ctx->program.fp_metadata,
+				m_ctx->program.vertex_program.ctrl,
+				m_ctx->program.fragment_program.ctrl);
 
 			// Program has changed, reupload
-			m_interpreter_state = rsx::invalidate_pipeline_bits;
+			m_interpreter_state.set(rsx::draw_state_t::group::programs);
 		}
 
 		// If swapping between interpreter and recompiler, we need to adjust some flags to reupload data as needed.
 		if (is_interpreter != was_interpreter)
 		{
 			// Always reupload transform constants when going between interpreter and recompiler
-			m_graphics_state |= rsx::transform_constants_dirty;
+			m_stale_constants.set(rsx::draw_state_t::group::transform_constants);
 
 			// Always reload fragment constansts when moving from interpreter back to recompiler.
 			if (was_interpreter)
 			{
-				m_graphics_state |= rsx::fragment_constants_dirty;
+				m_stale_constants.set(rsx::draw_state_t::group::fragment_constants);
 			}
 		}
 	}
@@ -928,16 +915,19 @@ void GLGSRender::load_program_env()
 		fmt::throw_exception("Unreachable right now");
 	}
 
-	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+	const u32 fragment_constants_size = m_ctx->program.fp_metadata.program_constants_buffer_length;
 
-	const bool update_transform_constants = m_graphics_state & rsx::pipeline_state::transform_constants_dirty;
-	const bool update_fragment_constants = (m_graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
-	const bool update_vertex_env = m_graphics_state & rsx::pipeline_state::vertex_state_dirty;
-	const bool update_fragment_env = m_graphics_state & rsx::pipeline_state::fragment_state_dirty;
-	const bool update_fragment_texture_env = m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
-	const bool update_instruction_buffers = !!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program);
-	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
-	const bool update_instancing_data = backend_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
+	// Constants changed since the last executed draw join the ones whose upload was deferred
+	m_stale_constants |= (m_ctx->draw_state.dirty.load() & static_cast<u32>(rsx::draw_state_t::group::constants));
+
+	const bool update_transform_constants = m_stale_constants.test(rsx::draw_state_t::group::transform_constants);
+	const bool update_fragment_constants = m_stale_constants.test(rsx::draw_state_t::group::fragment_constants) && fragment_constants_size;
+	const bool update_vertex_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::vertex_env);
+	const bool update_fragment_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_env);
+	const bool update_fragment_texture_env = m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::fragment_texture_env);
+	const bool update_instruction_buffers = m_interpreter_state.test(rsx::draw_state_t::group::programs) && m_shader_interpreter.is_interpreter(m_program);
+	const bool update_raster_env = m_ctx->draw_state.stipple.enabled && m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::stipple);
+	const bool update_instancing_data = m_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
 	if (manually_flush_ring_buffers)
 	{
@@ -952,7 +942,7 @@ void GLGSRender::load_program_env()
 		if (update_instruction_buffers)
 		{
 			m_vertex_instructions_buffer->reserve_storage_on_heap(513 * 16);
-			m_fragment_instructions_buffer->reserve_storage_on_heap(current_fp_metadata.program_ucode_length);
+			m_fragment_instructions_buffer->reserve_storage_on_heap(m_ctx->program.fp_metadata.program_ucode_length);
 		}
 	}
 
@@ -961,12 +951,7 @@ void GLGSRender::load_program_env()
 		// Vertex state
 		auto mapping = m_vertex_env_buffer->alloc_from_heap(96, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		m_draw_processor.fill_scale_offset_data(buf, false);
-		m_draw_processor.fill_user_clip_data(buf + 64);
-		*(reinterpret_cast<u32*>(buf + 68)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = rsx::method_registers.point_size() * resolution_scaling_config.scale_factor();
-		*(reinterpret_cast<f32*>(buf + 76)) = rsx::method_registers.clip_min();
-		*(reinterpret_cast<f32*>(buf + 80)) = rsx::method_registers.clip_max();
+		RSX(m_ctx)->draw_processor()->fill_vertex_env(buf, RSX(m_ctx)->resolution_scaling_config.scale_factor());
 
 		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 96);
 	}
@@ -992,7 +977,7 @@ void GLGSRender::load_program_env()
 			return mapping;
 		});
 
-		m_draw_processor.fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
+		RSX(m_ctx)->draw_processor()->fill_constants_instancing_buffer(indirection_table_buf, constants_array_buf, m_vertex_prog);
 
 		m_instancing_ring_buffer->bind_range(GL_INSTANCING_LUT_BIND_SLOT, indirection_table_offset, ::size32(indirection_table_buf));
 		m_instancing_ring_buffer->bind_range(GL_INSTANCING_XFORM_CONSTANTS_SLOT, constants_data_table_offset, ::size32(constants_array_buf));
@@ -1025,7 +1010,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-			*ensure(m_fragment_prog), current_fragment_program, true);
+			*ensure(m_fragment_prog), m_ctx->program.fragment_program, true);
 
 		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}
@@ -1035,7 +1020,7 @@ void GLGSRender::load_program_env()
 		// Fragment state
 		auto mapping = m_fragment_env_buffer->alloc_from_heap(32, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
+		RSX(m_ctx)->draw_processor()->fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
 
 		m_fragment_env_buffer->bind_range(GL_FRAGMENT_STATE_BIND_SLOT, mapping.second, 32);
 	}
@@ -1044,7 +1029,7 @@ void GLGSRender::load_program_env()
 	{
 		// Fragment texture parameters
 		auto mapping = m_texture_parameters_buffer->alloc_from_heap(768, m_uniform_buffer_offset_align);
-		current_fragment_program.texture_params.write_to(mapping.first, current_fp_metadata.referenced_textures_mask);
+		m_ctx->program.fragment_program.texture_params.write_to(mapping.first, m_ctx->program.fp_metadata.referenced_textures_mask);
 
 		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 768);
 	}
@@ -1053,47 +1038,37 @@ void GLGSRender::load_program_env()
 	{
 		auto mapping = m_raster_env_ring_buffer->alloc_from_heap(128, m_uniform_buffer_offset_align);
 
-		std::memcpy(mapping.first, rsx::method_registers.polygon_stipple_pattern(), 128);
+		std::memcpy(mapping.first, m_ctx->draw_state.stipple.pattern.data(), 128);
 		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
-
-		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)
 	{
-		if (m_interpreter_state & rsx::vertex_program_dirty)
+		if (m_interpreter_state.test(rsx::draw_state_t::group::vertex_program))
 		{
 			// Attach vertex buffer data
-			const auto vp_block_length = current_vp_metadata.ucode_length + 16;
+			const auto vp_block_length = m_ctx->program.vp_metadata.ucode_length + 16;
 			auto vp_mapping = m_vertex_instructions_buffer->alloc_from_heap(vp_block_length, 16);
 			auto vp_buf = static_cast<u8*>(vp_mapping.first);
 
-			auto vp_config = reinterpret_cast<u32*>(vp_buf);
-			vp_config[0] = current_vertex_program.base_address;
-			vp_config[1] = current_vertex_program.entry;
-			vp_config[2] = current_vertex_program.output_mask;
-			vp_config[3] = rsx::method_registers.two_side_light_en() ? 1u : 0u;
+			RSX(m_ctx)->draw_processor()->fill_interpreter_vertex_header(vp_buf);
 
-			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
+			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 
 			m_vertex_instructions_buffer->bind_range(GL_INTERPRETER_VERTEX_BLOCK, vp_mapping.second, vp_block_length);
 			m_vertex_instructions_buffer->notify();
 		}
 
-		if (m_interpreter_state & rsx::fragment_program_dirty)
+		if (m_interpreter_state.test(rsx::draw_state_t::group::fragment_program))
 		{
 			// Attach fragment buffer data
-			const auto fp_block_length = current_fp_metadata.program_ucode_length + 16;
+			const auto fp_block_length = m_ctx->program.fp_metadata.program_ucode_length + 16;
 			auto fp_mapping = m_fragment_instructions_buffer->alloc_from_heap(fp_block_length, 16);
 			auto fp_buf = static_cast<u8*>(fp_mapping.first);
 
-			// Control mask
-			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
-			control_masks[0] = rsx::method_registers.shader_control();
-			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
-			control_masks[2] = current_fp_metadata.referenced_textures_mask;
+			RSX(m_ctx)->draw_processor()->fill_interpreter_fragment_header(fp_buf);
 
-			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
+			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 
 			m_fragment_instructions_buffer->bind_range(GL_INTERPRETER_FRAGMENT_BLOCK, fp_mapping.second, fp_block_length);
 			m_fragment_instructions_buffer->notify();
@@ -1117,23 +1092,18 @@ void GLGSRender::load_program_env()
 		}
 	}
 
-	rsx::flags32_t handled_flags =
-		rsx::pipeline_state::fragment_state_dirty |
-		rsx::pipeline_state::vertex_state_dirty |
-		rsx::pipeline_state::transform_constants_dirty |
-		rsx::pipeline_state::fragment_texture_state_dirty;
+	m_stale_constants.clear(rsx::draw_state_t::group::transform_constants);
 
+	// A program without constants or the interpreter leaves the fragment constants pending
 	if (update_fragment_constants && !m_shader_interpreter.is_interpreter(m_program))
 	{
-		handled_flags |= rsx::pipeline_state::fragment_constants_dirty;
+		m_stale_constants.clear(rsx::draw_state_t::group::fragment_constants);
 	}
 
 	if (m_shader_interpreter.is_interpreter(m_program))
 	{
 		ensure(m_transform_constants_buffer->bound_range().second >= 468 * 16);
 	}
-
-	m_graphics_state.clear(handled_flags);
 }
 
 bool GLGSRender::is_current_program_interpreted() const
@@ -1153,7 +1123,7 @@ void GLGSRender::upload_transform_constants(const rsx::io_buffer& buffer)
 			: std::span<const u16>(m_vertex_prog->constant_ids);
 
 		buffer.reserve(transform_constants_size);
-		m_draw_processor.fill_vertex_program_constants_data(buffer.data(), constant_ids);
+		RSX(m_ctx)->draw_processor()->fill_vertex_program_constants_data(buffer.data(), constant_ids);
 	}
 }
 
@@ -1172,9 +1142,9 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
 
-	m_draw_processor.fill_vertex_layout_state(
+	RSX(m_ctx)->draw_processor()->fill_vertex_layout_state(
 		m_vertex_layout,
-		current_vp_metadata,
+		m_ctx->program.vp_metadata,
 		upload_info.first_vertex,
 		upload_info.allocated_vertex_count,
 		reinterpret_cast<s32*>(buf),
@@ -1194,7 +1164,7 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
-		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		m_stale_constants.set(rsx::draw_state_t::group::transform_constants);
 		return;
 	}
 
@@ -1259,17 +1229,21 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 	m_scratch_ring_buffer->copy_to(m_transform_constants_buffer.get(), mapping.second, data_range.first, data_range.second);
 }
 
-bool GLGSRender::on_access_violation(u32 address, bool is_writing)
+bool GLGSRender::on_access_violation(rsx::context* ctx, u32 address, bool is_writing)
 {
-	rsx::mm_flush(address);
+	const auto resources = res(ctx);
+	if (!resources)
+	{
+		return false;
+	}
 
-	const bool can_flush = is_current_thread();
+	const bool can_flush = RSX(m_ctx)->is_current_thread();
 	const rsx::invalidation_cause cause = is_writing
 		? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		: (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
 
 	auto cmd = can_flush ? gl::command_context{ gl_state } : gl::command_context{};
-	auto result = m_gl_texture_cache.invalidate_address(cmd, address, cause);
+	auto result = resources->texture_cache.invalidate_address(cmd, address, cause);
 
 	if (result.invalidate_samplers)
 	{
@@ -1279,14 +1253,14 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (!result.violation_handled)
 	{
-		return zcull_ctrl->on_access_violation(address);
+		return false;
 	}
 
 	if (result.num_flushable > 0)
 	{
-		auto &task = post_flush_request(address, result);
+		auto &task = post_flush_request(ctx, address, result);
 
-		m_eng_interrupt_mask |= rsx::backend_interrupt;
+		RSX(m_ctx)->raise_backend_interrupt();
 		vm::temporary_unlock();
 		task.producer_wait();
 	}
@@ -1294,15 +1268,21 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void GLGSRender::on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause)
+void GLGSRender::on_invalidate_memory_range(rsx::context* ctx, const utils::address_range32 &range, rsx::invalidation_cause cause)
 {
+	const auto resources = res(ctx);
+	if (!resources)
+	{
+		return;
+	}
+
 	gl::command_context cmd{ gl_state };
-	auto data = m_gl_texture_cache.invalidate_range(cmd, range, cause);
+	auto data = resources->texture_cache.invalidate_range(cmd, range, cause);
 	AUDIT(data.empty());
 
 	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
 	{
-		m_gl_texture_cache.purge_unreleased_sections();
+		resources->texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
@@ -1313,13 +1293,13 @@ void GLGSRender::on_invalidate_memory_range(const utils::address_range32 &range,
 void GLGSRender::on_semaphore_acquire_wait()
 {
 	if (!work_queue.empty() ||
-		(async_flip_requested & flip_request::emu_requested))
+		RSX(m_ctx)->display_ctrl().has_flip_request(rsx::thread::flip_request::emu_requested))
 	{
-		do_local_task(rsx::FIFO::state::lock_wait);
+		RSX(m_ctx)->do_local_task(rsx::FIFO::state::lock_wait);
 	}
 }
 
-void GLGSRender::do_local_task(rsx::FIFO::state state)
+bool GLGSRender::on_local_task(rsx::FIFO::state state)
 {
 	if (!work_queue.empty())
 	{
@@ -1332,46 +1312,33 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 			if (q.processed.load()) continue;
 
 			gl::command_context cmd{ gl_state };
-			q.result = m_gl_texture_cache.flush_all(cmd, q.section_data);
+			q.result = res(q.ctx)->texture_cache.flush_all(cmd, q.section_data);
 			q.processed = true;
 		}
 	}
-	else if (!in_begin_end && state != rsx::FIFO::state::lock_wait)
+	else if (!m_ctx->in_begin_end && state != rsx::FIFO::state::lock_wait)
 	{
-		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		if (m_ctx->graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
 		{
 			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 			//Only call when there are no waiters
-			m_gl_texture_cache.do_update();
-			m_graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
+			if (const auto resources = res())
+			{
+				resources->texture_cache.do_update();
+			}
+			m_ctx->graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
 		}
 	}
 
-	rsx::thread::do_local_task(state);
-
-	if (state == rsx::FIFO::state::lock_wait)
-	{
-		// Critical check finished
-		return;
-	}
-
-	if (m_overlay_manager)
-	{
-		const auto should_ignore = in_begin_end && state != rsx::FIFO::state::empty;
-		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
-		{
-			rsx::display_flip_info_t info{};
-			info.buffer = current_display_buffer;
-			flip(info);
-		}
-	}
+	return true;
 }
 
-gl::work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data)
+gl::work_item& GLGSRender::post_flush_request(rsx::context* ctx, u32 address, gl::texture_cache::thrashed_set& flush_data)
 {
 	std::lock_guard lock(queue_guard);
 
 	auto &result = work_queue.emplace_back();
+	result.ctx = ctx;
 	result.address_to_flush = address;
 	result.section_data = std::move(flush_data);
 	return result;
@@ -1380,7 +1347,7 @@ gl::work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::th
 bool GLGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
 	gl::command_context cmd{ gl_state };
-	if (m_gl_texture_cache.blit(cmd, src, dst, interpolate, m_rtts))
+	if (res()->texture_cache.blit(cmd, src, dst, interpolate, res()->surface_cache))
 	{
 		m_samplers_dirty.store(true);
 		return true;
@@ -1394,9 +1361,9 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	// TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_pre_memory_unmapped(addr, tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
-		m_rtts.invalidate_surface_address(addr, false);
+		u32 addr = rsx::get_address(m_ctx, RSX(m_ctx)->tiles[tile].offset, RSX(m_ctx)->tiles[tile].location);
+		RSX(m_ctx)->on_notify_pre_memory_unmapped(addr, RSX(m_ctx)->tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
+		res()->surface_cache.invalidate_surface_address(addr, false);
 	}
 
 	{
@@ -1407,7 +1374,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 
 bool GLGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
-	if (!backend_config.supports_host_gpu_labels)
+	if (!m_config.supports_host_gpu_labels)
 	{
 		return false;
 	}
@@ -1454,7 +1421,7 @@ void GLGSRender::enqueue_host_context_write(u32 offset, u32 size, const void* da
 
 void GLGSRender::on_guest_texture_read()
 {
-	if (!backend_config.supports_host_gpu_labels)
+	if (!m_config.supports_host_gpu_labels)
 	{
 		return;
 	}
@@ -1467,14 +1434,14 @@ void GLGSRender::on_guest_texture_read()
 
 void GLGSRender::write_barrier(u32 address, u32 range)
 {
-	ensure(is_current_thread());
-	m_rtts.invalidate_range(utils::address_range32::start_length(address, range));
+	ensure(RSX(m_ctx)->is_current_thread());
+	res()->surface_cache.invalidate_range(utils::address_range32::start_length(address, range));
 }
 
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
-	glBeginQuery(m_occlusion_type, query->driver_handle);
+	glBeginQuery(m_occlusion_type, m_occlusion_query_handles[query->slot_index]);
 }
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
@@ -1489,7 +1456,7 @@ bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return true;
 
 	GLint status = GL_TRUE;
-	glGetQueryObjectiv(query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
+	glGetQueryObjectiv(m_occlusion_query_handles[query->slot_index], GL_QUERY_RESULT_AVAILABLE, &status);
 
 	return status != GL_FALSE;
 }
@@ -1499,7 +1466,7 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 	if (query->num_draws)
 	{
 		GLint result = 0;
-		glGetQueryObjectiv(query->driver_handle, GL_QUERY_RESULT, &result);
+		glGetQueryObjectiv(m_occlusion_query_handles[query->slot_index], GL_QUERY_RESULT, &result);
 
 		query->result += result;
 	}

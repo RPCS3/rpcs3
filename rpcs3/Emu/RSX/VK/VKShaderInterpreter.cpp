@@ -11,6 +11,7 @@
 #include "Emu/RSX/Program/ShaderInterpreter.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/localized_string.h"
+#include "Emu/RSX/Core/RSXContext.h"
 
 #include <thread>
 
@@ -23,7 +24,6 @@ namespace vk
 	{
 		vk::pipeline_props m_properties{};
 		VkDevice m_device = VK_NULL_HANDLE;
-		VkPipelineCache m_pipeline_cache = VK_NULL_HANDLE;
 		VkShaderModule m_vs = VK_NULL_HANDLE;
 		VkShaderModule m_fs = VK_NULL_HANDLE;
 
@@ -52,12 +52,10 @@ namespace vk
 		async_pipe_compiler_context(
 			const vk::pipeline_props& props,
 			VkDevice device,
-			VkPipelineCache pipeline_cache,
 			VkShaderModule vs,
 			VkShaderModule fs)
 			: m_properties(props)
 			, m_device(device)
-			, m_pipeline_cache(pipeline_cache)
 			, m_vs(vs)
 			, m_fs(fs)
 		{
@@ -459,12 +457,10 @@ namespace vk
 		return vk_prog;
 	}
 
-	void shader_interpreter::init(const vk::render_device& dev)
+	void shader_interpreter::init(rsx::context* ctx, const vk::render_device& dev)
 	{
+		m_ctx = ctx;
 		m_device = dev;
-
-		VkPipelineCacheCreateInfo drv_cache_info{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-		vkCreatePipelineCache(m_device, &drv_cache_info, nullptr, &m_driver_pipeline_cache);
 	}
 
 	void shader_interpreter::destroy()
@@ -473,12 +469,6 @@ namespace vk
 		m_program_cache.clear();
 		m_vs_shader_cache.clear();
 		m_fs_shader_cache.clear();
-
-		if (m_driver_pipeline_cache)
-		{
-			vkDestroyPipelineCache(m_device, m_driver_pipeline_cache, nullptr);
-			m_driver_pipeline_cache = VK_NULL_HANDLE;
-		}
 	}
 
 	std::shared_ptr<glsl::program> shader_interpreter::link(const vk::pipeline_props& properties, u64 compiler_opt, bool async, async_build_fn_callback async_callback)
@@ -486,7 +476,7 @@ namespace vk
 		auto vs = build_vs(compiler_opt);
 		auto fs = build_fs(compiler_opt);
 
-		async_pipe_compiler_context context{ properties, m_device, m_driver_pipeline_cache, vs->shader.get_handle(), fs->shader.get_handle() };
+		async_pipe_compiler_context context{ properties, m_device, vs->shader.get_handle(), fs->shader.get_handle() };
 		auto create_graphics_info_fn = [=]() mutable
 		{
 			return context.compile();
@@ -560,9 +550,9 @@ namespace vk
 		key.compiler_opt = 0;
 		key.properties = properties;
 
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (fp_ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (m_ctx->draw_state.fragment_env.alpha_func)
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -596,7 +586,7 @@ namespace vk
 		if (fp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (fp_metadata.has_branch_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (fp_metadata.has_pack_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) key.compiler_opt |= COMPILER_OPT_ENABLE_STIPPLING;
+		if (fp_ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE) key.compiler_opt |= COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) key.compiler_opt |= COMPILER_OPT_ENABLE_INSTANCING;
 		if (vp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_VTX_TEXTURES;
 
@@ -726,32 +716,68 @@ namespace vk
 		std::vector<vk::pipeline_props> pipe_properties;
 		auto pdev = vk::get_current_renderer();
 
-		// Base pipeline - simple color
-		vk::pipeline_props base_props{};
-		base_props.state.set_attachment_count(1);
-		base_props.state.enable_cull_face(VK_CULL_MODE_BACK_BIT);
-		base_props.state.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-		base_props.state.set_color_mask(0, true, true, true, true);
-		base_props.state.set_attachment_count(1);
-		base_props.state.enable_depth_bias(true);
-		base_props.state.enable_depth_clamp(true);
-		base_props.state.enable_depth_bounds_test(pdev->get_depth_bounds_support());
-		base_props.renderpass_key = vk::get_renderpass_key(VK_FORMAT_B8G8R8A8_UNORM);
-		pipe_properties.push_back(base_props);
-
-		// Add in some blending
-		base_props.state.enable_blend(0,
-			VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-			VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
-		pipe_properties.push_back(base_props);
-
-		// Add a depth buffer
+		// Collect format information we intend to use.
+		// All formats to cover as many variants as possible
 		const auto depth_format = pdev->get_formats_support().d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
-		base_props.renderpass_key = vk::get_renderpass_key(VK_FORMAT_B8G8R8A8_UNORM, depth_format);
-		base_props.state.enable_depth_test(VK_COMPARE_OP_LESS);
-		base_props.state.set_depth_mask(true);
-		pipe_properties.push_back(base_props);
+		std::vector<VkFormat> possible_color_formats =
+		{
+			VK_FORMAT_B8G8R8A8_UNORM,
+			VK_FORMAT_R8G8B8A8_UNORM,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			VK_FORMAT_R8G8_UNORM,
+			VK_FORMAT_R32_SFLOAT,
+			VK_FORMAT_R8_UNORM,
+
+			// These formats are so rarely used, we can skip them and not stutter so badly
+			// VK_FORMAT_R5G6B5_UNORM_PACK16,
+			// VK_FORMAT_A1R5G5B5_UNORM_PACK16,
+			// VK_FORMAT_R32G32B32A32_SFLOAT,
+		};
+
+		for (const auto surface_format : possible_color_formats)
+		{
+			// Base pipeline - simple color
+			vk::pipeline_props base_props{};
+			base_props.state.set_attachment_count(1);
+			base_props.state.enable_cull_face(VK_CULL_MODE_BACK_BIT);
+			base_props.state.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+			base_props.state.set_color_mask(0, true, true, true, true);
+			base_props.state.set_attachment_count(1);
+			base_props.state.enable_depth_bias(true);
+			base_props.state.enable_depth_clamp(true);
+			base_props.state.enable_depth_bounds_test(pdev->get_depth_bounds_support());
+			base_props.renderpass_key = vk::get_renderpass_key(surface_format);
+			pipe_properties.push_back(base_props);
+
+			// Add a depth buffer
+			base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format);
+			base_props.state.enable_depth_test(VK_COMPARE_OP_LESS);
+			base_props.state.set_depth_mask(true);
+			pipe_properties.push_back(base_props);
+
+			// Add more targets. Typical G-buffers are 1-4 color targets + depth.
+			for (u8 index = 1; index < 4; ++index)
+			{
+				base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format, index + 1);
+				base_props.state.set_attachment_count(index + 1);
+				base_props.state.set_color_mask(index, true, true, true, true);
+				pipe_properties.push_back(base_props);
+			}
+
+			// Add in some blending
+			if (surface_format != VK_FORMAT_R32G32B32A32_SFLOAT &&
+				surface_format != VK_FORMAT_R32_SFLOAT)
+			{
+				// Blending not supported for some F32 formats.
+				base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format);
+				base_props.state.set_attachment_count(1);
+				base_props.state.enable_blend(0,
+					VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+					VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+					VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
+				pipe_properties.push_back(base_props);
+			}
+		}
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
 		const u32 limit1 = ::size32(variants.base_pipelines) * ::size32(pipe_properties);

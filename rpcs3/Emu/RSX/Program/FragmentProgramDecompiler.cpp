@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "FragmentProgramDecompiler.h"
-#include "ProgramStateCache.h"
 
 #include "Assembler/Passes/FP/RegisterAnnotationPass.h"
 #include "Assembler/Passes/FP/RegisterDependencyPass.h"

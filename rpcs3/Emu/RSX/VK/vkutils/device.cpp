@@ -36,6 +36,7 @@ namespace vk
 		VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
 		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
 		VkPhysicalDeviceProvokingVertexFeaturesEXT provoking_vertex_info{};
+		VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_info{};
 
 		// Core features
 		shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
@@ -45,6 +46,10 @@ namespace vk
 		descriptor_indexing_info.pNext = features2.pNext;
 		features2.pNext                = &descriptor_indexing_info;
 		descriptor_indexing_support    = true;
+
+		shader_draw_parameters_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+		shader_draw_parameters_info.pNext = features2.pNext;
+		features2.pNext                   = &shader_draw_parameters_info;
 
 		// Optional features
 		if (device_extensions.is_supported(VK_EXT_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
@@ -113,6 +118,7 @@ namespace vk
 		optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
 		optional_features_support.extended_device_fault = !!device_fault_info.deviceFault;
 		optional_features_support.provoking_vertex_last = !!provoking_vertex_info.provokingVertexLast;
+		optional_features_support.shader_draw_parameters = !!shader_draw_parameters_info.shaderDrawParameters;
 
 		features = features2.features;
 
@@ -280,17 +286,24 @@ namespace vk
 
 	std::string physical_device::get_name() const
 	{
+#ifdef __APPLE__
+		// Both Apple drivers fail to include their names anywhere in the device name string, so we need to append the driver names here.
+		switch (get_driver_vendor())
+		{
+		case driver_vendor::KOSMICKRISP:
+			 return std::string(props.deviceName) + " (KosmicKrisp)";
+		case driver_vendor::MVK:
+			 return std::string(props.deviceName) + " (MoltenVK)";
+		default:
+			 break;
+		}
+#endif
+		// Return the raw device name otherwise.
 		return props.deviceName;
 	}
 
 	driver_vendor physical_device::get_driver_vendor() const
 	{
-#ifdef __APPLE__
-		// moltenVK currently returns DRIVER_ID_MOLTENVK (0).
-		// For now, assume the vendor is moltenVK on Apple devices.
-		return driver_vendor::MVK;
-#endif
-
 		if (!driver_properties.driverID)
 		{
 			const auto gpu_name = get_name();
@@ -341,7 +354,11 @@ namespace vk
 
 			if (gpu_name.find("Apple") != umax)
 			{
+#ifdef __APPLE__
+				return driver_vendor::KOSMICKRISP;
+#else
 				return driver_vendor::HONEYKRISP;
+#endif
 			}
 
 			if (gpu_name.find("Panfrost") != umax)
@@ -351,6 +368,15 @@ namespace vk
 			else if (gpu_name.find("Mali") != umax)
 			{ // e.g. "Mali-G610", hence "else"
 				return driver_vendor::ARM_MALI;
+			}
+
+			if (gpu_name.find("Adreno") != umax)
+			{
+#if defined(_WIN32) || defined(ANDROID)
+				return driver_vendor::QUALCOMM;
+#else
+				return driver_vendor::TURNIP;
+#endif
 			}
 
 			return driver_vendor::unknown;
@@ -380,10 +406,18 @@ namespace vk
 				return driver_vendor::V3DV;
 			case VK_DRIVER_ID_MESA_HONEYKRISP:
 				return driver_vendor::HONEYKRISP;
+			case VK_DRIVER_ID_MESA_KOSMICKRISP:
+				return driver_vendor::KOSMICKRISP;
 			case VK_DRIVER_ID_MESA_PANVK:
 				return driver_vendor::PANVK;
 			case VK_DRIVER_ID_ARM_PROPRIETARY:
 				return driver_vendor::ARM_MALI;
+			case VK_DRIVER_ID_QUALCOMM_PROPRIETARY:
+				return driver_vendor::QUALCOMM;
+			case VK_DRIVER_ID_MESA_TURNIP:
+				return driver_vendor::TURNIP;
+			case VK_DRIVER_ID_MOLTENVK:
+				return driver_vendor::MVK;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
@@ -764,6 +798,15 @@ namespace vk
 			device.pNext = &custom_border_color_features;
 		}
 
+		VkPhysicalDeviceShaderDrawParametersFeatures shader_draw_parameters_features{};
+		if (pgpu->optional_features_support.shader_draw_parameters)
+		{
+			shader_draw_parameters_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES;
+			shader_draw_parameters_features.shaderDrawParameters = VK_TRUE;
+			shader_draw_parameters_features.pNext = const_cast<void*>(device.pNext);
+			device.pNext = &shader_draw_parameters_features;
+		}
+
 		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_features{};
 		if (pgpu->multidraw_support)
 		{
@@ -931,6 +974,22 @@ namespace vk
 	{
 		// Rebalance device local memory types
 		memory_map.device_local.rebalance();
+	}
+
+	bool render_device::device_lost() const
+	{
+		if (m_is_lost.exchange(true))
+			return false;
+
+		if (m_error_handler)
+			m_error_handler();
+
+		return true;
+	}
+
+	bool render_device::get_debug_utils_support() const
+	{
+		return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils;
 	}
 
 	void render_device::dump_debug_info(

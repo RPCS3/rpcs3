@@ -58,7 +58,11 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 			const auto prev = ci->getParent();
 			const auto next = prev->splitBasicBlock(ci->getNextNode());
 
+#if LLVM_VERSION_MAJOR >= 23
+			llvm::cast<llvm::UncondBrInst>(m_ir->GetInsertBlock()->getTerminator())->setSuccessor(loop);
+#else
 			llvm::cast<llvm::BranchInst>(m_ir->GetInsertBlock()->getTerminator())->setOperand(0, loop);
+#endif
 
 			llvm::Value* result;
 			//m_ir->CreateBr(loop);
@@ -339,6 +343,27 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	if (auto v = llvm::cast<llvm::FixedVectorType>(t); v->getScalarSizeInBits() * v->getNumElements() != 128)
 	{
 		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u", _pos, _line, v->getScalarSizeInBits(), v->getNumElements());
+	}
+
+	// Vector splats may be represented as ConstantInt/ConstantFP with a vector type (default for ConstantFP since LLVM 23)
+	const auto splat = [&](const llvm::APInt& elem) -> std::pair<bool, v128>
+	{
+		const auto cv = llvm::APInt::getSplat(128, elem);
+
+		result._u64[0] = cv.extractBitsAsZExtValue(64, 0);
+		result._u64[1] = cv.extractBitsAsZExtValue(64, 64);
+
+		return {true, result};
+	};
+
+	if (const auto ci = llvm::dyn_cast<llvm::ConstantInt>(c))
+	{
+		return splat(ci->getValue());
+	}
+
+	if (const auto cfp = llvm::dyn_cast<llvm::ConstantFP>(c))
+	{
+		return splat(cfp->getValueAPF().bitcastToAPInt());
 	}
 
 	const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);

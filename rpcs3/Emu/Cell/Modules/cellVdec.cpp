@@ -49,7 +49,34 @@ extern "C"
 
 std::mutex g_mutex_avcodec_open2;
 
+constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
+
 LOG_CHANNEL(cellVdec);
+
+// Checks whether the AU holds a header that tells the decoder the picture size:
+// MPEG-2: sequence header; MPEG-4 Part 2: Video Object Layer header, or a short video header (H.263 picture start code) at the start of the AU
+static bool au_has_sequence_header(AVCodecID codec_id, const u8* data, u32 size)
+{
+	if (codec_id == AV_CODEC_ID_MPEG4 && size >= 3 && data[0] == 0 && data[1] == 0 && (data[2] & 0xfc) == 0x80)
+	{
+		return true;
+	}
+
+	for (u32 i = 0; i + 3 < size; i++)
+	{
+		if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1)
+		{
+			const u8 code = data[i + 3];
+
+			if (codec_id == AV_CODEC_ID_MPEG2VIDEO ? code == 0xb3 : (code & 0xf0) == 0x20)
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
 
 template<>
 void fmt_class_string<CellVdecError>::format(std::string& out, u64 arg)
@@ -119,6 +146,7 @@ enum class vdec_cmd_type : u32
 	close,
 	au_decode,
 	framerate,
+	drain, // Outputs the pictures still held by the decoder before the sequence ends
 };
 
 struct vdec_cmd
@@ -134,6 +162,10 @@ struct vdec_cmd
 		: type(_type), seq_id(_seq_id), id(_id), mode(_mode), au(std::move(_au))
 	{
 		ensure(_type == vdec_cmd_type::au_decode);
+
+		// Copy the AU now: the game may refill its buffer before the decoder thread gets to this AU
+		const u8* data = vm::_ptr<const u8>(au.startAddr);
+		au_data.assign(data, data + au.size);
 	}
 
 	explicit vdec_cmd(vdec_cmd_type _type, u64 _seq_id, u64 _id, s32 _framerate)
@@ -148,6 +180,7 @@ struct vdec_cmd
 	s32 mode{};
 	s32 framerate{};
 	CellVdecAuInfo au{};
+	std::vector<u8> au_data;
 };
 
 struct vdec_frame
@@ -221,6 +254,8 @@ struct vdec_context final
 
 	AVRational log_time_base{}; // Used to reduce log spam
 	AVRational log_framerate{}; // Used to reduce log spam
+	u32 skipped_au_count{}; // Used to reduce log spam
+	bool sequence_header_found = false;
 
 	vdec_context(s32 type, u32 /*profile*/, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: type(type)
@@ -265,12 +300,18 @@ struct vdec_context final
 			fmt::throw_exception("avcodec_descriptor_get() failed (type=0x%x)", type);
 		}
 
+		// Only these decoders are checked for a sequence header before an AU is passed to them
+		sequence_header_found = codec->id != AV_CODEC_ID_MPEG2VIDEO && codec->id != AV_CODEC_ID_MPEG4;
+
 		ctx = avcodec_alloc_context3(codec);
 
 		if (!ctx)
 		{
 			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)", type);
 		}
+
+		// Carry the AU userdata from each packet to the picture decoded from it, across the frame reordering
+		ctx->flags |= AV_CODEC_FLAG_COPY_OPAQUE;
 
 		AVDictionary* opts = nullptr;
 
@@ -299,8 +340,14 @@ struct vdec_context final
 
 	~vdec_context()
 	{
+		release_decoder();
+	}
+
+	// Frees the FFmpeg decoder, which may take milliseconds
+	void release_decoder()
+	{
 		avcodec_free_context(&ctx);
-		sws_freeContext(sws);
+		sws_freeContext(std::exchange(sws, nullptr));
 	}
 
 	static u32 freq_to_framerate_code(f64 freq)
@@ -389,6 +436,7 @@ struct vdec_context final
 				lv2_obj::sleep(ppu);
 				break;
 			}
+			case vdec_cmd_type::drain:
 			case vdec_cmd_type::au_decode:
 			{
 				AVPacket packet{};
@@ -396,17 +444,20 @@ struct vdec_context final
 
 				u64 au_usrd{};
 
+				// When draining, the command has no AU. Sending a null packet makes the decoder output the pictures it still holds.
+				const bool drain = cmd->type == vdec_cmd_type::drain;
+
 				const u32 au_mode = cmd->mode;
-				const u32 au_addr = cmd->au.startAddr;
 				const u32 au_size = cmd->au.size;
 				const u64 au_pts = u64{cmd->au.pts.upper} << 32 | cmd->au.pts.lower;
 				const u64 au_dts = u64{cmd->au.dts.upper} << 32 | cmd->au.dts.lower;
 				au_usrd = cmd->au.userData;
 
-				packet.data = vm::_ptr<u8>(au_addr);
+				packet.data = cmd->au_data.data();
 				packet.size = au_size;
 				packet.pts = au_pts != umax ? au_pts : s64{smin};
 				packet.dts = au_dts != umax ? au_dts : s64{smin};
+				packet.opaque = reinterpret_cast<void*>(au_usrd);
 
 				if (next_pts == 0 && au_pts != umax)
 				{
@@ -430,9 +481,22 @@ struct vdec_context final
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, seq_id=%d, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->seq_id, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
-					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
+					if (!drain && !sequence_header_found && !au_has_sequence_header(codec->id, packet.data, au_size))
+					{
+						// The decoder cannot use an AU before a sequence header (e.g. a stream continued on a new decoder,
+						// or one that sends its sequence header after its first pictures): skip it
+						if (skipped_au_count++ == 0)
+						{
+							cellVdec.warning("No sequence header yet, skipping AUs until one arrives (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
+						}
+					}
+					else if (int ret = avcodec_send_packet(ctx, drain ? nullptr : &packet); ret < 0)
 					{
 						fmt::throw_exception("AU queuing error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
+					}
+					else
+					{
+						sequence_header_found = true;
 					}
 
 					while (!abort_decode && seq_id == cmd->seq_id)
@@ -450,7 +514,7 @@ struct vdec_context final
 
 						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
 						{
-							if (ret == AVERROR(EAGAIN) || ret == AVERROR(EOF))
+							if (ret == AVERROR(EAGAIN) || ret == averror_eof)
 							{
 								break;
 							}
@@ -493,7 +557,7 @@ struct vdec_context final
 
 						frame.pts = next_pts;
 						frame.dts = next_dts;
-						frame.userdata = au_usrd;
+						frame.userdata = reinterpret_cast<u64>(frame->opaque);
 						frame.attr = attr;
 
 						u64 amend = 0;
@@ -560,16 +624,26 @@ struct vdec_context final
 
 						decoded_frames.push_back(std::move(frame));
 					}
+
+					if (skipped_au_count && !decoded_frames.empty())
+					{
+						cellVdec.warning("Decoder output resumed after %d skipped AUs (handle=0x%x, seq_id=%d, cmd_id=%d)", skipped_au_count, handle, cmd->seq_id, cmd->id);
+						skipped_au_count = 0;
+					}
 				}
 
 				if (thread_ctrl::state() != thread_state::aborting)
 				{
 					// Send AUDONE even if the current sequence was reset and a new sequence was started.
-					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
-					ensure(au_count.try_dec(0));
+					// A drain command has no AU, so there is nothing to report.
+					if (!drain)
+					{
+						cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
+						ensure(au_count.try_dec(0));
 
-					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
-					lv2_obj::sleep(ppu);
+						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
+						lv2_obj::sleep(ppu);
+					}
 
 					while (!decoded_frames.empty() && seq_id == cmd->seq_id)
 					{
@@ -589,16 +663,21 @@ struct vdec_context final
 
 							thread_ctrl::wait_for(10000);
 
-							if (elapsed++ >= 500) // 5 seconds
+							// Report a wait once: a game may keep the pictures of a decoder it does not display for a long time
+							if (++elapsed == 500) // 5 seconds
 							{
-								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, seq_id=%d, cmd_id=%d, queue_size=%d)", handle, cmd->seq_id, cmd->id, out_queue.size());
-								elapsed = 0;
+								cellVdec.warning("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, seq_id=%d, cmd_id=%d, queue_size=%d)", handle, cmd->seq_id, cmd->id, out_queue.size());
 							}
 						}
 
 						if (thread_ctrl::state() == thread_state::aborting || abort_decode || seq_id != cmd->seq_id)
 						{
 							break;
+						}
+
+						if (elapsed >= 500)
+						{
+							cellVdec.notice("Video au decode resumed after waiting %d seconds for a consumer. (handle=0x%x, seq_id=%d, cmd_id=%d)", elapsed / 100, handle, cmd->seq_id, cmd->id);
 						}
 
 						{
@@ -651,6 +730,38 @@ struct vdec_context final
 		std::lock_guard lock{mutex};
 		seq_state = sequence_state::closed;
 	}
+};
+
+// Frees the FFmpeg decoders of closed contexts on a host thread.
+// Freeing a decoder takes milliseconds, which would otherwise delay the guest thread closing it.
+struct vdec_context_reaper
+{
+	lf_queue<shared_ptr<vdec_context>> contexts;
+
+	void operator()()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			thread_ctrl::wait_on(contexts);
+
+			// Let the closing sequence of the caller complete first: freeing this much memory slows down the other threads
+			thread_ctrl::wait_for(100'000);
+
+			for (auto&& vdec : contexts.pop_all())
+			{
+				if (vdec.use_count() > 1)
+				{
+					// Still used by an HLE call in progress, retry later
+					contexts.push(std::move(vdec));
+					continue;
+				}
+
+				vdec->release_decoder();
+			}
+		}
+	}
+
+	static constexpr auto thread_name = "HLE Video Decoder Reaper"sv;
 };
 
 extern bool check_if_vdec_contexts_exist()
@@ -1204,7 +1315,7 @@ error_code cellVdecQueryAttrEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, v
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	VdecDecoderAttr decoder_attr;
+	VdecDecoderAttr decoder_attr {};
 
 	if (get_decoder_specific_ops(type->codecType).query_attr(ppu, decoder_attr, type->profileLevel, type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr) != CELL_OK)
 	{
@@ -1378,7 +1489,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 		spec = type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr;
 	}
 
-	VdecDecoderAttr attr;
+	VdecDecoderAttr attr {};
 	const error_code err = get_decoder_specific_ops(type->codecType).query_attr(ppu, attr, type->profileLevel, spec);
 	if (err != CELL_OK)
 	{
@@ -1493,11 +1604,14 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->seq_state = sequence_state::closed;
 	vdec->mutex.lock_unlock();
 
-	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
+	if (!idm::remove_verify<vdec_context>(handle, vdec))
 	{
 		// Other thread removed it beforehead
 		return { CELL_VDEC_ERROR_ARG, "remove_verify failed" };
 	}
+
+	// Let the reaper free the decoder so that the caller does not pay for it
+	g_fxo->get<named_thread<vdec_context_reaper>>().contexts.push(std::move(vdec));
 
 	return CELL_OK;
 }
@@ -1579,6 +1693,13 @@ error_code cellVdecEndSeq(ppu_thread& ppu, u32 handle)
 	}
 
 	const u64 seq_id = vdec->seq_id;
+
+	// Output the pictures still held by the decoder before ending the sequence
+	const u64 drain_cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding drain cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, drain_cmd_id);
+
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::drain, seq_id, drain_cmd_id));
+
 	const u64 cmd_id = vdec->next_cmd_id++;
 	cellVdec.trace("Adding end cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, cmd_id);
 
@@ -1622,7 +1743,8 @@ error_code cellVdecDecodeAu(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode
 
 	if (!vdec->au_count.try_inc(4))
 	{
-		return CELL_VDEC_ERROR_BUSY;
+		// The AU queue is full: BUSY asks the caller to retry, it is not an error
+		return not_an_error(CELL_VDEC_ERROR_BUSY);
 	}
 
 	const u64 seq_id = vdec->seq_id;
@@ -1669,7 +1791,8 @@ error_code cellVdecDecodeAuEx2(ppu_thread& ppu, u32 handle, CellVdecDecodeMode m
 
 	if (!vdec->au_count.try_inc(4))
 	{
-		return CELL_VDEC_ERROR_BUSY;
+		// The AU queue is full: BUSY asks the caller to retry, it is not an error
+		return not_an_error(CELL_VDEC_ERROR_BUSY);
 	}
 
 	CellVdecAuInfo au_info{};
@@ -1764,12 +1887,14 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 
 		AVPixelFormat out_f = AV_PIX_FMT_YUV420P;
 
-		std::unique_ptr<u8[]> alpha_plane;
+		thread_local std::vector<u8> alpha_plane;
+		thread_local u8 alpha = 0;
+		bool use_alpha = false;
 
 		switch (const u32 type = format->formatType)
 		{
-		case CELL_VDEC_PICFMT_ARGB32_ILV: out_f = AV_PIX_FMT_ARGB; alpha_plane.reset(new u8[w * h]); break;
-		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; alpha_plane.reset(new u8[w * h]); break;
+		case CELL_VDEC_PICFMT_ARGB32_ILV: out_f = AV_PIX_FMT_ARGB; use_alpha = true; break;
+		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; use_alpha = true; break;
 		case CELL_VDEC_PICFMT_UYVY422_ILV: out_f = AV_PIX_FMT_UYVY422; break;
 		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
 		default:
@@ -1780,9 +1905,11 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 
 		// TODO: color matrix
 
-		if (alpha_plane)
+		if (use_alpha && (alpha != format->alpha || static_cast<s32>(alpha_plane.size()) != w * h))
 		{
-			std::memset(alpha_plane.get(), format->alpha, w * h);
+			alpha = format->alpha;
+			alpha_plane.resize(w * h, alpha);
+			std::memset(alpha_plane.data(), format->alpha, alpha_plane.size());
 		}
 
 		AVPixelFormat in_f = AV_PIX_FMT_YUV420P;
@@ -1793,17 +1920,17 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 			cellVdec.error("cellVdecGetPictureExt: experimental AVPixelFormat (handle=0x%x, seq_id=%d, cmd_id=%d, format=%d). This may cause suboptimal video quality.", handle, frame.seq_id, frame.cmd_id, frame->format);
 			[[fallthrough]];
 		case AV_PIX_FMT_YUV420P:
-			in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
+			in_f = false ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
 			break;
 		default:
 			fmt::throw_exception("cellVdecGetPictureExt: Unknown frame format (%d)", frame->format);
 		}
 
-		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, seq_id=%d, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, frame.seq_id, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
+		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, seq_id=%d, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, use_alpha=%d, alpha=%d, colorMatrixType=%d", handle, frame.seq_id, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, use_alpha, format->alpha, format->colorMatrixType);
 
 		vdec->sws = sws_getCachedContext(vdec->sws, w, h, in_f, w, h, out_f, SWS_POINT, nullptr, nullptr, nullptr);
 
-		const u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
+		const u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], use_alpha ? alpha_plane.data() : nullptr };
 		const int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
 		u8* out_data[4] = { outBuff.get_ptr() };
 		int out_line[4] = { w * 4 }; // RGBA32 or ARGB32
@@ -1812,7 +1939,7 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 		// It's possible that we need to align the pitch to 128 here.
 		// PS HOME seems to rely on this somehow in certain cases.
 
-		if (!alpha_plane)
+		if (!use_alpha)
 		{
 			// YUV420P or UYVY422
 			out_data[1] = out_data[0] + w * h;

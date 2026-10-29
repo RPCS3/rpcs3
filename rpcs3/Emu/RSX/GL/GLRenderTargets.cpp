@@ -5,6 +5,8 @@
 
 #include <span>
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
 	//color format
@@ -16,15 +18,15 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	case rsx::surface_color_format::a8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true };
 
-	//These formats discard their alpha component, forced to 0 or 1
-	//All XBGR formats will have remapping before they can be read back in shaders as DRGB8
-	//Prefix o = 1, z = 0
+	// These formats discard their alpha component, forced to 0 or 1
+	// All XBGR formats will have remapping before they can be read back in shaders as DRGB8
+	// Prefix o = 1, z = 0
 	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+		return{ ::gl::texture::type::ushort_1_5_5_5_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
 
 	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+		return{ ::gl::texture::type::ushort_1_5_5_5_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
 
 	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
@@ -54,7 +56,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::g8b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, false,
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, true,
 		{ ::gl::texture::channel::g, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::x32:
@@ -84,7 +86,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
 	case rsx::surface_depth_format2::z24s8_float:
-		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+		return{ ::gl::texture::type::f32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
 		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
@@ -101,118 +103,99 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	}
 }
 
-void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)
+bool GLGSRender::is_framebuffer_bound() const
 {
-	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_current_framebuffer_context == context && !m_graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
-	{
-		// Fast path
-		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
-		set_scissor(clipped_scissor);
-		return;
-	}
+	return !!m_draw_fbo;
+}
 
-	m_graphics_state.clear(
-		rsx::rtt_config_dirty |
-		rsx::rtt_config_contested |
-		rsx::rtt_config_valid |
-		rsx::rtt_cache_state_dirty |
-		rsx::pipeline_config_dirty);
-
-	get_framebuffer_layout(context, m_framebuffer_layout);
-	if (!m_graphics_state.test(rsx::rtt_config_valid))
-	{
-		return;
-	}
-
-	if (m_draw_fbo && m_framebuffer_layout.ignore_change)
+bool GLGSRender::on_framebuffer_bound(const rsx::framebuffer_layout& layout)
+{
+	if (m_draw_fbo && layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor(clipped_scissor);
-
-		return;
+		return true;
 	}
 
 	gl::command_context cmd{ gl_state };
-	m_rtts.prepare_render_target(cmd,
-		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
-		m_framebuffer_layout.width, m_framebuffer_layout.height,
-		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
-		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
-		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
-		resolution_scaling_config);
+	res()->surface_cache.prepare_render_target(cmd,
+		m_ctx->fb.layout.color_format, m_ctx->fb.layout.depth_format,
+		m_ctx->fb.layout.width, m_ctx->fb.layout.height,
+		m_ctx->fb.layout.target, m_ctx->fb.layout.aa_mode, m_ctx->fb.layout.raster_type,
+		m_ctx->fb.layout.color_addresses, m_ctx->fb.layout.zeta_address,
+		m_ctx->fb.layout.actual_color_pitch, m_ctx->fb.layout.actual_zeta_pitch,
+		RSX(m_ctx)->resolution_scaling_config);
 
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
 
-	const u8 color_bpp = get_format_block_size_in_bytes(m_framebuffer_layout.color_format);
-	const auto samples = get_format_sample_count(m_framebuffer_layout.aa_mode);
+	const u8 color_bpp = get_format_block_size_in_bytes(m_ctx->fb.layout.color_format);
+	const auto samples = get_format_sample_count(m_ctx->fb.layout.aa_mode);
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		if (m_ctx->fb.surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
-			const utils::address_range32 surface_range = m_surface_info[i].get_memory_range();
-			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
+			const utils::address_range32 surface_range = m_ctx->fb.surface_info[i].get_memory_range();
+			res()->texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+			res()->texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 		}
 
-		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
+		if (std::get<0>(res()->surface_cache.m_bound_render_targets[i]))
 		{
-			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
+			auto rtt = std::get<1>(res()->surface_cache.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
-			ensure(rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i]); // "Pitch mismatch!"
-			m_surface_info[i].address = m_framebuffer_layout.color_addresses[i];
-			m_surface_info[i].pitch = m_framebuffer_layout.actual_color_pitch[i];
-			m_surface_info[i].width = m_framebuffer_layout.width;
-			m_surface_info[i].height = m_framebuffer_layout.height;
-			m_surface_info[i].color_format = m_framebuffer_layout.color_format;
-			m_surface_info[i].bpp = color_bpp;
-			m_surface_info[i].samples = samples;
-			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].get_memory_range(m_framebuffer_layout.aa_factors));
+			ensure(rtt->get_rsx_pitch() == m_ctx->fb.layout.actual_color_pitch[i]); // "Pitch mismatch!"
+			m_ctx->fb.surface_info[i].address = m_ctx->fb.layout.color_addresses[i];
+			m_ctx->fb.surface_info[i].pitch = m_ctx->fb.layout.actual_color_pitch[i];
+			m_ctx->fb.surface_info[i].width = m_ctx->fb.layout.width;
+			m_ctx->fb.surface_info[i].height = m_ctx->fb.layout.height;
+			m_ctx->fb.surface_info[i].color_format = m_ctx->fb.layout.color_format;
+			m_ctx->fb.surface_info[i].bpp = color_bpp;
+			m_ctx->fb.surface_info[i].samples = samples;
+			res()->texture_cache.notify_surface_changed(m_ctx->fb.surface_info[i].get_memory_range(m_ctx->fb.layout.aa_factors));
 		}
 		else
 		{
 			color_targets[i] = GL_NONE;
-			m_surface_info[i] = {};
+			m_ctx->fb.surface_info[i] = {};
 		}
 	}
 
-	if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+	if (m_ctx->fb.depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 	{
-		const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
-		m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-		m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
+		const utils::address_range32 surface_range = m_ctx->fb.depth_surface_info.get_memory_range();
+		res()->texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+		res()->texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 	}
 
-	if (std::get<0>(m_rtts.m_bound_depth_stencil))
+	if (std::get<0>(res()->surface_cache.m_bound_depth_stencil))
 	{
-		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
-		ensure(std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch); // "Pitch mismatch!"
+		ensure(std::get<1>(res()->surface_cache.m_bound_depth_stencil)->get_rsx_pitch() == m_ctx->fb.layout.actual_zeta_pitch); // "Pitch mismatch!"
 
-		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
-		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
-		m_depth_surface_info.width = m_framebuffer_layout.width;
-		m_depth_surface_info.height = m_framebuffer_layout.height;
-		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
-		m_depth_surface_info.bpp = get_format_block_size_in_bytes(m_framebuffer_layout.depth_format);
-		m_depth_surface_info.samples = samples;
+		m_ctx->fb.depth_surface_info.address = m_ctx->fb.layout.zeta_address;
+		m_ctx->fb.depth_surface_info.pitch = m_ctx->fb.layout.actual_zeta_pitch;
+		m_ctx->fb.depth_surface_info.width = m_ctx->fb.layout.width;
+		m_ctx->fb.depth_surface_info.height = m_ctx->fb.layout.height;
+		m_ctx->fb.depth_surface_info.depth_format = m_ctx->fb.layout.depth_format;
+		m_ctx->fb.depth_surface_info.bpp = get_format_block_size_in_bytes(m_ctx->fb.layout.depth_format);
+		m_ctx->fb.depth_surface_info.samples = samples;
 
-		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(m_framebuffer_layout.aa_factors));
+		res()->texture_cache.notify_surface_changed(m_ctx->fb.depth_surface_info.get_memory_range(m_ctx->fb.layout.aa_factors));
 	}
 	else
 	{
 		depth_stencil_target = GL_NONE;
-		m_depth_surface_info = {};
+		m_ctx->fb.depth_surface_info = {};
 	}
 
-	m_graphics_state.clear(rsx::rtt_config_valid);
+	bool found_fbo = false;
 
 	if (m_draw_fbo)
 	{
@@ -228,14 +211,14 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 			m_draw_fbo = &fbo;
 			m_draw_fbo->bind();
-			m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
+			m_draw_fbo->set_extents({ m_ctx->fb.layout.width, m_ctx->fb.layout.height });
 
-			m_graphics_state.set(rsx::rtt_config_valid);
+			found_fbo = true;
 			break;
 		}
 	}
 
-	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	if (!found_fbo)
 	{
 		m_framebuffer_cache.emplace_back();
 		m_framebuffer_cache.back().add_ref();
@@ -243,7 +226,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_draw_fbo = &m_framebuffer_cache.back();
 		m_draw_fbo->create();
 		m_draw_fbo->bind();
-		m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
+		m_draw_fbo->set_extents({ m_ctx->fb.layout.width, m_ctx->fb.layout.height });
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -255,7 +238,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 		if (depth_stencil_target)
 		{
-			if (is_depth_stencil_format(m_framebuffer_layout.depth_format))
+			if (is_depth_stencil_format(m_ctx->fb.layout.depth_format))
 			{
 				m_draw_fbo->depth_stencil = depth_stencil_target;
 			}
@@ -268,7 +251,18 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	ensure(m_draw_fbo);
 
-	switch (rsx::method_registers.surface_color_target())
+	if (m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
+	{
+		// Framebufferless rendering. Raster dimensions must be supplied explicitly and match what real surfaces would have used.
+		const auto [raster_width, raster_height] = rsx::apply_resolution_scale<true>(
+			RSX(m_ctx)->resolution_scaling_config, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+
+		const GLint raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_draw_fbo->set_default_extents({ raster_width, raster_height });
+		m_draw_fbo->set_default_samples(raster_samples);
+	}
+
+	switch (layout.target)
 	{
 	case rsx::surface_target::none: break;
 
@@ -300,39 +294,34 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	if (!m_draw_fbo->check())
 	{
-		m_graphics_state.clear(rsx::rtt_config_valid);
-		return;
+		// Tell the GRAPH engine the framebuffer cannot be used
+		return false;
 	}
 
-	m_graphics_state.set(rsx::rtt_config_valid);
-	on_framebuffer_layout_updated();
-
-	check_zcull_status(true);
 	set_viewport();
-	set_scissor(clipped_scissor);
 
-	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
+	res()->texture_cache.clear_ro_tex_invalidate_intr();
 
-	if (!m_rtts.superseded_surfaces.empty())
+	if (!res()->surface_cache.superseded_surfaces.empty())
 	{
-		for (auto& surface : m_rtts.superseded_surfaces)
+		for (auto& surface : res()->surface_cache.superseded_surfaces)
 		{
-			m_gl_texture_cache.discard_framebuffer_memory_region(cmd, surface->get_memory_range());
+			res()->texture_cache.discard_framebuffer_memory_region(cmd, surface->get_memory_range());
 		}
 
-		m_rtts.superseded_surfaces.clear();
+		res()->surface_cache.superseded_surfaces.clear();
 	}
 
-	if (!m_rtts.orphaned_surfaces.empty())
+	if (!res()->surface_cache.orphaned_surfaces.empty())
 	{
-		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
+		for (auto& [base_addr, surface] : res()->surface_cache.orphaned_surfaces)
 		{
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
 				!!g_cfg.video.write_color_buffers;
 
 			if (lock &&
 #ifdef TEXTURE_CACHE_DEBUG
-				!m_gl_texture_cache.is_protected(
+				!res()->texture_cache.is_protected(
 					base_addr,
 					surface->get_memory_range(),
 					rsx::texture_upload_context::framebuffer_storage)
@@ -346,59 +335,61 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 			if (!lock) [[likely]]
 			{
-				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
+				res()->texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
 				continue;
 			}
 
-			m_gl_texture_cache.lock_memory_region(
+			res()->texture_cache.lock_memory_region(
 				cmd, surface, surface->get_memory_range(), false,
 				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
 				surface);
 		}
 
-		m_rtts.orphaned_surfaces.clear();
+		res()->surface_cache.orphaned_surfaces.clear();
 	}
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
+		if (!m_ctx->fb.surface_info[i].address || !m_ctx->fb.surface_info[i].pitch) continue;
 
-		const auto surface_range = m_surface_info[i].get_memory_range();
+		const auto surface_range = m_ctx->fb.surface_info[i].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
-			m_gl_texture_cache.lock_memory_region(
-				cmd, m_rtts.m_bound_render_targets[i].second, surface_range, true,
-				m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
-				m_rtts.m_bound_render_targets[i].second);
+			res()->texture_cache.lock_memory_region(
+				cmd, res()->surface_cache.m_bound_render_targets[i].second, surface_range, true,
+				m_ctx->fb.surface_info[i].width, m_ctx->fb.surface_info[i].height, m_ctx->fb.surface_info[i].pitch,
+				res()->surface_cache.m_bound_render_targets[i].second);
 		}
 		else
 		{
-			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
+			res()->texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
 		}
 	}
 
-	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
+	if (m_ctx->fb.depth_surface_info.address && m_ctx->fb.depth_surface_info.pitch)
 	{
-		const auto surface_range = m_depth_surface_info.get_memory_range();
+		const auto surface_range = m_ctx->fb.depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
-			m_gl_texture_cache.lock_memory_region(
-				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
-				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
-				m_rtts.m_bound_depth_stencil.second);
+			res()->texture_cache.lock_memory_region(
+				cmd, res()->surface_cache.m_bound_depth_stencil.second, surface_range, true,
+				m_ctx->fb.depth_surface_info.width, m_ctx->fb.depth_surface_info.height, m_ctx->fb.depth_surface_info.pitch,
+				res()->surface_cache.m_bound_depth_stencil.second);
 		}
 		else
 		{
-			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
+			res()->texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
 		}
 	}
 
-	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
+	if (res()->texture_cache.get_ro_tex_invalidate_intr())
 	{
 		// Invalidate cached sampler state
 		m_samplers_dirty.store(true);
 	}
+
+	return true;
 }
 
 // Render target helpers

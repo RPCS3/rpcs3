@@ -5,7 +5,9 @@
 #include "Emu/Io/interception.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(overlays);
 
@@ -39,7 +41,7 @@ namespace rsx
 
 		void play_sound(sound_effect sound, std::optional<f32> volume)
 		{
-			Emu.GetCallbacks().play_sound(get_sound_filepath(sound), volume);
+			g_emu_callbacks.play_sound(get_sound_filepath(sound), volume);
 		}
 
 		thread_local DECLARE(user_interface::g_thread_bit) = 0;
@@ -525,9 +527,9 @@ namespace rsx
 			}
 
 			if (auto rsxthr = rsx::get_current_renderer(); rsxthr &&
-				(min_refresh_duration_us + rsxthr->last_host_flip_timestamp) < get_system_time())
+				(min_refresh_duration_us + rsxthr->display_ctrl().get_last_host_flip_timestamp()) < get_system_time())
 			{
-				rsxthr->async_flip_requested |= rsx::thread::flip_request::native_ui;
+				rsxthr->display_ctrl().request_native_ui_flip();
 			}
 		}
 	} // namespace overlays

@@ -59,11 +59,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -98,7 +98,7 @@ namespace rsx
 			m_dim_background->back_color.a = 0.9f;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select trophy"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -109,21 +109,21 @@ namespace rsx
 			m_sort_button->set_image_resource(resource_config::standard_image_resource::triangle);
 			m_sort_button->set_size(120, 30);
 			m_sort_button->set_pos(460, trophy_list_y + trophy_list_h + 20);
-			m_sort_button->set_font("Arial", 16);
+			m_sort_button->set_font(16);
 
 			m_show_hidden_trophies_button = std::make_unique<image_button>();
 			m_show_hidden_trophies_button->set_text(m_show_hidden_trophies ? localized_string_id::HOME_MENU_TROPHY_HIDE_HIDDEN_TROPHIES : localized_string_id::HOME_MENU_TROPHY_SHOW_HIDDEN_TROPHIES);
 			m_show_hidden_trophies_button->set_image_resource(resource_config::standard_image_resource::square);
 			m_show_hidden_trophies_button->set_size(120, 30);
 			m_show_hidden_trophies_button->set_pos(180, trophy_list_y + trophy_list_h + 20);
-			m_show_hidden_trophies_button->set_font("Arial", 16);
+			m_show_hidden_trophies_button->set_font(16);
 
 			m_sync_trophies_button = std::make_unique<image_button>();
 			m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES);
 			m_sync_trophies_button->set_image_resource(resource_config::standard_image_resource::select);
 			m_sync_trophies_button->set_size(120, 30);
 			m_sync_trophies_button->set_pos(700, trophy_list_y + trophy_list_h + 20);
-			m_sync_trophies_button->set_font("Arial", 16);
+			m_sync_trophies_button->set_font(16);
 
 			fade_animation.duration_sec = 0.15f;
 

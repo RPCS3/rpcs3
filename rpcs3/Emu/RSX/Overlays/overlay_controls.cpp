@@ -15,14 +15,6 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <limits.h>
-
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
-
-#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
-#include <sys/sysctl.h>
-#endif
 #endif
 
 // Definitions for common UI controls and their routines
@@ -109,7 +101,7 @@ namespace rsx
 			load_data(bytes, grayscaled);
 		}
 
-		image_info::image_info(const std::vector<u8>& bytes, bool grayscaled)
+		image_info::image_info(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			load_data(bytes, grayscaled);
 		}
@@ -119,7 +111,7 @@ namespace rsx
 			if (data) stbi_image_free(data);
 		}
 
-		void image_info::load_data(const std::vector<u8>& bytes, bool grayscaled)
+		void image_info::load_data(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, grayscaled ? STBI_grey_alpha : STBI_rgb_alpha);
 			channels = grayscaled ? 2 : 4;
@@ -205,45 +197,18 @@ namespace rsx
 				// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
 				if (info->get_data() == nullptr)
 				{
-					char result[ PATH_MAX ];
-#if defined(__APPLE__)
-					u32 bufsize = PATH_MAX;
-					const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
-#elif defined(KERN_PROC_PATHNAME)
-					usz bufsize = PATH_MAX;
-					int mib[] = {
-						CTL_KERN,
-#if defined(__NetBSD__)
-						KERN_PROC_ARGS,
-						-1,
-						KERN_PROC_PATHNAME,
-#else
-						KERN_PROC,
-						KERN_PROC_PATHNAME,
-						-1,
-#endif
-					};
-					const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
-#elif defined(__linux__)
-					const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
-#elif defined(__sun)
-					const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
-#else
-					const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
-#endif
-					if (success)
+					if (const std::string& resources_dir = fs::get_resources_dir(); !resources_dir.empty())
 					{
-						std::string executablePath = dirname(result);
-#ifdef __APPLE__
-						src = executablePath + "/../Resources/Icons/ui/" + res;
-#else
-						src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
-#endif
+						src = resources_dir + "Icons/ui/" + res;
 						info = std::make_unique<image_info>(src);
-						// Check if the icons are in the same directory as the executable (local builds)
-						if (info->get_data() == nullptr)
+					}
+
+					// Check if the icons are in the same directory as the executable (local builds)
+					if (info->get_data() == nullptr)
+					{
+						if (const std::string& executable_dir = fs::get_real_executable_dir(); !executable_dir.empty())
 						{
-							src = executablePath + "/Icons/ui/" + res;
+							src = executable_dir + "/Icons/ui/" + res;
 							info = std::make_unique<image_info>(src);
 						}
 					}
@@ -505,9 +470,17 @@ namespace rsx
 			set_text(container.str);
 		}
 
-		void overlay_element::set_font(const char* font_name, u16 font_size)
+		void overlay_element::set_font(u16 font_size, std::string_view font_name)
 		{
-			font_ref = fontmgr::get(font_name, font_size);
+			if (font_name.empty())
+			{
+				font_ref = fontmgr::get(g_cfg.video.ui.default_font.get(), font_size);
+			}
+			else
+			{
+				font_ref = fontmgr::get(font_name, font_size);
+			}
+
 			m_is_compiled = false;
 		}
 
@@ -525,7 +498,7 @@ namespace rsx
 
 		font* overlay_element::get_font() const
 		{
-			return font_ref ? font_ref : fontmgr::get("Arial", 12);
+			return font_ref ? font_ref : fontmgr::get(g_cfg.video.ui.default_font.get(), 12);
 		}
 
 		std::vector<vertex> overlay_element::render_text(const char32_t* string, f32 x, f32 y)

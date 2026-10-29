@@ -35,5 +35,6 @@ namespace gl
 {
 	void enable_debugging();
 	bool is_primitive_native(rsx::primitive_type in);
+	bool emulate_extended_depth_range();
 	GLenum draw_mode(rsx::primitive_type in);
 }

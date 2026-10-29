@@ -2,7 +2,7 @@
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Core/RSXContext.h"
-#include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Utils/algorithm.hpp"
 
 #include "texture_cache_utils.h"
 #include "texture_cache_predictor.h"
@@ -645,7 +645,6 @@ namespace rsx
 
 
 	protected:
-
 		/**
 		 * Variable declarations
 		 */
@@ -688,9 +687,6 @@ namespace rsx
 		static const bool invalidation_ignore_unsynchronized = true; // If true, unsynchronized sections don't get forcefully flushed unless they overlap the fault range
 		static const bool invalidation_keep_ro_during_read = true; // If true, RO sections are not invalidated during read faults
 
-
-
-
 		/**
 		 * Virtual Methods
 		 */
@@ -713,6 +709,8 @@ namespace rsx
 		virtual void cleanup_after_dma_transfers(commandbuffer_type&) = 0;
 
 	public:
+		void set_context(rsx::context* ctx) { m_ctx = ctx; }
+
 		virtual void destroy() = 0;
 		virtual bool is_depth_texture(u32, u32) = 0;
 		virtual void on_section_destroyed(section_storage_type& /*section*/)
@@ -720,6 +718,9 @@ namespace rsx
 
 
 	protected:
+		// Owning context. Immutable once set.
+		rsx::context* m_ctx = nullptr;
+
 		/**
 		 * Helpers
 		 */
@@ -812,7 +813,7 @@ namespace rsx
 				else if (surface->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
 				{
 					// This region is set to always read from itself (unavoidable hard sync)
-					const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
+					const auto ROP_timestamp = m_ctx->ROP_sync_timestamp;
 					if (ROP_timestamp > surface->get_sync_timestamp())
 					{
 						sections_to_transfer.push_back(surface);
@@ -1828,6 +1829,7 @@ namespace rsx
 
 					// Fake RTT cache hit
 					dst_subres.surface = dst_surface;
+					dst_subres.base_address = section_attr.address;
 					dst_is_render_target = true;
 
 					dest_texture = dst_surface->get_surface(rsx::surface_access::transfer_write);
@@ -2390,6 +2392,12 @@ namespace rsx
 
 					if (desc.op == deferred_request_command::copy_image_dynamic)
 						update_image_contents(cmd, It->second.second, desc);
+
+					if (It->second.first.remap.encoded != desc.remap.encoded)
+					{
+						auto image = static_cast<viewable_image_type>(It->second.second->image());
+						return image->get_view(desc.remap);
+					}
 
 					return It->second.second;
 				}
@@ -3066,7 +3074,7 @@ namespace rsx
 
 			image_section_attributes_t attributes{};
 			texture_cache_search_options options{};
-			attributes.address = rsx::get_address(tex.offset(), tex.location());
+			attributes.address = rsx::get_address(m_ctx, tex.offset(), tex.location());
 			attributes.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();
@@ -3308,7 +3316,7 @@ namespace rsx
 			// Do direct upload from CPU as the last resort
 			m_texture_upload_misses_this_frame++;
 
-			const auto subresources_layout = get_subresources_layout(tex);
+			const auto subresources_layout = get_subresources_layout(m_ctx, tex);
 			const auto format_class = classify_format(attributes.gcm_format);
 
 			if (!tex_size)
@@ -3498,6 +3506,7 @@ namespace rsx
 				}
 
 				const auto props = texture_cache_helpers::get_optimal_blit_target_properties(
+					m_ctx,
 					src_is_render_target,
 					dst_range,
 					dst.pitch,
@@ -3681,45 +3690,67 @@ namespace rsx
 				// We also want to grab the section alias while we're at it to make sure the memory is sane
 				section_storage_type* dest_section = nullptr;
 
-				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
-					found && found->is_locked())
-				{
-					if (found->get_rsx_pitch() == dst.pitch) [[ likely ]]
-					{
-						// It is possible for other resource types to overlap this fbo if it only covers a small section of its max width.
-						// Blit engine read and write resources do not allow clipping and would have been recreated at the same address.
-						// TODO: In cases of clipped data, generate the blit resources in the surface cache instead.
-						if (found->get_context() == rsx::texture_upload_context::framebuffer_storage)
-						{
-							found->touch(m_cache_update_tag);
-							update_cache_tag();
+				// Write back all host data if we're expecting to miss data on super_ptr path...
+				const auto test_range = dst_subres.surface->get_memory_range();
+				bool require_range_flush = false;
 
-							if (found->get_section_base() == dst_subres.surface->base_addr)
-							{
-								ensure(!dest_section, "More than one section matches our surface!");
-								ensure(found->get_section_range() == dst_subres.surface->get_memory_range(), "Memory range does not match!");
-								dest_section = found;
-							}
-						}
-					}
-					else
+				for (auto It = m_storage.range_begin(test_range, section_bounds::locked_range, true); It != m_storage.range_end(); ++It)
+				{
+					auto& section = *It;
+					if (!section.is_flushable())
 					{
-						// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-						if (found->is_flushable())
-						{
-							// Technically this is possible in games that may change surface pitch at random (insomniac engine)
-							// FIXME: A proper fix includes pitch conversion and surface inheritance chains between surface targets and blit targets (unified cache) which is a very long-term thing.
-							const auto range = found->get_section_range();
-							rsx_log.error("[Pitch Mismatch] GPU-resident data at 0x%x->0x%x is discarded due to surface cache data clobbering it.", range.start, range.end);
-						}
-						found->discard(true);
+						continue;
+					}
+
+					// If we reached here, we overlap the output range and we're locked (have host-side data)
+					if (section.get_rsx_pitch() != dst_subres.surface->get_rsx_pitch() ||
+						section.get_context() != rsx::texture_upload_context::framebuffer_storage)
+					{
+						// Invalidate the range if we need to upload data.
+						require_range_flush = true;
+						continue;
+					}
+
+					if (section.matches(test_range))
+					{
+						section.touch(m_cache_update_tag);
+						update_cache_tag();
+
+						ensure(!dest_section, "More than one section matches our surface!");
+						dest_section = &section;
 					}
 				}
 
 				if (!dest_section || !dest_section->is_locked())
 				{
+					// Check if the transfer operation fully covers the destination...
+					const bool skip_data_load =
+						dst_area.x1 == 0 &&
+						dst_area.y1 == 0 &&
+						dst_area.x2 == dst_subres.surface->template get_surface_width<rsx::surface_metrics::samples, int>() &&
+						dst_area.y2 == dst_subres.surface->template get_surface_height<rsx::surface_metrics::samples, int>();
+
+					// Forced write-back if we actually need to upload.
+					if (require_range_flush && !skip_data_load)
+					{
+						invalidate_range_impl_base(
+							cmd,
+							dst_subres.surface->get_memory_range(),
+							invalidation_cause::cause_is_write | invalidation_cause::cause_uses_strict_data_bounds,
+							{},
+							std::forward<Args>(extras)...);
+					}
+
 					// All blit targets must be protected, regardless of WCB/RCB settings
-					dst_subres.surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+					// Optimization: Ignore BG data load and BG erase if we're going to fully overwrite the destination
+					if (skip_data_load)
+					{
+						dst_subres.surface->state_flags &= ~(rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd);
+					}
+					else
+					{
+						dst_subres.surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+					}
 
 					if (!dest_section)
 					{
@@ -3797,16 +3828,17 @@ namespace rsx
 
 			if (cached_dest)
 			{
-				result.real_dst_address = cached_dest->get_section_base();
-				result.real_dst_size = cached_dest->get_section_size();
+				result.dst_range = utils::address_range32::start_length(
+					cached_dest->get_section_base(),
+					cached_dest->get_section_size());
 			}
 			else
 			{
 				ensure(dst_is_render_target);
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
 
-				result.real_dst_address = dst_base_address;
-				result.real_dst_size = dst.pitch * dst_dimensions.height;
+				// We use the full surface range here. Blit resources are always locked after writing regardless of WCB/WDB settings.
+				result.dst_range = dst_subres.surface->get_memory_range();
 			}
 
 			return result;

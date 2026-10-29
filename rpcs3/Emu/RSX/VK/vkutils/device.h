@@ -5,6 +5,8 @@
 #include "pipeline_binding_table.h"
 #include "memory.h"
 
+#include <util/atomic.hpp>
+
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -104,6 +106,7 @@ namespace vk
 			bool texture_compression_bc = false;
 			bool portability = false;
 			bool provoking_vertex_last = false;
+			bool shader_draw_parameters = false;
 		} optional_features_support;
 
 		friend class render_device;
@@ -154,6 +157,10 @@ namespace vk
 		u32 m_present_queue_family = 0;
 		u32 m_transfer_queue_family = 0;
 
+		// GPU reset and recovery
+		mutable atomic_t<bool> m_is_lost = false;
+		std::function<void()> m_error_handler{};
+
 		void dump_debug_info(
 			const std::vector<const char*>& requested_extensions,
 			const VkPhysicalDeviceFeatures& requested_features) const;
@@ -186,13 +193,14 @@ namespace vk
 		bool get_unrestricted_depth_range_support() const { return pgpu->optional_features_support.unrestricted_depth_range; }
 		bool get_external_memory_host_support() const { return pgpu->optional_features_support.external_memory_host; }
 		bool get_surface_capabilities_2_support() const { return pgpu->optional_features_support.surface_capabilities_2; }
-		bool get_debug_utils_support() const { return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils; }
+		bool get_debug_utils_support() const;
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }
 		bool get_barycoords_support() const { return pgpu->optional_features_support.barycentric_coords; }
 		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
 		bool get_extended_device_fault_support() const { return pgpu->optional_features_support.extended_device_fault; }
 		bool get_texture_compression_bc_support() const { return pgpu->optional_features_support.texture_compression_bc; }
 		bool get_provoking_vertex_last_support() const { return pgpu->optional_features_support.provoking_vertex_last; }
+		bool get_shader_draw_parameters_support() const { return pgpu->optional_features_support.shader_draw_parameters; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
@@ -205,6 +213,10 @@ namespace vk
 		u32 get_transfer_queue_family() const { return m_transfer_queue_family; }
 
 		mem_allocator_base* get_allocator() const { return m_allocator.get(); }
+
+		bool device_lost() const;  // Returns true if the device was valid before the call.
+		bool is_lost() const { return m_is_lost; }
+		void set_error_handler(std::function<void()> callback) { m_error_handler = callback; }
 
 		operator VkDevice() const { return dev; }
 	};

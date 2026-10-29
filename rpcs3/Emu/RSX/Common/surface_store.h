@@ -5,7 +5,7 @@
 #include "ranged_map.hpp"
 #include "surface_cache_dma.hpp"
 #include "../gcm_enums.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 #include <list>
 
 #include "util/asm.hpp"
@@ -60,6 +60,12 @@ namespace rsx
 
 		bool m_invalidate_on_write = false;
 
+		// Context this cache belongs to
+		rsx::context* m_ctx = nullptr;
+
+		// Resolution scaling the surfaces were last synced to
+		rsx::surface_scaling_config_t m_scaling_config{};
+
 		rsx::surface_raster_type m_active_raster_type = rsx::surface_raster_type::linear;
 
 	public:
@@ -85,7 +91,44 @@ namespace rsx
 		~surface_store() = default;
 		surface_store(const surface_store&) = delete;
 
+		void set_context(rsx::context* ctx)
+		{
+			m_ctx = ctx;
+		}
+
 	private:
+		surface_storage_type find_reusable_matching_surface(surface_type ref, u16 width, u16 height, surface_type excluded_surface)
+		{
+			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
+				ref->resolution_scaling_config, width, height,
+				ref->template get_surface_width<rsx::surface_metrics::pixels>(),
+				ref->template get_surface_height<rsx::surface_metrics::pixels>());
+
+			for (auto it = invalidated_resources.begin(); it != invalidated_resources.end(); ++it)
+			{
+				auto& surface = *it;
+				if (surface.get() == ref || surface.get() == excluded_surface ||
+					surface->has_refs() || !surface->old_contents.empty())
+				{
+					continue;
+				}
+
+				if (surface->width() != new_w || surface->height() != new_h ||
+					surface->samples() != ref->samples() || surface->get_spp() != ref->get_spp() ||
+					surface->format_class() != ref->format_class() ||
+					!Traits::is_reusable_surface(surface.get(), ref))
+				{
+					continue;
+				}
+
+				auto result = std::move(surface);
+				invalidated_resources.erase(it);
+				return result;
+			}
+
+			return {};
+		}
+
 		template <bool is_depth_surface>
 		void split_surface_region(command_list_type cmd, u32 address, surface_type prev_surface, u16 width, u16 height, u8 bpp, rsx::surface_antialiasing aa)
 		{
@@ -141,8 +184,13 @@ namespace rsx
 					// Memory requirements can be altered when cloning
 					free_rsx_memory(Traits::get(sink));
 				}
+				else
+				{
+					sink = find_reusable_matching_surface(region.source, region.width, region.height, invalidated);
+				}
 
 				Traits::clone_surface(cmd, sink, region.source, new_address, region, region.source->resolution_scaling_config);
+				Traits::get(sink)->ctx = m_ctx;
 				allocate_rsx_memory(Traits::get(sink));
 
 				if (invalidated) [[unlikely]]
@@ -544,6 +592,7 @@ namespace rsx
 				ensure(store);
 				new_surface_storage = Traits::create_new_surface(command_list, address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
+				new_surface->ctx = m_ctx;
 				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
 			}
@@ -1249,7 +1298,14 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
+		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(
+			commandbuffer_type& cmd,
+			u32 texaddr,
+			u32 required_width,
+			u32 required_height,
+			u32 required_pitch,
+			u8 required_bpp,
+			rsx::surface_access access)
 		{
 			rsx::simple_array<surface_overlap_info> result;
 			rsx::simple_array<utils::pair<u32, bool>> dirty;
@@ -1396,17 +1452,35 @@ namespace rsx
 
 			if (result.size() > 1)
 			{
-				result.sort([](const auto &a, const auto &b)
+				result.sort([texaddr](const auto &a, const auto &b)
 				{
-					if (a.surface->last_use_tag == b.surface->last_use_tag)
+					// Check for the common case first. 99.99% of lookups end here.
+					if (a.surface->last_use_tag != b.surface->last_use_tag) [[ likely ]]
 					{
-						const auto area_a = a.dst_area.width * a.dst_area.height;
-						const auto area_b = b.dst_area.width * b.dst_area.height;
-
-						return area_a < area_b;
+						return a.surface->last_use_tag < b.surface->last_use_tag;
 					}
 
-					return a.surface->last_use_tag < b.surface->last_use_tag;
+					// Surfaces are aliasing. We need a tie-breaker
+					if (a.is_depth != b.is_depth &&
+						g_cfg.video.fb_aliasing_bias != framebuffer_aliasing_bias::_auto)
+					{
+						// User-defined preference for mismatched depth/color aliasing. This is the most common aliasing cause.
+						// Preferred aspect goes last.
+						const bool prefer_color = g_cfg.video.fb_aliasing_bias == framebuffer_aliasing_bias::prefer_color;
+						return prefer_color ? a.is_depth : b.is_depth;
+					}
+
+					// Check if we have a perfect match and make it go last
+					if (a.base_address == texaddr && !a.is_clipped) return false;
+					if (b.base_address == texaddr && !b.is_clipped) return true;
+
+					// Check if one of the two is able to serve the full request better than the other.
+					if (a.is_clipped != b.is_clipped) return a.is_clipped;
+
+					// Compare available area if nothing else could break the tie
+					const auto area_a = a.dst_area.width * a.dst_area.height;
+					const auto area_b = b.dst_area.width * b.dst_area.height;
+					return area_a < area_b;
 				});
 			}
 
@@ -1641,8 +1715,15 @@ namespace rsx
 			}
 		}
 
+		const rsx::surface_scaling_config_t& scaling_config() const
+		{
+			return m_scaling_config;
+		}
+
 		void sync_scaling_config(command_list_type cmd, const rsx::surface_scaling_config_t& active_config)
 		{
+			m_scaling_config = active_config;
+
 			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
 			{
 				std::vector<surface_type> surfaces_to_clone;
@@ -1691,6 +1772,7 @@ namespace rsx
 					copy.source = surface;
 
 					Traits::clone_surface(cmd, sink, surface, surface->base_addr, copy, active_config);
+					Traits::get(sink)->ctx = m_ctx;
 					allocate_rsx_memory(Traits::get(sink));
 
 					// Replace with the new one

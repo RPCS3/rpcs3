@@ -1,0 +1,8 @@
+ports:
+  - name: abseil
+  - name: ccache
+  - name: gtest
+  - name: sdl3
+  - name: vulkan-headers
+  - name: vulkan-loader
+  - name: MoltenVK

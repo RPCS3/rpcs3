@@ -198,6 +198,19 @@ namespace fs
 	// Return "path" plus an ending delimiter (if missing) if "path" is an existing directory. Otherwise, an empty string
 	std::string get_path_if_dir(const std::string& path);
 
+	// Check whether the path is the bare name of a drive (e.g. "E:"), that is a root path whose trailing delimiter was
+	// trimmed: such a path does not point to the root of the drive but to the current directory of that drive, so the
+	// delimiter must be restored before using or storing it.
+	// NOTE: always false on the other platforms, where a name ending with ':' is a regular path component
+	inline bool is_drive_name([[maybe_unused]] std::string_view path)
+	{
+#ifdef _WIN32
+		return !path.empty() && path.back() == ':';
+#else
+		return false;
+#endif
+	}
+
 	// Get file information
 	bool get_stat(const std::string& path, stat_t& info);
 
@@ -250,8 +263,8 @@ namespace fs
 	// Set file access/modification time
 	bool utime(const std::string& path, s64 atime, s64 mtime);
 
-	// Synchronize filesystems (TODO)
-	void sync();
+	// Synchronize the filesystem containing the given path (only that filesystem where supported)
+	void sync(const std::string& path);
 
 	class file final
 	{
@@ -626,11 +639,21 @@ namespace fs
 		}
 	};
 
-	// Get executable path
+	// Get executable path (points to the appimage on linux or the app bundle on macos)
 	std::string get_executable_path();
 
-	// Get executable containing directory
+	// Get directory containing executable
 	std::string get_executable_dir();
+
+	// Get real executable path (points to the binary inside the appimage on linux or app bundle on macos)
+	const std::string& get_real_executable_path();
+
+	// Get directory containing real executable
+	const std::string& get_real_executable_dir();
+
+#ifndef _WIN32
+	const std::string& get_resources_dir();
+#endif
 
 	// Get configuration directory. Set get_config_subdirectory to true to get the nested config dir on windows.
 	const std::string& get_config_dir(bool get_config_subdirectory = false);

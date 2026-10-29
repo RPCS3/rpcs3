@@ -55,7 +55,7 @@ public:
 	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);
 	~gs_frame();
 
-	video_renderer renderer() const { return m_renderer; };
+	video_renderer renderer() const override { return m_renderer; };
 
 	void ignore_stop_events() { m_ignore_stop_events = true; }
 
@@ -86,6 +86,7 @@ public:
 
 protected:
 	video_renderer m_renderer;
+	Visibility m_startup_visibility = Visibility::Hidden;
 
 	void paintEvent(QPaintEvent* event) override;
 	void showEvent(QShowEvent* event) override;

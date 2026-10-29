@@ -3,6 +3,7 @@
 #include "nv47_sync.hpp"
 
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 
 #include "context_accessors.define.h"
 
@@ -16,27 +17,33 @@ namespace rsx
 
 			// Write ref+get (get will be written again with the same value at command end)
 			auto& dma = *vm::_ptr<RsxDmaControl>(RSX(ctx)->dma_address);
-			dma.get.release(RSX(ctx)->fifo_ctrl->get_pos());
+			//dma.get.store(RSX(ctx)->fifo_ctrl->get_pos() + 4);
 			dma.ref.store(arg);
 		}
 
 		void semaphore_acquire(context* ctx, u32 /*reg*/, u32 arg)
 		{
 			RSX(ctx)->sync_point_request.release(true);
-			const u32 addr = get_address(REGS(ctx)->semaphore_offset_406e(), REGS(ctx)->semaphore_context_dma_406e());
+			const u32 addr = get_address(ctx, REGS(ctx)->semaphore_offset_406e(), REGS(ctx)->semaphore_context_dma_406e());
 
 			// Syncronization point, may be associated with memory changes without actually changing addresses
-			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
+			ctx->graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
+
+			// Ensure atomic seq-cst memory ordering for FIFO GET update
+			atomic_fence_seq_cst();
 
 			const auto& sema = vm::_ref<RsxSemaphore>(addr);
 			const auto& atomic_sema = vm::_ref<atomic_t<RsxSemaphore>>(addr);
 
+			RSX(ctx)->last_sema_cmd = RSX(ctx)->fifo_ctrl->get_pos() - 4;
+			RSX(ctx)->last_sema_addr = addr;
+
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay
-				if (addr != RSX(ctx)->label_addr + 0x10)
+				if (addr != ctx->fw.label_addr + 0x10)
 				{
-					RSX(ctx)->flush_fifo();
+					//RSX(ctx)->flush_fifo();
 					RSX(ctx)->fifo_wake_delay(2);
 				}
 
@@ -44,7 +51,7 @@ namespace rsx
 			}
 			else
 			{
-				RSX(ctx)->flush_fifo();
+				//RSX(ctx)->flush_fifo();
 			}
 
 			u64 start = get_system_time();
@@ -56,6 +63,12 @@ namespace rsx
 				{
 					RSX(ctx)->state += cpu_flag::again;
 					return;
+				}
+
+				if (ctx->fw.free_requested)
+				{
+					// lv2 waits for the context to be freed, which only happens once this method returns
+					break;
 				}
 
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
@@ -87,7 +100,7 @@ namespace rsx
 					continue;
 				}
 
-				RSX(ctx)->on_semaphore_acquire_wait();
+				RSX(ctx)->renderer()->on_semaphore_acquire_wait();
 
 				// Wait until the value changes or until 100us pass.
 				utils::spin_on_cacheline_once(atomic_sema, sema, 100);
@@ -117,10 +130,10 @@ namespace rsx
 				RSX(ctx)->sync_point_request.release(true);
 			}
 
-			const u32 addr = get_address(offset, ctxt);
+			const u32 addr = get_address(ctx, offset, ctxt);
 
 			// TODO: Check if possible to write on reservations
-			if (RSX(ctx)->label_addr >> 28 != addr >> 28)
+			if (ctx->fw.label_addr >> 28 != addr >> 28)
 			{
 				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 				RSX(ctx)->recover_fifo();

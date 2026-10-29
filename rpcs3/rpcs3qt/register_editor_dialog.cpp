@@ -17,6 +17,7 @@
 
 #include "util/v128.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 enum registers : int
 {
@@ -300,7 +301,7 @@ void register_editor_dialog::OnOkay()
 					}
 				}
 
-				value.erase(std::remove_if(value.begin(), value.end(), [](uchar c){ return std::isspace(c); }), value.end());
+				value.erase(std::remove_if(value.begin(), value.end(), utils::isspace<char>), value.end());
 
 				pad(32);
 
@@ -365,7 +366,7 @@ void register_editor_dialog::OnOkay()
 				}
 			}
 
-			value.erase(std::remove_if(value.begin(), value.end(), [](uchar c){ return std::isspace(c); }), value.end());
+			value.erase(std::remove_if(value.begin(), value.end(), utils::isspace<char>), value.end());
 
 			pad(32);
 

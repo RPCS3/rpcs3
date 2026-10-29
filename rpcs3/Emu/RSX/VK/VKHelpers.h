@@ -6,7 +6,7 @@
 #include "VulkanAPI.h"
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
@@ -54,6 +54,7 @@ namespace vk
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
 	bool emulate_conditional_rendering();
+	bool emulate_extended_depth_range();
 	bool use_strict_query_scopes();
 	bool force_reuse_query_pools();
 	VkFlags get_heap_compatible_buffer_types();

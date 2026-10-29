@@ -5,6 +5,7 @@
 #include "VKHelpers.h"
 #include "vkutils/device.h"
 #include "../Program/GLSLCommon.h"
+#include "Emu/system_config.h"
 
 std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
@@ -79,6 +80,15 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 		"#extension GL_EXT_uniform_buffer_unsized_array : require\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
+	// When ARB_shader_draw_paramaters is available, repurpose the instance base index register to carry the draw parameters index
+	const bool use_base_instance = vk::g_render_device->get_shader_draw_parameters_support();
+	if (use_base_instance)
+	{
+		OS <<
+			"#extension GL_ARB_shader_draw_parameters : require\n"
+			"#define _VK_DRAW_ID_FROM_BASE_INSTANCE\n\n";
+	}
+
 	glsl::insert_subheader_block(OS);
 
 	OS <<
@@ -139,6 +149,13 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 		.name = "DrawParametersBuffer"
 	};
 	inputs.push_back(std::move(layouts_input));
+
+	if (use_base_instance) [[ likely ]]
+	{
+		// Skip use of push constants
+		OS << "#define draw_parameters_offset uint(gl_BaseInstanceARB)\n\n";
+		return;
+	}
 
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
@@ -320,6 +337,11 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 	{
 		OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
 	}
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+	{
+		OS << "layout(location=" << vk::get_varying_register_location("depth_range") << ") out flat vec2 depth_range;\n";
+	}
 }
 
 void VKVertexDecompilerThread::insertFSExport(std::stringstream& OS)
@@ -345,6 +367,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 	properties2.low_precision_tests = vk::is_NVIDIA(vk::get_driver_vendor());
 	properties2.require_explicit_invariance = (vk::is_NVIDIA(vk::get_driver_vendor()) && g_cfg.video.shader_precision != gpu_preset_level::low);
 	properties2.require_instanced_render = !!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS);
+	properties2.emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_vulkan);
@@ -476,7 +499,18 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream& OS)
 	}
 
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
-	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
+
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)) [[ likely ]]
+	{
+		OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
+	}
+	else
+	{
+		OS <<
+			"	depth_range = vec2(min(z_near, z_far), max(z_near, z_far));\n"
+			"	gl_Position = apply_depth_range_xform(gl_Position, depth_range);\n";
+	}
+
 	OS << "}\n";
 }
 
@@ -497,7 +531,7 @@ VKVertexProgram::~VKVertexProgram()
 
 void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
-	use_last_provoking_vertex = !!(prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING);
+	m_ctrl = prog.ctrl;
 
 	std::string source;
 	VKVertexDecompilerThread decompiler(prog, source, parr, *this);

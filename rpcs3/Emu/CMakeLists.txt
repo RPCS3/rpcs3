@@ -19,6 +19,7 @@ add_library(rpcs3_emu STATIC
     perf_monitor.cpp
     IPC_config.cpp
     IPC_socket.cpp
+    Io/SkylanderPortalIPC_config.cpp
 )
 
 if(USE_LTO)
@@ -137,6 +138,8 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/PSF.cpp
     ../Loader/PUP.cpp
     ../Loader/TAR.cpp
+    ../Loader/IRD.cpp
+    ../Loader/IRD_validation.cpp
     ../Loader/ISO.cpp
     ../Loader/iso_cache.cpp
     ../Loader/content_validation.cpp
@@ -198,6 +201,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUThread.cpp
     Cell/lv2/lv2.cpp
     Cell/lv2/sys_bdemu.cpp
+    Cell/lv2/sys_bluetooth.cpp
     Cell/lv2/sys_btsetting.cpp
     Cell/lv2/sys_cond.cpp
     Cell/lv2/sys_console.cpp
@@ -425,6 +429,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/GHLtar.cpp
     Io/GunCon3.cpp
     Io/Infinity.cpp
+    Io/wiimote_config.cpp
     Io/interception.cpp
     Io/KamenRider.cpp
     Io/KeyboardHandler.cpp
@@ -442,6 +447,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/RB3MidiKeyboard.cpp
     Io/recording_config.cpp
     Io/Skylander.cpp
+    Io/SkylanderPortalIPC.cpp
     Io/TopShotElite.cpp
     Io/TopShotFearmaster.cpp
     Io/Turntable.cpp
@@ -456,6 +462,7 @@ target_sources(rpcs3_emu PRIVATE
 # Np
 target_sources(rpcs3_emu PRIVATE
     NP/pb_helpers.cpp
+    NP/np_avatar.cpp
     NP/np_cache.cpp
     NP/np_gui_cache.cpp
     NP/np_contexts.cpp
@@ -493,14 +500,21 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/texture_cache.cpp
     RSX/Common/texture_cache_types.cpp
     RSX/Core/RSXContext.cpp
+    RSX/Core/RSXCoreRenderer.cpp
+    RSX/Core/RSXDisplayEngine.cpp
+    RSX/Core/RSXDisplayOutput.cpp
+    RSX/Core/RSXPowerMgmt.cpp
+    RSX/Core/RSXRenderBackend.cpp
+    RSX/Core/RSXRendererFactory.cpp
     RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
+    RSX/Core/RSXGraphEngine.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
-    RSX/GSRender.cpp
     RSX/Host/MM.cpp
     RSX/Host/RSXDMAWriter.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/context.cpp
     RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
@@ -580,8 +594,8 @@ target_sources(rpcs3_emu PRIVATE
     RSX/RSXThread.cpp
     RSX/RSXZCULL.cpp
     RSX/rsx_methods.cpp
-    RSX/rsx_utils.cpp
     RSX/rsx_vertex_data.cpp
+    RSX/Utils/rsx_utils.cpp
 )
 
 if(NOT ANDROID AND NOT APPLE)
@@ -693,6 +707,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::vulkan
         3rdparty::glew
         3rdparty::libusb
+        3rdparty::hidapi
         3rdparty::wolfssl
         3rdparty::openal
         3rdparty::cubeb

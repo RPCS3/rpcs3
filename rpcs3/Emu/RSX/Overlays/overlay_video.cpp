@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_video.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Loader/ISO.h"
 
 namespace rsx
@@ -63,7 +63,7 @@ namespace rsx
 		{
 			if (video_path.empty()) return;
 
-			m_video_source = ensure(Emu.GetCallbacks().make_video_source());
+			m_video_source = ensure(g_emu_callbacks.make_video_source());
 			m_video_source->set_update_callback([this]()
 			{
 				if (m_video_active)

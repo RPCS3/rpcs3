@@ -257,6 +257,9 @@ namespace gl
 		void set_extents(const size2i& extents);
 		size2i get_extents() const;
 
+		void set_default_extents(const size2i& extents) const;
+		void set_default_samples(GLint samples) const;
+
 		bool matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const;
 		bool references_any(const std::vector<GLuint>& resources) const;
 

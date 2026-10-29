@@ -40,6 +40,10 @@
 constexpr VkDriverId VK_DRIVER_ID_MESA_HONEYKRISP = static_cast<VkDriverId>(26);
 #endif
 
+#if VK_HEADER_VERSION < 287
+constexpr VkDriverId VK_DRIVER_ID_MESA_KOSMICKRISP = static_cast<VkDriverId>(28);
+#endif
+
 #if VK_HEADER_VERSION < 332
 #define VK_EXT_shader_uniform_buffer_unsized_array 1
 #define VK_EXT_SHADER_UNIFORM_BUFFER_UNSIZED_ARRAY_SPEC_VERSION 1
@@ -59,4 +63,6 @@ constexpr VkStructureType VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNIFORM_BUFFE
 namespace vk
 {
 	void init();
+
+	inline VkBool32 to_bool32(bool x) { return x ? VK_TRUE : VK_FALSE; }
 }
