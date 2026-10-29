@@ -297,6 +297,11 @@ struct voice_service
 		u32 waited = 0;
 		u32 hangover = 0;                        // OUT_VOICE: voice activity
 		f32 noise_db = 30.0f;
+		bool energy_enabled = false;
+		f32 energy_level = 0.0f;
+		u32 vad_threshold = 0;                   // Firmware substitutes 8 for values outside 1..10 when capture starts.
+		u32 vad_activity = 0;                    // Measured local-talk activity, not the configured threshold.
+		f32 mic_noise_db = 30.0f;
 		bool attached = false;                   // IN_MIC: PORT_ATTACHED sent
 		bool paused = false;
 		bool logged = false;
@@ -362,6 +367,8 @@ struct voice_service
 	void stop(voice_manager& manager);
 	void remove_port(u16 id);
 	void clear();
+	u32 set_port_attr(const voice_manager::port_t& port, u16 id, u32 attr, u32 value);
+	u32 get_port_attr(const voice_manager::port_t& port, u16 id, u32 attr, u32& value) const;
 	void commit(voice_manager& manager, const voice_firmware::result& result);
 	std::vector<voice_firmware::key> codec_keys() const;
 	void save(utils::serial& ar);
@@ -372,6 +379,7 @@ struct voice_service
 	u32 bytes_queued(u16 id) const;
 
 private:
+	void measure_port(port_data& d, const f32* samples, bool microphone);
 	bool ensure_codec(port_data& d, u32 bitrate, bool encode, u16 id);
 	void decode_voice(const voice_manager::port_t& port, port_data& d, u16 id);
 	void encode_voice(const voice_manager::port_t& port, port_data& d, u16 id, const f32* mix);

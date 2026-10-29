@@ -480,6 +480,10 @@ void voice_service::tick(voice_manager& manager)
 		default: break;
 		}
 
+		measure_port(d, d.signal.data(), port.info.portType == CELLVOICE_PORTTYPE_IN_MIC);
+		if (port.info.portType == CELLVOICE_PORTTYPE_IN_MIC && d.vad_activity <= d.vad_threshold)
+			d.signal.fill(0.0f);
+
 		const f32 gain = static_cast<u16>(port.info.bMute) || mute_all || d.paused ? 0.0f : static_cast<f32>(port.info.volume);
 
 		if (gain != 1.0f)
@@ -522,6 +526,8 @@ void voice_service::tick(voice_manager& manager)
 			for (f32& s : mix) s *= gain;
 		}
 
+		measure_port(d, mix.data(), false);
+
 		switch (port.info.portType)
 		{
 		case CELLVOICE_PORTTYPE_OUT_PCMAUDIO: write_pcm(port, d, mix.data()); break;
@@ -553,6 +559,8 @@ void voice_service::stop(voice_manager& manager)
 		d.waited = 0;
 		d.hangover = 0;
 		d.noise_db = 30.0f;
+		d.mic_noise_db = 30.0f;
+		d.vad_activity = 0;
 		d.filter = {};
 		d.signal.fill(0.0f);
 		d.logged = false;
@@ -579,6 +587,73 @@ void voice_service::clear()
 	edges.clear();
 	requests.clear();
 	mute_all = false;
+}
+
+u32 voice_service::set_port_attr(const voice_manager::port_t& port, u16 id, u32 attr, u32 value)
+{
+	switch (attr)
+	{
+	case CELLVOICE_ATTR_ENERGY_LEVEL:
+		// The setter takes a 32-bit integer enable flag; the getter returns a float measurement.
+		data[id].energy_enabled = value != 0;
+		return CELL_OK;
+	case CELLVOICE_ATTR_VAD:
+		if (port.info.portType != CELLVOICE_PORTTYPE_IN_MIC)
+			return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+		data[id].vad_threshold = value;
+		return CELL_OK;
+	default:
+		return port.info.portType == CELLVOICE_PORTTYPE_IN_MIC ? CELL_VOICE_ERROR_DEVICE_NOT_PRESENT : CELL_VOICE_ERROR_ARGUMENT_INVALID;
+	}
+}
+
+u32 voice_service::get_port_attr(const voice_manager::port_t& port, u16 id, u32 attr, u32& value) const
+{
+	const auto it = data.find(id);
+	switch (attr)
+	{
+	case CELLVOICE_ATTR_ENERGY_LEVEL:
+		value = std::bit_cast<u32>(it == data.end() ? 0.0f : it->second.energy_level);
+		return CELL_OK;
+	case CELLVOICE_ATTR_VAD:
+		if (port.info.portType != CELLVOICE_PORTTYPE_IN_MIC)
+			return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+		value = it == data.end() ? 0 : it->second.vad_activity;
+		return CELL_OK;
+	default:
+		return port.info.portType == CELLVOICE_PORTTYPE_IN_MIC ? CELL_VOICE_ERROR_DEVICE_NOT_PRESENT : CELL_VOICE_ERROR_ARGUMENT_INVALID;
+	}
+}
+
+void voice_service::measure_port(port_data& d, const f32* samples, bool microphone)
+{
+	if (!d.energy_enabled && !microphone)
+		return;
+
+	f64 sum = 0.0;
+	for (u32 i = 0; i < tick_samples; i++)
+		sum += static_cast<f64>(samples[i]) * samples[i];
+
+	if (d.energy_enabled)
+	{
+		// Use the same host energy approximation as cellMic (40..90 dB).
+		const f64 rms = std::sqrt(sum / tick_samples) / 32768.0;
+		d.energy_level = static_cast<f32>(std::clamp(90.0 + 10.0 * std::log10(std::max(rms, 0.00001)), 40.0, 90.0));
+	}
+
+	if (microphone)
+	{
+		if (d.vad_threshold < 1 || d.vad_threshold > 10)
+			d.vad_threshold = 8;
+
+		// Approximate the microphone DSP's 0..10 local-talk score using our existing
+		// noise-floor detector. A detected voice scores 9, as in cellMic; silence scores 0.
+		const f32 level = static_cast<f32>(10.0 * std::log10(sum / tick_samples + 1.0));
+		const bool active = level > std::max(d.mic_noise_db + 9.0f, 40.0f);
+		d.vad_activity = active ? 9 : 0;
+		if (!active)
+			d.mic_noise_db = std::max(level < d.mic_noise_db ? level : d.mic_noise_db + 0.05f, 20.0f);
+	}
 }
 
 bool voice_service::ensure_codec(port_data& d, u32 bitrate, bool encode, u16 id)
@@ -1467,6 +1542,8 @@ void voice_service::save(utils::serial& ar)
 		ar(d.bytes, d.pcm, d.signal, d.codec_bitrate, d.codec_generation, d.codec_encode,
 			pending, d.codec_failed, d.filter.x, d.playing, d.waited, d.hangover,
 			d.noise_db, d.attached, d.paused, d.logged, d.read_logged);
+		if (GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellVoice) >= 4)
+			ar(d.energy_enabled, d.energy_level, d.vad_threshold, d.vad_activity, d.mic_noise_db);
 		ensure(!pending);
 		d.codec_pending = 0;
 	}
@@ -1731,22 +1808,27 @@ error_code cellVoiceGetMuteFlag(u32 portId, vm::ptr<u16> bMuted)
 
 error_code cellVoiceGetPortAttr(u32 portId, u32 attr, vm::ptr<void> attrValue)
 {
-	cellVoice.todo("cellVoiceGetPortAttr(portId=0x%x, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
+	cellVoice.trace("cellVoiceGetPortAttr(portId=0x%x, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
 
 	auto& manager = g_fxo->get<voice_manager>();
-
-	reader_lock lock(manager.mtx);
-
+	std::scoped_lock lock(manager.mtx);
 	if (!manager.is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
-
-	auto port = manager.access_port(portId);
-
+	const auto port = manager.access_port(portId);
 	if (!port)
-		return CELL_VOICE_ERROR_TOPOLOGY;
+		return CELL_VOICE_ERROR_PORT_INVALID;
+	if (!attrValue)
+		return CELL_VOICE_ERROR_ADDRESS_INVALID;
 
-	// Report detached microphone
-	return not_an_error(CELL_VOICE_ERROR_DEVICE_NOT_PRESENT);
+	if (attr != CELLVOICE_ATTR_ENERGY_LEVEL && attr != CELLVOICE_ATTR_VAD)
+		cellVoice.todo("cellVoiceGetPortAttr: attribute %d is not implemented", attr);
+
+	u32 value = 0;
+	const u32 error = manager.service().get_port_attr(*port, static_cast<u16>(portId), attr, value);
+	if (error)
+		return error;
+	*vm::static_ptr_cast<u32>(attrValue) = value;
+	return CELL_OK;
 }
 
 error_code cellVoiceGetPortInfo(u32 portId, vm::ptr<CellVoiceBasePortInfo> pInfo)
@@ -1951,7 +2033,13 @@ error_code cellVoiceResetPort(u32 portId)
 	{
 		const bool paused = it->second.paused;
 		const bool attached = it->second.attached;
+		const bool energy_enabled = it->second.energy_enabled;
+		const f32 energy_level = it->second.energy_level;
+		const u32 vad_threshold = it->second.vad_threshold;
 		it->second = {};
+		it->second.energy_enabled = energy_enabled;
+		it->second.energy_level = energy_level;
+		it->second.vad_threshold = vad_threshold;
 		it->second.paused = paused;
 		it->second.attached = attached;
 	}
@@ -2102,22 +2190,22 @@ error_code cellVoiceSetNotifyEventQueue(u64 key, u64 source)
 
 error_code cellVoiceSetPortAttr(u32 portId, u32 attr, vm::ptr<void> attrValue)
 {
-	cellVoice.todo("cellVoiceSetPortAttr(portId=0x%x, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
+	cellVoice.trace("cellVoiceSetPortAttr(portId=0x%x, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
 
 	auto& manager = g_fxo->get<voice_manager>();
-
 	std::scoped_lock lock(manager.mtx);
-
 	if (!manager.is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
-
-	auto port = manager.access_port(portId);
-
+	const auto port = manager.access_port(portId);
 	if (!port)
-		return CELL_VOICE_ERROR_TOPOLOGY;
+		return CELL_VOICE_ERROR_PORT_INVALID;
+	if (!attrValue)
+		return CELL_VOICE_ERROR_ADDRESS_INVALID;
 
-	// Report detached microphone
-	return not_an_error(CELL_VOICE_ERROR_DEVICE_NOT_PRESENT);
+	if (attr != CELLVOICE_ATTR_ENERGY_LEVEL && attr != CELLVOICE_ATTR_VAD)
+		cellVoice.todo("cellVoiceSetPortAttr: attribute %d is not implemented", attr);
+
+	return manager.service().set_port_attr(*port, static_cast<u16>(portId), attr, *vm::static_ptr_cast<u32>(attrValue));
 }
 
 error_code cellVoiceSetVolume(u32 portId, f32 volume)

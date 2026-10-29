@@ -531,6 +531,62 @@ TEST_F(CellVoiceAsync, StopInvalidatesOutstandingCompletion)
 	EXPECT_FALSE(service.data.at(voice_output).codec_pending);
 }
 
+TEST_F(CellVoiceAsync, AttributesValidatePortTypeAndReturnMeasurements)
+{
+	for (u32 type = CELLVOICE_PORTTYPE_IN_MIC; type <= CELLVOICE_PORTTYPE_OUT_SECONDARY; type++)
+	{
+		SCOPED_TRACE(type);
+		const auto port = make_port(static_cast<CellVoicePortType>(type));
+		const u16 id = static_cast<u16>(0x100 + type);
+		u32 value = 0xdeadbeef;
+		EXPECT_EQ(service.get_port_attr(port, id, CELLVOICE_ATTR_ENERGY_LEVEL, value), CELL_OK);
+		EXPECT_EQ(value, 0u);
+		EXPECT_EQ(service.set_port_attr(port, id, CELLVOICE_ATTR_ENERGY_LEVEL, 1), CELL_OK);
+		const u32 expected = type == CELLVOICE_PORTTYPE_IN_MIC ? CELL_OK : CELL_VOICE_ERROR_ARGUMENT_INVALID;
+		EXPECT_EQ(service.set_port_attr(port, id, CELLVOICE_ATTR_VAD, 5), expected);
+		value = 0xdeadbeef;
+		EXPECT_EQ(service.get_port_attr(port, id, CELLVOICE_ATTR_VAD, value), expected);
+		// Get(VAD) returns activity, not the threshold passed to Set(VAD).
+		EXPECT_EQ(value, type == CELLVOICE_PORTTYPE_IN_MIC ? 0u : 0xdeadbeef);
+	}
+}
+
+TEST_F(CellVoiceAsync, EnergyMeasurementCanBeEnabledFrozenAndReenabled)
+{
+	manager.ports[pcm_input] = make_port(CELLVOICE_PORTTYPE_IN_PCMAUDIO);
+	manager.ports[pcm_output] = make_port(CELLVOICE_PORTTYPE_OUT_PCMAUDIO);
+	service.edges.emplace(pcm_input, pcm_output);
+	const auto& input = manager.ports.at(pcm_input);
+	const auto& output = manager.ports.at(pcm_output);
+	u32 value = 0;
+	feed_pcm(2000);
+	ASSERT_EQ(service.get_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, value), CELL_OK);
+	EXPECT_EQ(value, 0u); // Disabled by default.
+	ASSERT_EQ(service.set_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, 1), CELL_OK);
+	ASSERT_EQ(service.set_port_attr(output, pcm_output, CELLVOICE_ATTR_ENERGY_LEVEL, 0xffffffff), CELL_OK);
+	feed_pcm(2000);
+	ASSERT_EQ(service.get_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, value), CELL_OK);
+	const f32 measured = std::bit_cast<f32>(value);
+	EXPECT_GT(measured, 40.0f);
+	EXPECT_LT(measured, 90.0f);
+	u32 output_value = 0;
+	ASSERT_EQ(service.get_port_attr(output, pcm_output, CELLVOICE_ATTR_ENERGY_LEVEL, output_value), CELL_OK);
+	EXPECT_EQ(output_value, value);
+	ASSERT_EQ(service.set_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, 0), CELL_OK);
+	feed_pcm(0);
+	ASSERT_EQ(service.get_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, value), CELL_OK);
+	EXPECT_FLOAT_EQ(std::bit_cast<f32>(value), measured);
+	ASSERT_EQ(service.set_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, 1), CELL_OK);
+	feed_pcm(0);
+	ASSERT_EQ(service.get_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, value), CELL_OK);
+	EXPECT_FLOAT_EQ(std::bit_cast<f32>(value), 40.0f);
+	service.stop(manager);
+	EXPECT_TRUE(service.data.at(pcm_input).energy_enabled);
+	service.remove_port(pcm_input);
+	ASSERT_EQ(service.get_port_attr(input, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, value), CELL_OK);
+	EXPECT_EQ(value, 0u);
+}
+
 TEST_F(CellVoiceAsync, PcmRoutingPreservesSamplesAndCreatesNoFirmwareJobs)
 {
 	manager.ports[pcm_input] = make_port(CELLVOICE_PORTTYPE_IN_PCMAUDIO);
@@ -778,6 +834,59 @@ namespace
 			return false;
 		}
 	};
+}
+
+TEST_F(CellVoiceMicrophone, VadThresholdControlsMicrophoneWithoutMutingOtherInputs)
+{
+	manager.ports[pcm_output] = make_port(CELLVOICE_PORTTYPE_OUT_PCMAUDIO);
+	manager.ports[encoded_input_port] = make_port(CELLVOICE_PORTTYPE_IN_PCMAUDIO);
+	service.edges.clear();
+	service.edges.emplace(pcm_input, pcm_output);
+	service.edges.emplace(encoded_input_port, pcm_output);
+	tick(); // Complete the initial microphone source-change transition.
+	const auto& microphone = manager.ports.at(pcm_input);
+	ASSERT_EQ(service.set_port_attr(microphone, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, 1), CELL_OK);
+	for (const u32 threshold : {8u, 10u, 1u})
+	{
+		SCOPED_TRACE(threshold);
+		ASSERT_EQ(service.set_port_attr(microphone, pcm_input, CELLVOICE_ATTR_VAD, threshold), CELL_OK);
+		std::array<be_t<s16>, voice_service::tick_samples> other;
+		other.fill(300);
+		ASSERT_EQ(service.write(manager.ports.at(encoded_input_port), encoded_input_port,
+			reinterpret_cast<const u8*>(other.data()), sizeof(other)), sizeof(other));
+		tick();
+		std::array<be_t<s16>, voice_service::tick_samples> mixed{};
+		ASSERT_EQ(service.read(manager, manager.ports.at(pcm_output), pcm_output,
+			reinterpret_cast<u8*>(mixed.data()), sizeof(mixed)), sizeof(mixed));
+		for (const auto sample : mixed)
+			EXPECT_EQ(static_cast<s16>(sample), threshold == 10 ? 300 : 2300);
+		u32 activity = 0;
+		ASSERT_EQ(service.get_port_attr(microphone, pcm_input, CELLVOICE_ATTR_VAD, activity), CELL_OK);
+		EXPECT_EQ(activity, 9u); // Measurement continues even when the threshold rejects capture.
+		u32 energy = 0;
+		ASSERT_EQ(service.get_port_attr(microphone, pcm_input, CELLVOICE_ATTR_ENERGY_LEVEL, energy), CELL_OK);
+		EXPECT_GT(std::bit_cast<f32>(energy), 40.0f);
+	}
+}
+
+TEST_F(CellVoiceMicrophone, VadUsesIntegerThresholdAndFirmwareFallback)
+{
+	const auto& microphone = manager.ports.at(pcm_input);
+	for (const u32 threshold : {0u, 11u, 0xffffffffu, 0x3f800000u})
+	{
+		ASSERT_EQ(service.set_port_attr(microphone, pcm_input, CELLVOICE_ATTR_VAD, threshold), CELL_OK);
+		EXPECT_EQ(service.data.at(pcm_input).vad_threshold, threshold);
+		tick();
+		EXPECT_EQ(service.data.at(pcm_input).vad_threshold, 8u);
+	}
+	ASSERT_EQ(service.set_port_attr(microphone, pcm_input, CELLVOICE_ATTR_VAD, 1), CELL_OK);
+	tick();
+	EXPECT_EQ(service.data.at(pcm_input).vad_threshold, 1u);
+	service.mic_file.assign(voice_service::tick_samples, 0.0f);
+	tick();
+	u32 activity = 0xdeadbeef;
+	ASSERT_EQ(service.get_port_attr(microphone, pcm_input, CELLVOICE_ATTR_VAD, activity), CELL_OK);
+	EXPECT_EQ(activity, 0u);
 }
 
 TEST_F(CellVoiceMicrophone, PushToSpeakDiscardsQueuedAndInFlightAudioBeforeNextTick)
