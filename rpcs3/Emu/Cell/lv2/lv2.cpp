@@ -74,11 +74,6 @@
 
 extern std::string ppu_get_syscall_name(u64 code);
 
-namespace rsx
-{
-	void set_rsx_yield_flag() noexcept;
-}
-
 using spu_rdata_t = decltype(spu_thread::rdata);
 extern u32 compute_rdata_hash32(const spu_rdata_t& _src);
 
@@ -2021,7 +2016,7 @@ void lv2_obj::schedule_all(u64 current_time)
 			{
 				s_last_yield_tsc = tsc;
 				g_lv2_preempts_taken.release(g_lv2_preempts_taken.load() + 1); // Has a minor race but performance is more important
-				rsx::set_rsx_yield_flag();
+				rsx::yield_rsx_ctx_thread();
 			}
 		}
 	}
@@ -2340,7 +2335,7 @@ void lv2_obj::notify_all() noexcept
 	u32 notifies[total_waiters]{};
 	u64 notifies_time[total_waiters]{};
 
-	// There may be 6 waiters, but checking them all may be performance expensive 
+	// There may be 6 waiters, but checking them all may be performance expensive
 	// Instead, check 2 at max, but use the CPU ID index to tell which index to start checking so the work would be distributed across all threads
 
 	atomic_t<u64, 128>* range_lock = nullptr;

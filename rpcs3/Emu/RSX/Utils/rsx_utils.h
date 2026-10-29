@@ -613,7 +613,7 @@ namespace rsx
 	u32 get_address(const context* ctx, u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
 
 	// Lets the RSX thread yield to other CPU threads (power save pre-emption)
-	void set_rsx_yield_flag() noexcept;
+	void yield_rsx_ctx_thread() noexcept;
 
 	// Asks the display engine to flip the native UI
 	void set_native_ui_flip();
