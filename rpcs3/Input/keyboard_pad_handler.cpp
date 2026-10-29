@@ -62,6 +62,8 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
 	cfg->analog_limiter_button.def = GetKeyName(Qt::NoButton);
+	cfg->voice_talk_button.def = GetKeyName(Qt::Key_V);
+	cfg->voice_mute_button.def = GetKeyName(Qt::NoButton);
 
 	cfg->lstick_anti_deadzone.def = 0;
 	cfg->rstick_anti_deadzone.def = 0;
@@ -152,6 +154,8 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 		};
 
+		update_special_button_press(pad.m_voice_talk_button_index);
+		update_special_button_press(pad.m_voice_mute_button_index);
 		update_special_button_press(pad.m_pressure_intensity_button_index);
 
 		const bool adjust_pressure = pad.get_pressure_intensity_button_active(m_pressure_intensity_toggle_mode, pad.m_player_id);
@@ -180,7 +184,9 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			// Ignore special buttons
 			if (static_cast<s32>(i) == pad.m_pressure_intensity_button_index ||
 				static_cast<s32>(i) == pad.m_analog_limiter_button_index ||
-				static_cast<s32>(i) == pad.m_orientation_reset_button_index)
+				static_cast<s32>(i) == pad.m_orientation_reset_button_index ||
+				static_cast<s32>(i) == pad.m_voice_talk_button_index ||
+				static_cast<s32>(i) == pad.m_voice_mute_button_index)
 				continue;
 
 			Button& button = pad.m_buttons[i];
@@ -1120,6 +1126,12 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		cfg->product_id,
 		cfg->pressure_intensity
 	);
+
+	pad->m_voice_push_to_talk = cfg->voice_push_to_talk.get();
+	pad->m_buttons.emplace_back(special_button_offset, find_combos(cfg->voice_talk_button), special_button_value::voice_talk);
+	pad->m_voice_talk_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	pad->m_buttons.emplace_back(special_button_offset, find_combos(cfg->voice_mute_button), special_button_value::voice_mute);
+	pad->m_voice_mute_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 
 	if (b_has_pressure_intensity_button)
 	{

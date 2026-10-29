@@ -326,8 +326,6 @@ struct voice_service
 	bool mic_config_test = false;
 	bool mic_source_changed = false;
 	bool mic_transmitting = true;
-	bool mic_push_to_talk = false;
-	std::string mic_talk_key;
 	u64 mic_talk_generation = 0;
 
 	// The headset output (OUT_SECONDARY)

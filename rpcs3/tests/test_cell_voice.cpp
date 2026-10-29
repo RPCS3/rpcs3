@@ -548,6 +548,44 @@ TEST_F(CellVoiceAsync, PcmRoutingPreservesSamplesAndCreatesNoFirmwareJobs)
 	EXPECT_TRUE(service.codec_keys().empty());
 }
 
+TEST(CellVoiceInput, MuteTogglesOnPressAndOverridesPushToTalk)
+{
+	voice_input::microphone_control control;
+	EXPECT_TRUE(control.update(false, false, false, true));
+	EXPECT_FALSE(control.update(false, false, true, true));
+	EXPECT_FALSE(control.update(false, false, true, true));
+	EXPECT_FALSE(control.update(true, true, true, true));
+	EXPECT_FALSE(control.update(true, true, false, true));
+	EXPECT_TRUE(control.update(true, true, true, true));
+	EXPECT_FALSE(control.update(true, false, false, true));
+	EXPECT_TRUE(control.update(true, true, false, true));
+}
+
+TEST(CellVoiceInput, InputInterceptionClosesGateWithoutChangingMute)
+{
+	voice_input::microphone_control control;
+	EXPECT_FALSE(control.update(false, false, true, false));
+	EXPECT_FALSE(control.muted);
+	EXPECT_TRUE(control.update(false, false, true, true));
+	EXPECT_TRUE(control.update(false, false, false, true));
+	EXPECT_FALSE(control.update(false, false, true, true));
+	EXPECT_FALSE(control.update(false, false, false, false));
+	EXPECT_TRUE(control.muted);
+	EXPECT_FALSE(control.update(false, false, false, true));
+}
+
+TEST(CellVoiceInput, ReleaseAndRepressPublishesNewGeneration)
+{
+	voice_input::set_transmitting(true);
+	const auto before = voice_input::talk.load();
+	voice_input::set_transmitting(false);
+	voice_input::set_transmitting(true);
+	const auto after = voice_input::talk.load();
+	EXPECT_TRUE(after->transmitting);
+	EXPECT_EQ(after->generation, before->generation + 2);
+}
+
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 namespace
 {
 	class CellVoiceMicrophone : public CellVoiceAsync
@@ -560,11 +598,11 @@ namespace
 			CellVoiceAsync::SetUp();
 			g_cfg.audio.microphone_type.set(microphone_handler::null);
 			g_cfg.audio.microphone_devices.set("");
-			g_cfg.audio.voice_push_to_talk.set(false);
-			g_cfg.audio.voice_push_to_talk_key.set("V");
+			voice_input::set_transmitting(true);
+
 			g_cfg.audio.voice_test_file_enabled.set(false);
 			g_cfg.audio.voice_test_file.set("");
-			voice_input::set_talk_key({});
+			voice_input::set_transmitting(true);
 			service.mic_file_loaded = true;
 			service.mic_file.assign(voice_service::tick_samples, 2000.0f);
 			manager.ports[pcm_input] = make_port(CELLVOICE_PORTTYPE_IN_MIC);
@@ -576,7 +614,7 @@ namespace
 		{
 			service.stop(manager);
 			g_cfg.audio.from_string(saved_audio);
-			voice_input::set_talk_key({});
+			voice_input::set_transmitting(true);
 		}
 
 		void use_mp3()
@@ -601,11 +639,11 @@ namespace
 
 TEST_F(CellVoiceMicrophone, PushToSpeakDiscardsQueuedAndInFlightAudioBeforeNextTick)
 {
-	g_cfg.audio.voice_push_to_talk.set(true);
+	voice_input::set_transmitting(false);
 	tick(3);
 	EXPECT_TRUE(service.requests.empty());
 	EXPECT_TRUE(service.mic_fifo.empty());
-	voice_input::set_talk_key("V");
+	voice_input::set_transmitting(true);
 	tick();
 	auto ready = take_requests();
 	ASSERT_EQ(ready.size(), 1u);
@@ -614,7 +652,7 @@ TEST_F(CellVoiceMicrophone, PushToSpeakDiscardsQueuedAndInFlightAudioBeforeNextT
 	auto pending = take_requests();
 	ASSERT_EQ(pending.size(), 1u);
 	ASSERT_EQ(service.bytes_queued(voice_output), packet_bytes);
-	voice_input::set_talk_key({});
+	voice_input::set_transmitting(false);
 	std::array<u8, 255> out{};
 	EXPECT_EQ(service.read(manager, manager.ports.at(voice_output), voice_output, out.data(), out.size()), 0u);
 	service.commit(manager, encoded(pending.front(), 2));
@@ -622,7 +660,7 @@ TEST_F(CellVoiceMicrophone, PushToSpeakDiscardsQueuedAndInFlightAudioBeforeNextT
 	tick(20);
 	EXPECT_TRUE(service.requests.empty());
 	EXPECT_TRUE(service.data.at(voice_output).pcm.empty());
-	voice_input::set_talk_key("V");
+	voice_input::set_transmitting(true);
 	tick();
 	ASSERT_EQ(service.requests.size(), 1u);
 	EXPECT_NE(service.requests.front().codec.generation, pending.front().codec.generation);
@@ -630,13 +668,13 @@ TEST_F(CellVoiceMicrophone, PushToSpeakDiscardsQueuedAndInFlightAudioBeforeNextT
 
 TEST_F(CellVoiceMicrophone, ReleaseAndRepressBetweenTicksRejectsOldCompletion)
 {
-	g_cfg.audio.voice_push_to_talk.set(true);
-	voice_input::set_talk_key("V");
+	voice_input::set_transmitting(false);
+	voice_input::set_transmitting(true);
 	tick(2);
 	auto pending = take_requests();
 	ASSERT_EQ(pending.size(), 1u);
-	voice_input::set_talk_key({});
-	voice_input::set_talk_key("V");
+	voice_input::set_transmitting(false);
+	voice_input::set_transmitting(true);
 	service.commit(manager, encoded(pending.front(), 1));
 	EXPECT_EQ(service.bytes_queued(voice_output), 0u);
 	tick();
@@ -646,12 +684,12 @@ TEST_F(CellVoiceMicrophone, ReleaseAndRepressBetweenTicksRejectsOldCompletion)
 
 TEST_F(CellVoiceMicrophone, BindingAndModeChangesApplyLiveWithoutMutingOtherInputs)
 {
-	g_cfg.audio.voice_push_to_talk.set(true);
-	voice_input::set_talk_key("V");
+	voice_input::set_transmitting(false);
+	voice_input::set_transmitting(true);
 	tick(2);
 	auto pending = take_requests();
 	ASSERT_EQ(pending.size(), 1u);
-	g_cfg.audio.voice_push_to_talk_key.set("B");
+	voice_input::set_transmitting(false);
 	service.commit(manager, encoded(pending.front(), 1));
 	EXPECT_EQ(service.bytes_queued(voice_output), 0u);
 	tick();
@@ -665,7 +703,7 @@ TEST_F(CellVoiceMicrophone, BindingAndModeChangesApplyLiveWithoutMutingOtherInpu
 	service.write(manager.ports.at(encoded_input_port), encoded_input_port, reinterpret_cast<const u8*>(pcm.data()), sizeof(pcm));
 	tick();
 	EXPECT_EQ(service.bytes_queued(pcm_output), sizeof(pcm));
-	g_cfg.audio.voice_push_to_talk.set(false);
+	voice_input::set_transmitting(true);
 	tick();
 	EXPECT_EQ(service.requests.size(), 1u);
 }
@@ -690,15 +728,11 @@ TEST_F(CellVoiceMicrophone, FailedFileCanBeReplacedLiveAndPhysicalSettingsAreDyn
 	cfg_root updated;
 	updated.audio.microphone_type.set(microphone_handler::standard);
 	updated.audio.microphone_devices.set("New microphone@@@");
-	updated.audio.voice_push_to_talk.set(true);
-	updated.audio.voice_push_to_talk_key.set("B");
 	updated.audio.voice_test_file_enabled.set(true);
 	updated.audio.voice_test_file.set("test.mp3");
 	ASSERT_TRUE(live.from_string(updated.to_string(), true));
 	EXPECT_EQ(live.audio.microphone_type.get(), microphone_handler::standard);
 	EXPECT_EQ(live.audio.microphone_devices.get(), "New microphone@@@");
-	EXPECT_TRUE(live.audio.voice_push_to_talk.get());
-	EXPECT_EQ(live.audio.voice_push_to_talk_key.get(), "B");
 	EXPECT_TRUE(live.audio.voice_test_file_enabled.get());
 	EXPECT_EQ(live.audio.voice_test_file.get(), "test.mp3");
 }
@@ -772,3 +806,4 @@ TEST_F(CellVoiceMicrophone, DecoderRejectsAudioBeyondItsMemoryLimit)
 	std::lock_guard lock(decoder.data_mutex());
 	EXPECT_LE(decoder.size(), 100 * sizeof(f32));
 }
+#endif

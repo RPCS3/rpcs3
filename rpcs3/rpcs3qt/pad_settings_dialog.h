@@ -67,6 +67,8 @@ class pad_settings_dialog : public QDialog
 		id_pressure_intensity, // Special button for pressure intensity
 		id_analog_limiter, // Special button for analog limiter
 		id_orientation_reset, // Special button for orientation reset
+		id_voice_talk,
+		id_voice_mute,
 
 		id_pad_end, // end
 

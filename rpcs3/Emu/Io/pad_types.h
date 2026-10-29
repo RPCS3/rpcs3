@@ -388,7 +388,9 @@ enum special_button_value
 {
 	pressure_intensity,
 	analog_limiter,
-	orientation_reset
+	orientation_reset,
+	voice_talk,
+	voice_mute
 };
 
 struct Button
@@ -530,6 +532,10 @@ struct Pad
 	bool m_analog_limiter_toggled{}; // Whether the sensitivity is toggled on or off.
 	bool m_analog_limiter_enabled_last{}; // only used in keyboard_pad_handler
 	bool get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id);
+
+	bool m_voice_push_to_talk = false;
+	s32 m_voice_talk_button_index = -1;
+	s32 m_voice_mute_button_index = -1;
 
 	s32 m_orientation_reset_button_index{-1}; // Special button index. -1 if not set.
 	bool get_orientation_reset_button_active();

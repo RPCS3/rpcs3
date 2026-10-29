@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Audio/voice_input.h"
+
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Emu/Io/pad_types.h"
@@ -69,6 +71,7 @@ private:
 	u64 m_track_start_press_begin_timestamp = 0;
 	bool m_resume_emulation_flag = false;
 	bool m_ps_button_pressed = false;
+	voice_input::microphone_control m_microphone_control;
 	atomic_t<bool> m_home_menu_open = false;
 
 	mouse_gyro_handler m_mouse_gyro;

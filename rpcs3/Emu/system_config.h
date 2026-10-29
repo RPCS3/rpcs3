@@ -279,10 +279,10 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null, true };
 		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@", true };
-		cfg::_bool voice_push_to_talk{ this, "Voice Push To Talk", false, true };
-		cfg::string voice_push_to_talk_key{ this, "Voice Push To Talk Key", "V", true };
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 		cfg::_bool voice_test_file_enabled{ this, "Voice Test File Enabled", false, true };
 		cfg::string voice_test_file{ this, "Voice Test File", "", true };
+#endif
 		cfg::_enum<music_handler> music{ this, "Music Handler", music_handler::qt };
 	} audio{ this };
 

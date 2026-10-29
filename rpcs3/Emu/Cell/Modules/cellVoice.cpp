@@ -168,6 +168,7 @@ namespace
 		}
 	}
 
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	// For tests without a microphone: RPCS3_CELLVOICE_MIC_FILE names a WAV file (16-bit PCM) the IN_MIC ports play in a
 	// loop instead of the configured microphone.
 	std::string get_env(const char* name)
@@ -271,6 +272,7 @@ namespace
 		cellVoice.success("Microphone: RPCS3_CELLVOICE_MIC_FILE '%s' (%d Hz, %d channel(s), %.1f s)", path, rate, channels, out.size() / f64{voice_rate});
 		return out;
 	}
+#endif
 }
 
 void voice_service::halfband_filter::down(const f32* in, u32 count, std::vector<f32>& out)
@@ -939,6 +941,7 @@ u32 voice_service::bytes_queued(u16 id) const
 
 bool voice_service::mic_present() const
 {
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	if (mic_config_test)
 	{
 		if (!mic_decoder || mic_decoder->has_error() || !mic_decoder->track_fully_decoded()) return false;
@@ -946,6 +949,9 @@ bool voice_service::mic_present() const
 		return mic_decoder->size() != 0;
 	}
 	return mic || !mic_file.empty();
+#else
+	return !!mic;
+#endif
 }
 
 void voice_service::discard_mic_outputs(voice_manager& manager)
@@ -988,23 +994,24 @@ void voice_service::discard_mic_outputs(voice_manager& manager)
 bool voice_service::update_mic_gate(voice_manager& manager)
 {
 	const auto talk = voice_input::talk.load();
-	const bool push = g_cfg.audio.voice_push_to_talk.get();
-	const std::string key = g_cfg.audio.voice_push_to_talk_key.get();
 	const auto devices = fmt::split(g_cfg.audio.microphone_devices.get(), {"@@@"});
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	const bool test = g_cfg.audio.voice_test_file_enabled.get();
+	const std::string file = test ? g_cfg.audio.voice_test_file.get() : "";
+#else
+	constexpr bool test = false;
+	const std::string file;
+#endif
 	const bool source_changed = mic_source_changed || mic_config_type != static_cast<u32>(g_cfg.audio.microphone_type.get()) ||
 		mic_config_device != (devices.empty() ? "" : devices.front()) || mic_config_test != test ||
-		(test && mic_config_file != g_cfg.audio.voice_test_file.get());
-	const bool allowed = mic_present() && !source_changed && (!push || (!key.empty() && talk->key == key));
-	if (source_changed || mic_transmitting != allowed || mic_push_to_talk != push || mic_talk_key != key ||
-		(push && mic_talk_generation != talk->generation))
+		(test && mic_config_file != file);
+	const bool allowed = mic_present() && !source_changed && talk->transmitting;
+	if (source_changed || mic_transmitting != allowed || mic_talk_generation != talk->generation)
 	{
 		discard_mic_outputs(manager);
 	}
 	mic_source_changed = false;
 	mic_transmitting = allowed;
-	mic_push_to_talk = push;
-	mic_talk_key = key;
 	mic_talk_generation = talk->generation;
 	return allowed;
 }
@@ -1014,8 +1021,13 @@ void voice_service::open_mic()
 	const microphone_handler type = g_cfg.audio.microphone_type.get();
 	const auto devices = fmt::split(g_cfg.audio.microphone_devices.get(), {"@@@"});
 	const std::string device_name = devices.empty() ? "" : devices.front();
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	const bool test = g_cfg.audio.voice_test_file_enabled.get();
 	const std::string file = test ? g_cfg.audio.voice_test_file.get() : "";
+#else
+	constexpr bool test = false;
+	const std::string file;
+#endif
 	if (mic_config_type != static_cast<u32>(type) || mic_config_device != device_name ||
 		mic_config_test != test || mic_config_file != file)
 	{
@@ -1029,6 +1041,7 @@ void voice_service::open_mic()
 		mic_source_changed = true;
 	}
 
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	if (test)
 	{
 		if (mic_decoder && mic_decoder->has_error())
@@ -1061,6 +1074,8 @@ void voice_service::open_mic()
 		mic_file = load_mic_file();
 		mic_file_loaded = true;
 	}
+
+#endif
 
 	if (mic || mic_failed || !mic_file.empty())
 	{
@@ -1121,6 +1136,7 @@ void voice_service::close_mic()
 
 void voice_service::pull_mic()
 {
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	if (mic_config_test)
 	{
 		if (!mic_present()) return;
@@ -1137,7 +1153,9 @@ void voice_service::pull_mic()
 		}
 		for (f32 sample : samples) mic_fifo.push_back(std::clamp(sample, -1.0f, 1.0f) * 32768.0f);
 	}
-	else if (mic)
+	else
+#endif
+	if (mic)
 	{
 		mic->update_audio();
 
@@ -1172,6 +1190,7 @@ void voice_service::pull_mic()
 			}
 		}
 	}
+#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
 	else if (!mic_file.empty())
 	{
 		for (u32 i = 0; i < tick_samples; i++)
@@ -1180,6 +1199,7 @@ void voice_service::pull_mic()
 			mic_file_pos = (mic_file_pos + 1) % mic_file.size();
 		}
 	}
+#endif
 
 	if (mic_fifo.size() > max_mic_samples)
 	{

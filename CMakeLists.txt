@@ -28,6 +28,11 @@ else()
     set(USE_SYSTEM_OPENAL_DEFAULT ON)
 endif()
 
+option(RPCS3_ENABLE_VOICE_TEST_FILE "Enable developer-only looping microphone test files" OFF)
+if(RPCS3_ENABLE_VOICE_TEST_FILE)
+    add_compile_definitions(RPCS3_ENABLE_VOICE_TEST_FILE)
+endif()
+
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(USE_ARM_LSE2 "Compile with LSE2 instructions" OFF)
 option(WITH_LLVM "Enable usage of LLVM library" ON)

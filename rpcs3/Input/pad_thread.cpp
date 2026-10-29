@@ -74,6 +74,7 @@ pad_thread::pad_thread(void* curthread, void* curwindow, std::string_view title_
 
 pad_thread::~pad_thread()
 {
+	voice_input::set_transmitting(false);
 	pad::g_pad_thread = nullptr;
 }
 
@@ -556,6 +557,7 @@ void pad_thread::operator()()
 	{
 		if (!pad::g_enabled || !is_input_allowed())
 		{
+			voice_input::set_transmitting(false);
 			m_resume_emulation_flag = false;
 			m_mask_start_press_to_resume = 0;
 			thread_ctrl::wait_for(30'000);
@@ -605,6 +607,26 @@ void pad_thread::operator()()
 		}
 
 		apply_copilots();
+
+		// Host voice controls do not become emulated PS3 buttons. A disconnected
+		// pad cannot hold the gate open; an enabled PTT binding still gates capture.
+		bool voice_push = false;
+		bool voice_held = false;
+		bool voice_toggle = false;
+		for (const auto& pad : m_pads)
+		{
+			voice_push |= pad->m_voice_push_to_talk;
+			if (!pad->is_connected()) continue;
+			const auto pressed = [&pad](s32 index)
+			{
+				return index >= 0 && pad->m_buttons[index].m_pressed;
+			};
+			voice_held |= pad->m_voice_push_to_talk && pressed(pad->m_voice_talk_button_index);
+			voice_toggle |= pressed(pad->m_voice_mute_button_index);
+		}
+		voice_input::set_transmitting(m_microphone_control.update(voice_push, voice_held, voice_toggle,
+			Emu.IsRunning() && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED)));
+
 
 		if (Emu.IsRunning())
 		{
@@ -702,6 +724,7 @@ void pad_thread::operator()()
 		if (m_home_menu_open && g_cfg.misc.pause_during_home_menu)
 		{
 			// Reset resume control if the home menu is open
+			voice_input::set_transmitting(false);
 			m_resume_emulation_flag = false;
 			m_mask_start_press_to_resume = 0;
 			m_track_start_press_begin_timestamp = 0;

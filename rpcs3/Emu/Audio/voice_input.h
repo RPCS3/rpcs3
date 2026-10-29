@@ -1,24 +1,36 @@
 #pragma once
 
 #include "util/shared_ptr.hpp"
-#include <string>
 
 namespace voice_input
 {
-	// Written by the GUI, read by the voice worker. A generation also records a
-	// release followed by another press between two audio ticks.
+	// Published by the pad thread. The generation records a release/repress
+	// between audio ticks so already encoded speech cannot escape after muting.
 	struct talk_state
 	{
-		std::string key;
+		bool transmitting = true;
 		u64 generation = 0;
 	};
 
 	inline stx::atomic_ptr<talk_state> talk{talk_state{}};
 
-	inline void set_talk_key(std::string key)
+	inline void set_transmitting(bool transmitting)
 	{
 		const auto previous = talk.load();
-		if (previous->key != key)
-			talk = talk_state{std::move(key), previous->generation + 1};
+		if (previous->transmitting != transmitting)
+			talk = talk_state{transmitting, previous->generation + 1};
 	}
+
+	struct microphone_control
+	{
+		bool muted = false;
+		bool toggle_pressed = false;
+
+		bool update(bool push_to_talk, bool held, bool toggle, bool input_allowed)
+		{
+			if (input_allowed && toggle && !toggle_pressed) muted = !muted;
+			toggle_pressed = toggle;
+			return input_allowed && !muted && (!push_to_talk || held);
+		}
+	};
 }

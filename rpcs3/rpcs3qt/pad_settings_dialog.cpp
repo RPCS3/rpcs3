@@ -361,6 +361,8 @@ void pad_settings_dialog::InitButtons()
 	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
 	insert_button(button_ids::id_analog_limiter, ui->b_analog_limiter);
 	insert_button(button_ids::id_orientation_reset, ui->b_orientation_reset);
+	insert_button(button_ids::id_voice_talk, ui->b_voice_talk);
+	insert_button(button_ids::id_voice_mute, ui->b_voice_mute);
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
@@ -902,6 +904,9 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
 	updateButton(button_ids::id_analog_limiter, ui->b_analog_limiter, &cfg.analog_limiter_button);
 	updateButton(button_ids::id_orientation_reset, ui->b_orientation_reset, &cfg.orientation_reset_button);
+	updateButton(button_ids::id_voice_talk, ui->b_voice_talk, &cfg.voice_talk_button);
+	updateButton(button_ids::id_voice_mute, ui->b_voice_mute, &cfg.voice_mute_button);
+	ui->cb_voice_push_to_talk->setChecked(cfg.voice_push_to_talk.get());
 
 	UpdateLabels(true);
 }
@@ -1447,6 +1452,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_analog_limiter->setEnabled(is_enabled && m_enable_analog_limiter_button);
 	ui->gb_orientation_reset->setEnabled(is_enabled && m_enable_orientation_reset_button);
+	ui->gb_voice_controls->setEnabled(is_enabled);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_motion_controls->setEnabled(is_enabled && m_enable_motion);
 	ui->gb_stick_deadzones->setEnabled(is_enabled && m_enable_deadzones);
@@ -2170,7 +2176,8 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
 			if (m_handler->m_type != pad_handler::keyboard &&
-				(id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter || id == button_ids::id_orientation_reset))
+				(id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter || id == button_ids::id_orientation_reset ||
+				 id == button_ids::id_voice_talk || id == button_ids::id_voice_mute))
 			{
 				continue;
 			}
@@ -2197,6 +2204,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Apply rest of config
 	auto& cfg = player->config;
 
+	cfg.voice_push_to_talk.set(ui->cb_voice_push_to_talk->isChecked());
 	cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
 	cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
 
@@ -2445,6 +2453,7 @@ void pad_settings_dialog::SubscribeTooltips()
 
 	SubscribeTooltip(ui->gb_orientation_reset, tooltips.gamepad_settings.orientation_reset);
 	SubscribeTooltip(ui->gb_analog_limiter, tooltips.gamepad_settings.analog_limiter);
+	SubscribeTooltip(ui->gb_voice_controls, tr("Voice-chat microphone controls. When push-to-talk is enabled, hold the Talk binding to transmit. Toggle microphone mute works in either mode. DualSense defaults to its Mic button. These controls do not mute game audio or the operating system microphone."));
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
