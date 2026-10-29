@@ -392,7 +392,14 @@ namespace rsx
 		update_program_state(m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
 
 		// Binding the framebuffer reads the viewport
-		decode_draw_state();
+		if (auto& state = m_ctx->draw_state;
+			state.pending.test(draw_state_t::group::viewport))
+		{
+			decode_viewport_state(*REGS(m_ctx), state.viewport);
+			state.pending.clear(draw_state_t::group::viewport);
+			state.dirty.set(draw_state_t::group::viewport);
+		}
+
 		m_graph.bind_framebuffer(rsx::framebuffer_creation_context::context_draw);
 
 		RSX(m_ctx)->renderer()->begin_draw();
