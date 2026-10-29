@@ -32,7 +32,7 @@ namespace voice_firmware
 
 	struct request
 	{
-		key codec;
+		key codec {};
 		u32 bitrate = 0;
 		std::vector<f32> pcm; // 8 kHz mono, s16 scale
 		std::vector<u8> packet;
