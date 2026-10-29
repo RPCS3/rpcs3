@@ -380,13 +380,6 @@ error_code sys_raw_spu_load(ppu_thread& ppu, s32 id, vm::cptr<char> path, vm::pt
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
-	const auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
-
-	if (!thread || thread->get_type() != spu_type::raw)
-	{
-		return CELL_ESRCH;
-	}
-
 	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
 	if (!elf_file)
@@ -404,7 +397,7 @@ error_code sys_raw_spu_load(ppu_thread& ppu, s32 id, vm::cptr<char> path, vm::pt
 	}
 
 	const auto image = idm::withdraw<lv2_obj, lv2_spu_image>(img.entry_point);
-	sys_spu_image::deploy(thread->ls, std::span(image->segs.get_ptr(), image->nsegs));
+	sys_spu_image::deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(image->segs.get_ptr(), image->nsegs));
 	ensure(vm::dealloc(image->segs.addr()));
 
 	ppu.check_state();
@@ -417,15 +410,8 @@ error_code sys_raw_spu_image_load(s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
-	const auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
-
-	if (!thread || thread->get_type() != spu_type::raw)
-	{
-		return CELL_ESRCH;
-	}
-
 	// Load SPU segments
-	img->deploy(thread->ls, std::span(img->segs.get_ptr(), img->nsegs));
+	img->deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(img->segs.get_ptr(), img->nsegs));
 
 	// Use MMIO
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point);
