@@ -530,46 +530,37 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 	}
 
 	const auto& display_buffer = m_ctx->display_buffers[info.buffer];
-	u32 buffer_width = display_buffer.width;
-	u32 buffer_height = display_buffer.height;
-	u32 buffer_pitch = display_buffer.pitch;
+	u32 buffer_width;
+	u32 buffer_height;
+	u32 buffer_pitch;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
 
-	if (!buffer_width)
-	{
-		buffer_width = avconfig.resolution_x;
-		buffer_height = avconfig.resolution_y;
-	}
-
 	if (avconfig.state)
 	{
 		av_format = avconfig.get_compatible_gcm_format();
-		if (!buffer_pitch)
-			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		// Some games under-declare the display buffer width, leaving unclaimed bytes at the end of every row
-		// while rendering the full row. Brutal Legend declares 1152 wide on a pitch of 5120 (= 1280px).
-		// Cropping to the declared width loses the right edge of the frame and skews the source aspect ratio,
-		// which aspect_convert_region then pillarboxes. Recover the full row, but never past what the video
-		// mode can display, so buffers with genuine pitch padding are left alone.
-		// NOTE: This is decided from the display buffer and the AV config alone, never from whatever render
-		// target happens to be in the surface store. Keying it off the surface makes the output geometry
-		// change between frames and the picture visibly pulses.
-		if (const u32 row_width = buffer_pitch / avconfig.get_bpp();
-			row_width > buffer_width && row_width <= avconfig.resolution_x)
-		{
-			buffer_width = row_width;
-		}
-
+		// The video output scans out the configured video mode at the configured pitch, starting at the display
+		// buffer offset. The width, height and pitch registered with the display buffer are not used.
 		const size2u video_frame_size = avconfig.video_frame_size();
-		buffer_width = std::min(buffer_width, video_frame_size.width);
-		buffer_height = std::min(buffer_height, video_frame_size.height);
+		buffer_width = video_frame_size.width;
+		buffer_height = video_frame_size.height;
+		buffer_pitch = avconfig.scanline_pitch;
 	}
 	else
 	{
 		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
+		buffer_width = display_buffer.width;
+		buffer_height = display_buffer.height;
+		buffer_pitch = display_buffer.pitch;
+
+		if (!buffer_width)
+		{
+			buffer_width = avconfig.resolution_x;
+			buffer_height = avconfig.resolution_y;
+		}
+
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * 4;
 	}
