@@ -1838,8 +1838,13 @@ bool VKGSRender::load_program()
 	// TODO: EXT_dynamic_state should get rid of this sillyness soon (kd)
 	const auto vertex_state = vk::decode_vertex_input_assembly_state(m_ctx);
 
+	// Invalidate pipeline properties if these bits change...
+	constexpr u32 pipeline_properties_invalidate_bits = (RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING | RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+	const u32 pipeline_properties_ctrl = m_ctx->program.fragment_program.ctrl & pipeline_properties_invalidate_bits;
+
 	const bool pipeline_state_dirty =
 		m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::pipelines_dirty_vk) ||
+		pipeline_properties_ctrl != m_pipeline_properties_ctrl ||
 		vk::get_renderpass_format_key(m_pipeline_properties.renderpass_key) != vk::get_renderpass_format_key(m_current_renderpass_key) || // We only care about RP format mismatch
 		m_pipeline_properties.state.cs.attachmentCount != m_draw_buffers.size();
 
@@ -1891,6 +1896,8 @@ bool VKGSRender::load_program()
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
+		m_pipeline_properties_ctrl = pipeline_properties_ctrl;
+
 		if (m_program &&
 			!m_shader_interpreter.is_interpreter(m_program) &&
 			!m_ctx->draw_state.dirty.test(rsx::draw_state_t::group::programs) &&
