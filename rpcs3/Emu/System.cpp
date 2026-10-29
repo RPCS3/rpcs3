@@ -122,11 +122,6 @@ namespace atomic_wait
 	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll));
 }
 
-namespace rsx
-{
-	void set_native_ui_flip();
-}
-
 Emulator::Emulator() noexcept
 	: m_supported_renderers({video_renderer::null})
 	, m_default_renderer(video_renderer::null)
@@ -3383,7 +3378,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				Resume();
 			}, nullptr, true, read_counter);
 
-			std::shared_lock rlock(id_manager::g_mutex, std::defer_lock); 
+			std::shared_lock rlock(id_manager::g_mutex, std::defer_lock);
 
 			// Check if the EXITGAME signal was read. We allow the game to terminate itself if that's the case.
 			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count() && rlock.try_lock())
@@ -4286,7 +4281,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (return_to_big_picture_mode)
 			{
-				ensure(!after_kill_callback);  
+				ensure(!after_kill_callback);
 				after_kill_callback = [this]()
 				{
 					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");

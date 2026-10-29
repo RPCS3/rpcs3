@@ -365,13 +365,13 @@ namespace rsx
 		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc);
 	}
 
-	void set_rsx_yield_flag() noexcept
+	void yield_rsx_ctx_thread() noexcept
 	{
-		if (auto rsx = get_current_renderer())
+		if (auto rsxthr = get_current_renderer())
 		{
 			if (g_cfg.core.allow_rsx_cpu_preempt)
 			{
-				rsx->state += cpu_flag::yield;
+				rsxthr->state += cpu_flag::yield;
 			}
 		}
 	}
