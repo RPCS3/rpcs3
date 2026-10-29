@@ -65,7 +65,8 @@ private:
 	const VKVertexProgram *m_vertex_prog = nullptr;
 	vk::glsl::program *m_program = nullptr;
 	vk::glsl::program *m_prev_program = nullptr;
-	vk::pipeline_props m_pipeline_properties;
+	vk::pipeline_props m_pipeline_properties;           // Decoded pipeline properties cached
+	u32 m_pipeline_properties_ctrl = 0;                 // Fragment program control bits that m_pipeline_properties was decoded with
 
 	const vs_binding_table_t* m_vs_binding_table = nullptr;
 	const fs_binding_table_t* m_fs_binding_table = nullptr;
