@@ -117,6 +117,106 @@ namespace
 	};
 }
 
+TEST_F(CellVoiceAsync, WidebandEncoderKeepsFullRateAndFrameCadence)
+{
+	for (const auto bitrate : {CELLVOICE_BITRATE_14400, CELLVOICE_BITRATE_16000, CELLVOICE_BITRATE_22533})
+	{
+		SCOPED_TRACE(bitrate);
+		service.clear();
+		manager.ports.clear();
+		add_encoder();
+		manager.ports.at(voice_output).info.voice.bitrate = bitrate;
+		const auto& cfg = *voice_firmware::find_config(bitrate);
+		u32 total_samples = 0;
+		for (u32 period = 0; period < 30; period++)
+		{
+			feed_pcm(2000);
+			auto jobs = take_requests();
+			ASSERT_GE(jobs.size(), 1u);
+			ASSERT_LE(jobs.size(), 2u);
+			EXPECT_EQ(service.data.at(voice_output).codec_pending, jobs.size());
+			for (const auto& job : jobs)
+			{
+				ASSERT_EQ(job.pcm.size(), cfg.samples);
+				EXPECT_TRUE(std::all_of(job.pcm.begin(), job.pcm.end(), [](f32 v) { return v == 2000.0f; }));
+				total_samples += static_cast<u32>(job.pcm.size());
+				service.commit(manager, encoded(job, 1));
+			}
+			EXPECT_EQ(service.data.at(voice_output).codec_pending, 0u);
+			EXPECT_LT(service.data.at(voice_output).pcm.size(), cfg.samples);
+		}
+		EXPECT_EQ(total_samples, 30 * voice_service::tick_samples);
+	}
+}
+
+TEST_F(CellVoiceAsync, WidebandDecoderRefillsWithoutGapsOrGrowingBacklog)
+{
+	for (const auto bitrate : {CELLVOICE_BITRATE_14400, CELLVOICE_BITRATE_16000, CELLVOICE_BITRATE_22533})
+	{
+		SCOPED_TRACE(bitrate);
+		service.clear();
+		manager.ports.clear();
+		add_decoder();
+		manager.ports.at(encoded_input_port).info.voice.bitrate = bitrate;
+		const auto& cfg = *voice_firmware::find_config(bitrate);
+		u32 samples = 0;
+		for (u32 period = 0; period < 90; period++)
+		{
+			samples += voice_service::tick_samples;
+			while (samples >= cfg.samples)
+			{
+				write_packet(encoded_input_port, packet(1, cfg.bytes));
+				samples -= cfg.samples;
+			}
+			tick();
+			auto jobs = take_requests();
+			EXPECT_LE(jobs.size(), 2u);
+			if (period > 5)
+			{
+				const auto& signal = service.data.at(encoded_input_port).signal;
+				EXPECT_TRUE(std::all_of(signal.begin(), signal.end(), [](f32 v) { return v == 1000.0f; }));
+			}
+			for (const auto& job : jobs) service.commit(manager, decoded(job));
+			EXPECT_LE(service.bytes_queued(encoded_input_port), cfg.bytes * 6);
+			EXPECT_LT(service.data.at(encoded_input_port).pcm.size(), voice_service::tick_samples + cfg.samples);
+		}
+	}
+}
+
+TEST_F(CellVoiceAsync, WidebandBatchStaysPendingUntilLastCompletionAndRejectsFailureRemainder)
+{
+	add_decoder();
+	manager.ports.at(encoded_input_port).info.voice.bitrate = CELLVOICE_BITRATE_16000;
+	for (u32 i = 0; i < 4; i++) write_packet(encoded_input_port, packet(1, 20));
+	wait_for_request();
+	auto jobs = take_requests();
+	ASSERT_EQ(jobs.size(), 2u);
+	service.commit(manager, decoded(jobs[0]));
+	EXPECT_EQ(service.data.at(encoded_input_port).codec_pending, 1u);
+	tick();
+	EXPECT_TRUE(service.requests.empty());
+	auto failure = decoded(jobs[1]);
+	failure.error = 1;
+	service.commit(manager, failure);
+	EXPECT_EQ(service.data.at(encoded_input_port).codec_pending, 0u);
+	EXPECT_TRUE(service.data.at(encoded_input_port).codec_failed);
+	service.commit(manager, decoded(jobs[0]));
+	EXPECT_TRUE(service.data.at(encoded_input_port).pcm.empty());
+}
+
+TEST_F(CellVoiceAsync, WidebandStopRejectsBothFramesOfAnOutstandingBatch)
+{
+	add_encoder();
+	manager.ports.at(voice_output).info.voice.bitrate = CELLVOICE_BITRATE_16000;
+	feed_pcm();
+	auto jobs = take_requests();
+	ASSERT_EQ(jobs.size(), 2u);
+	service.stop(manager);
+	for (const auto& job : jobs) service.commit(manager, encoded(job, 1));
+	EXPECT_EQ(service.bytes_queued(voice_output), 0u);
+	EXPECT_EQ(service.data.at(voice_output).codec_pending, 0u);
+}
+
 TEST_F(CellVoiceAsync, DecoderWaitsForAWholePacketAndCopiesItsInput)
 {
 	add_decoder();

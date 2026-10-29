@@ -290,7 +290,7 @@ struct voice_service
 		u32 codec_bitrate = 0;
 		u64 codec_generation = 0;
 		bool codec_encode = false;
-		bool codec_pending = false;
+		u32 codec_pending = 0;
 		bool codec_failed = false;
 		halfband_filter filter;
 		bool playing = false;                    // IN_VOICE: past its pre-buffering

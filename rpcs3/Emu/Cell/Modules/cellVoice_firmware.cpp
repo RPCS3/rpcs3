@@ -7,6 +7,7 @@
 #include "Emu/IdManager.h"
 #include "cellAdec.h"
 #include "cellCelp8Enc.h"
+#include "cellCelpEnc.h"
 #include "cellSpurs.h"
 #include "cellSysmodule.h"
 #include "util/serialization.hpp"
@@ -32,20 +33,25 @@ namespace voice_firmware
 {
 	namespace
 	{
-		// Public CELP8 framing parameters, not codec implementation data.
+		// CELP framing parameters; the installed firmware implements both codecs.
 		constexpr config configurations[] =
 		{
 			{3850, 0, 320, 20},
 			{4650, 2, 320, 24},
 			{5700, 6, 160, 15},
 			{7300, 12, 160, 19},
+			{14400, 0, 240, 27, 16000},
+			{16000, 1, 160, 20, 16000},
+			{22533, 3, 240, 43, 16000},
 		};
 
 		enum encoder_op : u32 { query, open, close, start_sequence, end_sequence, encode_frame, wait_output, get_au, op_count };
-		constexpr u32 encoder_nids[op_count] =
+		constexpr u32 encoder_nids[2][op_count] =
 		{
-			0x2d677e0c, 0xcd48ad62, 0xfd2566b4, 0x0f6ab57b,
-			0xbbbc2c1c, 0x2099f86e, 0x29da1ea6, 0x48c5020d,
+			{0x2d677e0c, 0xcd48ad62, 0xfd2566b4, 0x0f6ab57b,
+			 0xbbbc2c1c, 0x2099f86e, 0x29da1ea6, 0x48c5020d},
+			{0x6b148570, 0xba50bc23, 0x15ec0cca, 0x55dc23de,
+			 0xf2b85dff, 0x81fe030c, 0x9b244272, 0x3773692f},
 		};
 		enum spurs_op : u32 { spurs_attribute, spurs_initialize, spurs_finalize, spurs_op_count };
 		constexpr u32 spurs_nids[spurs_op_count] = {0x95180230, 0xaa6269a8, 0xca4c4600};
@@ -54,7 +60,30 @@ namespace voice_firmware
 		constexpr u32 callback_offset = pcm_capacity + packet_capacity;
 		constexpr u32 auxiliary_size = callback_offset + 128;
 		constexpr u32 decoder_frame_done = (1u << CELL_ADEC_MSG_TYPE_AUDONE) | (1u << CELL_ADEC_MSG_TYPE_PCMOUT);
-		constexpr u16 module_ids[] = {CELL_SYSMODULE_CELP8ENC, CELL_SYSMODULE_ADEC_CELP8, CELL_SYSMODULE_SPURS};
+		constexpr u16 module_ids[] = {CELL_SYSMODULE_CELP8ENC, CELL_SYSMODULE_ADEC_CELP8, CELL_SYSMODULE_SPURS, CELL_SYSMODULE_CELPENC, CELL_SYSMODULE_ADEC_CELP};
+
+		// CELP and CELP8 share this host/firmware ABI; only the parameter values differ.
+		static_assert(sizeof(CellCelpEncAttr) == sizeof(CellCelp8EncAttr));
+		static_assert(offsetof(CellCelpEncAttr, workMemSize) == offsetof(CellCelp8EncAttr, workMemSize));
+		static_assert(sizeof(CellCelpEncResourceEx) == sizeof(CellCelp8EncResourceEx));
+		static_assert(offsetof(CellCelpEncResourceEx, totalMemSize) == offsetof(CellCelp8EncResourceEx, totalMemSize));
+		static_assert(offsetof(CellCelpEncResourceEx, startAddr) == offsetof(CellCelp8EncResourceEx, startAddr));
+		static_assert(offsetof(CellCelpEncResourceEx, spurs) == offsetof(CellCelp8EncResourceEx, spurs));
+		static_assert(offsetof(CellCelpEncResourceEx, priority) == offsetof(CellCelp8EncResourceEx, priority));
+		static_assert(offsetof(CellCelpEncResourceEx, maxContention) == offsetof(CellCelp8EncResourceEx, maxContention));
+		static_assert(sizeof(CellCelpEncParam) == sizeof(CellCelp8EncParam));
+		static_assert(offsetof(CellCelpEncParam, excitationMode) == offsetof(CellCelp8EncParam, excitationMode));
+		static_assert(offsetof(CellCelpEncParam, sampleRate) == offsetof(CellCelp8EncParam, sampleRate));
+		static_assert(offsetof(CellCelpEncParam, configuration) == offsetof(CellCelp8EncParam, configuration));
+		static_assert(offsetof(CellCelpEncParam, wordSize) == offsetof(CellCelp8EncParam, wordSize));
+		static_assert(offsetof(CellCelpEncParam, outBuff) == offsetof(CellCelp8EncParam, outBuff));
+		static_assert(offsetof(CellCelpEncParam, outSize) == offsetof(CellCelp8EncParam, outSize));
+		static_assert(sizeof(CellCelpEncPcmInfo) == sizeof(CellCelp8EncPcmInfo));
+		static_assert(offsetof(CellCelpEncPcmInfo, startAddr) == offsetof(CellCelp8EncPcmInfo, startAddr));
+		static_assert(offsetof(CellCelpEncPcmInfo, size) == offsetof(CellCelp8EncPcmInfo, size));
+		static_assert(sizeof(CellCelpEncAuInfo) == sizeof(CellCelp8EncAuInfo));
+		static_assert(offsetof(CellCelpEncAuInfo, startAddr) == offsetof(CellCelp8EncAuInfo, startAddr));
+		static_assert(offsetof(CellCelpEncAuInfo, size) == offsetof(CellCelp8EncAuInfo, size));
 
 		struct callback_state
 		{
@@ -193,16 +222,17 @@ namespace voice_firmware
 		bool started = false;
 		bool validated = false;
 		u8 module_refs = 0;
-		u32 encoder_module = 0, decoder_module = 0, spurs_module = 0;
-		std::array<u32, op_count> functions{}; // Re-resolved after loading a savestate.
+		std::array<u32, 2> encoder_module{}, decoder_module{};
+		u32 spurs_module = 0;
+		std::array<std::array<u32, op_count>, 2> functions{}; // Re-resolved after loading a savestate.
 		std::array<u32, spurs_op_count> spurs_functions{};
 		std::vector<pool> pools;
 		std::map<key, codec> codecs;
 
 		template <typename F>
-		vm::ptr<F> function(encoder_op op) const
+		vm::ptr<F> function(encoder_op op, u32 bitrate) const
 		{
-			return vm::ptr<F>::make(functions[op]);
+			return vm::ptr<F>::make(functions[find_config(bitrate)->sample_rate == 16000][op]);
 		}
 
 		template <typename F>
@@ -223,40 +253,45 @@ namespace voice_firmware
 				cellVoice_firmware.error("Firmware SPURS exports are unavailable (missing firmware or HLE override)");
 				return CELL_ENOSYS;
 			}
-			for (u32 i = 0; i < op_count; i++)
+			for (u32 family = 0; family < 2; family++)
 			{
-				functions[i] = ppu_get_exported_func_addr(encoder_nids[i], "cellCelp8Enc");
-			}
-			const u32 encoder_id = module_owner(functions[query], "libcelp8enc.sprx");
-			const auto encoder = idm::get_unlocked<lv2_obj, lv2_prx>(encoder_id);
-			if (!encoder || (encoder_module && encoder_module != encoder_id)
-				|| !std::all_of(functions.begin(), functions.end(), [&](u32 address) { return descriptor_valid(*encoder, address); }))
-			{
-				cellVoice_firmware.error("Firmware CELP8 encoder exports are unavailable (missing firmware or HLE override)");
-				return CELL_ENOSYS;
-			}
-
-			const auto var = ppu_module_manager::cellCelp8Dec.variables.find(0xf0190c6c);
-			const u32 table = var == ppu_module_manager::cellCelp8Dec.variables.end() || !var->second.export_addr ? 0 : *var->second.export_addr;
-			const u32 decoder_id = module_owner(table, "libcelp8dec.sprx");
-			const auto decoder = idm::get_unlocked<lv2_obj, lv2_prx>(decoder_id);
-			if (!decoder || (decoder_module && decoder_module != decoder_id)
-				|| !contains(*decoder, table, sizeof(CellAdecCoreOps), 4)
-				|| !vm::check_addr(table, vm::page_readable, sizeof(CellAdecCoreOps)))
-			{
-				cellVoice_firmware.error("Firmware CELP8 decoder operations are unavailable (missing firmware or HLE override)");
-				return CELL_ENOSYS;
-			}
-			for (u32 i = 0; i < sizeof(CellAdecCoreOps) / sizeof(u32); i++)
-			{
-				if (!descriptor_valid(*decoder, vm::read32(table + i * sizeof(u32))))
+				if (family && (module_refs & 0x18) != 0x18) continue;
+				for (u32 i = 0; i < op_count; i++)
 				{
-					cellVoice_firmware.error("Invalid firmware CELP8 decoder operation %u", i);
+					functions[family][i] = ppu_get_exported_func_addr(encoder_nids[family][i], family ? "cellCelpEnc" : "cellCelp8Enc");
+				}
+				const u32 encoder_id = module_owner(functions[family][query], family ? "libcelpenc.sprx" : "libcelp8enc.sprx");
+				const auto encoder = idm::get_unlocked<lv2_obj, lv2_prx>(encoder_id);
+				if (!encoder || (encoder_module[family] && encoder_module[family] != encoder_id)
+					|| !std::all_of(functions[family].begin(), functions[family].end(), [&](u32 address) { return descriptor_valid(*encoder, address); }))
+				{
+					cellVoice_firmware.error("Firmware CELP encoder exports are unavailable (missing firmware or HLE override)");
 					return CELL_ENOSYS;
 				}
+
+				const auto& module = family ? ppu_module_manager::cellCelpDec : ppu_module_manager::cellCelp8Dec;
+				const auto var = module.variables.find(family ? 0xffe42c22 : 0xf0190c6c);
+				const u32 table = var == module.variables.end() || !var->second.export_addr ? 0 : *var->second.export_addr;
+				const u32 decoder_id = module_owner(table, family ? "libcelpdec.sprx" : "libcelp8dec.sprx");
+				const auto decoder = idm::get_unlocked<lv2_obj, lv2_prx>(decoder_id);
+				if (!decoder || (decoder_module[family] && decoder_module[family] != decoder_id)
+					|| !contains(*decoder, table, sizeof(CellAdecCoreOps), 4)
+					|| !vm::check_addr(table, vm::page_readable, sizeof(CellAdecCoreOps)))
+				{
+					cellVoice_firmware.error("Firmware CELP decoder operations are unavailable (missing firmware or HLE override)");
+					return CELL_ENOSYS;
+				}
+				for (u32 i = 0; i < sizeof(CellAdecCoreOps) / sizeof(u32); i++)
+				{
+					if (!descriptor_valid(*decoder, vm::read32(table + i * sizeof(u32))))
+					{
+						cellVoice_firmware.error("Invalid firmware CELP decoder operation %u", i);
+						return CELL_ENOSYS;
+					}
+				}
+				encoder_module[family] = encoder_id;
+				decoder_module[family] = decoder_id;
 			}
-			encoder_module = encoder_id;
-			decoder_module = decoder_id;
 			spurs_module = spurs_id;
 			validated = true;
 			return CELL_OK;
@@ -311,11 +346,11 @@ namespace voice_firmware
 			const config& cfg = *find_config(value.bitrate);
 			ppu.state += cpu_flag::wait;
 			vm::var<CellAdecType> type;
-			type->audioCodecType = CELL_ADEC_TYPE_CELP8;
+			type->audioCodecType = cfg.sample_rate == 16000 ? CELL_ADEC_TYPE_CELP : CELL_ADEC_TYPE_CELP8;
 			if (id.encode)
 			{
-				vm::var<CellCelp8EncAttr> attr;
-				const s32 error = function<s32(vm::ptr<CellCelp8EncAttr>)>(query)(ppu, attr);
+				vm::var<CellCelpEncAttr> attr;
+				const s32 error = function<s32(vm::ptr<CellCelpEncAttr>)>(query, value.bitrate)(ppu, attr);
 				if (interrupted(ppu)) return CELL_ECANCELED;
 				if (error) return error;
 				value.work_size = attr->workMemSize;
@@ -343,13 +378,13 @@ namespace voice_firmware
 			value.opening = true;
 			if (id.encode)
 			{
-				vm::var<CellCelp8EncResourceEx> resource{};
+				vm::var<CellCelpEncResourceEx> resource{};
 				resource->totalMemSize = value.work_size;
 				resource->startAddr = vm::cast(value.arena);
 				resource->spurs = vm::cast(pools[value.pool_index].address);
 				std::fill(std::begin(resource->priority), std::end(resource->priority), 15);
 				resource->maxContention = 1;
-				error = function<s32(vm::ptr<CellCelp8EncResourceEx>, vm::ptr<u32>)>(open)(ppu, resource, handle);
+				error = function<s32(vm::ptr<CellCelpEncResourceEx>, vm::ptr<u32>)>(open, value.bitrate)(ppu, resource, handle);
 			}
 			else
 			{
@@ -374,22 +409,23 @@ namespace voice_firmware
 			ppu.state += cpu_flag::wait;
 			if (id.encode)
 			{
-				vm::var<CellCelp8EncParam> param{};
-				param->excitationMode = CELL_CELP8ENC_EXCITATION_MODE_MPE;
-				param->sampleRate = CELL_CELP8ENC_FS_8kHz;
+				vm::var<CellCelpEncParam> param{};
+				param->excitationMode = cfg.sample_rate == 16000 ? u32{CELL_CELPENC_EXCITATION_MODE_RPE} : u32{CELL_CELP8ENC_EXCITATION_MODE_MPE};
+				param->sampleRate = cfg.sample_rate == 16000 ? u32{CELL_CELPENC_FS_16kHz} : u32{CELL_CELP8ENC_FS_8kHz};
 				param->configuration = cfg.configuration;
-				param->wordSize = CELL_CELP8ENC_WORD_SZ_FLOAT;
+				param->wordSize = cfg.sample_rate == 16000 ? u32{CELL_CELPENC_WORD_SZ_FLOAT} : u32{CELL_CELP8ENC_WORD_SZ_FLOAT};
 				param->outBuff = vm::cast(value.packet_address());
 				param->outSize = packet_capacity;
-				error = function<s32(vm::ptr<void>, vm::ptr<CellCelp8EncParam>)>(start_sequence)(ppu, vm::cast(value.handle), param);
+				error = function<s32(vm::ptr<void>, vm::ptr<CellCelpEncParam>)>(start_sequence, value.bitrate)(ppu, vm::cast(value.handle), param);
 			}
 			else
 			{
-				vm::var<CellAdecParamCelp8> param{};
-				param->excitationMode = CELL_ADEC_CELP8_EXCITATION_MODE_MPE;
-				param->sampleRate = CELL_ADEC_FS_8kHz;
+				static_assert(sizeof(CellAdecParamCelp) == sizeof(CellAdecParamCelp8));
+				vm::var<CellAdecParamCelp> param{};
+				param->excitationMode = cfg.sample_rate == 16000 ? CELL_ADEC_CELP_EXCITATION_MODE_RPE : CELL_ADEC_CELP8_EXCITATION_MODE_MPE;
+				param->sampleRate = cfg.sample_rate == 16000 ? CELL_ADEC_FS_16kHz : CELL_ADEC_FS_8kHz;
 				param->configuration = cfg.configuration;
-				param->wordSize = CELL_ADEC_CELP8_WORD_SZ_FLOAT;
+				param->wordSize = cfg.sample_rate == 16000 ? CELL_ADEC_CELP_WORD_SZ_FLOAT : CELL_ADEC_CELP8_WORD_SZ_FLOAT;
 				error = ppu_execute<&cellAdecStartSeq>(ppu, vm::ptr<AdecContext>::make(value.handle), vm::cast(param.addr()));
 			}
 			if (!error) value.sequence = true;
@@ -453,7 +489,7 @@ namespace voice_firmware
 					s32 error = CELL_OK;
 					if (id.encode)
 					{
-						error = function<s32(vm::ptr<void>)>(end_sequence)(ppu, vm::cast(value.handle));
+						error = function<s32(vm::ptr<void>)>(end_sequence, value.bitrate)(ppu, vm::cast(value.handle));
 					}
 					else
 					{
@@ -471,7 +507,7 @@ namespace voice_firmware
 					value.sequence = value.in_flight = value.ending = false;
 				}
 				const s32 error = id.encode
-					? function<s32(vm::ptr<void>)>(close)(ppu, vm::cast(value.handle))
+					? function<s32(vm::ptr<void>)>(close, value.bitrate)(ppu, vm::cast(value.handle))
 					: static_cast<s32>(ppu_execute<&cellAdecClose>(ppu, vm::ptr<AdecContext>::make(value.handle)));
 				if (interrupted(ppu)) return CELL_ECANCELED;
 				if (error) return error;
@@ -511,14 +547,14 @@ namespace voice_firmware
 			if (error)
 			{
 				const s32 cleanup_error = stop(ppu);
-				if (cleanup_error) cellVoice_firmware.error("CELP8 startup cleanup failed: 0x%x", cleanup_error);
+				if (cleanup_error) cellVoice_firmware.error("Voice codec startup cleanup failed: 0x%x", cleanup_error);
 				return error;
 			}
 		}
 		if (const s32 error = state.validate())
 		{
 			const s32 cleanup_error = stop(ppu);
-			if (cleanup_error) cellVoice_firmware.error("CELP8 startup cleanup failed: 0x%x", cleanup_error);
+			if (cleanup_error) cellVoice_firmware.error("Voice codec startup cleanup failed: 0x%x", cleanup_error);
 			return error;
 		}
 		state.started = true;
@@ -536,6 +572,19 @@ namespace voice_firmware
 			output.error = CELL_EINVAL;
 			return output;
 		}
+		// Load wideband modules only when a port first requests RPE CELP.
+		if (cfg->sample_rate == 16000)
+		{
+			for (const u32 i : {3u, 4u})
+			{
+				if (state.module_refs & (1u << i)) continue;
+				const s32 error = ppu_execute<&cellSysmoduleLoadModule>(ppu, module_ids[i]);
+				if (!error) state.module_refs |= 1u << i;
+				state.validated = false;
+				if (interrupted(ppu)) { output.error = CELL_ECANCELED; return output; }
+				if (error) { output.error = error; return output; }
+			}
+		}
 		if (!state.validated)
 		{
 			if (const s32 error = state.validate()) { output.error = error; return output; }
@@ -551,7 +600,7 @@ namespace voice_firmware
 				// Preserve the fault for this generation, but release any resources
 				// whose close completed. A failed close retains their ownership.
 				const s32 cleanup_error = state.close_codec(ppu, input.codec, value);
-				if (cleanup_error) cellVoice_firmware.error("CELP8 open cleanup failed: 0x%x", cleanup_error);
+				if (cleanup_error) cellVoice_firmware.error("Voice codec open cleanup failed: 0x%x", cleanup_error);
 			}
 		}
 		if (value.fault || value.bitrate != input.bitrate)
@@ -570,17 +619,17 @@ namespace voice_firmware
 				if (!std::isfinite(input.pcm[i])) { output.error = CELL_EINVAL; return output; }
 				pcm[i] = std::clamp(input.pcm[i] / 32768.0f, -1.0f, 1.0f);
 			}
-			vm::var<CellCelp8EncPcmInfo> info;
+			vm::var<CellCelpEncPcmInfo> info;
 			info->startAddr = vm::cast(value.pcm_address());
 			info->size = cfg->samples * sizeof(f32);
-			error = state.function<s32(vm::ptr<void>, vm::ptr<CellCelp8EncPcmInfo>)>(encode_frame)(ppu, vm::cast(value.handle), info);
+			error = state.function<s32(vm::ptr<void>, vm::ptr<CellCelpEncPcmInfo>)>(encode_frame, value.bitrate)(ppu, vm::cast(value.handle), info);
 			if (!error) value.in_flight = true;
-			if (!error && !interrupted(ppu)) error = state.function<s32(vm::ptr<void>)>(wait_output)(ppu, vm::cast(value.handle));
+			if (!error && !interrupted(ppu)) error = state.function<s32(vm::ptr<void>)>(wait_output, value.bitrate)(ppu, vm::cast(value.handle));
 			if (!error && !interrupted(ppu))
 			{
 				ppu.state += cpu_flag::wait;
-				vm::var<CellCelp8EncAuInfo> au;
-				error = state.function<s32(vm::ptr<void>, vm::ptr<void>, vm::ptr<CellCelp8EncAuInfo>)>(get_au)(ppu, vm::cast(value.handle), vm::cast(value.packet_address()), au);
+				vm::var<CellCelpEncAuInfo> au;
+				error = state.function<s32(vm::ptr<void>, vm::ptr<void>, vm::ptr<CellCelpEncAuInfo>)>(get_au, value.bitrate)(ppu, vm::cast(value.handle), vm::cast(value.packet_address()), au);
 				if (!error && !interrupted(ppu))
 				{
 					value.in_flight = false;
@@ -616,7 +665,7 @@ namespace voice_firmware
 			value.fault = output.error = error;
 			output.packet.clear();
 			output.pcm.clear();
-			cellVoice_firmware.error("CELP8 %s failed for voice port 0x%x: 0x%x", input.codec.encode ? "encode" : "decode", input.codec.port, error);
+			cellVoice_firmware.error("CELP %s failed for voice port 0x%x: 0x%x", input.codec.encode ? "encode" : "decode", input.codec.port, error);
 		}
 		return output;
 	}
@@ -668,7 +717,7 @@ namespace voice_firmware
 			release(ppu, owner.address);
 		}
 		state.pools.clear();
-		for (const u32 i : {1u, 0u, 2u})
+		for (const u32 i : {4u, 3u, 1u, 0u, 2u})
 		{
 			if (!(state.module_refs & (1u << i))) continue;
 			const s32 error = ppu_execute<&cellSysmoduleUnloadModule>(ppu, module_ids[i]);
@@ -677,16 +726,20 @@ namespace voice_firmware
 			state.module_refs &= ~(1u << i);
 		}
 		state.started = state.validated = false;
-		state.encoder_module = state.decoder_module = state.spurs_module = 0;
-		state.functions.fill(0);
+		state.encoder_module.fill(0);
+		state.decoder_module.fill(0);
+		state.spurs_module = 0;
+		state.functions = {};
 		state.spurs_functions.fill(0);
 		return CELL_OK;
 	}
 
-	void backend::save(utils::serial& ar)
+	void backend::save(utils::serial& ar, s32 version)
 	{
 		auto& state = *m_impl;
-		ar(state.started, state.module_refs, state.encoder_module, state.decoder_module, state.spurs_module);
+		ar(state.started, state.module_refs, state.encoder_module[0], state.decoder_module[0], state.spurs_module);
+		if (ar.is_writing() || version >= 3)
+			ar(state.encoder_module[1], state.decoder_module[1]);
 		u32 count = static_cast<u32>(state.pools.size());
 		ar(count);
 		ensure(count <= 3);
@@ -721,7 +774,7 @@ namespace voice_firmware
 				ensure(state.codecs.emplace(id, value).second);
 			}
 			state.validated = false;
-			state.functions.fill(0);
+			state.functions = {};
 			state.spurs_functions.fill(0);
 		}
 	}

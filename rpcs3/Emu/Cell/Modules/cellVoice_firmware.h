@@ -16,6 +16,7 @@ namespace voice_firmware
 		u32 configuration = 0;
 		u32 samples = 0;
 		u32 bytes = 0;
+		u32 sample_rate = 8000;
 	};
 
 	const config* find_config(u32 bitrate);
@@ -37,7 +38,7 @@ namespace voice_firmware
 	{
 		key codec {};
 		u32 bitrate = 0;
-		std::vector<f32> pcm; // 8 kHz mono, s16 scale
+		std::vector<f32> pcm; // Mono at the codec sample rate, s16 scale
 		std::vector<u8> packet;
 	};
 
@@ -45,7 +46,7 @@ namespace voice_firmware
 	{
 		key codec {};
 		u32 error = 0;
-		std::vector<f32> pcm; // 8 kHz mono, s16 scale
+		std::vector<f32> pcm; // Mono at the codec sample rate, s16 scale
 		std::vector<u8> packet;
 	};
 
@@ -56,9 +57,6 @@ namespace voice_firmware
 	// caller guards guest calls against savestate creation with hle_locks_t.
 	class backend
 	{
-		struct impl;
-		std::unique_ptr<impl> m_impl;
-
 	public:
 		backend();
 		~backend(); // Host teardown only; normal shutdown must call stop().
@@ -69,6 +67,10 @@ namespace voice_firmware
 		result process(ppu_thread& ppu, const request& input);
 		s32 reconcile(ppu_thread& ppu, const std::vector<key>& live_keys);
 		s32 stop(ppu_thread& ppu);
-		void save(utils::serial& ar);
+		void save(utils::serial& ar, s32 version);
+
+	private:
+		struct impl;
+		std::unique_ptr<impl> m_impl;
 	};
 }

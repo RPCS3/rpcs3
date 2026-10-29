@@ -556,7 +556,7 @@ void voice_service::stop(voice_manager& manager)
 		d.logged = false;
 		d.read_logged = false;
 		d.codec_generation = 0;
-		d.codec_pending = false;
+		d.codec_pending = 0;
 		d.codec_failed = false;
 	}
 	requests.clear();
@@ -601,7 +601,7 @@ bool voice_service::ensure_codec(port_data& d, u32 bitrate, bool encode, u16 id)
 	d.codec_bitrate = bitrate;
 	d.codec_generation = next_codec_generation++;
 	d.codec_encode = encode;
-	d.codec_pending = false;
+	d.codec_pending = 0;
 	d.codec_failed = false;
 
 	const auto* cfg = voice_config(bitrate);
@@ -610,7 +610,7 @@ bool voice_service::ensure_codec(port_data& d, u32 bitrate, bool encode, u16 id)
 	{
 		if (!d.logged)
 		{
-			cellVoice.todo("Voice port 0x%x: bit rate %d (16 kHz RPE CELP) is not implemented", id, bitrate);
+			cellVoice.todo("Voice port 0x%x: bit rate %d is not implemented", id, bitrate);
 			d.logged = true;
 		}
 
@@ -662,15 +662,21 @@ void voice_service::decode_voice(const voice_manager::port_t& port, port_data& d
 
 	// Refill after consuming this tick. Testing before consumption inserts a silent
 	// tick between every pair of 20 ms packets and makes the input backlog grow.
-	if (!d.codec_pending && d.pcm.size() < tick_samples && d.bytes.size() >= frame_bytes)
+	if (!d.codec_pending)
 	{
-		voice_firmware::request request;
-		request.codec = {id, d.codec_generation, false};
-		request.bitrate = d.codec_bitrate;
-		request.packet.assign(d.bytes.begin(), d.bytes.begin() + frame_bytes);
-		d.bytes.erase(d.bytes.begin(), d.bytes.begin() + frame_bytes);
-		d.codec_pending = true;
-		requests.push_back(std::move(request));
+		// RPE frames span 10 or 15 ms. Refill a full service period, including
+		// any samples carried from the preceding frame, before the next tick.
+		const u32 frame_samples = cfg.samples * 16000 / cfg.sample_rate;
+		for (usz queued = d.pcm.size(); queued < tick_samples && d.bytes.size() >= frame_bytes; queued += frame_samples)
+		{
+			voice_firmware::request request;
+			request.codec = {id, d.codec_generation, false};
+			request.bitrate = d.codec_bitrate;
+			request.packet.assign(d.bytes.begin(), d.bytes.begin() + frame_bytes);
+			d.bytes.erase(d.bytes.begin(), d.bytes.begin() + frame_bytes);
+			d.codec_pending++;
+			requests.push_back(std::move(request));
+		}
 	}
 
 	if (!d.codec_pending && d.pcm.empty() && d.bytes.size() < frame_bytes)
@@ -718,19 +724,27 @@ void voice_service::encode_voice(const voice_manager::port_t& port, port_data& d
 		return;
 	}
 
-	d.filter.down(mix, tick_samples, d.pcm);
-
 	const auto& cfg = *voice_config(d.codec_bitrate);
+	if (cfg.sample_rate == 16000)
+		d.pcm.insert(d.pcm.end(), mix, mix + tick_samples);
+	else
+		d.filter.down(mix, tick_samples, d.pcm);
 
-	if (!d.codec_pending && d.pcm.size() >= cfg.samples)
+	if (!d.codec_pending)
 	{
-		voice_firmware::request request;
-		request.codec = {id, d.codec_generation, true};
-		request.bitrate = d.codec_bitrate;
-		request.pcm.assign(d.pcm.begin(), d.pcm.begin() + cfg.samples);
-		d.pcm.erase(d.pcm.begin(), d.pcm.begin() + cfg.samples);
-		d.codec_pending = true;
-		requests.push_back(std::move(request));
+		// Bound the batch to one tick's worth of whole frames. Firmware calls
+		// remain sequential, outside the manager lock, even for the same stream.
+		const u32 max_frames = (tick_samples * cfg.sample_rate / 16000 + cfg.samples - 1) / cfg.samples;
+		while (d.codec_pending < max_frames && d.pcm.size() >= cfg.samples)
+		{
+			voice_firmware::request request;
+			request.codec = {id, d.codec_generation, true};
+			request.bitrate = d.codec_bitrate;
+			request.pcm.assign(d.pcm.begin(), d.pcm.begin() + cfg.samples);
+			d.pcm.erase(d.pcm.begin(), d.pcm.begin() + cfg.samples);
+			d.codec_pending++;
+			requests.push_back(std::move(request));
+		}
 	}
 }
 
@@ -744,7 +758,8 @@ void voice_service::commit(voice_manager& manager, const voice_firmware::result&
 	auto& d = found->second;
 	if (d.codec_generation != result.codec.generation || d.codec_encode != result.codec.encode)
 		return;
-	d.codec_pending = false;
+	if (d.codec_pending) d.codec_pending--;
+	if (d.codec_failed) return;
 	if (d.codec_bitrate != static_cast<u32>(port->info.voice.bitrate))
 		return;
 	if (result.error)
@@ -776,7 +791,10 @@ void voice_service::commit(voice_manager& manager, const voice_firmware::result&
 	}
 	else
 	{
-		d.filter.up(result.pcm.data(), static_cast<u32>(result.pcm.size()), d.pcm);
+		if (voice_config(d.codec_bitrate)->sample_rate == 16000)
+			d.pcm.insert(d.pcm.end(), result.pcm.begin(), result.pcm.end());
+		else
+			d.filter.up(result.pcm.data(), static_cast<u32>(result.pcm.size()), d.pcm);
 	}
 }
 
@@ -951,7 +969,7 @@ void voice_service::discard_mic_outputs(voice_manager& manager)
 			// A firmware encoder can retain one frame internally. Recreate it as well
 			// as dropping queued packets, so the next press cannot expose that frame.
 			d.codec_generation = 0;
-			d.codec_pending = false;
+			d.codec_pending = 0;
 			d.codec_failed = false;
 		}
 		if (const auto port = manager.access_port(id); port && port->info.portType == CELLVOICE_PORTTYPE_OUT_SECONDARY)
@@ -1405,17 +1423,21 @@ void voice_service::save(utils::serial& ar)
 	for (const u16 id : ids)
 	{
 		auto& d = data[id];
+		// Saves occur after the whole batch completes. Preserve the version-2
+		// boolean field while the live counter tracks multiple pending frames.
+		bool pending = d.codec_pending != 0;
 		ar(d.bytes, d.pcm, d.signal, d.codec_bitrate, d.codec_generation, d.codec_encode,
-			d.codec_pending, d.codec_failed, d.filter.x, d.playing, d.waited, d.hangover,
+			pending, d.codec_failed, d.filter.x, d.playing, d.waited, d.hangover,
 			d.noise_db, d.attached, d.paused, d.logged, d.read_logged);
-		ensure(!d.codec_pending);
+		ensure(!pending);
+		d.codec_pending = 0;
 	}
 	ar(mic_file_loaded, mic_file, mic_file_pos, mic_fifo, mic_primed, mic_resample_pos, mic_last);
 	{
 		std::lock_guard lock(headset_mtx);
 		ar(headset_fifo, headset_primed, headset_pos, headset_step, headset_prev, headset_cur, headset_volume);
 	}
-	firmware->save(ar);
+	firmware->save(ar, GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), cellVoice));
 }
 
 error_code cellVoiceConnectIPortToOPort(u32 ips, u32 ops)
