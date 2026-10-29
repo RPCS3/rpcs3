@@ -19,7 +19,9 @@
 #include "VKShaderInterpreter.h"
 #include "VKQueryPool.h"
 
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Core/RSXRenderBackend.h"
+#include "Emu/RSX/GSFrameBase.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include <functional>
 #include <initializer_list>
@@ -33,9 +35,17 @@ using fs_binding_table_t = decltype(VKFragmentProgram::binding_table);
 namespace vk
 {
 	using host_data_t = rsx::host_gpu_context_t;
+
+	// Per-context caches, stored on the context
+	struct context_resources final : rsx::context_resources
+	{
+		std::unique_ptr<vk::vertex_cache> vertex_cache;
+		vk::texture_cache texture_cache;
+		vk::surface_cache surface_cache;
+	};
 }
 
-class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
+class VKGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_query_provider
 {
 private:
 	enum frame_context_state : u32
@@ -55,13 +65,12 @@ private:
 	const VKVertexProgram *m_vertex_prog = nullptr;
 	vk::glsl::program *m_program = nullptr;
 	vk::glsl::program *m_prev_program = nullptr;
-	vk::pipeline_props m_pipeline_properties;
+	vk::pipeline_props m_pipeline_properties;           // Decoded pipeline properties cached
+	u32 m_pipeline_properties_ctrl = 0;                 // Fragment program control bits that m_pipeline_properties was decoded with
 
 	const vs_binding_table_t* m_vs_binding_table = nullptr;
 	const fs_binding_table_t* m_fs_binding_table = nullptr;
 
-	vk::texture_cache m_texture_cache;
-	vk::surface_cache m_rtts;
 
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
@@ -88,7 +97,6 @@ private:
 
 public:
 	//vk::fbo draw_fbo;
-	std::unique_ptr<vk::vertex_cache> m_vertex_cache;
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
@@ -186,6 +194,8 @@ private:
 
 	// Offloader thread deadlock recovery
 	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
+	// A fault has no owning context: the core asks every context in turn. This is the one whose cache the pending deadlock replay invalidates.
+	rsx::context* m_offloader_fault_ctx = nullptr;
 	utils::address_range32 m_offloader_fault_range;
 	rsx::invalidation_cause m_offloader_fault_cause;
 
@@ -196,26 +206,25 @@ private:
 
 	std::unique_ptr<vk::image> m_overlay_recording_img;
 
-	//Vertex layout
+	// Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 
+	// Constant buffers whose host copy is out of date.
+	rsx::bitmask_t<rsx::draw_state_t::group> m_stale_constants;
+
 	vk::shader_interpreter m_shader_interpreter;
-	u32 m_interpreter_state;
+	rsx::bitmask_t<rsx::draw_state_t::group> m_interpreter_state;
 
 #if defined(HAVE_X11) && defined(HAVE_VULKAN)
 	Display *m_display_handle = nullptr;
 #endif
 
 public:
-	u64 get_cycles() final;
 	~VKGSRender() override;
 
-	VKGSRender(utils::serial* ar) noexcept;
-	VKGSRender() noexcept : VKGSRender(nullptr) {}
+	VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept;
 
 private:
-	void prepare_rtts(rsx::framebuffer_creation_context context);
-
 	void close_and_submit_command_buffer(
 		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
@@ -247,19 +256,21 @@ private:
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 	void upload_transform_constants(const rsx::io_buffer& buffer);
 
-	void load_texture_env();
+	rsx::flags32_t load_texture_env();
 	bool bind_texture_env();
 	bool bind_interpreter_texture_env();
 
+	static vk::context_resources* res(rsx::context* ctx) { return static_cast<vk::context_resources*>(ctx->resources.get()); }
+	vk::context_resources* res() const { return res(m_ctx); }
+
 public:
-	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 	void set_viewport();
-	void set_scissor(bool clip_viewport);
+	void set_scissor();
 	void bind_viewport();
 
 	// Sync
 	void write_barrier(u32 address, u32 range) override;
-	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
+	void on_sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
 	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -267,6 +278,7 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+	rsx::reports::occlusion_query_provider* occlusion_queries() override { return this; }
 
 	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
 	void emergency_query_cleanup(vk::command_buffer* commands);
@@ -278,8 +290,7 @@ public:
 	void on_descriptor_pool_fragmentation(bool is_fatal);
 
 	// Conditional rendering
-	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
-	void end_conditional_rendering() override;
+	void on_begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
 
 	// Host sync object
 	std::pair<volatile vk::host_data_t*, VkBuffer> map_host_object_data() const;
@@ -291,23 +302,38 @@ public:
 	// Misc
 	bool is_current_program_interpreted() const override;
 
+	// Identifiers
+	std::string logical_id() const override;
+	std::string configured_logical_id() const override;
+
 protected:
-	void clear_surface(u32 mask) override;
-	void begin() override;
-	void end() override;
+	void clear() override;
+	void begin_draw() override;
+	bool resolve_sampler_state(rsx::flags32_t& invalidated_programs) override;
+	bool end_draw() override;
 	void emit_geometry(u32 sub_index) override;
 
-	void on_init_thread() override;
-	void on_exit() override;
-	void flip(const rsx::display_flip_info_t& info) override;
+	bool on_framebuffer_bound(const rsx::framebuffer_layout& layout) override;
+	bool is_framebuffer_bound() const override;
 
-	void renderctl(u32 request_code, void* args) override;
+	void on_init() override;
+	void on_shutdown() override;
+	std::unique_ptr<rsx::context_resources> create_context_resources(rsx::context* ctx) override;
+	rsx::device_status check_device_status() const override;
+	void on_bind_context(rsx::context* ctx) override;
+	void on_unbind_context(rsx::context* ctx) override;
+	void on_release_context_resources(rsx::context* ctx) override;
+	bool present_frame(const rsx::display_flip_info_t& info) override;
+	void post_present() override;
 
-	void do_local_task(rsx::FIFO::state state) override;
+	bool on_renderctl(u32 request_code, void* args) override;
+
+	bool on_local_task(rsx::FIFO::state state) override;
 	bool scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 
-	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range32 &range, rsx::invalidation_cause cause) override;
+	bool on_access_violation(rsx::context* ctx, u32 address, bool is_writing) override;
+	void on_invalidate_memory_range(rsx::context* ctx, const utils::address_range32 &range, rsx::invalidation_cause cause) override;
+	void on_unmap_memory_range(const utils::address_range32& range) override;
 	void on_semaphore_acquire_wait() override;
 };

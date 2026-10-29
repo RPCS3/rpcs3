@@ -31,7 +31,8 @@ namespace rsx
 	{
 		struct occlusion_query_info
 		{
-			u32 driver_handle;
+			u32 ctx_id;                          // The context whose draws the query counts
+			u32 slot_index;                      // Position in the unit's query pool. Providers key their host query objects by it.
 			u32 result;
 			u32 num_draws;
 			u32 data_type;
@@ -40,6 +41,7 @@ namespace rsx
 			bool pending;
 			bool active;
 			bool owned;
+			bool orphaned;                       // The provider that ran the host query is gone. Completes as "always visible".
 		};
 
 		struct queued_report_write
@@ -95,9 +97,25 @@ namespace rsx
 			max_stat_registers    = 8192   // Size of the statistics cache
 		};
 
+		// Host occlusion query provider. Implemented by the renderer.
+		// The defaults report everything as visible.
+		class occlusion_query_provider
+		{
+		public:
+			virtual ~occlusion_query_provider() = default;
+
+			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
+			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
+			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
+			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
+			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
+		};
+
 		class ZCULL_control
 		{
 		private:
+			occlusion_query_provider* m_provider = nullptr;
+
 			std::unordered_map<u32, MMIO_page_data_t> m_locked_pages[2];
 			atomic_t<bool> m_pages_accessed[2] = { false, false };
 			atomic_t<s32> m_critical_reports_in_flight = { 0 };
@@ -115,7 +133,7 @@ namespace rsx
 			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
 			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
-			std::array<occlusion_query_info, 2048> m_occlusion_query_data = {};
+			std::array<occlusion_query_info, occlusion_query_count> m_occlusion_query_data = {};
 			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
 
 			occlusion_query_info* m_current_task = nullptr;
@@ -151,13 +169,27 @@ namespace rsx
 			// Retire operation
 			void retire(class ::rsx::thread* ptimer, queued_report_write* writer, u32 result);
 
+			// Host query calls. Orphaned queries never reach the provider and behave as with the null provider.
+			void begin_host_query(occlusion_query_info* query);
+			void end_host_query(occlusion_query_info* query);
+			bool check_host_query(occlusion_query_info* query);
+			void read_host_query(occlusion_query_info* query);
+			void discard_host_query(occlusion_query_info* query);
+
+			// Orphans every query in flight. Their host part lived in the provider that just went away.
+			void on_provider_lost();
+
 		public:
 
 			ZCULL_control();
-			virtual ~ZCULL_control();
+			~ZCULL_control();
 
 			ZCULL_control(const ZCULL_control&) = delete;
 			ZCULL_control& operator=(const ZCULL_control&) = delete;
+
+			// Attach the host query provider. nullptr attaches the null provider.
+			// Safe at any time, with queries in flight: the queries the old provider was running complete as "always visible".
+			void set_provider(occlusion_query_provider* provider);
 
 			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
 			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
@@ -180,6 +212,9 @@ namespace rsx
 
 			// Draw call notification
 			void on_draw();
+
+			// The bound context is about to change. The active query counts the outgoing context's draws, so it ends here.
+			void on_context_switch(class ::rsx::thread* ptimer);
 
 			// Sync hint notification
 			void on_sync_hint(sync_hint_payload_t payload);
@@ -207,13 +242,6 @@ namespace rsx
 
 			// Optimization check
 			bool is_query_result_urgent(u32 address) const { return m_pages_accessed[rsx::classify_location(address)]; }
-
-			// Backend methods (optional, will return everything as always visible by default)
-			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
-			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
-			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
-			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
 		};
 
 		// Helper class for conditional rendering

@@ -618,10 +618,9 @@ void signaling_handler::update_ext_si_status(std::shared_ptr<signaling_info>& si
 	if (op_activated && !si->op_activated)
 	{
 		si->op_activated = true;
+		signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED, CELL_OK);
 
-		if (si->conn_status != SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
-			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_PEER_ACTIVATED, CELL_OK);
-		else
+		if (si->conn_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
 			signal_ext_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED, CELL_OK);
 	}
 	else if (!op_activated && si->op_activated)
@@ -821,6 +820,11 @@ u32 signaling_handler::init_sig1(const SceNpId& npid)
 		// Request peer infos from RPCN
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		nph.req_sign_infos(np::npid_to_string(npid), conn_id);
+	}
+	else if (sig_peers[conn_id]->conn_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
+	{
+		// If connection exists from prior state notify
+		signal_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED, CELL_OK);
 	}
 
 	return conn_id;
