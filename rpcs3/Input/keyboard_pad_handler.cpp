@@ -62,9 +62,9 @@ void keyboard_pad_handler::init_config(cfg_pad* cfg)
 
 	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
 	cfg->analog_limiter_button.def = GetKeyName(Qt::NoButton);
-	// Voice controls are opt-in; V already belongs to Triangle.
+	// Leave push-to-talk unbound; B is free in the default pad and shortcut mappings.
 	cfg->voice_talk_button.def = GetKeyName(Qt::NoButton);
-	cfg->voice_mute_button.def = GetKeyName(Qt::NoButton);
+	cfg->voice_mute_button.def = GetKeyName(Qt::Key_B);
 
 	cfg->lstick_anti_deadzone.def = 0;
 	cfg->rstick_anti_deadzone.def = 0;
