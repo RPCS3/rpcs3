@@ -331,6 +331,9 @@ struct voice_service
 	// The headset output (OUT_SECONDARY)
 	std::shared_ptr<AudioBackend> headset;
 	bool headset_failed = false;
+	std::string headset_config_device;
+	u32 headset_config_renderer = ~0u;
+	bool headset_config_s16 = false;
 	shared_mutex headset_mtx;
 	std::deque<f32> headset_fifo;
 	bool headset_primed = false;

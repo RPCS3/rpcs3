@@ -1233,6 +1233,22 @@ void voice_service::take_mic(f32* out)
 
 void voice_service::open_headset()
 {
+	std::string device = g_cfg.audio.voice_output_device.to_string();
+	if (device.empty()) device = g_cfg.audio.audio_device.to_string();
+	const u32 renderer = static_cast<u32>(g_cfg.audio.renderer.get());
+	const bool convert_to_s16 = g_cfg.audio.convert_to_s16.get();
+
+	// This runs on the voice service thread. Close waits for the audio callback,
+	// so never hold headset_mtx while replacing the backend.
+	if (device != headset_config_device || renderer != headset_config_renderer || convert_to_s16 != headset_config_s16)
+	{
+		close_headset();
+		headset_failed = false;
+		headset_config_device = device;
+		headset_config_renderer = renderer;
+		headset_config_s16 = convert_to_s16;
+	}
+
 	if (headset || headset_failed)
 	{
 		return;
@@ -1248,9 +1264,9 @@ void voice_service::open_headset()
 
 	backend->SetWriteCallback([this](u32 bytes, void* buffer) { return headset_callback(bytes, buffer); });
 
-	const AudioSampleSize sample_size = g_cfg.audio.convert_to_s16.get() ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
+	const AudioSampleSize sample_size = convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
 
-	if (!backend->Open(g_cfg.audio.audio_device.to_string(), AudioFreq::FREQ_48K, sample_size, AudioChannelCnt::STEREO, audio_channel_layout::stereo))
+	if (!backend->Open(device, AudioFreq::FREQ_48K, sample_size, AudioChannelCnt::STEREO, audio_channel_layout::stereo))
 	{
 		cellVoice.error("Failed to open the audio backend for the voice chat (OUT_SECONDARY)");
 		headset_failed = true;
@@ -1270,7 +1286,7 @@ void voice_service::open_headset()
 
 	backend->Play();
 	headset = std::move(backend);
-	cellVoice.notice("Voice chat output (OUT_SECONDARY): %s, %d Hz, %d channel(s)", headset->GetName(), headset->get_sampling_rate(), headset->get_channels());
+	cellVoice.notice("Voice chat output (OUT_SECONDARY): %s, device '%s', %d Hz, %d channel(s)", headset->GetName(), device, headset->get_sampling_rate(), headset->get_channels());
 }
 
 void voice_service::close_headset()
@@ -1284,6 +1300,8 @@ void voice_service::close_headset()
 	std::lock_guard lock(headset_mtx);
 	headset_fifo.clear();
 	headset_primed = false;
+	headset_pos = 1.0;
+	headset_prev = headset_cur = 0.0f;
 }
 
 void voice_service::play_headset(const f32* mix)

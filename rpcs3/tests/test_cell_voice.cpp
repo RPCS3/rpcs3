@@ -2,6 +2,8 @@
 #include <gtest/gtest.h>
 #include "Emu/Cell/Modules/cellVoice.h"
 #include "Emu/Audio/voice_input.h"
+#include "Emu/Audio/AudioBackend.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/system_config.h"
 #include "util/media_utils.h"
 #include <filesystem>
@@ -546,6 +548,147 @@ TEST_F(CellVoiceAsync, PcmRoutingPreservesSamplesAndCreatesNoFirmwareJobs)
 	EXPECT_EQ(service.bytes_queued(pcm_input), 0u);
 	EXPECT_TRUE(service.requests.empty());
 	EXPECT_TRUE(service.codec_keys().empty());
+}
+
+namespace
+{
+	class voice_test_audio_backend final : public AudioBackend
+	{
+	public:
+		bool open_ok = true;
+		u32 close_count = 0;
+		std::string device;
+
+		std::string_view GetName() const override { return "Voice output test"; }
+		bool Open(std::string_view id, AudioFreq freq, AudioSampleSize size, AudioChannelCnt channels, audio_channel_layout layout) override
+		{
+			device = id;
+			m_sampling_rate = freq;
+			m_sample_size = size;
+			m_channels = static_cast<u32>(channels);
+			m_layout = layout;
+			return open_ok;
+		}
+		void Close() override
+		{
+			// Model a final callback while Close waits for the stream to stop.
+			// This must be safe even when voice output is being switched.
+			alignas(f32) std::array<u8, 64> samples{};
+			if (m_write_callback) m_write_callback(static_cast<u32>(samples.size()), samples.data());
+			m_playing = false;
+			close_count++;
+		}
+		f64 GetCallbackFrameLen() override { return 0.01; }
+		void Play() override { m_playing = true; }
+		void Pause() override { m_playing = false; }
+	};
+
+	class CellVoiceOutput : public CellVoiceAsync
+	{
+	protected:
+		std::string saved_audio = g_cfg.audio.to_string();
+		std::function<std::shared_ptr<AudioBackend>()> saved_factory = g_emu_callbacks.get_audio;
+		std::vector<std::shared_ptr<voice_test_audio_backend>> backends;
+		bool next_open_ok = true;
+
+		void SetUp() override
+		{
+			CellVoiceAsync::SetUp();
+			g_cfg.audio.voice_output_device.set("");
+			g_cfg.audio.audio_device.set("game-speakers");
+			g_cfg.audio.convert_to_s16.set(false);
+			g_emu_callbacks.get_audio = [this]() -> std::shared_ptr<AudioBackend>
+			{
+				auto backend = std::make_shared<voice_test_audio_backend>();
+				backend->open_ok = next_open_ok;
+				backends.push_back(backend);
+				return backend;
+			};
+			manager.ports[pcm_input] = make_port(CELLVOICE_PORTTYPE_IN_PCMAUDIO);
+			manager.ports[pcm_output] = make_port(CELLVOICE_PORTTYPE_OUT_SECONDARY);
+			service.edges.emplace(pcm_input, pcm_output);
+		}
+
+		void TearDown() override
+		{
+			service.stop(manager);
+			g_emu_callbacks.get_audio = saved_factory;
+			g_cfg.audio.from_string(saved_audio);
+		}
+	};
+}
+
+TEST_F(CellVoiceOutput, AppliedDeviceChangeReopensOnlyVoiceAndDiscardsQueuedAudio)
+{
+	tick();
+	ASSERT_EQ(backends.size(), 1u);
+	EXPECT_EQ(backends[0]->device, "game-speakers");
+	service.headset_fifo.assign(1000, 1234.0f);
+	service.headset_primed = true;
+	service.headset_prev = service.headset_cur = 1234.0f;
+
+	// Match the dynamic-only config update performed by Apply during emulation.
+	ASSERT_TRUE(g_cfg.from_string("Audio:\n  Voice Chat Output Device: headset\n", true));
+	tick();
+	ASSERT_EQ(backends.size(), 2u);
+	EXPECT_EQ(backends[0]->close_count, 1u);
+	EXPECT_FALSE(backends[0]->IsPlaying());
+	EXPECT_EQ(backends[1]->device, "headset");
+	EXPECT_TRUE(backends[1]->IsPlaying());
+	EXPECT_EQ(g_cfg.audio.audio_device.to_string(), "game-speakers");
+	EXPECT_TRUE(std::all_of(service.headset_fifo.begin(), service.headset_fifo.end(), [](f32 sample) { return sample == 0.0f; }));
+	EXPECT_EQ(service.headset_prev, 0.0f);
+	EXPECT_EQ(service.headset_cur, 0.0f);
+
+	g_cfg.audio.audio_device.set("other-game-speakers");
+	tick(3);
+	EXPECT_EQ(backends.size(), 2u); // Explicit voice device stays independent.
+	g_cfg.audio.voice_output_device.set("");
+	tick();
+	ASSERT_EQ(backends.size(), 3u);
+	EXPECT_EQ(backends[2]->device, "other-game-speakers");
+	g_cfg.audio.audio_device.set("new-game-speakers");
+	tick();
+	ASSERT_EQ(backends.size(), 4u);
+	EXPECT_EQ(backends[3]->device, "new-game-speakers");
+	g_cfg.audio.voice_output_device.set("@@@default@@@");
+	tick();
+	ASSERT_EQ(backends.size(), 5u);
+	EXPECT_EQ(backends[4]->device, "@@@default@@@");
+}
+
+TEST_F(CellVoiceOutput, FailedDeviceCanBeReplacedWithoutRestart)
+{
+	next_open_ok = false;
+	g_cfg.audio.voice_output_device.set("missing-headset");
+	tick(3);
+	ASSERT_EQ(backends.size(), 1u);
+	EXPECT_FALSE(service.headset);
+	EXPECT_TRUE(service.headset_failed);
+
+	next_open_ok = true;
+	g_cfg.audio.voice_output_device.set("connected-headset");
+	tick();
+	ASSERT_EQ(backends.size(), 2u);
+	EXPECT_FALSE(service.headset_failed);
+	ASSERT_TRUE(service.headset);
+	EXPECT_TRUE(service.headset->IsPlaying());
+	EXPECT_EQ(backends[1]->device, "connected-headset");
+}
+
+TEST_F(CellVoiceOutput, FormatAndBackendChangesReopenVoiceStream)
+{
+	g_cfg.audio.renderer.set(audio_renderer::cubeb);
+	tick();
+	g_cfg.audio.convert_to_s16.set(true);
+	tick();
+	ASSERT_EQ(backends.size(), 2u);
+	EXPECT_EQ(backends[0]->close_count, 1u);
+	EXPECT_EQ(backends[1]->get_sample_size(), sizeof(s16));
+	g_cfg.audio.renderer.set(audio_renderer::null);
+	tick();
+	ASSERT_EQ(backends.size(), 3u);
+	EXPECT_EQ(backends[1]->close_count, 1u);
 }
 
 TEST(CellVoiceInput, MuteTogglesOnPressAndOverridesPushToTalk)
