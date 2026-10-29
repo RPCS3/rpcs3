@@ -247,7 +247,7 @@ namespace rsx
 			decoded                      = raster | depth_stencil | blend | multisample | viewport | input_assembly | stipple | fragment_env,
 			programs                     = vertex_program | fragment_program,
 			constants                    = transform_constants | fragment_constants,
-			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly | programs,
+			pipelines_dirty_vk           = raster | depth_stencil | blend | multisample | input_assembly,
 			all                          = decoded | vertex_env | fragment_env | programs | scissor | depth_cyclic_barrier | constants | fragment_texture_env,
 		};
 
