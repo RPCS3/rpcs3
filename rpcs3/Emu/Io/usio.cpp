@@ -64,6 +64,14 @@ struct usio_memory
 	static constexpr usz page_count = 0x10;
 };
 
+// Serialize a struct (e.g. a PN532 response) into bytes
+template <typename T> requires std::is_trivially_copyable_v<T>
+static std::vector<u8> to_bytes(const T& value)
+{
+	const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
+	return {bytes.begin(), bytes.end()};
+}
+
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
@@ -707,10 +715,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		{
 			if (status.card_tapped)
 			{
-				const auto& card_data = g_fxo->get<usio_memory>().card_data[card_player].begin();
-				std::vector<u8> data = {res, 0x01, 0x01, 0x00, 0x04, 0x08, 0x04};
-				data.insert(data.end(), card_data, card_data + 4);
-				build_response(response, data);
+				pn532_in_list_passive_target_response resp{};
+				std::memcpy(resp.nfcid.data(), g_fxo->get<usio_memory>().card_data[card_player].data(), mifare_uid_size);
+				build_response(response, to_bytes(resp));
 			}
 			else
 			{
