@@ -704,12 +704,20 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		}
 		case pn532_cmd::in_data_exchange:
 		{
-			if (payload.size() >= 4 && status.card_tapped)
+			if (payload.size() < sizeof(pn532_in_data_exchange_request) || !status.card_tapped)
 			{
-				const auto& card_data = g_fxo->get<usio_memory>().card_data[card_player].begin() + ::at32(payload, 3) * 0x10;
-				std::vector<u8> data = {res, 0x00};
-				data.insert(data.end(), card_data, card_data + 0x10);
-				build_response(response, data);
+				build_response(response, {res, 0x01});
+				break;
+			}
+
+			const auto req = read_from_ptr<pn532_in_data_exchange_request>(payload);
+			auto& card = g_fxo->get<usio_memory>().card_data[card_player];
+
+			if (req.block < (card.size() / mifare_block_size))
+			{
+				pn532_in_data_exchange_response resp{};
+				std::memcpy(resp.block.data(), card.data() + req.block * mifare_block_size, mifare_block_size);
+				build_response(response, to_bytes(resp));
 			}
 			else
 			{
