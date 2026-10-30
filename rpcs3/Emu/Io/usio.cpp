@@ -673,7 +673,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		}
 		case pn532_cmd::read_gpio:
 		{
-			build_response(response, {res, 0x00, 0x06, 0x00});
+			build_response(response, to_bytes(pn532_read_gpio_response{}));
 			break;
 		}
 		case pn532_cmd::write_gpio:
