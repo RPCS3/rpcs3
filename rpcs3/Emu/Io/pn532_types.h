@@ -54,6 +54,15 @@ constexpr u8 pn532_response_code(pn532_cmd cmd)
 }
 
 
+// PN532 ReadGPIO response
+struct pn532_read_gpio_response
+{
+	u8 cmd = pn532_response_code(pn532_cmd::read_gpio);
+	u8 p3 = 0x00;
+	u8 p7 = 0x06;
+	u8 i0i1 = 0x00;
+};
+
 // PN532 InListPassiveTarget response (one ISO/IEC 14443 Type A target)
 struct pn532_in_list_passive_target_response
 {
@@ -65,4 +74,5 @@ struct pn532_in_list_passive_target_response
 	u8 nfcid_length = mifare_uid_size;
 	std::array<u8, mifare_uid_size> nfcid{};
 };
+static_assert(sizeof(pn532_read_gpio_response) == 4);
 static_assert(sizeof(pn532_in_list_passive_target_response) == 11);
