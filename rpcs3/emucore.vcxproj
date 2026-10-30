@@ -533,6 +533,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_gauge_button.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_save_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp" />
@@ -784,6 +785,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_gauge_button.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_select.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_slider.h" />
