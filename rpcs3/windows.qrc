@@ -1,5 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file>qt/etc/qt.conf</file>
-    </qresource>
-</RCC>

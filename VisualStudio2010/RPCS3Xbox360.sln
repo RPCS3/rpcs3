@@ -1,0 +1,16 @@
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RPCS3Xbox360", "RPCS3Xbox360.vcxproj", "{B3DD8740-86E9-4DA5-9393-A9F14C55BDEA}"
+EndProject
+Global
+ GlobalSection(SolutionConfigurationPlatforms) = preSolution
+  Debug|Xbox 360 = Debug|Xbox 360
+  Release|Xbox 360 = Release|Xbox 360
+ EndGlobalSection
+ GlobalSection(ProjectConfigurationPlatforms) = postSolution
+  {B3DD8740-86E9-4DA5-9393-A9F14C55BDEA}.Debug|Xbox 360.ActiveCfg = Debug|Xbox 360
+  {B3DD8740-86E9-4DA5-9393-A9F14C55BDEA}.Debug|Xbox 360.Build.0 = Debug|Xbox 360
+  {B3DD8740-86E9-4DA5-9393-A9F14C55BDEA}.Release|Xbox 360.ActiveCfg = Release|Xbox 360
+  {B3DD8740-86E9-4DA5-9393-A9F14C55BDEA}.Release|Xbox 360.Build.0 = Release|Xbox 360
+ EndGlobalSection
+EndGlobal

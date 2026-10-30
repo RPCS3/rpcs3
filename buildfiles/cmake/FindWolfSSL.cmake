@@ -1,3 +1,0 @@
-set(WOLFSSL_LIBRARY wolfssl)
-set(WOLFSSL_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/wolfssl)
-set(WOLFSSL_FOUND TRUE)

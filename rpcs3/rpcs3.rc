@@ -1,3 +1,0 @@
-#include "resource.h"
-IDI_ICON1 ICON "rpcs3.ico"
-frame_icon ICON "rpcs3.ico"
