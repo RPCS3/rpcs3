@@ -26,7 +26,11 @@ namespace rsx::overlays
 		if (value != m_value)
 		{
 			m_value = value;
-			m_gauge.set_cutoff_angle(value * 360.f);
+
+			// Easing formula makes the animation speed up at the start and slow at the end.
+			// This feels way more responsive than just a linear response. It also doesn't affect timing.
+			const f32 eased = 1.f - ((1.f - value) * (1.f - value));
+			m_gauge.set_cutoff_angle(eased * 360.f);
 			m_is_compiled = false;
 		}
 	}
