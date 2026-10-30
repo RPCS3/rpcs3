@@ -42,7 +42,7 @@ namespace rsx
 			std::array<text_guard_t, 2> bar_text_guard{};
 
 			// Hold-to-skip gauge button
-			static constexpr f32 gauge_fill_duration_us = 5'000'000.f;
+			static constexpr f32 gauge_fill_duration_us = 1'500'000.f;
 			static constexpr f32 gauge_drain_duration_us = 1'000'000.f;
 
 			gauge_button btn_hold_to_skip;
