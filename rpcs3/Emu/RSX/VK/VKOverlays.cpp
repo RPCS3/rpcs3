@@ -527,7 +527,8 @@ namespace vk
 		// 76: float blur_intensity;
 		// 80: vec4 sdf_params;
 		// 96: vec2 sdf_origin;
-		// 104: vec2 reserved;
+		// 104: float sdf_cutoff_angle;
+		// 108: float reserved;
 		// 112: vec4 sdf_border_color;
 
 		usz pos = 0;
@@ -578,7 +579,7 @@ namespace vk
 		push_buf[pos++] = m_sdf_config.bw;
 		push_buf[pos++] = m_sdf_config.cx;
 		push_buf[pos++] = m_sdf_config.cy;
-		push_buf[pos++] = 0.f;
+		push_buf[pos++] = m_sdf_config.ca;
 		push_buf[pos++] = 0.f;
 
 		write_to_ptr(push_buf, pos, m_sdf_config.border_color.rgba);

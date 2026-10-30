@@ -560,6 +560,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_osk.cpp
     RSX/Overlays/overlay_osk_panel.cpp
     RSX/Overlays/overlay_perf_metrics.cpp
+    RSX/Overlays/overlay_gauge_button.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
     RSX/Overlays/overlay_select.cpp
