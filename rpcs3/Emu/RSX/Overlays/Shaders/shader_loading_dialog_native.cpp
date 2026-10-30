@@ -66,4 +66,15 @@ namespace rsx
 		dlg->return_code = CELL_OK;
 		dlg->close(false, false);
 	}
+
+	void shader_loading_dialog_native::enable_hold_to_skip()
+	{
+		dlg->show_gauge_button(true, [skip_requested = m_skip_requested]()
+		{
+			rsx_log.notice("User requested to skip shader loading");
+			*skip_requested = true;
+		});
+
+		owner->flip({});
+	}
 }
