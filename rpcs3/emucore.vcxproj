@@ -92,7 +92,7 @@
     <ClCompile Include="Emu\Io\gem_config.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
-    <ClCompile Include="Emu\Io\pn532_types.cpp" />
+    <ClCompile Include="Emu\Io\pn532.cpp" />
     <ClCompile Include="Emu\Io\wiimote_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\MouseHandler.cpp" />
@@ -676,7 +676,7 @@
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\mifare_types.h" />
-    <ClInclude Include="Emu\Io\pn532_types.h" />
+    <ClInclude Include="Emu\Io\pn532.h" />
     <ClInclude Include="Emu\Io\usio.h" />
     <ClInclude Include="Emu\Io\usio_config.h" />
     <ClInclude Include="Emu\Io\usio_types.h" />
