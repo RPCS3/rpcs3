@@ -503,7 +503,7 @@ void usb_device_usio::translate_input_tekken()
 	response[2] = 0b00010000; // DIP switches, 8 in total
 }
 
-// The emulated card reader e.g. speaks the NXP PN532 host protocol to MIFARE Classic cards
+// The emulated card reader speaks the NXP PN532 host protocol (plus a few non-standard commands) to MIFARE Classic cards
 void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 {
 	static std::array<std::vector<u8>, 2> pending_response = {};

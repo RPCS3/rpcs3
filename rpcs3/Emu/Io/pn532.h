@@ -33,14 +33,14 @@ private:
 	static constexpr std::array<u8, 6> error_frame = {0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81};
 
 	// PN532 frame identifier (direction of an information frame)
-	enum class tfi : u8
+	enum class frame_identifier : u8
 	{
 		host_to_pn532 = 0xD4,
 		to_host = 0xD5,
 	};
 
 	// PN532 command codes (the response code is always the command code + 1)
-	enum class cmd : u8
+	enum class command_code : u8
 	{
 		get_firmware_version   = 0x02,
 		read_register          = 0x06,
@@ -66,9 +66,9 @@ private:
 		mifare_auth_error = 0x14,
 	};
 
-	static constexpr u8 response_code(cmd cmd)
+	static constexpr u8 response_code(command_code command)
 	{
-		return static_cast<u8>(static_cast<u8>(cmd) + 1);
+		return static_cast<u8>(static_cast<u8>(command) + 1);
 	}
 
 	// PN532 normal information frame header
@@ -77,7 +77,7 @@ private:
 		std::array<u8, 2> start = start_code;
 		u8 len = 0; // Length of TFI + data
 		u8 lcs = 0; // Length checksum (len + lcs == 0)
-		tfi tfi = tfi::to_host;
+		frame_identifier tfi = frame_identifier::to_host;
 	};
 
 	// PN532 extended information frame header (len and lcs are 0xFF in the normal header position)
@@ -87,27 +87,27 @@ private:
 		std::array<u8, 2> marker = {0xFF, 0xFF};
 		be_t<u16, 1> len = 0; // Length of TFI + data
 		u8 lcs = 0;           // Length checksum (len_m + len_l + lcs == 0)
-		tfi tfi = tfi::to_host;
+		frame_identifier tfi = frame_identifier::to_host;
 	};
 
 	// PN532 frame footer
 	struct frame_footer
 	{
 		u8 dcs = 0; // Data checksum (tfi + data + dcs == 0)
-		u8 postamble = postamble;
+		u8 postamble = pn532::postamble;
 	};
 
 	// PN532 ReadRegister request (only the first register address is inspected)
 	struct read_register_request
 	{
-		cmd cmd = cmd::read_register;
+		command_code cmd = command_code::read_register;
 		be_t<u16, 1> address = 0;
 	};
 
 	// PN532 InDataExchange request carrying a MIFARE command
 	struct in_data_exchange_request
 	{
-		cmd cmd = cmd::in_data_exchange;
+		command_code cmd = command_code::in_data_exchange;
 		u8 tg = 0;
 		mifare_cmd mifare = mifare_cmd::read;
 		u8 block = 0;
@@ -116,7 +116,7 @@ private:
 	// PN532 ReadGPIO response
 	struct read_gpio_response
 	{
-		u8 cmd = response_code(cmd::read_gpio);
+		u8 cmd = response_code(command_code::read_gpio);
 		u8 p3 = 0x00;
 		u8 p7 = 0x06;
 		u8 i0i1 = 0x00;
@@ -125,7 +125,7 @@ private:
 	// PN532 InDataExchange response (MIFARE READ of one 16-byte block)
 	struct in_data_exchange_response
 	{
-		u8 cmd = response_code(cmd::in_data_exchange);
+		u8 cmd = response_code(command_code::in_data_exchange);
 		u8 status = 0x00;
 		std::array<u8, mifare_block_size> block{};
 	};
@@ -133,7 +133,7 @@ private:
 	// PN532 InListPassiveTarget response (one ISO/IEC 14443 Type A target)
 	struct in_list_passive_target_response
 	{
-		u8 cmd = response_code(cmd::in_list_passive_target);
+		u8 cmd = response_code(command_code::in_list_passive_target);
 		u8 nb_tg = 0x01;
 		u8 tg = 0x01;
 		be_t<u16, 1> sens_res = 0x0004; // ATQA
@@ -157,7 +157,7 @@ private:
 		return header.len == 0xFF && header.lcs == 0xFF;
 	}
 
-	// Writes an PN532 ACK frame (with preamble and postamble) to the out buffer
+	// Writes a PN532 ACK frame (with preamble and postamble) to the out buffer
 	static inline void append_ack(std::vector<u8>& out)
 	{
 		out.push_back(preamble);
