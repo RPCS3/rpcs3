@@ -130,7 +130,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void compile_shaders(uint nb_workers, unpacked_type& unpacked, u32 entry_count, shader_loading_dialog* dlg, Args&&... args)
+		void compile_shaders(uint nb_workers, unpacked_type& unpacked, u32 entry_count, shader_loading_dialog* dlg, steady_clock::time_point skip_after, Args&&... args)
 		{
 			atomic_t<u32> processed(0);
 
@@ -138,7 +138,7 @@ namespace rsx
 			{
 				u32 pos;
 				// Processed is incremented before work starts in order to avoid two workers working on the same shader
-				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
+				while (((pos = processed++) < stop_at) && !Emu.IsStopped() && !dlg->skip_requested())
 				{
 					auto& entry = unpacked[pos];
 					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
@@ -147,11 +147,22 @@ namespace rsx
 				processed--;
 			};
 
-			await_workers(nb_workers, 1, shader_comp_worker, processed, entry_count, dlg);
+			await_workers(nb_workers, 1, shader_comp_worker, processed, entry_count, dlg, skip_after);
 		}
 
-		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg)
+		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg,
+			steady_clock::time_point skip_after = steady_clock::time_point::max())
 		{
+			bool skip_enabled = false;
+			const auto update_skip = [&](steady_clock::time_point now)
+			{
+				if (!skip_enabled && now >= skip_after)
+				{
+					dlg->enable_hold_to_skip();
+					skip_enabled = true;
+				}
+			};
+
 			if (nb_workers == 1)
 			{
 				steady_clock::time_point last_update;
@@ -172,7 +183,9 @@ namespace rsx
 						dlg->set_value(step, stop_at);
 						last_update = now;
 					}
-				} while (stop_at < entry_count && !Emu.IsStopped());
+
+					update_skip(now);
+				} while (stop_at < entry_count && !Emu.IsStopped() && !dlg->skip_requested());
 			}
 			else
 			{
@@ -183,11 +196,13 @@ namespace rsx
 
 				u32 current_progress = 0;
 				u32 last_update_progress = 0;
-				while ((current_progress < entry_count) && !Emu.IsStopped())
+				while ((current_progress < entry_count) && !Emu.IsStopped() && !dlg->skip_requested())
 				{
 					thread_ctrl::wait_for(16'000); // Around 60fps should be good enough
 
 					if (Emu.IsStopped()) break;
+
+					update_skip(steady_clock::now());
 
 					current_progress = std::min(processed.load(), entry_count);
 
@@ -200,7 +215,7 @@ namespace rsx
 				}
 			}
 
-			if (!Emu.IsStopped())
+			if (!Emu.IsStopped() && !dlg->skip_requested())
 			{
 				ensure(processed == entry_count);
 			}
@@ -272,6 +287,11 @@ namespace rsx
 			dlg->update_msg(0, get_message(0, 0, entry_count));
 			dlg->update_msg(1, get_message(1, 0, entry_count));
 
+			// The interpreter covers any pipelines we did not link, so the user may skip the linking step after a while
+			const auto skip_after = g_cfg.video.shadermode == shader_mode::async_with_interpreter
+				? steady_clock::now() + 60s
+				: steady_clock::time_point::max();
+
 			// Preload everything needed to compile the shaders
 			unpacked_type unpacked;
 			uint nb_workers = g_cfg.video.renderer == video_renderer::vulkan ? utils::get_thread_count() : 1;
@@ -281,7 +301,7 @@ namespace rsx
 			// Account for any invalid entries
 			entry_count = unpacked.size();
 
-			compile_shaders(nb_workers, unpacked, entry_count, dlg, std::forward<Args>(args)...);
+			compile_shaders(nb_workers, unpacked, entry_count, dlg, skip_after, std::forward<Args>(args)...);
 
 			dlg->refresh();
 			dlg->close();
