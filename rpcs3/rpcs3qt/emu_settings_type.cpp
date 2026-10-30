@@ -174,10 +174,6 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::TimeStretchingThreshold, get_cfg_location(local_cfg.audio.time_stretching_threshold) },
 	{ emu_settings_type::MicrophoneType,          get_cfg_location(local_cfg.audio.microphone_type) },
 	{ emu_settings_type::MicrophoneDevices,       get_cfg_location(local_cfg.audio.microphone_devices) },
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	{ emu_settings_type::VoiceTestFileEnabled,    get_cfg_location(local_cfg.audio.voice_test_file_enabled) },
-	{ emu_settings_type::VoiceTestFile,           get_cfg_location(local_cfg.audio.voice_test_file) },
-#endif
 	{ emu_settings_type::MusicHandler,            get_cfg_location(local_cfg.audio.music) },
 
 	// Input / Output

@@ -258,7 +258,6 @@ struct voice_manager
 
 class AudioBackend;
 class microphone_device;
-namespace utils { class audio_decoder; }
 
 // On the PS3, libvoice is a client of sys_audio's voice process, which mixes each output port's connected inputs every
 // frame: IN_MIC (the headset microphone), IN_PCMAUDIO and IN_VOICE (data the game writes) into OUT_PCMAUDIO and OUT_VOICE
@@ -312,23 +311,16 @@ struct voice_service
 	std::set<std::pair<u16, u16>> edges; // (input, output)
 	bool mute_all = false;
 
-	// The headset microphone (IN_MIC): the device configured for cellMic, or RPCS3_CELLVOICE_MIC_FILE (mic_file)
+	// The headset microphone (IN_MIC): the device configured for cellMic
 	std::unique_ptr<microphone_device> mic;
 	bool mic_failed = false;
-	bool mic_file_loaded = false;
-	std::vector<f32> mic_file;
-	usz mic_file_pos = 0;
 	std::vector<f32> mic_fifo;
 	std::vector<u8> mic_raw;
 	bool mic_primed = false;
 	f64 mic_resample_pos = 0.0;
 	f32 mic_last = 0.0f;
-	std::unique_ptr<utils::audio_decoder> mic_decoder;
-	u64 mic_decoder_pos = 0;
 	u32 mic_config_type = ~0u;
 	std::string mic_config_device;
-	std::string mic_config_file;
-	bool mic_config_test = false;
 	bool mic_source_changed = false;
 	bool mic_transmitting = true;
 	u64 mic_talk_generation = 0;

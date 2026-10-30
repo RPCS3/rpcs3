@@ -16,7 +16,6 @@
     </Lib>
     <ClCompile>
       <PreprocessorDefinitions>NOMINMAX;PUGIXML_HEADER_ONLY;YAML_CPP_STATIC_DEFINE;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(RPCS3_ENABLE_VOICE_TEST_FILE)' == 'true'">RPCS3_ENABLE_VOICE_TEST_FILE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>

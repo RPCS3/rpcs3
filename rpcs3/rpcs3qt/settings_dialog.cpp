@@ -1129,36 +1129,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->microphoneBox, &QComboBox::currentIndexChanged, change_microphone_type);
 	propagate_used_devices(); // Enables/Disables comboboxes and checks values from config for sanity
 
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	auto* file_enabled = new QCheckBox(tr("Loop audio file as microphone (testing)"), this);
-	EnhanceCheckBox(emu_settings_type::VoiceTestFileEnabled, file_enabled,
-		tr("Replaces the voice-chat microphone with the selected MP3 or WAV, looping continuously. Push-to-speak also controls this source. Use a clip up to 10 minutes long. Apply changes live."));
-	ui->gb_microphone_settings_layout->addWidget(file_enabled);
-	auto* file_path = new QLineEdit(QString::fromStdString(m_emu_settings->GetSetting(emu_settings_type::VoiceTestFile)), this);
-	file_path->setPlaceholderText(tr("Select an MP3 or WAV test clip"));
-	auto* browse = new QPushButton(tr("Browse…"), this);
-	auto* file_row = new QHBoxLayout;
-	file_row->addWidget(file_path);
-	file_row->addWidget(browse);
-	ui->gb_microphone_settings_layout->addLayout(file_row);
-	file_path->setEnabled(file_enabled->isChecked());
-	browse->setEnabled(file_enabled->isChecked());
-	connect(file_enabled, &QCheckBox::toggled, file_path, &QWidget::setEnabled);
-	connect(file_enabled, &QCheckBox::toggled, browse, &QWidget::setEnabled);
-	connect(file_path, &QLineEdit::textChanged, this, [this](const QString& path)
-	{
-		m_emu_settings->SetSetting(emu_settings_type::VoiceTestFile, path.toStdString());
-	});
-	connect(browse, &QPushButton::clicked, this, [this, file_path]()
-	{
-		const QString path = QFileDialog::getOpenFileName(this, tr("Choose microphone test audio"), file_path->text(), tr("Audio clips (*.mp3 *.wav)"));
-		if (!path.isEmpty()) file_path->setText(path);
-	});
-	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [this, file_path]()
-	{
-		file_path->setText(QString::fromStdString(m_emu_settings->GetSettingDefault(emu_settings_type::VoiceTestFile)));
-	});
-#endif
 
 	// Checkboxes
 

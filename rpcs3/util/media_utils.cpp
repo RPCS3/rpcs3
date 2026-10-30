@@ -497,10 +497,8 @@ namespace utils
 		return found_ch_layout;
 	}
 
-	audio_decoder::audio_decoder(s32 output_rate, bool mono, u64 max_bytes)
-		: sample_rate(output_rate), m_mono(mono), m_max_bytes(max_bytes)
+	audio_decoder::audio_decoder()
 	{
-		ensure(output_rate > 0);
 	}
 
 	audio_decoder::~audio_decoder()
@@ -629,10 +627,8 @@ namespace utils
 				return;
 			}
 
-			const int dst_channels = m_mono ? 1 : 2;
-			const AVChannelLayout mono_layout = AV_CHANNEL_LAYOUT_MONO;
-			const AVChannelLayout stereo_layout = AV_CHANNEL_LAYOUT_STEREO;
-			const AVChannelLayout dst_channel_layout = m_mono ? mono_layout : stereo_layout;
+			const int dst_channels = 2;
+			const AVChannelLayout dst_channel_layout = AV_CHANNEL_LAYOUT_STEREO;
 			const AVSampleFormat dst_format = AV_SAMPLE_FMT_FLT;
 
 			const int set_err = swr_alloc_set_opts2(&av.swr, &dst_channel_layout, dst_format,
@@ -692,7 +688,7 @@ namespace utils
 				const u64 expected_size = static_cast<u64>(av_rescale(duration, sample_rate * bytes_per_sample, AV_TIME_BASE));
 
 				std::scoped_lock lock(m_data_mtx);
-				m_data.reserve(std::min<u64>(expected_size, m_max_bytes ? std::min(max_reserve, m_max_bytes) : max_reserve));
+				m_data.reserve(std::min<u64>(expected_size, max_reserve));
 			}
 
 			// The output buffer is reused by every frame. Only its size may grow.
@@ -766,12 +762,6 @@ namespace utils
 				// Append resampled frames to data
 				{
 					std::scoped_lock lock(m_data_mtx);
-					if (m_max_bytes && size > m_max_bytes - m_data.size())
-					{
-						media_log.error("audio_decoder: decoded audio exceeds the configured %d byte limit", m_max_bytes);
-						m_has_error = true;
-						return false;
-					}
 					m_timestamps_ms.push_back({m_data.size(), last_timestamp_ms});
 					m_data.insert(m_data.cend(), out_buffer, out_buffer + size);
 				}

@@ -165,10 +165,6 @@ enum class emu_settings_type
 	TimeStretchingThreshold,
 	MicrophoneType,
 	MicrophoneDevices,
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	VoiceTestFileEnabled,
-	VoiceTestFile,
-#endif
 	MusicHandler,
 
 	// Input / Output

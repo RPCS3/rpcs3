@@ -6,9 +6,7 @@
 #include "Emu/emu_callbacks.h"
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/voice_input.h"
-#include "util/media_utils.h"
 #include "Emu/Cell/timers.hpp"
-#include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 
 #include "Emu/Cell/lv2/sys_event.h"
@@ -21,7 +19,6 @@
 #include "cellVoice_firmware.h"
 
 #include <cmath>
-#include <cstdlib>
 #include <set>
 
 LOG_CHANNEL(cellVoice);
@@ -168,111 +165,6 @@ namespace
 		}
 	}
 
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	// For tests without a microphone: RPCS3_CELLVOICE_MIC_FILE names a WAV file (16-bit PCM) the IN_MIC ports play in a
-	// loop instead of the configured microphone.
-	std::string get_env(const char* name)
-	{
-#ifdef _WIN32
-		char* value = nullptr;
-		usz len = 0;
-		std::string result;
-
-		if (_dupenv_s(&value, &len, name) == 0 && value)
-		{
-			result = value;
-		}
-
-		std::free(value);
-		return result;
-#else
-		const char* value = ::getenv(name);
-		return value ? value : "";
-#endif
-	}
-
-	std::vector<f32> load_mic_file()
-	{
-		const std::string path = get_env("RPCS3_CELLVOICE_MIC_FILE");
-
-		if (path.empty())
-		{
-			return {};
-		}
-
-		fs::file file(path);
-
-		if (!file)
-		{
-			cellVoice.error("Cannot open RPCS3_CELLVOICE_MIC_FILE '%s'", path);
-			return {};
-		}
-
-		const std::vector<u8> wav = file.to_vector<u8>();
-		const auto u16_at = [&](usz pos) { return static_cast<u32>(wav[pos] | wav[pos + 1] << 8); };
-		const auto u32_at = [&](usz pos) { return u16_at(pos) | u16_at(pos + 2) << 16; };
-
-		if (wav.size() < 12 || std::memcmp(wav.data(), "RIFF", 4) || std::memcmp(wav.data() + 8, "WAVE", 4))
-		{
-			cellVoice.error("RPCS3_CELLVOICE_MIC_FILE '%s' is not a WAV file", path);
-			return {};
-		}
-
-		u32 tag = 0, channels = 0, rate = 0, bits = 0;
-		usz pcm_at = 0, pcm_size = 0;
-
-		for (usz pos = 12; pos + 8 <= wav.size();)
-		{
-			const u32 len = u32_at(pos + 4);
-			const usz body = pos + 8;
-
-			if (!std::memcmp(wav.data() + pos, "fmt ", 4) && body + 16 <= wav.size())
-			{
-				tag = u16_at(body);
-				channels = u16_at(body + 2);
-				rate = u32_at(body + 4);
-				bits = u16_at(body + 14);
-			}
-			else if (!std::memcmp(wav.data() + pos, "data", 4))
-			{
-				pcm_at = body;
-				pcm_size = std::min<usz>(len, wav.size() - body);
-			}
-
-			pos = body + len + (len & 1);
-		}
-
-		if (tag != 1 || bits != 16 || !channels || !rate || !pcm_size)
-		{
-			cellVoice.error("RPCS3_CELLVOICE_MIC_FILE '%s': not 16-bit PCM", path);
-			return {};
-		}
-
-		// Mono, then 16 kHz (linear interpolation)
-		const usz frames = pcm_size / (2 * channels);
-		std::vector<f32> mono(frames);
-
-		for (usz i = 0; i < frames; i++)
-		{
-			f32 s = 0.0f;
-			for (u32 c = 0; c < channels; c++) s += static_cast<s16>(u16_at(pcm_at + (i * channels + c) * 2));
-			mono[i] = s / channels;
-		}
-
-		std::vector<f32> out;
-		const f64 step = static_cast<f64>(rate) / voice_rate;
-
-		for (f64 pos = 0; pos + 1 < static_cast<f64>(frames); pos += step)
-		{
-			const usz i = static_cast<usz>(pos);
-			const f32 frac = static_cast<f32>(pos - static_cast<f64>(i));
-			out.push_back(mono[i] + (mono[i + 1] - mono[i]) * frac);
-		}
-
-		cellVoice.success("Microphone: RPCS3_CELLVOICE_MIC_FILE '%s' (%d Hz, %d channel(s), %.1f s)", path, rate, channels, out.size() / f64{voice_rate});
-		return out;
-	}
-#endif
 }
 
 void voice_service::halfband_filter::down(const f32* in, u32 count, std::vector<f32>& out)
@@ -1016,17 +908,7 @@ u32 voice_service::bytes_queued(u16 id) const
 
 bool voice_service::mic_present() const
 {
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	if (mic_config_test)
-	{
-		if (!mic_decoder || mic_decoder->has_error() || !mic_decoder->track_fully_decoded()) return false;
-		std::lock_guard lock(mic_decoder->data_mutex());
-		return mic_decoder->size() != 0;
-	}
-	return mic || !mic_file.empty();
-#else
 	return !!mic;
-#endif
 }
 
 void voice_service::discard_mic_outputs(voice_manager& manager)
@@ -1070,16 +952,8 @@ bool voice_service::update_mic_gate(voice_manager& manager)
 {
 	const auto talk = voice_input::talk.load();
 	const auto devices = fmt::split(g_cfg.audio.microphone_devices.get(), {"@@@"});
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	const bool test = g_cfg.audio.voice_test_file_enabled.get();
-	const std::string file = test ? g_cfg.audio.voice_test_file.get() : "";
-#else
-	constexpr bool test = false;
-	const std::string file;
-#endif
 	const bool source_changed = mic_source_changed || mic_config_type != static_cast<u32>(g_cfg.audio.microphone_type.get()) ||
-		mic_config_device != (devices.empty() ? "" : devices.front()) || mic_config_test != test ||
-		(test && mic_config_file != file);
+		mic_config_device != (devices.empty() ? "" : devices.front());
 	const bool allowed = mic_present() && !source_changed && talk->transmitting;
 	if (source_changed || mic_transmitting != allowed || mic_talk_generation != talk->generation)
 	{
@@ -1096,63 +970,16 @@ void voice_service::open_mic()
 	const microphone_handler type = g_cfg.audio.microphone_type.get();
 	const auto devices = fmt::split(g_cfg.audio.microphone_devices.get(), {"@@@"});
 	const std::string device_name = devices.empty() ? "" : devices.front();
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	const bool test = g_cfg.audio.voice_test_file_enabled.get();
-	const std::string file = test ? g_cfg.audio.voice_test_file.get() : "";
-#else
-	constexpr bool test = false;
-	const std::string file;
-#endif
-	if (mic_config_type != static_cast<u32>(type) || mic_config_device != device_name ||
-		mic_config_test != test || mic_config_file != file)
+	if (mic_config_type != static_cast<u32>(type) || mic_config_device != device_name)
 	{
 		close_mic();
 		mic_failed = false;
-		mic_file_pos = 0;
 		mic_config_type = static_cast<u32>(type);
 		mic_config_device = device_name;
-		mic_config_test = test;
-		mic_config_file = file;
 		mic_source_changed = true;
 	}
 
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	if (test)
-	{
-		if (mic_decoder && mic_decoder->has_error())
-		{
-			cellVoice.error("Microphone test file could not be decoded (maximum duration: 10 minutes): '%s'", file);
-			mic_decoder.reset();
-			mic_failed = true;
-		}
-		if (!mic_decoder && !mic_failed)
-		{
-			// Only local regular files; FFmpeg also accepts network URLs on some builds.
-			if (file.empty() || !fs::is_file(file))
-			{
-				cellVoice.error("Microphone test file does not exist: '%s'", file);
-				mic_failed = true;
-				return;
-			}
-			music_selection_context context;
-			context.playlist.push_back(file);
-			mic_decoder = std::make_unique<utils::audio_decoder>(voice_rate, true, u64{voice_rate} * sizeof(f32) * 600);
-			mic_decoder->set_context(std::move(context));
-			mic_decoder->decode();
-			cellVoice.notice("Loading looping microphone test audio: '%s'", file);
-		}
-		return;
-	}
-
-	if (!mic_file_loaded)
-	{
-		mic_file = load_mic_file();
-		mic_file_loaded = true;
-	}
-
-#endif
-
-	if (mic || mic_failed || !mic_file.empty())
+	if (mic || mic_failed)
 	{
 		return;
 	}
@@ -1205,31 +1032,10 @@ void voice_service::close_mic()
 	mic_primed = false;
 	mic_resample_pos = 0.0;
 	mic_last = 0.0f;
-	mic_decoder.reset();
-	mic_decoder_pos = 0;
 }
 
 void voice_service::pull_mic()
 {
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	if (mic_config_test)
-	{
-		if (!mic_present()) return;
-		std::array<f32, tick_samples> samples{};
-		std::lock_guard lock(mic_decoder->data_mutex());
-		const u64 size = mic_decoder->size();
-		if (!size) return;
-		u64 copied = 0;
-		while (copied < sizeof(samples))
-		{
-			const u64 count = mic_decoder->read(reinterpret_cast<u8*>(samples.data()) + copied, mic_decoder_pos, sizeof(samples) - copied);
-			copied += count;
-			mic_decoder_pos = (mic_decoder_pos + count) % size;
-		}
-		for (f32 sample : samples) mic_fifo.push_back(std::clamp(sample, -1.0f, 1.0f) * 32768.0f);
-	}
-	else
-#endif
 	if (mic)
 	{
 		mic->update_audio();
@@ -1265,16 +1071,6 @@ void voice_service::pull_mic()
 			}
 		}
 	}
-#ifdef RPCS3_ENABLE_VOICE_TEST_FILE
-	else if (!mic_file.empty())
-	{
-		for (u32 i = 0; i < tick_samples; i++)
-		{
-			mic_fifo.push_back(mic_file[mic_file_pos]);
-			mic_file_pos = (mic_file_pos + 1) % mic_file.size();
-		}
-	}
-#endif
 
 	if (mic_fifo.size() > max_mic_samples)
 	{
@@ -1547,7 +1343,15 @@ void voice_service::save(utils::serial& ar)
 		ensure(!pending);
 		d.codec_pending = 0;
 	}
-	ar(mic_file_loaded, mic_file, mic_file_pos, mic_fifo, mic_primed, mic_resample_pos, mic_last);
+	if (!ar.is_writing() && GET_OR_USE_SERIALIZATION_VERSION(false, cellVoice) < 5)
+	{
+		// Discard the optional synthetic source stored by older development builds.
+		bool loaded = false;
+		std::vector<f32> samples;
+		usz position = 0;
+		ar(loaded, samples, position);
+	}
+	ar(mic_fifo, mic_primed, mic_resample_pos, mic_last);
 	{
 		std::lock_guard lock(headset_mtx);
 		ar(headset_fifo, headset_primed, headset_pos, headset_step, headset_prev, headset_cur, headset_volume);

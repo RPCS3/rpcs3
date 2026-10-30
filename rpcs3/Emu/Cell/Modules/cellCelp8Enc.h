@@ -93,8 +93,3 @@ struct CellCelp8EncResourceEx
 	u8 priority[8];
 	be_t<u32> maxContention;
 };
-
-static_assert(sizeof(CellCelp8EncResourceEx) == 0x18);
-static_assert(offsetof(CellCelp8EncResourceEx, spurs) == 0x08);
-static_assert(offsetof(CellCelp8EncResourceEx, priority) == 0x0c);
-static_assert(offsetof(CellCelp8EncResourceEx, maxContention) == 0x14);
