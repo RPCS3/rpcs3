@@ -60,3 +60,14 @@ enum class usio_reg : u16
 
 constexpr u16 usio_hopper_stride = 0x10;
 constexpr u16 usio_clear_sram_key = 0x6666;
+
+// USIO command sent on the command endpoint
+struct usio_command
+{
+	u8 op_channel = 0;     // High nibble: operation, low nibble: channel
+	u8 reg_check = 0;      // Write only: ~(reg >> 8) & 0xF0
+	le_t<u16, 1> reg = 0;
+	le_t<u16, 1> length = 0;
+};
+
+static_assert(sizeof(usio_command) == 6);

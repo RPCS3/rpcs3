@@ -967,20 +967,23 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 		}
 
 		// Commands
-		if (buf_size != 6)
+		if (buf_size != sizeof(usio_command))
 		{
-			usio_log.error("Expected a command but buf_size != 6");
+			usio_log.error("Expected a command but buf_size != %d", sizeof(usio_command));
 			return;
 		}
 
-		usio_channel  = buf[0] & 0xF;
-		usio_register = *reinterpret_cast<le_t<u16>*>(&buf[2]);
-		usio_length   = *reinterpret_cast<le_t<u16>*>(&buf[4]);
+		const auto cmd = read_from_ptr<usio_command>(std::span<const u8>(buf, buf_size));
 
-		if ((buf[0] & USIO_COMMAND_WRITE) == USIO_COMMAND_WRITE)
+		usio_channel  = cmd.op_channel & 0xF;
+		usio_register = cmd.reg;
+		usio_length   = cmd.length;
+
+		// Write has to be checked first, because it contains the read bit
+		if ((cmd.op_channel & USIO_COMMAND_WRITE) == USIO_COMMAND_WRITE)
 		{
 			usio_log.trace("UsioWrite(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
-			if (((~(usio_register >> 8)) & 0xF0) != buf[1])
+			if (((~(usio_register >> 8)) & 0xF0) != cmd.reg_check)
 			{
 				usio_log.error("Invalid UsioWrite command");
 				return;
@@ -988,21 +991,21 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 			expecting_data = true;
 			usio_data.clear();
 		}
-		else if ((buf[0] & USIO_COMMAND_READ) == USIO_COMMAND_READ)
+		else if ((cmd.op_channel & USIO_COMMAND_READ) == USIO_COMMAND_READ)
 		{
 			usio_log.trace("UsioRead(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
 			response_seek = 0;
 			response.clear();
 			usio_read(usio_channel, usio_register, usio_length);
 		}
-		else if ((buf[0] & USIO_COMMAND_INIT) == USIO_COMMAND_INIT)
+		else if ((cmd.op_channel & USIO_COMMAND_INIT) == USIO_COMMAND_INIT)
 		{
 			usio_log.trace("UsioInit(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
 			usio_init(usio_channel, usio_register, usio_length);
 		}
 		else
 		{
-			usio_log.error("Received an unexpected command: 0x%02X", buf[0]);
+			usio_log.error("Received an unexpected command: 0x%02X", cmd.op_channel);
 		}
 		break;
 	}
