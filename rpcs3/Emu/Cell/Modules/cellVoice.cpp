@@ -384,6 +384,8 @@ void voice_service::tick(voice_manager& manager)
 		}
 	}
 
+	std::array<f32, tick_samples> headset_mix{};
+
 	// Each output: the mix of its connected inputs
 	for (const auto& [id, port] : manager.ports)
 	{
@@ -426,10 +428,15 @@ void voice_service::tick(voice_manager& manager)
 		case CELLVOICE_PORTTYPE_OUT_VOICE:
 			if (!has_mic || has_other_input || transmit_mic) encode_voice(port, d, id, mix.data());
 			break;
-		case CELLVOICE_PORTTYPE_OUT_SECONDARY: play_headset(mix.data()); break;
+		case CELLVOICE_PORTTYPE_OUT_SECONDARY:
+			for (u32 i = 0; i < tick_samples; i++) headset_mix[i] += mix[i];
+			break;
 		default: break;
 		}
 	}
+
+	// All secondary ports share one host stream and one playback period.
+	if (want_headset) play_headset(headset_mix.data());
 }
 
 void voice_service::stop(voice_manager& manager)
@@ -1120,7 +1127,19 @@ void voice_service::open_headset()
 		headset_config_s16 = convert_to_s16;
 	}
 
-	if (headset || headset_failed)
+	if (headset)
+	{
+		const bool device_changed = headset_device_changed.exchange(false);
+		if (headset->Operational() && (!device_changed || !headset->DefaultDeviceChanged()))
+		{
+			return;
+		}
+
+		close_headset();
+	}
+
+	// Retry unavailable devices once per second of service time, not every tick.
+	if (headset_retry_ticks && --headset_retry_ticks)
 	{
 		return;
 	}
@@ -1130,17 +1149,27 @@ void voice_service::open_headset()
 	if (!backend)
 	{
 		headset_failed = true;
+		headset_retry_ticks = 1'000'000 / tick_usec;
 		return;
 	}
 
+	backend->SetStateCallback([this](AudioStateEvent event)
+	{
+		if (event == AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED)
+			headset_device_changed = true;
+	});
 	backend->SetWriteCallback([this](u32 bytes, void* buffer) { return headset_callback(bytes, buffer); });
 
 	const AudioSampleSize sample_size = convert_to_s16 ? AudioSampleSize::S16 : AudioSampleSize::FLOAT;
 
 	if (!backend->Open(device, AudioFreq::FREQ_48K, sample_size, AudioChannelCnt::STEREO, audio_channel_layout::stereo))
 	{
-		cellVoice.error("Failed to open the audio backend for the voice chat (OUT_SECONDARY)");
+		if (!headset_failed)
+			cellVoice.error("Failed to open the audio backend for the voice chat (OUT_SECONDARY)");
 		headset_failed = true;
+		headset_retry_ticks = 1'000'000 / tick_usec;
+		backend->SetStateCallback({});
+		backend->Close();
 		return;
 	}
 
@@ -1157,6 +1186,7 @@ void voice_service::open_headset()
 
 	backend->Play();
 	headset = std::move(backend);
+	headset_failed = false;
 	cellVoice.notice("Voice chat output (OUT_SECONDARY): %s, device '%s', %d Hz, %d channel(s)", headset->GetName(), device, headset->get_sampling_rate(), headset->get_channels());
 }
 
@@ -1164,10 +1194,13 @@ void voice_service::close_headset()
 {
 	if (headset)
 	{
+		headset->SetStateCallback({});
 		headset->Close();
 		headset.reset();
 	}
 
+	headset_device_changed = false;
+	headset_retry_ticks = 0;
 	std::lock_guard lock(headset_mtx);
 	headset_fifo.clear();
 	headset_primed = false;

@@ -610,6 +610,14 @@ namespace
 	{
 	public:
 		bool open_ok = true;
+		bool operational = true;
+		bool default_device_changed = false;
+		bool Operational() override { return operational; }
+		bool DefaultDeviceChanged() override { return default_device_changed; }
+		void notify_device_change()
+		{
+			if (m_state_callback) m_state_callback(AudioStateEvent::DEFAULT_DEVICE_MAYBE_CHANGED);
+		}
 		u32 close_count = 0;
 		std::string device;
 
@@ -780,4 +788,69 @@ TEST(CellVoiceInput, ReleaseAndRepressPublishesNewGeneration)
 	const auto after = voice_input::talk.load();
 	EXPECT_TRUE(after->transmitting);
 	EXPECT_EQ(after->generation, before->generation + 2);
+}
+
+TEST_F(CellVoiceOutput, SimultaneousSecondaryOutputsMixIntoOnePeriod)
+{
+	constexpr u16 input2 = 0x505, output2 = 0x606;
+	manager.ports[input2] = make_port(CELLVOICE_PORTTYPE_IN_PCMAUDIO);
+	manager.ports[output2] = make_port(CELLVOICE_PORTTYPE_OUT_SECONDARY);
+	service.edges.emplace(input2, output2);
+	std::array<be_t<s16>, voice_service::tick_samples> samples;
+	for (const u16 id : {pcm_input, input2})
+	{
+		samples.fill(id == pcm_input ? 1000 : 2000);
+		service.write(manager.ports.at(id), id, reinterpret_cast<const u8*>(samples.data()), sizeof(samples));
+	}
+	tick();
+	EXPECT_EQ(service.headset_fifo.size(), voice_service::tick_samples);
+	EXPECT_TRUE(std::all_of(service.headset_fifo.begin(), service.headset_fifo.end(), [](f32 sample) { return sample == 3000.0f; }));
+}
+
+TEST_F(CellVoiceOutput, DisconnectedSecondaryDoesNotAppendSilence)
+{
+	manager.ports[0x606] = make_port(CELLVOICE_PORTTYPE_OUT_SECONDARY);
+	feed_pcm(1000);
+	EXPECT_EQ(service.headset_fifo.size(), voice_service::tick_samples);
+	EXPECT_TRUE(std::all_of(service.headset_fifo.begin(), service.headset_fifo.end(), [](f32 sample) { return sample == 1000.0f; }));
+}
+
+TEST_F(CellVoiceOutput, BrokenStreamIsReopened)
+{
+	tick();
+	ASSERT_EQ(backends.size(), 1u);
+	backends.front()->operational = false;
+	tick(100);
+	EXPECT_GT(backends.size(), 1u);
+}
+
+TEST_F(CellVoiceOutput, ReconnectedDeviceRetriesSameSelection)
+{
+	next_open_ok = false;
+	tick();
+	ASSERT_EQ(backends.size(), 1u);
+	tick(49);
+	EXPECT_EQ(backends.size(), 1u); // No retry storm while the device is absent.
+	next_open_ok = true;
+	tick();
+	ASSERT_EQ(backends.size(), 2u);
+	EXPECT_TRUE(service.headset);
+	EXPECT_FALSE(service.headset_failed);
+}
+
+TEST_F(CellVoiceOutput, DefaultDeviceNotificationReopensOnlyWhenChanged)
+{
+	g_cfg.audio.voice_output_device.set("@@@default@@@");
+	tick();
+	ASSERT_EQ(backends.size(), 1u);
+	backends[0]->notify_device_change();
+	tick();
+	EXPECT_EQ(backends.size(), 1u);
+	backends[0]->default_device_changed = true;
+	backends[0]->notify_device_change();
+	tick();
+	ASSERT_EQ(backends.size(), 2u);
+	EXPECT_EQ(backends[0]->close_count, 1u);
+	EXPECT_EQ(backends[1]->device, "@@@default@@@");
+	EXPECT_TRUE(backends[1]->IsPlaying());
 }
