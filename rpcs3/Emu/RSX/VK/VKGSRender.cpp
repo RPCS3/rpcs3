@@ -1367,7 +1367,8 @@ void VKGSRender::on_bind_context(rsx::context* ctx)
 
 void VKGSRender::on_release_context_resources(rsx::context* ctx)
 {
-	if (!m_device->is_lost())
+	if (!m_device->is_lost() &&
+		!(RSX(ctx)->state & cpu_flag::exit))
 	{
 		// FIXME: This is very slow. It needs to be done on a background worker.
 		flush_command_queue(true);
