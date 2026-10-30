@@ -64,14 +64,6 @@ struct usio_memory
 	static constexpr usz page_count = 0x10;
 };
 
-// Serialize a struct (e.g. a PN532 response) into bytes
-template <typename T> requires std::is_trivially_copyable_v<T>
-static std::vector<u8> to_bytes(const T& value)
-{
-	const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
-	return {bytes.begin(), bytes.end()};
-}
-
 usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 	: usb_device_emulated(location)
 {
@@ -492,7 +484,10 @@ void usb_device_usio::translate_input_tekken()
 	};
 
 	for (usz i = 0; i < m_io_status.size(); i++)
+	{
 		m_io_status[i].card_tapped = false;
+	}
+
 	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
 	{
 		translate_input(i);
@@ -515,102 +510,6 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	static std::array<std::vector<u8>, 2> pending_response = {};
 	usz reader_index = 0;
 
-	const auto verify_request = [](const std::vector<u8>& in) -> bool
-	{
-		if (in.size() < pn532_ack_frame.size())
-			return false;
-
-		if (!std::equal(pn532_frame_start.begin(), pn532_frame_start.end(), in.begin()))
-			return false;
-
-		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), in.begin())) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
-			return true;
-
-		if (in.size() < sizeof(pn532_frame_header))
-			return false;
-
-		usz tfi_offset = 0; // TFI is the last byte of either header
-		usz len = 0;
-		u8 len_checksum = 0;
-		pn532_tfi tfi{};
-
-		if (pn532_is_extended_frame(in)) // Extended Information Frame
-		{
-			if (in.size() < sizeof(pn532_extended_frame_header))
-				return false;
-
-			const auto header = read_from_ptr<pn532_extended_frame_header>(in);
-			tfi_offset = offsetof(pn532_extended_frame_header, tfi);
-			len = header.len;
-			len_checksum = static_cast<u8>((len >> 8) + (len & 0xFF) + header.lcs);
-			tfi = header.tfi;
-		}
-		else // Normal Information Frame
-		{
-			const auto header = read_from_ptr<pn532_frame_header>(in);
-			tfi_offset = offsetof(pn532_frame_header, tfi);
-			len = header.len;
-			len_checksum = static_cast<u8>(header.len + header.lcs);
-			tfi = header.tfi;
-		}
-
-		// len covers TFI + data, followed by the footer
-		if (len < 2 || len_checksum != 0x00 || tfi != pn532_tfi::host_to_pn532 || in.size() < tfi_offset + len + sizeof(pn532_frame_footer))
-			return false;
-
-		// TFI + data + DCS
-		u8 data_checksum = 0;
-		for (usz i = tfi_offset; i < tfi_offset + len + 1; i++)
-			data_checksum += in[i];
-
-		return data_checksum == 0x00;
-	};
-
-	const auto build_response = [](std::vector<u8>& out, const std::vector<u8>& in = {})
-	{
-		out.assign(pn532_ack_frame.begin(), pn532_ack_frame.end());
-
-		if (in.empty())
-		{
-			out.insert(out.end(), pn532_error_frame.begin(), pn532_error_frame.end());
-			return;
-		}
-
-		const auto append = [&out](const auto& value)
-		{
-			const auto bytes = to_bytes(value);
-			out.insert(out.end(), bytes.begin(), bytes.end());
-		};
-
-		const usz total_len = in.size() + 1; // Including TFI
-
-		if (total_len > 0xFF) // Extended Information Frame
-		{
-			pn532_extended_frame_header header{};
-			header.len = static_cast<u16>(total_len);
-			header.lcs = static_cast<u8>(0x00 - ((total_len >> 8) + (total_len & 0xFF)));
-			append(header);
-		}
-		else // Normal Information Frame
-		{
-			pn532_frame_header header{};
-			header.len = static_cast<u8>(total_len);
-			header.lcs = static_cast<u8>(0x00 - total_len);
-			append(header);
-		}
-
-		pn532_frame_footer footer{};
-		footer.dcs = static_cast<u8>(0x00 - static_cast<u8>(pn532_tfi::pn532_to_host));
-
-		for (const auto& data : in)
-		{
-			out.push_back(data);
-			footer.dcs -= data;
-		}
-
-		append(footer);
-	};
-
 	switch (static_cast<usio_reg>(reg))
 	{
 	case usio_reg::card_reader_0_status:
@@ -631,7 +530,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case usio_reg::card_reader_0_write:
 	case usio_reg::card_reader_1_write:
 	{
-		if (!verify_request(buf))
+		const std::span<const u8> frame = pn532_find_frame(buf);
+
+		if (!pn532_verify_request(frame))
 			break;
 
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
@@ -641,17 +542,19 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		pending_response[reader_index].clear();
 
 		// Do not respond to ACK
-		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), buf.begin()))
+		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), frame.begin()))
 			break;
 
 		const auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
 		auto& response = pending_response[reader_index];
 
-		const bool is_extended = pn532_is_extended_frame(buf);
+		const bool is_extended = pn532_is_extended_frame(frame);
 		const usz data_offset = is_extended ? sizeof(pn532_extended_frame_header) : sizeof(pn532_frame_header);
-		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<pn532_extended_frame_header>(buf).len) : static_cast<usz>(read_from_ptr<pn532_frame_header>(buf).len)) - 1; // Excluding TFI
-		const std::span<const u8> payload(buf.data() + data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
+		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<pn532_extended_frame_header>(frame).len) : static_cast<usz>(read_from_ptr<pn532_frame_header>(frame).len)) - 1; // Excluding TFI
+		const std::span<const u8> payload = frame.subspan(data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
+
+		pn532_append_ack(response);
 
 		const auto cmd = static_cast<pn532_cmd>(::at32(payload, 0));
 		const u8 res = pn532_response_code(cmd);
@@ -666,50 +569,50 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 
 				if ((static_cast<u16>(req.address) & 0xFF) == 0x1C)
 				{
-					build_response(response, {res, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
+					pn532_build_response(response, {res, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
 				}
 				else
 				{
-					build_response(response, {res, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87});
+					pn532_build_response(response, {res, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87});
 				}
 			}
 			break;
 		}
 		case pn532_cmd::write_register:
 		{
-			build_response(response, {res, 0x00});
+			pn532_build_response(response, {res, 0x00});
 			break;
 		}
 		case pn532_cmd::read_gpio:
 		{
-			build_response(response, to_bytes(pn532_read_gpio_response{}));
+			pn532_build_response(response, to_bytes(pn532_read_gpio_response{}));
 			break;
 		}
 		case pn532_cmd::write_gpio:
 		{
-			build_response(response, {res});
+			pn532_build_response(response, {res});
 			break;
 		}
 		case pn532_cmd::set_parameters:
 		{
-			build_response(response, {res});
+			pn532_build_response(response, {res});
 			break;
 		}
 		case pn532_cmd::alpar_command_for_tda:
 		{
-			build_response(response, {res});
+			pn532_build_response(response, {res});
 			break;
 		}
 		case pn532_cmd::rf_configuration:
 		{
-			build_response(response, {res});
+			pn532_build_response(response, {res});
 			break;
 		}
 		case pn532_cmd::in_data_exchange:
 		{
 			if (payload.size() < sizeof(pn532_in_data_exchange_request) || !status.card_tapped)
 			{
-				build_response(response, {res, 0x01});
+				pn532_build_response(response, {res, 0x01});
 				break;
 			}
 
@@ -720,11 +623,11 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 			{
 				pn532_in_data_exchange_response resp{};
 				std::memcpy(resp.block.data(), card.data() + req.block * mifare_block_size, mifare_block_size);
-				build_response(response, to_bytes(resp));
+				pn532_build_response(response, to_bytes(resp));
 			}
 			else
 			{
-				build_response(response, {res, 0x01});
+				pn532_build_response(response, {res, 0x01});
 			}
 			break;
 		}
@@ -734,23 +637,23 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 			{
 				pn532_in_list_passive_target_response resp{};
 				std::memcpy(resp.nfcid.data(), g_fxo->get<usio_memory>().card_data[card_player].data(), mifare_uid_size);
-				build_response(response, to_bytes(resp));
+				pn532_build_response(response, to_bytes(resp));
 			}
 			else
 			{
-				build_response(response, {res, 0x00}); // No targets found
+				pn532_build_response(response, {res, 0x00}); // No targets found
 			}
 			break;
 		}
 		case pn532_cmd::in_release:
 		{
-			build_response(response, {res, 0x01, 0x00});
+			pn532_build_response(response, {res, 0x01, 0x00});
 			break;
 		}
 		default:
 		{
 			usio_log.warning("Unhandled card reader command: 0x%02X", static_cast<u8>(cmd));
-			build_response(response); // Respond with an error frame
+			pn532_build_response(response); // Respond with an error frame
 			break;
 		}
 		}
