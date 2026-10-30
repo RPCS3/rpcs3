@@ -14,10 +14,12 @@ constexpr std::array<u8, 3> pn532_frame_start = {0x00, 0x00, 0xFF};
 // PN532 ACK frame
 constexpr std::array<u8, 6> pn532_ack_frame = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
+// PN532 error frame (application level error, e.g. syntax error)
+constexpr std::array<u8, 8> pn532_error_frame = {0x00, 0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81, 0x00};
+
 // PN532 frame identifier (direction of an information frame)
 enum class pn532_tfi : u8
 {
-	syntax_error  = 0x7F,
 	host_to_pn532 = 0xD4,
 	pn532_to_host = 0xD5,
 };
