@@ -17,10 +17,13 @@ namespace gl
 	using enum program_common::interpreter::compiler_option;
 	using enum program_common::interpreter::cached_pipeline_flags;
 
-	void shader_interpreter::create(rsx::context* ctx, rsx::shader_loading_dialog* dlg)
+	void shader_interpreter::create(rsx::context* ctx)
 	{
 		m_ctx = ctx;
+	}
 
+	void shader_interpreter::preload(rsx::shader_loading_dialog* dlg)
+	{
 		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();

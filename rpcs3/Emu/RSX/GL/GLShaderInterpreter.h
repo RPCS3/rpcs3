@@ -130,8 +130,11 @@ namespace gl
 			std::memset(&m_texture_bindings, 0, sizeof(m_texture_bindings));
 		}
 
-		void create(rsx::context* ctx, rsx::shader_loading_dialog* dlg);
+		void create(rsx::context* ctx);
 		void destroy();
+
+		// Preload the cache
+		void preload(rsx::shader_loading_dialog* dlg);
 
 		// Follows the backend's bound context
 		void set_context(rsx::context* ctx) { m_ctx = ctx; }

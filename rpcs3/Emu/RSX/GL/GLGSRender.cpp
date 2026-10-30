@@ -428,6 +428,7 @@ void GLGSRender::on_init()
 		std::this_thread::sleep_for(16ms);
 	}
 
+	// Program buffer and interpreter are unusued outside application boot mode, but we initialize them anyway.
 	m_prog_buffer.initialize
 	(
 		[this](void* const& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
@@ -437,13 +438,25 @@ void GLGSRender::on_init()
 		}
 	);
 
+	m_shader_interpreter.create(m_ctx);
+
+	if (Emu.GetBootMode() == boot_mode::application)
+	{
+		preload_shaders();
+	}
+}
+
+void GLGSRender::preload_shaders()
+{
+	const auto shadermode = g_cfg.video.shadermode.get();
+
 	if (shadermode == shader_mode::async_with_interpreter ||
 		shadermode == shader_mode::interpreter_only)
 	{
 		std::unique_ptr<rsx::shader_loading_dialog> dlg = RSX(m_ctx)->overlay_manager()
 			? std::make_unique<rsx::shader_loading_dialog_native>(RSX(m_ctx))
 			: std::make_unique<rsx::shader_loading_dialog>();
-		m_shader_interpreter.create(m_ctx, dlg.get());
+		m_shader_interpreter.preload(dlg.get());
 		dlg->close();
 	}
 
