@@ -21,7 +21,7 @@ bool pn532::verify_request(std::span<const u8> in)
 	usz tfi_offset = 0; // TFI is the last byte of either header
 	usz len = 0;
 	u8 len_checksum = 0;
-	tfi tfi{};
+	frame_identifier tfi{};
 
 	if (is_extended_frame(in)) // Extended Information Frame
 	{
@@ -44,7 +44,7 @@ bool pn532::verify_request(std::span<const u8> in)
 	}
 
 	// len covers TFI + data, followed by DCS
-	if (len < 2 || len_checksum != 0x00 || tfi != tfi::host_to_pn532 || in.size() < tfi_offset + len + sizeof(frame_footer::dcs))
+	if (len < 2 || len_checksum != 0x00 || tfi != frame_identifier::host_to_pn532 || in.size() < tfi_offset + len + sizeof(frame_footer::dcs))
 		return false;
 
 	// TFI + data + DCS
@@ -90,7 +90,7 @@ void pn532::build_response(std::vector<u8>& out, const std::vector<u8>& in)
 	}
 
 	frame_footer footer{};
-	footer.dcs = static_cast<u8>(0x00 - static_cast<u8>(tfi::to_host));
+	footer.dcs = static_cast<u8>(0x00 - static_cast<u8>(frame_identifier::to_host));
 
 	for (const auto& data : in)
 	{
@@ -123,12 +123,12 @@ void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, cons
 
 	append_ack(response);
 
-	const auto command = static_cast<cmd>(::at32(payload, 0));
+	const auto command = static_cast<command_code>(::at32(payload, 0));
 	const u8 res = response_code(command);
 
 	switch (command)
 	{
-	case cmd::read_register:
+	case command_code::read_register:
 	{
 		if (payload.size() >= sizeof(read_register_request))
 		{
@@ -145,37 +145,37 @@ void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, cons
 		}
 		break;
 	}
-	case cmd::write_register:
+	case command_code::write_register:
 	{
 		build_response(response, {res, 0x00});
 		break;
 	}
-	case cmd::read_gpio:
+	case command_code::read_gpio:
 	{
 		build_response(response, to_bytes(read_gpio_response{}));
 		break;
 	}
-	case cmd::write_gpio:
+	case command_code::write_gpio:
 	{
 		build_response(response, {res});
 		break;
 	}
-	case cmd::set_parameters:
+	case command_code::set_parameters:
 	{
 		build_response(response, {res});
 		break;
 	}
-	case cmd::alpar_command_for_tda:
+	case command_code::alpar_command_for_tda:
 	{
 		build_response(response, {res});
 		break;
 	}
-	case cmd::rf_configuration:
+	case command_code::rf_configuration:
 	{
 		build_response(response, {res});
 		break;
 	}
-	case cmd::in_data_exchange:
+	case command_code::in_data_exchange:
 	{
 		if (payload.size() < sizeof(in_data_exchange_request) || !status.card_tapped)
 		{
@@ -197,7 +197,7 @@ void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, cons
 		}
 		break;
 	}
-	case cmd::in_list_passive_target:
+	case command_code::in_list_passive_target:
 	{
 		if (status.card_tapped)
 		{
@@ -211,7 +211,7 @@ void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, cons
 		}
 		break;
 	}
-	case cmd::in_release:
+	case command_code::in_release:
 	{
 		build_response(response, {res, 0x01, 0x00});
 		break;
