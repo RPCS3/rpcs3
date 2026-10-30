@@ -868,7 +868,8 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	if (!m_is_valid_ucode)
 	{
-		// If the code is broken, do not compile. Simply NOP main and write empty outputs
+		// If the code is broken, do not compile it. Color outputs are left undefined, but the fragment must survive:
+		// stencil-only passes (e.g. deferred light volumes) bind invalid programs and rely on their depth/stencil side effects.
 		m_parr.params[PF_PARAM_UNIFORM].clear();
 		insertHeader(OS);
 		OS << "\n";
@@ -879,7 +880,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 		OS << "#if 0\n";
 		OS << main << "\n";
 		OS << "#endif\n";
-		OS << "	discard;\n";
 		OS << "}\n";
 
 		// Don't consume any args
