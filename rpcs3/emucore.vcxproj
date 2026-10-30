@@ -92,6 +92,7 @@
     <ClCompile Include="Emu\Io\gem_config.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
+    <ClCompile Include="Emu\Io\pn532_types.cpp" />
     <ClCompile Include="Emu\Io\wiimote_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\MouseHandler.cpp" />
