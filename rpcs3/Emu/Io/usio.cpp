@@ -570,6 +570,12 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	{
 		out.assign(pn532_ack_frame.begin(), pn532_ack_frame.end());
 
+		if (in.empty())
+		{
+			out.insert(out.end(), pn532_error_frame.begin(), pn532_error_frame.end());
+			return;
+		}
+
 		const auto append = [&out](const auto& value)
 		{
 			const auto bytes = to_bytes(value);
@@ -577,12 +583,10 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		};
 
 		const usz total_len = in.size() + 1; // Including TFI
-		const pn532_tfi tfi = in.empty() ? pn532_tfi::syntax_error : pn532_tfi::pn532_to_host;
 
 		if (total_len > 0xFF) // Extended Information Frame
 		{
 			pn532_extended_frame_header header{};
-			header.tfi = tfi;
 			header.len = static_cast<u16>(total_len);
 			header.lcs = static_cast<u8>(0x00 - ((total_len >> 8) + (total_len & 0xFF)));
 			append(header);
@@ -590,14 +594,13 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		else // Normal Information Frame
 		{
 			pn532_frame_header header{};
-			header.tfi = tfi;
 			header.len = static_cast<u8>(total_len);
 			header.lcs = static_cast<u8>(0x00 - total_len);
 			append(header);
 		}
 
 		pn532_frame_footer footer{};
-		footer.dcs = static_cast<u8>(0x00 - static_cast<u8>(tfi));
+		footer.dcs = static_cast<u8>(0x00 - static_cast<u8>(pn532_tfi::pn532_to_host));
 
 		for (const auto& data : in)
 		{
@@ -747,7 +750,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		default:
 		{
 			usio_log.warning("Unhandled card reader command: 0x%02X", static_cast<u8>(cmd));
-			build_response(response); // Respond with a packet indicating Syntax Error
+			build_response(response); // Respond with an error frame
 			break;
 		}
 		}
