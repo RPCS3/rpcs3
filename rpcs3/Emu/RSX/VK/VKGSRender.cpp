@@ -1367,7 +1367,8 @@ void VKGSRender::on_bind_context(rsx::context* ctx)
 
 void VKGSRender::on_release_context_resources(rsx::context* ctx)
 {
-	if (!m_device->is_lost())
+	if (!m_device->is_lost() &&
+		!(RSX(ctx)->state & cpu_flag::exit))
 	{
 		// FIXME: This is very slow. It needs to be done on a background worker.
 		flush_command_queue(true);
@@ -1423,9 +1424,8 @@ void VKGSRender::clear()
 
 	set_scissor();
 
-	//float depth_clear = 1.f;
-	u32   stencil_clear = 0;
-	u32   depth_stencil_mask = 0;
+	constexpr u32 stencil_clear = 0;
+	u32 depth_stencil_mask = 0;
 
 	std::vector<VkClearAttachment> clear_descriptors;
 	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
@@ -1446,7 +1446,7 @@ void VKGSRender::clear()
 	bool update_color = false, update_z = false;
 	const auto surface_depth_format = info.depth_format;
 
-	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); ds && (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK))
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
