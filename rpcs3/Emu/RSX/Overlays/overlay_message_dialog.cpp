@@ -243,9 +243,9 @@ namespace rsx
 				return;
 			}
 
-			m_gauge_timestamp_us = timestamp_us;
-			const u64 elapsed_us = (m_gauge_timestamp_us && timestamp_us > m_gauge_timestamp_us)
-				? (timestamp_us - m_gauge_timestamp_us)
+			const u64 last_timestamp_us = std::exchange(m_gauge_timestamp_us, timestamp_us);
+			const u64 elapsed_us = (last_timestamp_us && timestamp_us > last_timestamp_us)
+				? (timestamp_us - last_timestamp_us)
 				: 0;
 
 			// Fill while the confirm button is held. Once released, drain back to empty instead of snapping to 0.
