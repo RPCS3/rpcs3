@@ -32,17 +32,17 @@ namespace gl
 		dlg->set_limit(0, limit1);
 		dlg->set_limit(1, limit2);
 
-		atomic_t<u32> ctr = 0;
-		auto progress_hook = [&](const std::shared_ptr<interpreter::cached_program>&) { ctr++; };
+		auto ctr = std::make_shared<atomic_t<u32>>(0);
+		auto progress_hook = [ctr](const std::shared_ptr<interpreter::cached_program>&) { (*ctr)++; };
 
 		auto update_progress = [&](u32 stage)
 		{
-			const auto completed = ctr.load();
+			const auto completed = ctr->load();
 			const auto limit = stage ? limit2 : limit1;
 			const auto message = get_localized_string(
 				stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD,
 				"%u %s %u",
-				ctr.load(),
+				ctr->load(),
 				get_localized_string(localized_string_id::PROGRESS_DIALOG_OF),
 				limit);
 			dlg->update_msg(stage, message);
@@ -63,13 +63,19 @@ namespace gl
 			std::this_thread::sleep_for(16ms);
 			update_progress(0);
 		}
-		while (ctr < limit1);
+		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && !dlg->skip_requested());
 
 		// Show final progress
 		update_progress(0);
 
+		// If we were interrupted, return immediately.
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			return;
+		}
+
 		// Second stage. Propagate base pipelines to all compatible
-		ctr = 0;
+		*ctr = 0;
 		std::lock_guard lock(m_program_cache_lock);
 
 		for (const auto& variant : variants.pipelines)
@@ -85,7 +91,11 @@ namespace gl
 			auto base_pipeline = m_program_cache.find(compatible_options);
 			if (base_pipeline == m_program_cache.end())
 			{
-				fmt::throw_exception("Base variant was not found in the cache.");
+				if (!dlg->skip_requested())
+				{
+					fmt::throw_exception("Base variant was not found in the cache.");
+				}
+				continue;
 			}
 
 			auto data = new interpreter::cached_program();
@@ -97,7 +107,7 @@ namespace gl
 			m_program_cache[compiler_options].reset(data);
 		}
 
-		ctr = limit2;
+		*ctr = limit2;
 		update_progress(1);
 
 		// Minor stall to avoid visual flashing
