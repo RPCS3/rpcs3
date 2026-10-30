@@ -785,7 +785,7 @@ namespace vk
 		dlg->set_limit(0, limit1);
 		dlg->set_limit(1, limit2);
 
-		atomic_t<u32> ctr = 0;
+		auto ctr = std::make_shared<atomic_t<u32>>(0);
 		for (const auto& props : pipe_properties)
 		{
 			for (auto& variant : variants.base_pipelines)
@@ -794,23 +794,28 @@ namespace vk
 				key.properties = props;
 				key.compiler_opt = variant.first | variant.second;
 
-				link(props, variant.first | variant.second, true, [&](std::shared_ptr<glsl::program>&) { ctr++; });
+				link(props, variant.first | variant.second, true, [ctr](std::shared_ptr<glsl::program>&) { (*ctr)++; });
 			}
 		}
 
 		// Drain the queue.
-		// FIXME: Since the queue is executing from the context of the pipe compiler, we cannot properly stop this process.
 		do
 		{
 			std::this_thread::sleep_for(16ms);
 
-			const auto completed = ctr.load();
+			const auto completed = ctr->load();
 			dlg->update_msg(0, get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN, "%u %s %u", completed, get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit1));
 			dlg->set_value(0, completed);
 		}
-		while (ctr.load() < limit1);
+		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && !dlg->skip_requested());
 
-		ctr = 0;
+		// If we were interrupted, return immediately
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			return;
+		}
+
+		*ctr = 0;
 		std::lock_guard lock(m_program_cache_lock);
 
 		for (const auto& props : pipe_properties)
@@ -834,7 +839,14 @@ namespace vk
 				compat_key.compiler_opt = variant.vs_opts.compatible_shader_opts | variant.fs_opts.compatible_shader_opts;
 				auto found = m_program_cache.find(compat_key);
 
-				ensure(found != m_program_cache.end(), "Invalid interpreter configuration.");
+				if (found == m_program_cache.end())
+				{
+					if (!dlg->skip_requested())
+					{
+						fmt::throw_exception("Invalid interpreter configuration.");
+					}
+					continue;
+				}
 
 				pipeline_cache_entry_t cache_entry
 				{
