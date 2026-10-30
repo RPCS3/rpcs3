@@ -53,3 +53,16 @@ constexpr u8 pn532_response_code(pn532_cmd cmd)
 	return static_cast<u8>(static_cast<u8>(cmd) + 1);
 }
 
+
+// PN532 InListPassiveTarget response (one ISO/IEC 14443 Type A target)
+struct pn532_in_list_passive_target_response
+{
+	u8 cmd = pn532_response_code(pn532_cmd::in_list_passive_target);
+	u8 nb_tg = 0x01;
+	u8 tg = 0x01;
+	be_t<u16, 1> sens_res = 0x0004; // ATQA
+	u8 sel_res = 0x08;              // SAK: MIFARE Classic 1K
+	u8 nfcid_length = mifare_uid_size;
+	std::array<u8, mifare_uid_size> nfcid{};
+};
+static_assert(sizeof(pn532_in_list_passive_target_response) == 11);
