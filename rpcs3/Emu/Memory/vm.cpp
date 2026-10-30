@@ -213,7 +213,7 @@ namespace vm
 
 			if (!busy) [[likely]]
 			{
-				if (vm::check_addr(begin, vm::page_readable, size)) [[likely]]
+				if (begin >= RAW_SPU_BASE_ADDR || vm::check_addr(begin, vm::page_readable, size)) [[likely]]
 				{
 					break;
 				}

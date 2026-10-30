@@ -1,8 +1,8 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include "util/midi_types.h"
 
-#include <rtmidi_c.h>
 #include <chrono>
 #include <vector>
 #include <optional>
@@ -118,7 +118,7 @@ public:
 private:
 	usz response_pos{};
 	bool buttons_enabled{};
-	RtMidiInPtr midi_in{};
+	midi_ptr midi_in{};
 	std::vector<rb3drums::KitState> kit_states;
 	bool hold_kick{};
 	bool midi_cc_triggered{};

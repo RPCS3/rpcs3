@@ -41,6 +41,14 @@ namespace gui
 			"#game_list_grid_item[hover=\"true\"] #game_list_grid_item_title_label { color: #fff; }"
 			"#game_list_grid_item[focus=\"true\"] #game_list_grid_item_title_label { color: #fff; }"
 
+			// screenshot manager
+			"#screenshot_flow_widget #flow_widget_content { background: transparent; }"
+			"#screenshot_item { background: transparent; }"
+			"#screenshot_item[selected=\"true\"] { background: #148aff; }"
+			"#screenshot_item:focus { background: #148aff; }"
+			"#screenshot_item:hover { background: #94c9ff; }"
+			"#screenshot_item:hover:focus { background: #007fff; }"
+
 			// save manager icon color
 			"QLabel#save_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
 

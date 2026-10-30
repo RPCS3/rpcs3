@@ -373,14 +373,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 	case SPU_In_MBox_offs:
 	{
-		if (!ch_in_mbox.push(value).op_done)
-		{
-			if (auto cpu = cpu_thread::get_current())
-			{
-				cpu->state += cpu_flag::again;
-			}
-		}
-
+		push_in_mbox(value);
 		return true;
 	}
 

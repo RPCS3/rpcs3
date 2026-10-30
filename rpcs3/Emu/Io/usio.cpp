@@ -504,22 +504,93 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	static std::array<std::vector<u8>, 2> pending_response = {};
 	usz reader_index = 0;
 
-	const auto calculate_checksum = [](bool check, std::vector<u8>& data) -> bool
+	constexpr std::array<u8, 6> ack = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+
+	const auto verify_request = [&ack](const std::vector<u8>& in) -> bool
 	{
-		if (data.size() < 0x06)
+		if (in.size() < ack.size())
 			return false;
 
-		const usz data_end = data.size() - 2;
-		u8 sum = data[3] + data[4];
+		if (memcmp(in.data(), ack.data(), 3) != 0)
+			return false;
 
-		for (usz i = 5; i < data_end; i++)
-			sum -= data[i];
+		if (memcmp(in.data() + 3, ack.data() + 3, 3) == 0) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
+			return true;
 
-		if (check)
-			return *reinterpret_cast<le_t<u16>*>(&data[data_end]) == sum;
+		if (in[3] == 0xFF && in[4] == 0xFF) // Extended Information Frame
+		{
+			if (in.size() < 10)
+				return false;
 
-		*reinterpret_cast<le_t<u16>*>(&data[data_end]) = sum;
+			const u16 len = read_from_ptr<be_t<u16>>(in, 5);
+			const u8 len_checksum = in[7];
+			const u8 direction = in[8]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
+
+			if (len < 2 || static_cast<u8>(in[5] + in[6] + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 10))
+				return false;
+
+			u8 data_checksum = direction;
+			for (usz i = 0; i < len; i++)
+				data_checksum += in[i + 9];
+			if (data_checksum != 0x00)
+				return false;
+		}
+		else // Normal Information Frame
+		{
+			if (in.size() < 7)
+				return false;
+
+			const u8 len = in[3];
+			const u8 len_checksum = in[4];
+			const u8 direction = in[5]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
+
+			if (len < 2 || static_cast<u8>(len + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 7))
+				return false;
+
+			u8 data_checksum = direction;
+			for (usz i = 0; i < len; i++)
+				data_checksum += in[i + 6];
+			if (data_checksum != 0x00)
+				return false;
+		}
+
 		return true;
+	};
+
+	const auto build_response = [&ack](std::vector<u8>& out, const std::vector<u8>& in = {})
+	{
+		out.assign(ack.begin(), ack.end());
+
+		const usz total_len = in.size() + 1;           // Including direction byte
+		const u8 direction = in.empty() ? 0x7F : 0xD5; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
+
+		out.insert(out.end(), ack.begin(), ack.begin() + 3);
+
+		if (total_len > 0xFF) // Extended Information Frame
+		{
+			const u8 len_m = static_cast<u8>(total_len >> 8);
+			const u8 len_l = static_cast<u8>(total_len & 0xFF);
+			const u8 len_checksum = static_cast<u8>(0x00 - (len_m + len_l));
+			const std::array<u8, 6> header = {0xFF, 0xFF, len_m, len_l, len_checksum, direction};
+			out.insert(out.end(), header.begin(), header.end());
+		}
+		else // Normal Information Frame
+		{
+			const u8 len = static_cast<u8>(total_len);
+			const u8 len_checksum = static_cast<u8>(0x00 - len);
+			const std::array<u8, 3> header = {len, len_checksum, direction};
+			out.insert(out.end(), header.begin(), header.end());
+		}
+
+		u8 data_checksum = static_cast<u8>(0x00 - direction);
+		for (const auto& data : in)
+		{
+			out.push_back(data);
+			data_checksum -= data;
+		}
+
+		const std::array<u8, 2> footer = {data_checksum, 0x00};
+		out.insert(out.end(), footer.begin(), footer.end());
 	};
 
 	switch (reg)
@@ -536,143 +607,123 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case 0x7800:
 	{
 		reader_index = reg == 0x7000 ? 0 : 1;
-		buf.assign(pending_response[reader_index].begin(), pending_response[reader_index].end());
-		pending_response[reader_index].clear();
+		buf = {pending_response[reader_index].begin(), pending_response[reader_index].end()};
 		break;
 	}
 	case 0x7400:
 	case 0x7C00:
 	{
-		if (!calculate_checksum(true, buf))
+		if (!verify_request(buf))
 			break;
+
 		reader_index = reg == 0x7400 ? 0 : 1;
+
+		// In case NACK is received, the pending response should be retransmitted.
+		// So only clear the pending response buffer when a new legitimate request or ACK, both of which can be verified by verify_request(), is received.
+		pending_response[reader_index].clear();
+
+		// Do not respond to ACK (0x00, 0x00, 0xFF, [0x00, 0xFF], 0x00)
+		if (buf[3] == 0x00 && buf[4] == 0xFF)
+			break;
+
 		const auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
-		const u8 payload_length = buf[3];
-		const u8 command = buf[4];
-		const u8* const payload = &buf[6];
-		switch (command)
+
+		const bool is_extended = (buf[3] == 0xFF && buf[4] == 0xFF);
+		const usz data_offset = is_extended ? 9 : 6;
+		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<be_t<u16>>(buf, 5)) : static_cast<usz>(buf[3])) - 1; // Excluding direction byte
+		const std::span<const u8> payload(buf.data() + data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
+
+		switch (::at32(payload, 0))
 		{
-		case 0xE8:
+		case 0x06:
 		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x0D, 0xF3, 0xD5, 0x07, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87, 0xC9, 0x00};
-			break;
-		}
-		case 0xEE:
-		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x0A, 0xF6, 0xD5, 0x07, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1, 0xAA, 0x00};
-			break;
-		}
-		case 0xF1:
-		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x41, 0x00, 0xEA, 0x00};
-			break;
-		}
-		case 0xF2:
-		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x33, 0xF8, 0x00};
-			break;
-		}
-		case 0xF7:
-		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x4B, 0x00, 0xE0, 0x00};
-			break;
-		}
-		case 0xFA:
-		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x33, 0xF8, 0x00};
-			break;
-		}
-		case 0xFB:
-		{
-			if (payload_length >= 5)
+			if (payload.size() >= 3)
 			{
-				if (*reinterpret_cast<const le_t<u16>*>(&payload[0]) == 0x0140)
+				if (::at32(payload, 2) == 0x1C)
 				{
-					if (payload[3] < 4)
-					{
-						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x13, 0xED, 0xD5, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEA, 0x00};
-						std::memcpy(pending_response[reader_index].data() + 8, g_fxo->get<usio_memory>().card_data[card_player].data() + payload[3] * 0x10, 0x10);
-					}
-					else
-					{
-						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x41, 0x13, 0xD7, 0x00};
-					}
+					build_response(pending_response[reader_index], {0x07, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
 				}
 				else
 				{
-					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x09, 0x00, 0x22, 0x00};
+					build_response(pending_response[reader_index], {0x07, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87});
 				}
 			}
 			break;
 		}
-		case 0xFC:
+		case 0x08:
 		{
-			if (payload_length >= 2)
+			build_response(pending_response[reader_index], {0x09, 0x00});
+			break;
+		}
+		case 0x0C:
+		{
+			build_response(pending_response[reader_index], {0x0D, 0x00, 0x06, 0x00});
+			break;
+		}
+		case 0x0E:
+		{
+			build_response(pending_response[reader_index], {0x0F});
+			break;
+		}
+		case 0x12:
+		{
+			build_response(pending_response[reader_index], {0x13});
+			break;
+		}
+		case 0x18:
+		{
+			build_response(pending_response[reader_index], {0x19});
+			break;
+		}
+		case 0x32:
+		{
+			build_response(pending_response[reader_index], {0x33});
+			break;
+		}
+		case 0x40:
+		{
+			if (payload.size() >= 4 && status.card_tapped)
 			{
-				switch (payload[0])
-				{
-				case 0x52:
-					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x04, 0xFC, 0xD5, 0x53, 0x01, 0x00, 0xD7, 0x00};
-					break;
-				case 0x0E:
-					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x0F, 0x1C, 0x00};
-					break;
-				case 0x4A:
-					if (status.card_tapped)
-					{
-						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x0C, 0xF4, 0xD5, 0x4B, 0x01, 0x01, 0x00, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0xCE, 0x00};
-						std::memcpy(pending_response[reader_index].data() + 0x13, g_fxo->get<usio_memory>().card_data[card_player].data(), 4);
-					}
-					else
-					{
-						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x4B, 0x00, 0xE0, 0x00};
-					}
-					break;
-				case 0x32:
-					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x33, 0xF8, 0x00};
-					break;
-				default:
-					break;
-				}
+				const auto& card_data = g_fxo->get<usio_memory>().card_data[card_player].begin() + ::at32(payload, 3) * 0x10;
+				std::vector<u8> data = {0x41, 0x00};
+				data.insert(data.end(), card_data, card_data + 0x10);
+				build_response(pending_response[reader_index], data);
 			}
-			break;
-		}
-		case 0xFD:
-		{
-			if (payload_length >= 2)
+			else
 			{
-				switch (payload[0])
-				{
-				case 0x18:
-					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x19, 0x12, 0x00};
-					break;
-				case 0x12:
-					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x13, 0x18, 0x00};
-					break;
-				default:
-					break;
-				}
+				build_response(pending_response[reader_index], {0x41, 0x01});
 			}
 			break;
 		}
-		case 0xFE:
+		case 0x4A:
 		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x05, 0xFB, 0xD5, 0x0D, 0x00, 0x06, 0x00, 0x18, 0x00};
+			if (status.card_tapped)
+			{
+				const auto& card_data = g_fxo->get<usio_memory>().card_data[card_player].begin();
+				std::vector<u8> data = {0x4B, 0x01, 0x01, 0x00, 0x04, 0x08, 0x04};
+				data.insert(data.end(), card_data, card_data + 4);
+				build_response(pending_response[reader_index], data);
+			}
+			else
+			{
+				build_response(pending_response[reader_index], {0x4B, 0x00});
+			}
 			break;
 		}
-		case 0xFF:
+		case 0x52:
 		{
-			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+			build_response(pending_response[reader_index], {0x53, 0x01, 0x00});
 			break;
 		}
 		default:
 		{
-			usio_log.trace("Unhandled card reader command: 0x%02X", command);
+			usio_log.warning("Unhandled card reader command: 0x%02X", ::at32(payload, 0));
+			build_response(pending_response[reader_index]); // Respond with a packet indicating Syntax Error
 			break;
 		}
 		}
-		calculate_checksum(false, pending_response[reader_index]);
+
 		break;
 	}
 	default:
@@ -779,9 +830,10 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 		case 0x0000:
 		{
 			// Get Buffer, rarely gives a reply on real HW
-			// First U16 seems to be a timestamp of sort
+			// First U16 seems to be a free-running hardware timer
 			// Purpose seems related to connectivity check
-			response = {0x7E, 0xE4, 0x00, 0x00, 0x74, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+			response = {0x00, 0x00, 0x00, 0x00, 0x74, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7E, 0x00, 0x7E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+			write_to_ptr<le_t<u16>>(response, 0, static_cast<u16>(get_timestamp() / 1000));
 			break;
 		}
 		case 0x0080:

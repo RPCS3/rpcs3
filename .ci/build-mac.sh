@@ -9,6 +9,18 @@ AVVER="${COMM_TAG}-${COMM_COUNT}"
 export LVER="${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}"
 echo "AVVER=$AVVER" >> .ci/ci-vars.env
 
+# Due to issues with getting this running under MacPorts, I'm reluctantly going to let this depend on brew for now.
+if [ "$(arch)" = "arm64" ]; then
+  git clone https://gitlab.freedesktop.org/mesa/mesa.git kosmickrisp; cd kosmickrisp
+  brew install meson spirv-llvm-translator spirv-tools
+  pip3 install mako packaging pyyaml --break-system-packages
+  export PATH_OLD="$PATH"
+  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+  meson setup build --prefix=/opt/homebrew --buildtype=release -Dplatforms=macos -Dvulkan-drivers=kosmickrisp -Dgallium-drivers= -Dopengl=false -Dzstd=disabled
+  ninja -C build; cd ../
+  export PATH="$PATH_OLD"
+fi
+  
 # Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
 sudo port install "clang-$LLVM_COMPILER_VER"
 
@@ -43,7 +55,6 @@ ditto "/tmp/Qt/$QT_VER" "qt-downloader/$QT_VER"
 
 export Qt6_DIR="$WORKDIR/qt-downloader/$QT_VER/clang_64/lib/cmake/Qt$QT_VER_MAIN"
 export SDL3_DIR="/opt/local/lib/cmake/SDL3"
-export OpenCV_DIR="/opt/local/libexec/opencv4"
 export PATH="/opt/local/libexec/llvm-$LLVM_COMPILER_VER/bin:/$WORKDIR/qt-downloader/$QT_VER/clang_64/bin:/opt/local/bin:/opt/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/X11/bin:/Library/Apple/usr/bin:$PATH"
 export LDFLAGS="-L/opt/local/lib -Wl,-rpath,/opt/local/lib"
 export VULKAN_SDK="/opt/local"
@@ -51,12 +62,9 @@ export LLVM_DIR="/opt/local/libexec/llvm-$LLVM_COMPILER_VER"
 
 # Pull all the submodules except some
 # shellcheck disable=SC2046
-git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/opencv/ && !/libsdl-org/ && !/feralinteractive/ && !/curl/ && !/zlib/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ && !/libsdl-org/ && !/feralinteractive/ && !/curl/ && !/zlib/ { print $3 }' .gitmodules)
 
 mkdir build && cd build || exit 1
-# The below should be uncommented once bugs with Qt 6 QListWidgets when using the OS 26 visual style are resolved.
-# sudo xcode-select -switch /Applications/Xcode_26.3.app/Contents/Developer
-
 cmake .. \
     -DBUILD_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
     -DRUN_RPCS3_TESTS="${RUN_UNIT_TESTS}" \
@@ -73,7 +81,6 @@ cmake .. \
     -DUSE_PRECOMPILED_HEADERS=OFF \
     -DUSE_SYSTEM_MVK=ON \
     -DUSE_SYSTEM_SDL=ON \
-    -DUSE_SYSTEM_OPENCV=ON \
     -G Ninja
 
 ninja; build_status=$?;

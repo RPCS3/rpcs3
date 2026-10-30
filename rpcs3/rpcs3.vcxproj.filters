@@ -768,10 +768,19 @@
     <ClCompile Include="rpcs3qt\screenshot_manager_dialog.cpp">
       <Filter>Gui\screenshot manager</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\avatar_selection_dialog.cpp">
+      <Filter>Gui\user accounts</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_avatar_selection_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_avatar_selection_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\sound_effect_manager_dialog.cpp">
@@ -1266,6 +1275,9 @@
     <ClCompile Include="Input\ps_move_tracker.cpp">
       <Filter>Io\Move</Filter>
     </ClCompile>
+    <ClCompile Include="Input\blob_detector.cpp">
+      <Filter>Io\Move</Filter>
+    </ClCompile>
     <ClCompile Include="Input\ps_move_config.cpp">
       <Filter>Io\Move</Filter>
     </ClCompile>
@@ -1562,6 +1574,9 @@
     <ClInclude Include="Input\ps_move_tracker.h">
       <Filter>Io\Move</Filter>
     </ClInclude>
+    <ClInclude Include="Input\blob_detector.h">
+      <Filter>Io\Move</Filter>
+    </ClInclude>
     <ClInclude Include="Input\ps_move_config.h">
       <Filter>Io\Move</Filter>
     </ClInclude>
@@ -1798,6 +1813,9 @@
     <CustomBuild Include="rpcs3qt\screenshot_manager_dialog.h">
       <Filter>Gui\screenshot manager</Filter>
     </CustomBuild>
+    <CustomBuild Include="rpcs3qt\avatar_selection_dialog.h">
+      <Filter>Gui\user accounts</Filter>
+    </CustomBuild>
     <CustomBuild Include="rpcs3qt\screenshot_preview.h">
       <Filter>Gui\screenshot manager</Filter>
     </CustomBuild>
@@ -1999,6 +2017,9 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="rpcs3.manifest" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\GuiConfigs\Classic (Bright).qss">

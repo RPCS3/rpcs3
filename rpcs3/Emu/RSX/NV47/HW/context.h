@@ -2,30 +2,19 @@
 
 #include <util/types.hpp>
 
+#include <array>
+
 namespace rsx
 {
-	class thread;
-	struct rsx_state;
+	struct context;
 
-#if 0
-	// TODO: Separate GRAPH context from RSX state
-	struct GRAPH_context
+	// Static on-device state. Decoders belong to firmware context (see rsx_state).
+	struct hw_context
 	{
-		u32 id;
-		std::array<u32, 0x10000 / 4> registers;
+		std::array<u32, 0x10000 / 4> registers{};
+		u32 latch{};
 
-		GRAPH_context(u32 ctx_id)
-			: id(ctx_id)
-		{
-			std::fill(registers.begin(), registers.end(), 0);
-		}
-	};
-#endif
-
-	struct context
-	{
-		thread* rsxthr;
-		// GRAPH_context* graph;
-		rsx_state* register_state;
+		std::array<u32, 544 * 4> transform_program{};
+		std::array<u32[4], 512> transform_constants{};
 	};
 }

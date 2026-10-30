@@ -16,11 +16,11 @@ namespace rsx
 			// Ensure atomic seq-cst memory ordering for FIFO GET updates
 			atomic_fence_seq_cst();
 
-			const bool is_flip_sema = (address == (RSX(ctx)->label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
+			const bool is_flip_sema = (address == (ctx->fw.label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
 			if (!is_flip_sema)
 			{
 				// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
-				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->release_GCM_label(type, address, data);
+				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->renderer()->release_GCM_label(type, address, data);
 
 				if (vm::_ref<RsxSemaphore>(address) == data)
 				{
@@ -44,7 +44,7 @@ namespace rsx
 					if constexpr (FlushPipe)
 					{
 						// Syncronization point, may be associated with memory changes without actually changing addresses
-						RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
+						ctx->graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
 
 						// Manually flush the pipeline.
 						// It is possible to stream report writes using the host GPU, but that generates too much submit traffic.

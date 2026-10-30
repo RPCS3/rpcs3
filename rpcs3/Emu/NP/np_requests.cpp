@@ -1966,4 +1966,135 @@ namespace np
 	{
 		return handle_tus_no_data(req_id, error);
 	}
+
+	void np_handler::tus_get_tss(shared_ptr<tus_transaction_ctx>& trans_ctx, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::TUS);
+
+		trans_ctx->tdata = tdata_tss{
+			.slot_id = slotId,
+			.data = data,
+			.contentLength = {},
+			.maxSize = recvSize,
+			.dataStatus = dataStatus,
+			.option = option,
+		};
+
+		const u64 timestamp = (option && option->ifParam && option->ifParam->ifType == SCE_NP_TSS_IFTYPE_IF_MODIFIED_SINCE) ? static_cast<u64>(option->ifParam->lastModified.tick) : 0ull;
+
+		get_rpcn()->get_tss(req_id, trans_ctx->communicationId, slotId, timestamp);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	void np_handler::lookup_get_tss(shared_ptr<lookup_transaction_ctx>& trans_ctx, vm::ptr<void> data, u32 maxSize, vm::ptr<u32> contentLength, bool async)
+	{
+		std::unique_lock lock(trans_ctx->mutex);
+		const u32 req_id = get_req_id(REQUEST_ID_HIGH::LOOKUP);
+
+		trans_ctx->tdata = tdata_tss{
+			.slot_id = 0,
+			.data = data,
+			.contentLength = contentLength,
+			.maxSize = maxSize,
+			.dataStatus = {},
+			.option = {},
+		};
+
+		get_rpcn()->get_tss(req_id, trans_ctx->communicationId, 0, 0);
+		transaction_async_handler(std::move(lock), trans_ctx, req_id, async);
+	}
+
+	void np_handler::reply_get_tss(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
+		REQUEST_ID_HIGH type = get_req_type(req_id);
+		ensure(type == REQUEST_ID_HIGH::LOOKUP || type == REQUEST_ID_HIGH::TUS);
+
+		if (error != rpcn::ErrorType::NotFound && error != rpcn::ErrorType::NoError && error != rpcn::ErrorType::CondFail)
+		{
+			fmt::throw_exception("Unexpected error in reply to GetTss: %s", error);
+		}
+
+		u64 timestamp = 0;
+		std::vector<u8> data;
+		const bool cond_fail = (error == rpcn::ErrorType::CondFail);
+
+		if (error == rpcn::ErrorType::NoError)
+		{
+			timestamp = reply.get<u64>();
+			data = reply.get_rawdata();
+		}
+
+		if (type == REQUEST_ID_HIGH::LOOKUP)
+		{
+			handle_reply_get_tss<lookup_transaction_ctx>(req_id, data, timestamp, cond_fail);
+		}
+		else
+		{
+			handle_reply_get_tss<tus_transaction_ctx>(req_id, data, timestamp, cond_fail);
+		}
+	}
+
+	template <typename T>
+	void np_handler::handle_reply_get_tss(u32 req_id, const std::vector<u8>& data, u64 timestamp, bool cond_fail)
+	{
+		std::lock_guard lock_trans(mutex_async_transactions);
+		if (!async_transactions.count(req_id))
+		{
+			rpcn_log.error("Couldn't find transaction(%d) in trans_id!", req_id);
+			return;
+		}
+
+		auto trans = idm::get_unlocked<T>(::at32(async_transactions, req_id)->idm_id);
+		ensure(trans);
+
+		std::lock_guard lock(trans->mutex);
+		const tdata_tss* tdata = std::get_if<tdata_tss>(&trans->tdata);
+		ensure(tdata);
+
+		const auto update_data_status = [&](s32 status, u32 length, u64 timestamp)
+		{
+			if (tdata->contentLength)
+			{
+				*tdata->contentLength = length;
+			}
+
+			if (tdata->dataStatus)
+			{
+				tdata->dataStatus->statusCodeType = status;
+				tdata->dataStatus->contentLength = length;
+				tdata->dataStatus->lastModified.tick = timestamp;
+			}
+		};
+
+		const auto copy_data = [&](u64 offset, u64 size)
+		{
+			if (tdata->data)
+				std::memcpy(tdata->data.get_ptr(), data.data() + offset, size);
+		};
+
+		if (cond_fail)
+		{
+			update_data_status(SCE_NP_TSS_STATUS_TYPE_NOT_MODIFIED, 0, tdata->option->ifParam->lastModified.tick);
+		}
+		else if (tdata->option &&
+				 (!tdata->option->ifParam ? (tdata->option->offset || tdata->option->lastByte) :
+											(tdata->option->ifParam->ifType == SCE_NP_TSS_IFTYPE_IF_RANGE && timestamp <= tdata->option->ifParam->lastModified.tick)))
+		{
+			const u64 start_offset = tdata->option->offset ? static_cast<u64>(*tdata->option->offset) : 0ull;
+			// lastByte is most likely inclusive as per HTTP standard
+			const u64 end_offset = (tdata->option->lastByte && !data.empty()) ? std::min(static_cast<u64>(*tdata->option->lastByte), static_cast<u64>(data.size() - 1)) + 1 : data.size();
+			const u64 size = std::min(end_offset < start_offset ? 0u : end_offset - start_offset, static_cast<u64>(tdata->maxSize));
+			update_data_status(SCE_NP_TSS_STATUS_TYPE_PARTIAL, ::narrow<u32>(size), timestamp);
+			copy_data(start_offset, size);
+		}
+		else
+		{
+			const u32 size = std::min(::size32(data), tdata->maxSize);
+			update_data_status(SCE_NP_TSS_STATUS_TYPE_OK, size, timestamp);
+			copy_data(0, size);
+		}
+
+		trans->set_result_and_wake(CELL_OK);
+	}
 } // namespace np

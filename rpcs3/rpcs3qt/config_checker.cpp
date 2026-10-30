@@ -296,13 +296,8 @@ bool config_checker::check_config(cfg_mode mode, QString content_or_serial, QStr
 				{
 					fmt::append(diff, "%s:<br>", base->get_name());
 
-					midi_creator mc {};
-
-					mc.parse_devices(def);
-					const std::array<midi_device, max_midi_devices> def_devices = mc.get_selection_list();
-
-					mc.parse_devices(val);
-					const std::array<midi_device, max_midi_devices>& devices = mc.get_selection_list();
+					const std::array<midi_device, max_midi_devices> def_devices = midi_creator::parse_device_selection(def);
+					const std::array<midi_device, max_midi_devices> devices = midi_creator::parse_device_selection(val);
 
 					for (usz i = 0; i < devices.size(); i++)
 					{
@@ -321,13 +316,8 @@ bool config_checker::check_config(cfg_mode mode, QString content_or_serial, QStr
 				{
 					fmt::append(diff, "%s:<br>", base->get_name());
 
-					microphone_creator mc {};
-
-					mc.parse_devices(def);
-					const std::array<std::string, 4> def_devices = mc.get_selection_list();
-
-					mc.parse_devices(val);
-					const std::array<std::string, 4>& devices = mc.get_selection_list();
+					const std::array<std::string, 4> def_devices = microphone_creator::parse_device_selection(def);
+					const std::array<std::string, 4> devices = microphone_creator::parse_device_selection(val);
 
 					for (usz i = 0; i < devices.size(); i++)
 					{
