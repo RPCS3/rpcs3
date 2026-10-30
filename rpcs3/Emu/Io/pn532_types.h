@@ -4,18 +4,25 @@
 #include "util/endian.hpp"
 #include "mifare_types.h"
 
+#include <algorithm>
 #include <array>
+#include <span>
+#include <vector>
 
 // NXP PN532 NFC controller host protocol
 
-// Preamble and start code of every PN532 frame
-constexpr std::array<u8, 3> pn532_frame_start = {0x00, 0x00, 0xFF};
+// Frames are wrapped in a preamble and a postamble byte, which are optional when receiving
+constexpr u8 pn532_preamble = 0x00;
+constexpr u8 pn532_postamble = 0x00;
 
-// PN532 ACK frame
-constexpr std::array<u8, 6> pn532_ack_frame = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+// Start code of every PN532 frame
+constexpr std::array<u8, 2> pn532_start_code = {0x00, 0xFF};
 
-// PN532 error frame (application level error, e.g. syntax error)
-constexpr std::array<u8, 8> pn532_error_frame = {0x00, 0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81, 0x00};
+// PN532 ACK frame (without preamble and postamble)
+constexpr std::array<u8, 4> pn532_ack_frame = {0x00, 0xFF, 0x00, 0xFF};
+
+// PN532 error frame (application level error, e.g. syntax error) (without preamble and postamble)
+constexpr std::array<u8, 6> pn532_error_frame = {0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81};
 
 // PN532 frame identifier (direction of an information frame)
 enum class pn532_tfi : u8
@@ -59,7 +66,7 @@ constexpr u8 pn532_response_code(pn532_cmd cmd)
 // PN532 normal information frame header
 struct pn532_frame_header
 {
-	std::array<u8, 3> start = pn532_frame_start;
+	std::array<u8, 2> start = pn532_start_code;
 	u8 len = 0; // Length of TFI + data
 	u8 lcs = 0; // Length checksum (len + lcs == 0)
 	pn532_tfi tfi = pn532_tfi::pn532_to_host;
@@ -68,7 +75,7 @@ struct pn532_frame_header
 // PN532 extended information frame header (len and lcs are 0xFF in the normal header position)
 struct pn532_extended_frame_header
 {
-	std::array<u8, 3> start = pn532_frame_start;
+	std::array<u8, 2> start = pn532_start_code;
 	std::array<u8, 2> marker = {0xFF, 0xFF};
 	be_t<u16, 1> len = 0; // Length of TFI + data
 	u8 lcs = 0;           // Length checksum (len_m + len_l + lcs == 0)
@@ -79,7 +86,7 @@ struct pn532_extended_frame_header
 struct pn532_frame_footer
 {
 	u8 dcs = 0; // Data checksum (tfi + data + dcs == 0)
-	u8 postamble = 0x00;
+	u8 postamble = pn532_postamble;
 };
 
 // PN532 ReadRegister request (only the first register address is inspected)
@@ -127,15 +134,37 @@ struct pn532_in_list_passive_target_response
 	std::array<u8, mifare_uid_size> nfcid{};
 };
 
-// Requires at least sizeof(pn532_frame_header) bytes
-inline bool pn532_is_extended_frame(const std::vector<u8>& in)
+// Skip the preamble (any bytes before the start code) and return the frame starting at the start code
+// Returns an empty span if there is no start code
+inline std::span<const u8> pn532_find_frame(const std::vector<u8>& in)
 {
-	const auto header = read_from_ptr<pn532_frame_header>(in);
-	return header.len == 0xFF && header.lcs == 0xFF;
-};
+	const auto it = std::search(in.begin(), in.end(), pn532_start_code.begin(), pn532_start_code.end());
+	return {it, in.end()};
+}
 
-static_assert(sizeof(pn532_frame_header) == 6);
-static_assert(sizeof(pn532_extended_frame_header) == 9);
+// Requires at least sizeof(pn532_frame_header) bytes
+inline bool pn532_is_extended_frame(std::span<const u8> frame)
+{
+	const auto header = read_from_ptr<pn532_frame_header>(frame);
+	return header.len == 0xFF && header.lcs == 0xFF;
+}
+
+// Writes an PN532 ACK frame (with preamble and postamble) to the out buffer
+inline void pn532_append_ack(std::vector<u8>& out)
+{
+	out.push_back(pn532_preamble);
+	out.insert(out.end(), pn532_ack_frame.begin(), pn532_ack_frame.end());
+	out.push_back(pn532_postamble);
+}
+
+// Expects a frame starting at the start code (see pn532_find_frame), the postamble is optional
+bool pn532_verify_request(std::span<const u8> in);
+
+// Appends to out, which already contains the ACK frame
+void pn532_build_response(std::vector<u8>& out, const std::vector<u8>& in = {});
+
+static_assert(sizeof(pn532_frame_header) == 5);
+static_assert(sizeof(pn532_extended_frame_header) == 8);
 static_assert(sizeof(pn532_frame_footer) == 2);
 static_assert(sizeof(pn532_read_register_request) == 3);
 static_assert(sizeof(pn532_in_data_exchange_request) == 4);

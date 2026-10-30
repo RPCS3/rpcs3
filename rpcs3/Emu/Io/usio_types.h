@@ -3,6 +3,14 @@
 #include "util/types.hpp"
 #include "util/endian.hpp"
 
+// Serialize a struct (e.g. a PN532 response) into bytes
+template <typename T> requires std::is_trivially_copyable_v<T>
+inline std::vector<u8> to_bytes(const T& value)
+{
+	const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
+	return {bytes.begin(), bytes.end()};
+}
+
 // USIO USB endpoints
 enum class usio_endpoint : u8
 {
