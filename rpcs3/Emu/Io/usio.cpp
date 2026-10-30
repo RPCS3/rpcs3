@@ -524,7 +524,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 
 			const u16 len = read_from_ptr<be_t<u16>>(in, 5);
 			const u8 len_checksum = in[7];
-			const u8 direction = in[8]; // 0xD4: Host to Device, 0xD5: Device to Host
+			const u8 direction = in[8]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
 			if (len < 2 || static_cast<u8>(in[5] + in[6] + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 10))
 				return false;
@@ -542,7 +542,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 
 			const u8 len = in[3];
 			const u8 len_checksum = in[4];
-			const u8 direction = in[5]; // 0xD4: Host to Device, 0xD5: Device to Host
+			const u8 direction = in[5]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
 			if (len < 2 || static_cast<u8>(len + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 7))
 				return false;
@@ -561,11 +561,8 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	{
 		out.assign(ack.begin(), ack.end());
 
-		if (in.empty()) // In this case, simply respond an ACK packet which is just assigned
-			return;
-
-		const usz total_len = in.size() + 1; // Including direction byte
-		constexpr u8 direction = 0xD5;       // 0xD4: Host to Device, 0xD5: Device to Host
+		const usz total_len = in.size() + 1;           // Including direction byte
+		const u8 direction = in.empty() ? 0x7F : 0xD5; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
 		out.insert(out.end(), ack.begin(), ack.begin() + 3);
 
@@ -688,13 +685,14 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		{
 			if (payload.size() >= 4 && status.card_tapped)
 			{
-				std::vector<u8> data = {0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-				std::memcpy(data.data() + 2, g_fxo->get<usio_memory>().card_data[card_player].data() + ::at32(payload, 3) * 0x10, 0x10);
+				const auto& card_data = g_fxo->get<usio_memory>().card_data[card_player].begin() + ::at32(payload, 3) * 0x10;
+				std::vector<u8> data = {0x41, 0x00};
+				data.insert(data.end(), card_data, card_data + 0x10);
 				build_response(pending_response[reader_index], data);
 			}
 			else
 			{
-				build_response(pending_response[reader_index], {0x41, 0x00});
+				build_response(pending_response[reader_index], {0x41, 0x01});
 			}
 			break;
 		}
@@ -702,8 +700,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		{
 			if (status.card_tapped)
 			{
-				std::vector<u8> data = {0x4B, 0x01, 0x01, 0x00, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00};
-				std::memcpy(data.data() + 7, g_fxo->get<usio_memory>().card_data[card_player].data(), 4);
+				const auto& card_data = g_fxo->get<usio_memory>().card_data[card_player].begin();
+				std::vector<u8> data = {0x4B, 0x01, 0x01, 0x00, 0x04, 0x08, 0x04};
+				data.insert(data.end(), card_data, card_data + 4);
 				build_response(pending_response[reader_index], data);
 			}
 			else
@@ -719,8 +718,8 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		}
 		default:
 		{
-			usio_log.trace("Unhandled card reader command: 0x%02X", ::at32(payload, 0));
-			build_response(pending_response[reader_index]);
+			usio_log.warning("Unhandled card reader command: 0x%02X", ::at32(payload, 0));
+			build_response(pending_response[reader_index]); // Respond with a packet indicating Syntax Error
 			break;
 		}
 		}
