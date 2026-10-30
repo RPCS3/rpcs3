@@ -5,8 +5,7 @@
 #include "MouseHandler.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/usio_config.h"
-#include "Emu/Io/usio_types.h"
-#include "Emu/Io/pn532_types.h"
+#include "Emu/Io/pn532.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 
@@ -504,7 +503,7 @@ void usb_device_usio::translate_input_tekken()
 	response[2] = 0b00010000; // DIP switches, 8 in total
 }
 
-// The emulated card reader speaks the NXP PN532 host protocol to MIFARE Classic cards
+// The emulated card reader e.g. speaks the NXP PN532 host protocol to MIFARE Classic cards
 void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 {
 	static std::array<std::vector<u8>, 2> pending_response = {};
@@ -530,134 +529,13 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case usio_reg::card_reader_0_write:
 	case usio_reg::card_reader_1_write:
 	{
-		const std::span<const u8> frame = pn532_find_frame(buf);
-
-		if (!pn532_verify_request(frame))
-			break;
-
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
-
-		// In case NACK is received, the pending response should be retransmitted.
-		// So only clear the pending response buffer when a new legitimate request or ACK, both of which can be verified by verify_request(), is received.
-		pending_response[reader_index].clear();
-
-		// Do not respond to ACK
-		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), frame.begin()))
-			break;
-
+		auto& response = pending_response[reader_index];
 		const auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
-		auto& response = pending_response[reader_index];
+		const auto& card = g_fxo->get<usio_memory>().card_data[card_player];
 
-		const bool is_extended = pn532_is_extended_frame(frame);
-		const usz data_offset = is_extended ? sizeof(pn532_extended_frame_header) : sizeof(pn532_frame_header);
-		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<pn532_extended_frame_header>(frame).len) : static_cast<usz>(read_from_ptr<pn532_frame_header>(frame).len)) - 1; // Excluding TFI
-		const std::span<const u8> payload = frame.subspan(data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
-
-		pn532_append_ack(response);
-
-		const auto cmd = static_cast<pn532_cmd>(::at32(payload, 0));
-		const u8 res = pn532_response_code(cmd);
-
-		switch (cmd)
-		{
-		case pn532_cmd::read_register:
-		{
-			if (payload.size() >= sizeof(pn532_read_register_request))
-			{
-				const auto req = read_from_ptr<pn532_read_register_request>(payload);
-
-				if ((static_cast<u16>(req.address) & 0xFF) == 0x1C)
-				{
-					pn532_build_response(response, {res, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
-				}
-				else
-				{
-					pn532_build_response(response, {res, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87});
-				}
-			}
-			break;
-		}
-		case pn532_cmd::write_register:
-		{
-			pn532_build_response(response, {res, 0x00});
-			break;
-		}
-		case pn532_cmd::read_gpio:
-		{
-			pn532_build_response(response, to_bytes(pn532_read_gpio_response{}));
-			break;
-		}
-		case pn532_cmd::write_gpio:
-		{
-			pn532_build_response(response, {res});
-			break;
-		}
-		case pn532_cmd::set_parameters:
-		{
-			pn532_build_response(response, {res});
-			break;
-		}
-		case pn532_cmd::alpar_command_for_tda:
-		{
-			pn532_build_response(response, {res});
-			break;
-		}
-		case pn532_cmd::rf_configuration:
-		{
-			pn532_build_response(response, {res});
-			break;
-		}
-		case pn532_cmd::in_data_exchange:
-		{
-			if (payload.size() < sizeof(pn532_in_data_exchange_request) || !status.card_tapped)
-			{
-				pn532_build_response(response, {res, 0x01});
-				break;
-			}
-
-			const auto req = read_from_ptr<pn532_in_data_exchange_request>(payload);
-			auto& card = g_fxo->get<usio_memory>().card_data[card_player];
-
-			if (req.block < (card.size() / mifare_block_size))
-			{
-				pn532_in_data_exchange_response resp{};
-				std::memcpy(resp.block.data(), card.data() + req.block * mifare_block_size, mifare_block_size);
-				pn532_build_response(response, to_bytes(resp));
-			}
-			else
-			{
-				pn532_build_response(response, {res, 0x01});
-			}
-			break;
-		}
-		case pn532_cmd::in_list_passive_target:
-		{
-			if (status.card_tapped)
-			{
-				pn532_in_list_passive_target_response resp{};
-				std::memcpy(resp.nfcid.data(), g_fxo->get<usio_memory>().card_data[card_player].data(), mifare_uid_size);
-				pn532_build_response(response, to_bytes(resp));
-			}
-			else
-			{
-				pn532_build_response(response, {res, 0x00}); // No targets found
-			}
-			break;
-		}
-		case pn532_cmd::in_release:
-		{
-			pn532_build_response(response, {res, 0x01, 0x00});
-			break;
-		}
-		default:
-		{
-			usio_log.warning("Unhandled card reader command: 0x%02X", static_cast<u8>(cmd));
-			pn532_build_response(response); // Respond with an error frame
-			break;
-		}
-		}
-
+		pn532::write_response(buf, response, card, status);
 		break;
 	}
 	default:
