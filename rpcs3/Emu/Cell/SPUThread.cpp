@@ -2394,9 +2394,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 			// Cannot use accurate DMA path
 		}
-		// Make 128 byte PUT atomic
-		// Plus MGS4 specific accuracy improvement: this is not a hack, it is selective accuracy improvement
-		else if (g_cfg.core.spu_accurate_dma || ((eal & 127) == 0 && (args.size == 128 || args.lsa == 0xb100) && ~args.cmd & MFC_LIST_MASK)) [[unlikely]]
+		else if (g_cfg.core.spu_accurate_dma || ((eal & 127) == 0 && args.size == 128 && ~args.cmd & MFC_LIST_MASK)) [[unlikely]]
 		{
 			for (u32 size0, size = args.size;; size -= size0, dst += size0, src += size0, eal += size0)
 			{
