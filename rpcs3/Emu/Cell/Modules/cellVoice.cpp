@@ -2122,6 +2122,7 @@ static error_code VoiceStart(ppu_thread& ppu)
 error_code cellVoiceStart(ppu_thread& ppu)
 {
 	cellVoice.warning("cellVoiceStart()");
+	cellVoice.notice("VOICE_RX diagnostics enabled: WriteToIPort/Ex/Ex2 entry and return, first 8 and every 256 calls; extra is numFrameLost for Ex, frameGaps for Ex2");
 	return VoiceStart(ppu);
 }
 
@@ -2246,22 +2247,43 @@ error_code cellVoiceWriteToIPort(u32 ips, vm::cptr<void> data, vm::ptr<u32> size
 
 	std::scoped_lock lock(manager.mtx);
 
+	// Temporary receive diagnostics; counters are protected by manager.mtx.
+	static u64 calls = 0, failures = 0;
+	const u64 call = ++calls;
+	const bool sampled = call <= 8 || call % 256 == 0;
+	u32 requested = 0, accepted = 0;
+	bool size_read = false;
+	if (sampled)
+		cellVoice.notice("VOICE_RX cellVoiceWriteToIPort call=%u ENTER port=0x%x data=0x%x size_ptr=0x%x extra=%d", call, ips, data, size, 0);
+	const auto report = [&](error_code result) -> error_code
+	{
+		const bool failed = static_cast<s32>(result) != 0;
+		if (failed) failures++;
+		if (sampled || (failed && (failures <= 8 || failures % 256 == 0)))
+			cellVoice.notice("VOICE_RX cellVoiceWriteToIPort call=%u RETURN port=0x%x data=0x%x size_ptr=0x%x extra=%d size_read=%d requested=%u accepted=%u result=0x%x",
+				call, ips, data, size, 0, size_read, requested, accepted, static_cast<u32>(static_cast<s32>(result)));
+		return result;
+	};
+
 	if (!manager.is_init)
-		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+		return report(CELL_VOICE_ERROR_LIBVOICE_NOT_INIT);
 
 	auto iport = manager.access_port(ips);
 
 	if (!iport || iport->info.portType >= CELLVOICE_PORTTYPE_OUT_PCMAUDIO)
-		return CELL_VOICE_ERROR_TOPOLOGY;
+		return report(CELL_VOICE_ERROR_TOPOLOGY);
 
 	if (!size)
-		return CELL_VOICE_ERROR_ADDRESS_INVALID;
+		return report(CELL_VOICE_ERROR_ADDRESS_INVALID);
 
-	if (*size && !data)
-		return CELL_VOICE_ERROR_ADDRESS_INVALID;
+	requested = *size;
+	size_read = true;
+	if (requested && !data)
+		return report(CELL_VOICE_ERROR_ADDRESS_INVALID);
 
-	*size = manager.service().write(*iport, static_cast<u16>(ips), static_cast<const u8*>(data.get_ptr()), *size);
-	return CELL_OK;
+	accepted = manager.service().write(*iport, static_cast<u16>(ips), static_cast<const u8*>(data.get_ptr()), requested);
+	*size = accepted;
+	return report(CELL_OK);
 }
 
 error_code cellVoiceWriteToIPortEx(u32 ips, vm::cptr<void> data, vm::ptr<u32> size, u32 numFrameLost)
@@ -2272,23 +2294,44 @@ error_code cellVoiceWriteToIPortEx(u32 ips, vm::cptr<void> data, vm::ptr<u32> si
 
 	std::scoped_lock lock(manager.mtx);
 
+	// Temporary receive diagnostics; counters are protected by manager.mtx.
+	static u64 calls = 0, failures = 0;
+	const u64 call = ++calls;
+	const bool sampled = call <= 8 || call % 256 == 0;
+	u32 requested = 0, accepted = 0;
+	bool size_read = false;
+	if (sampled)
+		cellVoice.notice("VOICE_RX cellVoiceWriteToIPortEx call=%u ENTER port=0x%x data=0x%x size_ptr=0x%x extra=%d", call, ips, data, size, numFrameLost);
+	const auto report = [&](error_code result) -> error_code
+	{
+		const bool failed = static_cast<s32>(result) != 0;
+		if (failed) failures++;
+		if (sampled || (failed && (failures <= 8 || failures % 256 == 0)))
+			cellVoice.notice("VOICE_RX cellVoiceWriteToIPortEx call=%u RETURN port=0x%x data=0x%x size_ptr=0x%x extra=%d size_read=%d requested=%u accepted=%u result=0x%x",
+				call, ips, data, size, numFrameLost, size_read, requested, accepted, static_cast<u32>(static_cast<s32>(result)));
+		return result;
+	};
+
 	if (!manager.is_init)
-		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+		return report(CELL_VOICE_ERROR_LIBVOICE_NOT_INIT);
 
 	auto iport = manager.access_port(ips);
 
 	if (!iport || iport->info.portType >= CELLVOICE_PORTTYPE_OUT_PCMAUDIO)
-		return CELL_VOICE_ERROR_TOPOLOGY;
+		return report(CELL_VOICE_ERROR_TOPOLOGY);
 
 	if (!size)
-		return CELL_VOICE_ERROR_ADDRESS_INVALID;
+		return report(CELL_VOICE_ERROR_ADDRESS_INVALID);
 
-	if (*size && !data)
-		return CELL_VOICE_ERROR_ADDRESS_INVALID;
+	requested = *size;
+	size_read = true;
+	if (requested && !data)
+		return report(CELL_VOICE_ERROR_ADDRESS_INVALID);
 
 	// TODO: conceal the lost frames
-	*size = manager.service().write(*iport, static_cast<u16>(ips), static_cast<const u8*>(data.get_ptr()), *size);
-	return CELL_OK;
+	accepted = manager.service().write(*iport, static_cast<u16>(ips), static_cast<const u8*>(data.get_ptr()), requested);
+	*size = accepted;
+	return report(CELL_OK);
 }
 
 error_code cellVoiceWriteToIPortEx2(u32 ips, vm::cptr<void> data, vm::ptr<u32> size, s16 frameGaps)
@@ -2299,23 +2342,44 @@ error_code cellVoiceWriteToIPortEx2(u32 ips, vm::cptr<void> data, vm::ptr<u32> s
 
 	std::scoped_lock lock(manager.mtx);
 
+	// Temporary receive diagnostics; counters are protected by manager.mtx.
+	static u64 calls = 0, failures = 0;
+	const u64 call = ++calls;
+	const bool sampled = call <= 8 || call % 256 == 0;
+	u32 requested = 0, accepted = 0;
+	bool size_read = false;
+	if (sampled)
+		cellVoice.notice("VOICE_RX cellVoiceWriteToIPortEx2 call=%u ENTER port=0x%x data=0x%x size_ptr=0x%x extra=%d", call, ips, data, size, frameGaps);
+	const auto report = [&](error_code result) -> error_code
+	{
+		const bool failed = static_cast<s32>(result) != 0;
+		if (failed) failures++;
+		if (sampled || (failed && (failures <= 8 || failures % 256 == 0)))
+			cellVoice.notice("VOICE_RX cellVoiceWriteToIPortEx2 call=%u RETURN port=0x%x data=0x%x size_ptr=0x%x extra=%d size_read=%d requested=%u accepted=%u result=0x%x",
+				call, ips, data, size, frameGaps, size_read, requested, accepted, static_cast<u32>(static_cast<s32>(result)));
+		return result;
+	};
+
 	if (!manager.is_init)
-		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+		return report(CELL_VOICE_ERROR_LIBVOICE_NOT_INIT);
 
 	auto iport = manager.access_port(ips);
 
 	if (!iport || iport->info.portType >= CELLVOICE_PORTTYPE_OUT_PCMAUDIO)
-		return CELL_VOICE_ERROR_TOPOLOGY;
+		return report(CELL_VOICE_ERROR_TOPOLOGY);
 
 	if (!size)
-		return CELL_VOICE_ERROR_ADDRESS_INVALID;
+		return report(CELL_VOICE_ERROR_ADDRESS_INVALID);
 
-	if (*size && !data)
-		return CELL_VOICE_ERROR_ADDRESS_INVALID;
+	requested = *size;
+	size_read = true;
+	if (requested && !data)
+		return report(CELL_VOICE_ERROR_ADDRESS_INVALID);
 
 	// TODO: frame gaps
-	*size = manager.service().write(*iport, static_cast<u16>(ips), static_cast<const u8*>(data.get_ptr()), *size);
-	return CELL_OK;
+	accepted = manager.service().write(*iport, static_cast<u16>(ips), static_cast<const u8*>(data.get_ptr()), requested);
+	*size = accepted;
+	return report(CELL_OK);
 }
 
 error_code cellVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size)
