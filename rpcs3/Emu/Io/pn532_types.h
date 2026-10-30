@@ -54,6 +54,13 @@ constexpr u8 pn532_response_code(pn532_cmd cmd)
 }
 
 
+// PN532 ReadRegister request (only the first register address is inspected)
+struct pn532_read_register_request
+{
+	pn532_cmd cmd = pn532_cmd::read_register;
+	be_t<u16, 1> address = 0;
+};
+
 // PN532 ReadGPIO response
 struct pn532_read_gpio_response
 {
@@ -74,5 +81,6 @@ struct pn532_in_list_passive_target_response
 	u8 nfcid_length = mifare_uid_size;
 	std::array<u8, mifare_uid_size> nfcid{};
 };
+static_assert(sizeof(pn532_read_register_request) == 3);
 static_assert(sizeof(pn532_read_gpio_response) == 4);
 static_assert(sizeof(pn532_in_list_passive_target_response) == 11);
