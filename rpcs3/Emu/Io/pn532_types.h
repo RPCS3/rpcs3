@@ -87,6 +87,15 @@ struct pn532_read_register_request
 	be_t<u16, 1> address = 0;
 };
 
+// PN532 InDataExchange request carrying a MIFARE command
+struct pn532_in_data_exchange_request
+{
+	pn532_cmd cmd = pn532_cmd::in_data_exchange;
+	u8 tg = 0;
+	mifare_cmd mifare = mifare_cmd::read;
+	u8 block = 0;
+};
+
 // PN532 ReadGPIO response
 struct pn532_read_gpio_response
 {
@@ -94,6 +103,14 @@ struct pn532_read_gpio_response
 	u8 p3 = 0x00;
 	u8 p7 = 0x06;
 	u8 i0i1 = 0x00;
+};
+
+// PN532 InDataExchange response (MIFARE READ of one 16-byte block)
+struct pn532_in_data_exchange_response
+{
+	u8 cmd = pn532_response_code(pn532_cmd::in_data_exchange);
+	u8 status = 0x00;
+	std::array<u8, mifare_block_size> block{};
 };
 
 // PN532 InListPassiveTarget response (one ISO/IEC 14443 Type A target)
@@ -119,5 +136,7 @@ static_assert(sizeof(pn532_frame_header) == 6);
 static_assert(sizeof(pn532_extended_frame_header) == 9);
 static_assert(sizeof(pn532_frame_footer) == 2);
 static_assert(sizeof(pn532_read_register_request) == 3);
+static_assert(sizeof(pn532_in_data_exchange_request) == 4);
 static_assert(sizeof(pn532_read_gpio_response) == 4);
+static_assert(sizeof(pn532_in_data_exchange_response) == 18);
 static_assert(sizeof(pn532_in_list_passive_target_response) == 11);
