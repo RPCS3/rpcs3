@@ -515,17 +515,16 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	static std::array<std::vector<u8>, 2> pending_response = {};
 	usz reader_index = 0;
 
-	constexpr std::array<u8, 6> ack = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
 
-	const auto verify_request = [&ack](const std::vector<u8>& in) -> bool
+	const auto verify_request = [](const std::vector<u8>& in) -> bool
 	{
-		if (in.size() < ack.size())
+		if (in.size() < pn532_ack_frame.size())
 			return false;
 
-		if (memcmp(in.data(), ack.data(), 3) != 0)
+		if (!std::equal(pn532_frame_start.begin(), pn532_frame_start.end(), in.begin()))
 			return false;
 
-		if (memcmp(in.data() + 3, ack.data() + 3, 3) == 0) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
+		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), in.begin())) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
 			return true;
 
 		if (in[3] == 0xFF && in[4] == 0xFF) // Extended Information Frame
@@ -568,14 +567,14 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		return true;
 	};
 
-	const auto build_response = [&ack](std::vector<u8>& out, const std::vector<u8>& in = {})
+	const auto build_response = [](std::vector<u8>& out, const std::vector<u8>& in = {})
 	{
-		out.assign(ack.begin(), ack.end());
+		out.assign(pn532_ack_frame.begin(), pn532_ack_frame.end());
 
 		const usz total_len = in.size() + 1;           // Including direction byte
 		const u8 direction = in.empty() ? 0x7F : 0xD5; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
-		out.insert(out.end(), ack.begin(), ack.begin() + 3);
+		out.insert(out.end(), pn532_frame_start.begin(), pn532_frame_start.end());
 
 		if (total_len > 0xFF) // Extended Information Frame
 		{
@@ -633,8 +632,8 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		// So only clear the pending response buffer when a new legitimate request or ACK, both of which can be verified by verify_request(), is received.
 		pending_response[reader_index].clear();
 
-		// Do not respond to ACK (0x00, 0x00, 0xFF, [0x00, 0xFF], 0x00)
-		if (buf[3] == 0x00 && buf[4] == 0xFF)
+		// Do not respond to ACK
+		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), buf.begin()))
 			break;
 
 		const auto& status = ::at32(m_io_status, reader_index);
