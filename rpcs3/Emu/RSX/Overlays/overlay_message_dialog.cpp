@@ -7,6 +7,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
+#include "Emu/Io/interception.h"
 #include "Utilities/Thread.h"
 
 #include <thread>
@@ -52,6 +53,10 @@ namespace rsx
 			btn_cancel.set_image_resource(resource_config::cancel_button_resource());
 
 			fade_animation.duration_sec = 0.15f;
+
+			btn_hold_to_skip.set_size(30, 30);
+			btn_hold_to_skip.set_pos(625, 640);
+			btn_hold_to_skip.set_image_resource(resource_config::confirm_button_resource());
 
 			update_custom_background();
 
@@ -109,6 +114,11 @@ namespace rsx
 				result.add(::at32(progress_bars, 1).get_compiled());
 			}
 
+			if (m_gauge_enabled)
+			{
+				result.add(btn_hold_to_skip.get_compiled());
+			}
+
 			if (interactive)
 			{
 				if (!num_progress_bars)
@@ -129,6 +139,19 @@ namespace rsx
 		void message_dialog::on_button_pressed(pad_button button_press, bool /*is_auto_repeat*/)
 		{
 			if (fade_animation.active) return;
+
+			// The gauge takes over the confirm button while it is visible
+			if (m_gauge_enabled && button_press == pad_button::cross)
+			{
+				m_gauge_held = true;
+				return;
+			}
+
+			if (!interactive)
+			{
+				// Non-interactive dialogs only receive input while the gauge is visible
+				return;
+			}
 
 			switch (button_press)
 			{
@@ -184,6 +207,14 @@ namespace rsx
 			};
 		}
 
+		void message_dialog::on_button_released(pad_button button_release)
+		{
+			if (button_release == pad_button::cross)
+			{
+				m_gauge_held = false;
+			}
+		}
+
 		void message_dialog::close(bool use_callback, bool stop_pad_interception)
 		{
 			if (num_progress_bars > 0)
@@ -198,6 +229,62 @@ namespace rsx
 		{
 			if (fade_animation.active)
 				fade_animation.update(timestamp_us);
+
+			update_gauge(timestamp_us);
+		}
+
+		void message_dialog::update_gauge(u64 timestamp_us)
+		{
+			if (!m_gauge_enabled)
+			{
+				// Start from empty the next time the gauge is shown
+				btn_hold_to_skip.set_value(0.f);
+				m_gauge_timestamp_us = 0;
+				return;
+			}
+
+			m_gauge_timestamp_us = timestamp_us;
+			const u64 elapsed_us = (m_gauge_timestamp_us && timestamp_us > m_gauge_timestamp_us)
+				? (timestamp_us - m_gauge_timestamp_us)
+				: 0;
+
+			// Fill while the confirm button is held. Once released, drain back to empty instead of snapping to 0.
+			const f32 delta = m_gauge_held
+				? (elapsed_us / gauge_fill_duration_us)
+				: -(elapsed_us / gauge_drain_duration_us);
+			btn_hold_to_skip.set_value(btn_hold_to_skip.get_value() + delta);
+
+			if (btn_hold_to_skip.get_value() < 1.f)
+			{
+				return;
+			}
+
+			std::function<void()> callback;
+			{
+				std::lock_guard lock(m_gauge_mutex);
+				if (!m_gauge_enabled)
+				{
+					// Hidden by the owner in the meantime
+					return;
+				}
+
+				callback = std::exchange(m_gauge_callback, nullptr);
+				m_gauge_enabled = false;
+			}
+
+			play_sound(sound_effect::accept);
+
+			if (callback)
+			{
+				callback();
+			}
+		}
+
+		void message_dialog::show_gauge_button(bool state, std::function<void()> callback)
+		{
+			std::lock_guard lock(m_gauge_mutex);
+			m_gauge_callback = state ? std::move(callback) : nullptr;
+			m_gauge_enabled = state;
 		}
 
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, msg_dialog_source source, std::function<void(s32 status)> on_close)
@@ -311,6 +398,33 @@ namespace rsx
 							{
 								while (!m_stop_input_loop && thread_ctrl::state() != thread_state::aborting)
 								{
+									if (m_gauge_enabled)
+									{
+										// We only poll pads while the gauge is visible so the dialog does not intercept input for nothing
+										const s32 result = run_input_loop([this]()
+										{
+											return m_gauge_enabled && thread_ctrl::state() != thread_state::aborting;
+										});
+
+										m_gauge_held = false;
+										m_interactive = false;
+
+										// The gauge started the interception, so it has to end it regardless of why the loop exited.
+										// The loop only exits if the gauge was hidden or the emulator is stopping.
+										if (m_start_pad_interception)
+										{
+											input::SetIntercepted(false);
+										}
+
+										if (result == selection_code::canceled)
+										{
+											// Emulation stopped, run_input_loop would return immediately again
+											break;
+										}
+
+										continue;
+									}
+
 									refresh();
 
 									// Only update the screen at about 60fps since updating it everytime slows down the process
