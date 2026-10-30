@@ -504,52 +504,65 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	static std::array<std::vector<u8>, 2> pending_response = {};
 	usz reader_index = 0;
 
-	constexpr std::array<u8, 6> ack = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+	constexpr std::array<u8, 4> ack = {0x00, 0xFF, 0x00, 0xFF};
 
-	const auto verify_request = [&ack](const std::vector<u8>& in) -> bool
+	const auto verify_request = [&ack](const std::vector<u8>& in, std::span<const u8>& in_span) -> bool
 	{
-		if (in.size() < ack.size())
+		// Skip preamble byte(s) and locate the actual start code 00 FF
+		for (usz i = 0; i + 1 < in.size(); i++)
+		{
+			if (in[i] == 0x00 && in[i + 1] == 0xFF)
+			{
+				in_span = {in.begin() + i, in.end()};
+				break;
+			}
+		}
+
+		if (in_span.data() == nullptr) // Start code not found
 			return false;
 
-		if (memcmp(in.data(), ack.data(), 3) != 0)
+		if (in_span.size() < ack.size())
 			return false;
 
-		if (memcmp(in.data() + 3, ack.data() + 3, 3) == 0) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
+		if (memcmp(in_span.data(), ack.data(), 2) != 0)
+			return false;
+
+		if (memcmp(in_span.data() + 2, ack.data() + 2, 2) == 0) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
 			return true;
 
-		if (in[3] == 0xFF && in[4] == 0xFF) // Extended Information Frame
+		if (in_span[2] == 0xFF && in_span[3] == 0xFF) // Extended Information Frame
 		{
-			if (in.size() < 10)
+			if (in_span.size() < 10) // 10 = 2 (min len) + 8 (data offset)
 				return false;
 
-			const u16 len = read_from_ptr<be_t<u16>>(in, 5);
-			const u8 len_checksum = in[7];
-			const u8 direction = in[8]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
+			const u16 len = read_from_ptr<be_t<u16>>(in_span, 4);
+			const u8 len_checksum = in_span[6];
+			const u8 direction = in_span[7]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
-			if (len < 2 || static_cast<u8>(in[5] + in[6] + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 10))
+			if (len < 2 || static_cast<u8>(in_span[4] + in_span[5] + len_checksum) != 0x00 || direction != 0xD4 || in_span.size() < static_cast<usz>(len + 8))
 				return false;
 
 			u8 data_checksum = direction;
 			for (usz i = 0; i < len; i++)
-				data_checksum += in[i + 9];
+				data_checksum += in_span[i + 8];
 			if (data_checksum != 0x00)
 				return false;
 		}
 		else // Normal Information Frame
 		{
-			if (in.size() < 7)
+			if (in_span.size() < 7) // 7 = 2 (min len) + 5 (data offset)
 				return false;
 
-			const u8 len = in[3];
-			const u8 len_checksum = in[4];
-			const u8 direction = in[5]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
+			const u8 len = in_span[2];
+			const u8 len_checksum = in_span[3];
+			const u8 direction = in_span[4]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
-			if (len < 2 || static_cast<u8>(len + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 7))
+			if (len < 2 || static_cast<u8>(len + len_checksum) != 0x00 || direction != 0xD4 || in_span.size() < static_cast<usz>(len + 5))
 				return false;
 
 			u8 data_checksum = direction;
 			for (usz i = 0; i < len; i++)
-				data_checksum += in[i + 6];
+				data_checksum += in_span[i + 5];
 			if (data_checksum != 0x00)
 				return false;
 		}
@@ -557,14 +570,23 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		return true;
 	};
 
-	const auto build_response = [&ack](std::vector<u8>& out, const std::vector<u8>& in = {})
+	const auto build_ack = [&ack](std::vector<u8>& out, bool remove_pre_and_postamble = false)
 	{
-		out.assign(ack.begin(), ack.end());
+		if (!remove_pre_and_postamble)
+			out.push_back(0x00);
+		out.insert(out.end(), ack.begin(), ack.end());
+		if (!remove_pre_and_postamble)
+			out.push_back(0x00);
+	};
 
+	const auto build_response = [&ack](std::vector<u8>& out, const std::vector<u8>& in = {}, bool remove_pre_and_postamble = false)
+	{
 		const usz total_len = in.size() + 1;           // Including direction byte
 		const u8 direction = in.empty() ? 0x7F : 0xD5; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
 
-		out.insert(out.end(), ack.begin(), ack.begin() + 3);
+		if (!remove_pre_and_postamble)
+			out.push_back(0x00);
+		out.insert(out.end(), ack.begin(), ack.begin() + 2); // Start code 00 FF
 
 		if (total_len > 0xFF) // Extended Information Frame
 		{
@@ -589,8 +611,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 			data_checksum -= data;
 		}
 
-		const std::array<u8, 2> footer = {data_checksum, 0x00};
-		out.insert(out.end(), footer.begin(), footer.end());
+		out.push_back(data_checksum);
+		if (!remove_pre_and_postamble)
+			out.push_back(0x00);
 	};
 
 	switch (reg)
@@ -613,7 +636,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case 0x7400:
 	case 0x7C00:
 	{
-		if (!verify_request(buf))
+		std::span<const u8> buf_span;
+
+		if (!verify_request(buf, buf_span))
 			break;
 
 		reader_index = reg == 0x7400 ? 0 : 1;
@@ -622,17 +647,19 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		// So only clear the pending response buffer when a new legitimate request or ACK, both of which can be verified by verify_request(), is received.
 		pending_response[reader_index].clear();
 
-		// Do not respond to ACK (0x00, 0x00, 0xFF, [0x00, 0xFF], 0x00)
-		if (buf[3] == 0x00 && buf[4] == 0xFF)
+		// Do not respond to ACK
+		if (memcmp(buf_span.data() + 2, ack.data() + 2, 2) == 0)
 			break;
 
 		const auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
 
-		const bool is_extended = (buf[3] == 0xFF && buf[4] == 0xFF);
-		const usz data_offset = is_extended ? 9 : 6;
-		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<be_t<u16>>(buf, 5)) : static_cast<usz>(buf[3])) - 1; // Excluding direction byte
-		const std::span<const u8> payload(buf.data() + data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
+		const bool is_extended = (buf_span[2] == 0xFF && buf_span[3] == 0xFF);
+		const usz data_offset = is_extended ? 8 : 5;
+		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<be_t<u16>>(buf_span, 4)) : static_cast<usz>(buf_span[2])) - 1; // Excluding direction byte
+		const std::span<const u8> payload(buf_span.data() + data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
+
+		build_ack(pending_response[reader_index]);
 
 		switch (::at32(payload, 0))
 		{
