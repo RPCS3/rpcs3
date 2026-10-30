@@ -836,8 +836,7 @@ u32 voice_service::write(const voice_manager::port_t& port, u16 id, const u8* sr
 	case CELLVOICE_PORTTYPE_IN_PCMAUDIO:
 	{
 		port_data& d = data[id];
-		const usz capacity = port.info.portType == CELLVOICE_PORTTYPE_IN_VOICE ? max_in_voice_bytes : std::max<u32>(port.info.pcmaudio.bufSize, tick_samples * 8);
-		accepted = static_cast<u32>(std::min<usz>(size, capacity - std::min(capacity, d.bytes.size())));
+		accepted = std::min(size, port_buffer_available(port, id));
 
 		if (accepted)
 		{
@@ -911,6 +910,21 @@ u32 voice_service::bytes_queued(u16 id) const
 {
 	const auto it = data.find(id);
 	return it == data.end() ? 0 : static_cast<u32>(it->second.bytes.size());
+}
+
+
+u32 voice_service::port_buffer_available(const voice_manager::port_t& port, u16 id) const
+{
+	const u32 queued = bytes_queued(id);
+	if (port.info.portType == CELLVOICE_PORTTYPE_IN_VOICE || port.info.portType == CELLVOICE_PORTTYPE_IN_PCMAUDIO)
+	{
+		// Input availability is writable space; reporting queued bytes prevents games
+		// that poll numByte before writing from ever submitting their first packet.
+		const u32 capacity = port.info.portType == CELLVOICE_PORTTYPE_IN_VOICE ? max_in_voice_bytes : std::max<u32>(port.info.pcmaudio.bufSize, tick_samples * 8);
+		return capacity - std::min(capacity, queued);
+	}
+
+	return queued;
 }
 
 bool voice_service::mic_present() const
@@ -1690,7 +1704,7 @@ error_code cellVoiceGetPortInfo(u32 portId, vm::ptr<CellVoiceBasePortInfo> pInfo
 	// No nullptr check!
 	pInfo->portType = port->info.portType;
 	pInfo->state = CELLVOICE_PORTSTATE_RUNNING;
-	pInfo->numByte = manager.m_service ? manager.m_service->bytes_queued(static_cast<u16>(portId)) : 0;
+	pInfo->numByte = manager.m_service ? manager.m_service->port_buffer_available(*port, static_cast<u16>(portId)) : 0;
 
 	if (port->info.portType == CELLVOICE_PORTTYPE_IN_VOICE || port->info.portType == CELLVOICE_PORTTYPE_OUT_VOICE)
 	{

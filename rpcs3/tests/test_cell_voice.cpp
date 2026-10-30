@@ -854,3 +854,44 @@ TEST_F(CellVoiceOutput, DefaultDeviceNotificationReopensOnlyWhenChanged)
 	EXPECT_EQ(backends[1]->device, "@@@default@@@");
 	EXPECT_TRUE(backends[1]->IsPlaying());
 }
+
+TEST_F(CellVoiceAsync, EmptyVoiceInputAdvertisesSpaceBeforeFirstWrite)
+{
+	add_decoder();
+	const auto& port = manager.ports.at(encoded_input_port);
+	const u32 capacity = service.port_buffer_available(port, encoded_input_port);
+	ASSERT_GT(capacity, 0u);
+	EXPECT_EQ(service.bytes_queued(encoded_input_port), 0u);
+	const auto input = packet(0x23);
+	ASSERT_EQ(service.write(port, encoded_input_port, input.data(), static_cast<u32>(input.size())), input.size());
+	EXPECT_EQ(service.port_buffer_available(port, encoded_input_port), capacity - input.size());
+	wait_for_request();
+	ASSERT_FALSE(service.requests.empty());
+	EXPECT_EQ(service.port_buffer_available(port, encoded_input_port), capacity);
+}
+
+TEST_F(CellVoiceAsync, InputAvailabilityMatchesAcceptedBytesWhenFull)
+{
+	for (const auto type : {CELLVOICE_PORTTYPE_IN_VOICE, CELLVOICE_PORTTYPE_IN_PCMAUDIO})
+	{
+		const auto port = make_port(type);
+		service.remove_port(pcm_input);
+		const u32 capacity = service.port_buffer_available(port, pcm_input);
+		ASSERT_GT(capacity, 0u);
+		std::vector<u8> input(capacity + 1, 0);
+		EXPECT_EQ(service.write(port, pcm_input, input.data(), static_cast<u32>(input.size())), capacity);
+		EXPECT_EQ(service.port_buffer_available(port, pcm_input), 0u);
+		EXPECT_EQ(service.write(port, pcm_input, input.data(), 1), 0u);
+	}
+}
+
+TEST_F(CellVoiceAsync, OutputAvailabilityReportsReadableBytes)
+{
+	const auto port = make_port(CELLVOICE_PORTTYPE_OUT_PCMAUDIO);
+	EXPECT_EQ(service.port_buffer_available(port, pcm_output), 0u);
+	service.data[pcm_output].bytes.assign(20, 0);
+	EXPECT_EQ(service.port_buffer_available(port, pcm_output), 20u);
+	std::array<u8, 20> output{};
+	EXPECT_EQ(service.read(manager, port, pcm_output, output.data(), static_cast<u32>(output.size())), output.size());
+	EXPECT_EQ(service.port_buffer_available(port, pcm_output), 0u);
+}

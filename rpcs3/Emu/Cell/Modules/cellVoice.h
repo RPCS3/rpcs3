@@ -371,6 +371,7 @@ struct voice_service
 	u32 write(const voice_manager::port_t& port, u16 id, const u8* src, u32 size);
 	u32 read(voice_manager& manager, const voice_manager::port_t& port, u16 id, u8* dst, u32 capacity);
 	u32 bytes_queued(u16 id) const;
+	u32 port_buffer_available(const voice_manager::port_t& port, u16 id) const;
 
 private:
 	void measure_port(port_data& d, const f32* samples, bool microphone);
