@@ -652,9 +652,11 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		{
 		case pn532_cmd::read_register:
 		{
-			if (payload.size() >= 3)
+			if (payload.size() >= sizeof(pn532_read_register_request))
 			{
-				if (::at32(payload, 2) == 0x1C)
+				const auto req = read_from_ptr<pn532_read_register_request>(payload);
+
+				if ((static_cast<u16>(req.address) & 0xFF) == 0x1C)
 				{
 					build_response(response, {res, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
 				}
