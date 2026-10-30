@@ -17,6 +17,7 @@ constexpr std::array<u8, 6> pn532_ack_frame = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x0
 // PN532 frame identifier (direction of an information frame)
 enum class pn532_tfi : u8
 {
+	syntax_error  = 0x7F,
 	host_to_pn532 = 0xD4,
 	pn532_to_host = 0xD5,
 };
@@ -53,6 +54,31 @@ constexpr u8 pn532_response_code(pn532_cmd cmd)
 	return static_cast<u8>(static_cast<u8>(cmd) + 1);
 }
 
+// PN532 normal information frame header
+struct pn532_frame_header
+{
+	std::array<u8, 3> start = pn532_frame_start;
+	u8 len = 0; // Length of TFI + data
+	u8 lcs = 0; // Length checksum (len + lcs == 0)
+	pn532_tfi tfi = pn532_tfi::pn532_to_host;
+};
+
+// PN532 extended information frame header (len and lcs are 0xFF in the normal header position)
+struct pn532_extended_frame_header
+{
+	std::array<u8, 3> start = pn532_frame_start;
+	std::array<u8, 2> marker = {0xFF, 0xFF};
+	be_t<u16, 1> len = 0; // Length of TFI + data
+	u8 lcs = 0;           // Length checksum (len_m + len_l + lcs == 0)
+	pn532_tfi tfi = pn532_tfi::pn532_to_host;
+};
+
+// PN532 frame footer
+struct pn532_frame_footer
+{
+	u8 dcs = 0; // Data checksum (tfi + data + dcs == 0)
+	u8 postamble = 0x00;
+};
 
 // PN532 ReadRegister request (only the first register address is inspected)
 struct pn532_read_register_request
@@ -81,6 +107,17 @@ struct pn532_in_list_passive_target_response
 	u8 nfcid_length = mifare_uid_size;
 	std::array<u8, mifare_uid_size> nfcid{};
 };
+
+// Requires at least sizeof(pn532_frame_header) bytes
+inline bool pn532_is_extended_frame(const std::vector<u8>& in)
+{
+	const auto header = read_from_ptr<pn532_frame_header>(in);
+	return header.len == 0xFF && header.lcs == 0xFF;
+};
+
+static_assert(sizeof(pn532_frame_header) == 6);
+static_assert(sizeof(pn532_extended_frame_header) == 9);
+static_assert(sizeof(pn532_frame_footer) == 2);
 static_assert(sizeof(pn532_read_register_request) == 3);
 static_assert(sizeof(pn532_read_gpio_response) == 4);
 static_assert(sizeof(pn532_in_list_passive_target_response) == 11);

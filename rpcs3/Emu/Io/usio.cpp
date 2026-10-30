@@ -515,7 +515,6 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	static std::array<std::vector<u8>, 2> pending_response = {};
 	usz reader_index = 0;
 
-
 	const auto verify_request = [](const std::vector<u8>& in) -> bool
 	{
 		if (in.size() < pn532_ack_frame.size())
@@ -527,80 +526,86 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		if (std::equal(pn532_ack_frame.begin(), pn532_ack_frame.end(), in.begin())) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
 			return true;
 
-		if (in[3] == 0xFF && in[4] == 0xFF) // Extended Information Frame
+		if (in.size() < sizeof(pn532_frame_header))
+			return false;
+
+		usz tfi_offset = 0; // TFI is the last byte of either header
+		usz len = 0;
+		u8 len_checksum = 0;
+		pn532_tfi tfi{};
+
+		if (pn532_is_extended_frame(in)) // Extended Information Frame
 		{
-			if (in.size() < 10)
+			if (in.size() < sizeof(pn532_extended_frame_header))
 				return false;
 
-			const u16 len = read_from_ptr<be_t<u16>>(in, 5);
-			const u8 len_checksum = in[7];
-			const u8 direction = in[8]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
-
-			if (len < 2 || static_cast<u8>(in[5] + in[6] + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 10))
-				return false;
-
-			u8 data_checksum = direction;
-			for (usz i = 0; i < len; i++)
-				data_checksum += in[i + 9];
-			if (data_checksum != 0x00)
-				return false;
+			const auto header = read_from_ptr<pn532_extended_frame_header>(in);
+			tfi_offset = offsetof(pn532_extended_frame_header, tfi);
+			len = header.len;
+			len_checksum = static_cast<u8>((len >> 8) + (len & 0xFF) + header.lcs);
+			tfi = header.tfi;
 		}
 		else // Normal Information Frame
 		{
-			if (in.size() < 7)
-				return false;
-
-			const u8 len = in[3];
-			const u8 len_checksum = in[4];
-			const u8 direction = in[5]; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
-
-			if (len < 2 || static_cast<u8>(len + len_checksum) != 0x00 || direction != 0xD4 || in.size() < static_cast<usz>(len + 7))
-				return false;
-
-			u8 data_checksum = direction;
-			for (usz i = 0; i < len; i++)
-				data_checksum += in[i + 6];
-			if (data_checksum != 0x00)
-				return false;
+			const auto header = read_from_ptr<pn532_frame_header>(in);
+			tfi_offset = offsetof(pn532_frame_header, tfi);
+			len = header.len;
+			len_checksum = static_cast<u8>(header.len + header.lcs);
+			tfi = header.tfi;
 		}
 
-		return true;
+		// len covers TFI + data, followed by the footer
+		if (len < 2 || len_checksum != 0x00 || tfi != pn532_tfi::host_to_pn532 || in.size() < tfi_offset + len + sizeof(pn532_frame_footer))
+			return false;
+
+		// TFI + data + DCS
+		u8 data_checksum = 0;
+		for (usz i = tfi_offset; i < tfi_offset + len + 1; i++)
+			data_checksum += in[i];
+
+		return data_checksum == 0x00;
 	};
 
 	const auto build_response = [](std::vector<u8>& out, const std::vector<u8>& in = {})
 	{
 		out.assign(pn532_ack_frame.begin(), pn532_ack_frame.end());
 
-		const usz total_len = in.size() + 1;           // Including direction byte
-		const u8 direction = in.empty() ? 0x7F : 0xD5; // 0x7F: Syntax Error, 0xD4: Host to Device, 0xD5: Device to Host
+		const auto append = [&out](const auto& value)
+		{
+			const auto bytes = to_bytes(value);
+			out.insert(out.end(), bytes.begin(), bytes.end());
+		};
 
-		out.insert(out.end(), pn532_frame_start.begin(), pn532_frame_start.end());
+		const usz total_len = in.size() + 1; // Including TFI
+		const pn532_tfi tfi = in.empty() ? pn532_tfi::syntax_error : pn532_tfi::pn532_to_host;
 
 		if (total_len > 0xFF) // Extended Information Frame
 		{
-			const u8 len_m = static_cast<u8>(total_len >> 8);
-			const u8 len_l = static_cast<u8>(total_len & 0xFF);
-			const u8 len_checksum = static_cast<u8>(0x00 - (len_m + len_l));
-			const std::array<u8, 6> header = {0xFF, 0xFF, len_m, len_l, len_checksum, direction};
-			out.insert(out.end(), header.begin(), header.end());
+			pn532_extended_frame_header header{};
+			header.tfi = tfi;
+			header.len = static_cast<u16>(total_len);
+			header.lcs = static_cast<u8>(0x00 - ((total_len >> 8) + (total_len & 0xFF)));
+			append(header);
 		}
 		else // Normal Information Frame
 		{
-			const u8 len = static_cast<u8>(total_len);
-			const u8 len_checksum = static_cast<u8>(0x00 - len);
-			const std::array<u8, 3> header = {len, len_checksum, direction};
-			out.insert(out.end(), header.begin(), header.end());
+			pn532_frame_header header{};
+			header.tfi = tfi;
+			header.len = static_cast<u8>(total_len);
+			header.lcs = static_cast<u8>(0x00 - total_len);
+			append(header);
 		}
 
-		u8 data_checksum = static_cast<u8>(0x00 - direction);
+		pn532_frame_footer footer{};
+		footer.dcs = static_cast<u8>(0x00 - static_cast<u8>(tfi));
+
 		for (const auto& data : in)
 		{
 			out.push_back(data);
-			data_checksum -= data;
+			footer.dcs -= data;
 		}
 
-		const std::array<u8, 2> footer = {data_checksum, 0x00};
-		out.insert(out.end(), footer.begin(), footer.end());
+		append(footer);
 	};
 
 	switch (static_cast<usio_reg>(reg))
@@ -640,9 +645,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		const usz card_player = reader_index * 2 + status.card_index;
 		auto& response = pending_response[reader_index];
 
-		const bool is_extended = (buf[3] == 0xFF && buf[4] == 0xFF);
-		const usz data_offset = is_extended ? 9 : 6;
-		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<be_t<u16>>(buf, 5)) : static_cast<usz>(buf[3])) - 1; // Excluding direction byte
+		const bool is_extended = pn532_is_extended_frame(buf);
+		const usz data_offset = is_extended ? sizeof(pn532_extended_frame_header) : sizeof(pn532_frame_header);
+		const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<pn532_extended_frame_header>(buf).len) : static_cast<usz>(read_from_ptr<pn532_frame_header>(buf).len)) - 1; // Excluding TFI
 		const std::span<const u8> payload(buf.data() + data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
 
 		const auto cmd = static_cast<pn532_cmd>(::at32(payload, 0));
