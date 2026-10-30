@@ -480,7 +480,7 @@ namespace gl
 				sdf_config.transform(static_cast<areaf>(viewport).flipped_vertical(), {ui_scale.x, ui_scale.y});
 
 				program_handle.uniforms["sdf_params"] = color4f(sdf_config.hx, sdf_config.hy, sdf_config.br, sdf_config.bw);
-				program_handle.uniforms["sdf_origin"] = color2f(sdf_config.cx, sdf_config.cy);
+				program_handle.uniforms["sdf_origin"] = color4f(sdf_config.cx, sdf_config.cy, sdf_config.ca, 0.f);
 				program_handle.uniforms["sdf_border_color"] = sdf_config.border_color;
 			}
 
