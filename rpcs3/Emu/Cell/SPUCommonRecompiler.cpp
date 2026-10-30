@@ -2430,12 +2430,12 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 		const u32 func = op_branch_targets(addr, op)[0];
 
-		if (func == umax || addr + 4 == func || func == addr || std::count(addrs.begin(), addrs.end(), func))
+		if (func == umax || addr + 4 == func || func == addr || std::ranges::contains(addrs, func))
 		{
 			continue;
 		}
 
-		if (std::count(calls.begin(), calls.end(), func))
+		if (std::ranges::contains(calls, func))
 		{
 			// Cannot call another call instruction (link is overwritten)
 			continue;
@@ -2466,7 +2466,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 			const u32 target = op_branch_targets(next, test_op)[0];
 
-			if (target == umax || addr + 4 == target || target == addr || std::count(addrs.begin(), addrs.end(), target))
+			if (target == umax || addr + 4 == target || target == addr || std::ranges::contains(addrs, target))
 			{
 				break;
 			}
@@ -2534,7 +2534,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 			addr = SPU_LS_SIZE + 4; // Terminate the next condition, no further checks needed
 
-			if (std::count(addrs.begin(), addrs.end(), func))
+			if (std::ranges::contains(addrs, func))
 			{
 				break;
 			}
@@ -2585,7 +2585,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 				continue;
 			}
 
-			if (std::count(addrs.begin(), addrs.end(), func))
+			if (std::ranges::contains(addrs, func))
 			{
 				break;
 			}
