@@ -2,13 +2,13 @@
 #include "shader_loading_dialog_native.h"
 #include "../overlay_manager.h"
 #include "../overlay_message_dialog.h"
-#include "../../GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/System.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 namespace rsx
 {
-	shader_loading_dialog_native::shader_loading_dialog_native(GSRender* ptr)
+	shader_loading_dialog_native::shader_loading_dialog_native(rsx::thread* ptr)
 		: owner(ptr)
 	{
 	}

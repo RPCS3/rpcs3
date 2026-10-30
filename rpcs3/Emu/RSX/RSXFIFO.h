@@ -126,6 +126,25 @@ namespace rsx
 			inline flatten_op test(register_pair& command);
 		};
 
+		// A context's virtual FIFO channel while the puller runs another one.
+		// Real hardware construct. PFIFO keeps these in RAMFC.
+		struct channel_state
+		{
+			RsxDmaControl* ctrl = nullptr;
+			u32 dma_address = 0;
+
+			// Where the puller stopped. Channels only switch between packets.
+			u32 get = 0;
+
+			// Call stack and rollback point
+			u32 ret_addr = RSX_CALL_STACK_EMPTY;
+			u32 saved_ret_addr = RSX_CALL_STACK_EMPTY;
+			u32 restore_point = 0;
+
+			state puller_state = state::running;
+			flattening_helper flattener;
+		};
+
 		class FIFO_control
 		{
 		private:
@@ -163,8 +182,11 @@ namespace rsx
 			std::span<const u32> get_current_arg_ptr(u32 length_in_words) const;
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
 			void restore_state(u32 cmd, u32 count, u32 position);
-			void inc_get(bool wait);
 
+			// Channel switch. The caller is expected to manually set GET afterwards.
+			void set_channel(RsxDmaControl* ctrl);
+
+			void inc_get(bool wait);
 			void set_get(u32 get, u32 spin_cmd = 0);
 			void abort();
 

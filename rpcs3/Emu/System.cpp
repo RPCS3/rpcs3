@@ -20,6 +20,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Utils/rsx_serde.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
@@ -62,8 +63,6 @@
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
-
-#include "Emu/RSX/GSRender.h"
 
 #ifdef LLVM_AVAILABLE
 #include "llvm/Config/llvm-config.h"
@@ -121,11 +120,6 @@ void initialize_timebased_time(u64 timebased_init, bool reset = false);
 namespace atomic_wait
 {
 	extern void parse_hashtable(bool(*cb)(u64 id, u32 refs, u64 ptr, u32 max_coll));
-}
-
-namespace rsx
-{
-	void set_native_ui_flip();
 }
 
 Emulator::Emulator() noexcept
@@ -1016,7 +1010,7 @@ bool Emulator::BootBigPictureMode()
 	// Initialize performance monitor
 	g_fxo->init<named_thread<perf_monitor>>();
 
-	// No PS3 executable is loaded. GSRender/pad_thread only exist to host the Big Picture Mode overlay.
+	// No PS3 executable is loaded. rsx::thread/pad_thread only exist to host the Big Picture Mode overlay.
 	m_state = system_state::ready;
 	g_emu_callbacks.on_ready();
 
@@ -1167,9 +1161,9 @@ void Emulator::SetContinuousMode(bool continuous_mode)
 {
 	m_continuous_mode = continuous_mode;
 
-	if (GSRender* render = static_cast<GSRender*>(g_fxo->try_get<rsx::thread>()))
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
-		render->set_continuous_mode(continuous_mode);
+		rsx->display().set_continuous_mode(continuous_mode);
 	}
 }
 
@@ -3384,7 +3378,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				Resume();
 			}, nullptr, true, read_counter);
 
-			std::shared_lock rlock(id_manager::g_mutex, std::defer_lock); 
+			std::shared_lock rlock(id_manager::g_mutex, std::defer_lock);
 
 			// Check if the EXITGAME signal was read. We allow the game to terminate itself if that's the case.
 			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count() && rlock.try_lock())
@@ -3669,7 +3663,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
 
 	// Decide upfront (before the renderer is torn down) whether this stop should return to Big Picture
-	// Mode, so SetContinuousMode() takes effect before GSRender::~GSRender() runs and closes the window.
+	// Mode, so SetContinuousMode() takes effect before rsx::display_output::~display_output() runs and closes the window.
 	const bool return_to_big_picture_mode = !after_kill_callback && g_big_picture_mode_active.exchange(false);
 
 	if (return_to_big_picture_mode)
@@ -3691,6 +3685,12 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
+		if (savestate)
+		{
+			// Implicit WCB callback. Ensures that resuming will show correct graphics.
+			rsx->request_guest_write_back();
+		}
+
 		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
 	}
 
@@ -4281,7 +4281,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (return_to_big_picture_mode)
 			{
-				ensure(!after_kill_callback);  
+				ensure(!after_kill_callback);
 				after_kill_callback = [this]()
 				{
 					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");

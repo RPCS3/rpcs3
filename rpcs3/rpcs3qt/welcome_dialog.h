@@ -17,7 +17,13 @@ public:
 	explicit welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool is_manual_show, QWidget* parent = nullptr);
 	~welcome_dialog();
 
+	void init_stylesheet();
+
 private:
 	std::unique_ptr<Ui::welcome_dialog> ui;
 	std::shared_ptr<gui_settings> m_gui_settings;
+	QString m_initial_stylesheet;
+
+Q_SIGNALS:
+	void request_stylesheet_change();
 };

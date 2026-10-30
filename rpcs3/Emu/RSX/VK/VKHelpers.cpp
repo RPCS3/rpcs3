@@ -317,7 +317,7 @@ namespace vk
 
 	void do_query_cleanup(vk::command_buffer& cmd)
 	{
-		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
+		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_render_backend());
 		ensure(renderer);
 
 		renderer->emergency_query_cleanup(&cmd);
@@ -325,7 +325,7 @@ namespace vk
 
 	void on_descriptor_pool_fragmentation(bool is_fatal)
 	{
-		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_renderer()))
+		if (auto vkthr = dynamic_cast<VKGSRender*>(rsx::get_current_render_backend()))
 		{
 			vkthr->on_descriptor_pool_fragmentation(is_fatal);
 		}

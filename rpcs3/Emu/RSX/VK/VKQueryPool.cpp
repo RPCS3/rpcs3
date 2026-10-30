@@ -45,8 +45,14 @@ namespace vk
 			return query.ready;
 		}
 		default:
-			die_with_error(error);
-			return false;
+			if (!die_with_error(error))
+				return false;
+
+			// The query will never complete. Report everything as visible, as if there was no host query.
+			query.any_passed = true;
+			query.ready = true;
+			query.data = umax;
+			return true;
 		}
 	}
 
