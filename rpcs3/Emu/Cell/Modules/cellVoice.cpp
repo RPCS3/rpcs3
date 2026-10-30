@@ -1701,6 +1701,17 @@ error_code cellVoiceGetPortInfo(u32 portId, vm::ptr<CellVoiceBasePortInfo> pInfo
 		pInfo->frameSize = pcm_sample_size(port->info.pcmaudio.format.dataType) * std::max<u32>(port->info.pcmaudio.format.numChannels, 1);
 	}
 
+	// Temporary diagnostics: sample each port separately so outgoing polling cannot hide incoming queries.
+	static std::array<atomic_t<u64>, 256> query_counts{};
+	const u64 query = ++query_counts[portId % query_counts.size()];
+	if (query <= 8 || query % 256 == 0)
+	{
+		const u32 type = port->info.portType;
+		const u32 frame_size = type == CELLVOICE_PORTTYPE_IN_MIC || type == CELLVOICE_PORTTYPE_OUT_SECONDARY ? 0 : pInfo->frameSize;
+		cellVoice.notice("VOICE_RX cellVoiceGetPortInfo query=%u port=0x%x type=%u numByte=%u frameSize=%u state=%u result=0x0",
+			query, portId, type, static_cast<u32>(pInfo->numByte), frame_size, static_cast<u32>(pInfo->state));
+	}
+
 	// TODO: edges
 
 	return CELL_OK;
