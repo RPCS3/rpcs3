@@ -79,12 +79,17 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	s_tls_file = tls_seg_size;
 	s_tls_zero = tls_mem_size - tls_seg_size;
 	s_tls_size = tls_mem_size + 0x30; // 0x30 is system area size
+
+	ppu.state += cpu_flag::wait;
+
 	s_tls_area = vm::alloc(0x40000, vm::main) + 0x30;
 	s_tls_max  = (0x40000 - 0x30) / s_tls_size;
 	s_tls_map  = std::make_unique<atomic_t<bool>[]>(s_tls_max);
 
 	// Allocate TLS for main thread
 	ppu.gpr[13] = ppu_alloc_tls() + 0x7000 + 0x30;
+
+	ppu.check_state();
 
 	sysPrxForUser.notice("TLS initialized (addr=0x%x, size=0x%x, max=0x%x)", s_tls_area - 0x30, s_tls_size, s_tls_max);
 
@@ -181,6 +186,8 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	}
 
 	ensure(!sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm));
+
+	ppu.state += cpu_flag::wait;
 
 	// Deallocate TLS
 	ppu_free_tls(vm::cast(ppu.gpr[13]) - 0x7030);
