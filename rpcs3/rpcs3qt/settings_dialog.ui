@@ -1274,6 +1274,44 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QWidget" name="voice_chat_mic_volume" native="true">
+                    <layout class="QVBoxLayout" name="layout_voice_chat_mic_volume">
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="voiceChatMicVolumeLabel">
+                       <property name="text">
+                        <string>Voice Chat Microphone: 0%</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QSlider" name="voiceChatMicVolume">
+                       <property name="orientation">
+                        <enum>Qt::Orientation::Horizontal</enum>
+                       </property>
+                       <property name="tickPosition">
+                        <enum>QSlider::TickPosition::TicksBelow</enum>
+                       </property>
+                       <property name="tickInterval">
+                        <number>50</number>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
                    <spacer name="spacer_audio_volume">
                     <property name="orientation">
                      <enum>Qt::Orientation::Vertical</enum>
@@ -2441,6 +2479,13 @@
                  <widget class="QCheckBox" name="enable_clans">
                   <property name="text">
                    <string>Enable Clans</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="enable_voice_chat">
+                  <property name="text">
+                   <string>Enable Voice Chat</string>
                   </property>
                  </widget>
                 </item>

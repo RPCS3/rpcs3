@@ -15,6 +15,7 @@
 #include "util/vm.hpp"
 #include "sysPrxForUser.h"
 #include "cellAudio.h"
+#include "cellSysutilAvc2.h"
 #include "util/video_provider.h"
 
 #include <cmath>
@@ -1500,6 +1501,8 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 			fmt::throw_exception("Unknown channel count (port=%u, channel=%d)", port.number, port.num_channels);
 		}
 	}
+
+	cellSysutilAvc2MixVoice(out_buffer, AUDIO_BUFFER_SAMPLES, out_channels, master_volume);
 }
 
 void cell_audio_thread::finish_port_volume_stepping()

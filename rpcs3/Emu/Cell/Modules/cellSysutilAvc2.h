@@ -300,3 +300,14 @@ struct CellSysutilAvc2StreamingTarget
 		CellSysutilAvc2MemberIpAndPortList ip_and_port_list;
 	};
 };
+
+void cellSysutilAvc2MixVoice(f32* out_buffer, u32 sample_count, u32 channel_count, f32 master_volume);
+
+struct avc2_voice_chat_member
+{
+	std::string npid;
+	bool muted = false;
+};
+
+std::vector<avc2_voice_chat_member> cellSysutilAvc2GetVoiceChatMembers();
+void cellSysutilAvc2SetVoiceChatMemberMuting(const std::string& npid, bool muted);
