@@ -514,15 +514,37 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case usio_reg::card_reader_1_status:
 	{
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_status ? 0 : 1;
+		const auto& status = ::at32(m_io_status, reader_index);
+		usz size_to_transmit = 0;
+
+		if (status.nfc_reader_send_ack)
+			size_to_transmit += nfc_reader::ack_frame.size() + 2; // TODO: Only + 2 when remove_pre_and_postamble is set to false
+		if (status.nfc_reader_send_response)
+			size_to_transmit += pending_response[reader_index].size();
+
 		buf = {0x02, 0x03, 0x00, 0x00, 0xFF, 0x0F, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x10, 0x00};
-		*reinterpret_cast<le_t<u16>*>(buf.data() + 2) = ::narrow<u16>(pending_response[reader_index].size());
+		write_to_ptr<le_t<u16>>(buf, 2, ::narrow<u16>(size_to_transmit));
 		break;
 	}
 	case usio_reg::card_reader_0_read:
 	case usio_reg::card_reader_1_read:
 	{
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_read ? 0 : 1;
-		buf = {pending_response[reader_index].begin(), pending_response[reader_index].end()};
+		const auto& response = pending_response[reader_index];
+		auto& status = ::at32(m_io_status, reader_index);
+
+		if (status.nfc_reader_send_ack)
+		{
+			nfc_reader::write_ack(buf);
+			status.nfc_reader_send_ack = false;
+		}
+
+		if (status.nfc_reader_send_response)
+		{
+			buf.insert(buf.end(), response.begin(), response.end());
+			status.nfc_reader_send_response = false;
+		}
+
 		break;
 	}
 	case usio_reg::card_reader_0_write:
@@ -530,7 +552,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	{
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
 		auto& response = pending_response[reader_index];
-		const auto& status = ::at32(m_io_status, reader_index);
+		auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
 		const auto& card = g_fxo->get<usio_memory>().card_data[card_player];
 
