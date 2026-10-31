@@ -5,7 +5,7 @@
 #include "MouseHandler.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/usio_config.h"
-#include "Emu/Io/pn532.h"
+#include "Emu/Io/nfc_reader.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 
@@ -503,7 +503,6 @@ void usb_device_usio::translate_input_tekken()
 	response[2] = 0b00010000; // DIP switches, 8 in total
 }
 
-// The emulated card reader speaks the NXP PN532 host protocol (plus a few non-standard commands) to MIFARE Classic cards
 void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 {
 	static std::array<std::vector<u8>, 2> pending_response = {};
@@ -535,7 +534,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		const usz card_player = reader_index * 2 + status.card_index;
 		const auto& card = g_fxo->get<usio_memory>().card_data[card_player];
 
-		pn532::write_response(buf, response, card, status);
+		nfc_reader::write_response(buf, response, card, status);
 		break;
 	}
 	default:

@@ -3,7 +3,7 @@
 #include "util/types.hpp"
 #include "util/endian.hpp"
 
-// Serialize a struct (e.g. a PN532 response) into bytes
+// Serialize a struct into bytes
 template <typename T> requires std::is_trivially_copyable_v<T>
 inline std::vector<u8> to_bytes(const T& value)
 {

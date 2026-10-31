@@ -436,6 +436,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/midi_config_types.cpp
     Io/mouse_config.cpp
     Io/MouseHandler.cpp
+    Io/nfc_reader.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/pad_types.cpp
@@ -455,7 +456,6 @@ target_sources(rpcs3_emu PRIVATE
     Io/usb_microphone.cpp
     Io/usb_vfs.cpp
     Io/usio.cpp
-    Io/pn532.cpp
     Io/LogitechG27.cpp
     Io/LogitechG27Config.cpp
 )

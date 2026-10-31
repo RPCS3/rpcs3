@@ -11,8 +11,8 @@
 
 struct usio_io_status;
 
-// NXP PN532 NFC controller host protocol
-class pn532
+// NFC controller host protocol
+class nfc_reader
 {
 public:
 	// Writes a response to out
@@ -23,23 +23,23 @@ private:
 	static constexpr u8 preamble = 0x00;
 	static constexpr u8 postamble = 0x00;
 
-	// Start code of every PN532 frame
+	// Start code of every frame
 	static constexpr std::array<u8, 2> start_code = {0x00, 0xFF};
 
-	// PN532 ACK frame (without preamble and postamble)
+	// ACK frame (without preamble and postamble)
 	static constexpr std::array<u8, 4> ack_frame = {0x00, 0xFF, 0x00, 0xFF};
 
-	// PN532 error frame (application level error, e.g. syntax error) (without preamble and postamble)
+	// Error frame (application level error, e.g. syntax error) (without preamble and postamble)
 	static constexpr std::array<u8, 6> error_frame = {0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81};
 
-	// PN532 frame identifier (direction of an information frame)
+	// Frame identifier (direction of an information frame)
 	enum class frame_identifier : u8
 	{
-		host_to_pn532 = 0xD4,
+		to_device = 0xD4,
 		to_host = 0xD5,
 	};
 
-	// PN532 command codes (the response code is always the command code + 1)
+	// Command codes (the response code is always the command code + 1)
 	enum class command_code : u8
 	{
 		get_firmware_version   = 0x02,
@@ -59,7 +59,7 @@ private:
 		in_select              = 0x54,
 	};
 
-	// PN532 status byte of InDataExchange, InDeselect, InRelease, InSelect and PowerDown responses
+	// Status byte of InDataExchange, InDeselect, InRelease, InSelect and PowerDown responses
 	enum class status : u8
 	{
 		success           = 0x00,
@@ -71,7 +71,7 @@ private:
 		return static_cast<u8>(static_cast<u8>(command) + 1);
 	}
 
-	// PN532 normal information frame header
+	// Normal information frame header
 	struct frame_header
 	{
 		std::array<u8, 2> start = start_code;
@@ -80,7 +80,7 @@ private:
 		frame_identifier tfi = frame_identifier::to_host;
 	};
 
-	// PN532 extended information frame header (len and lcs are 0xFF in the normal header position)
+	// Extended information frame header (len and lcs are 0xFF in the normal header position)
 	struct extended_frame_header
 	{
 		std::array<u8, 2> start = start_code;
@@ -90,21 +90,21 @@ private:
 		frame_identifier tfi = frame_identifier::to_host;
 	};
 
-	// PN532 frame footer
+	// Frame footer
 	struct frame_footer
 	{
 		u8 dcs = 0; // Data checksum (tfi + data + dcs == 0)
-		u8 postamble = pn532::postamble;
+		u8 postamble = nfc_reader::postamble;
 	};
 
-	// PN532 ReadRegister request (only the first register address is inspected)
+	// ReadRegister request (only the first register address is inspected)
 	struct read_register_request
 	{
 		command_code cmd = command_code::read_register;
 		be_t<u16, 1> address = 0;
 	};
 
-	// PN532 InDataExchange request carrying a MIFARE command
+	// InDataExchange request carrying a MIFARE command
 	struct in_data_exchange_request
 	{
 		command_code cmd = command_code::in_data_exchange;
@@ -113,7 +113,7 @@ private:
 		u8 block = 0;
 	};
 
-	// PN532 ReadGPIO response
+	// ReadGPIO response
 	struct read_gpio_response
 	{
 		u8 cmd = response_code(command_code::read_gpio);
@@ -122,7 +122,7 @@ private:
 		u8 i0i1 = 0x00;
 	};
 
-	// PN532 InDataExchange response (MIFARE READ of one 16-byte block)
+	// InDataExchange response (MIFARE READ of one 16-byte block)
 	struct in_data_exchange_response
 	{
 		u8 cmd = response_code(command_code::in_data_exchange);
@@ -130,7 +130,7 @@ private:
 		std::array<u8, mifare_block_size> block{};
 	};
 
-	// PN532 InListPassiveTarget response (one ISO/IEC 14443 Type A target)
+	// InListPassiveTarget response (one ISO/IEC 14443 Type A target)
 	struct in_list_passive_target_response
 	{
 		u8 cmd = response_code(command_code::in_list_passive_target);
@@ -157,7 +157,7 @@ private:
 		return header.len == 0xFF && header.lcs == 0xFF;
 	}
 
-	// Writes a PN532 ACK frame (with preamble and postamble, unless removed) to the out buffer
+	// Writes an ACK frame (with preamble and postamble, unless removed) to the out buffer
 	static inline void append_ack(std::vector<u8>& out, bool remove_pre_and_postamble = false)
 	{
 		if (!remove_pre_and_postamble)
