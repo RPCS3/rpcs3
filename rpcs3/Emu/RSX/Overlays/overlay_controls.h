@@ -37,6 +37,7 @@ namespace rsx
 			ellipse,
 			box,
 			rounded_box,
+			pie,
 		};
 
 		struct image_info_base
@@ -139,6 +140,7 @@ namespace rsx
 				f32 hy {}; // Half-size in Y
 				f32 br {}; // Border radius
 				f32 bw {}; // Border width
+				f32 ca {}; // Cutoff angle in degrees, clockwise from 12
 
 				color4f border_color;
 
@@ -386,6 +388,18 @@ namespace rsx
 		{
 			using rounded_rect::rounded_rect;
 			compiled_resource& get_compiled() override;
+		};
+
+		struct pie : public ellipse
+		{
+			using ellipse::ellipse;
+			compiled_resource& get_compiled() override;
+
+			void set_cutoff_angle(f32 degrees);
+			f32 get_cutoff_angle() const { return m_cutoff_angle; }
+
+		protected:
+			f32 m_cutoff_angle = 0.f;
 		};
 
 		struct image_view : public overlay_element

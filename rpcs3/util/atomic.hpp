@@ -1090,6 +1090,29 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
+#if defined(__ARM_FEATURE_ATOMICS)
+		u64 expected[2], desired[2];
+		std::memcpy(expected, &comp, 16);
+		std::memcpy(desired, &exch, 16);
+		register u64 previous0 __asm__("x4") = expected[0];
+		register u64 previous1 __asm__("x5") = expected[1];
+		register u64 desired0 __asm__("x2") = desired[0];
+		register u64 desired1 __asm__("x3") = desired[1];
+		__asm__ volatile("caspal %x[previous0], %x[previous1], %x[desired0], %x[desired1], %[dest]"
+			: [previous0] "+&r" (previous0), [previous1] "+&r" (previous1), [dest] "+Q" (dest)
+			: [desired0] "r" (desired0), [desired1] "r" (desired1)
+			: "memory"
+		);
+
+		if (previous0 == expected[0] && previous1 == expected[1])
+		{
+			return true;
+		}
+
+		const u64 previous[2] = {previous0, previous1};
+		std::memcpy(&comp, previous, 16);
+		return false;
+#else
 		bool result;
 		u64 cmp[2];
 		std::memcpy(cmp, &comp, 16);
@@ -1117,10 +1140,37 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 		std::memcpy(&comp, prev, 16);
 		return false;
+#endif
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
+#if defined(__ARM_FEATURE_ATOMICS)
+		u64 desired[2];
+		std::memcpy(desired, &value, 16);
+		register u64 previous0 __asm__("x4");
+		register u64 previous1 __asm__("x5");
+		register u64 desired0 __asm__("x2") = desired[0];
+		register u64 desired1 __asm__("x3") = desired[1];
+		u64 cmp0, cmp1;
+		__asm__ volatile("ldp %x[previous0], %x[previous1], %[dest]\n"
+			"1:\n"
+			"mov %x[cmp0], %x[previous0]\n"
+			"mov %x[cmp1], %x[previous1]\n"
+			"caspal %x[previous0], %x[previous1], %x[desired0], %x[desired1], %[dest]\n"
+			"cmp %x[previous0], %x[cmp0]\n"
+			"ccmp %x[previous1], %x[cmp1], #0, eq\n"
+			"b.ne 1b\n"
+			: [previous0] "=&r" (previous0), [previous1] "=&r" (previous1),
+			  [cmp0] "=&r" (cmp0), [cmp1] "=&r" (cmp1), [dest] "+Q" (dest)
+			: [desired0] "r" (desired0), [desired1] "r" (desired1)
+			: "cc", "memory"
+		);
+		const u64 previous[2] = {previous0, previous1};
+		T result;
+		std::memcpy(&result, previous, 16);
+		return result;
+#else
 		u32 tmp;
 		u64 src[2];
 		u64 data[2];
@@ -1136,6 +1186,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 		T result;
 		std::memcpy(&result, data, 16);
 		return result;
+#endif
 	}
 
 	static inline void store(T& dest, T value)

@@ -17,5 +17,12 @@ namespace rsx
 		virtual void set_limit(u32 index, u32 limit);
 		virtual void refresh();
 		virtual void close();
+
+		virtual void enable_hold_to_skip();
+		bool skip_requested() const { return *m_skip_requested; }
+
+	protected:
+		// Shared with the overlay skip callback so a late callback cannot outlive the dialog object
+		std::shared_ptr<atomic_t<bool>> m_skip_requested = std::make_shared<atomic_t<bool>>(false);
 	};
 }
