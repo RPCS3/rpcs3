@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -375,7 +376,7 @@ error_code sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 	return CELL_OK;
 }
 
-error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
+error_code sys_raw_spu_load(ppu_thread& ppu, s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
@@ -386,12 +387,21 @@ error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 		return CELL_ENOENT;
 	}
 
-	sys_spu_image img;
-	img.load(elf_file);
-	img.deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(img.segs.get_ptr(), img.nsegs));
-	img.free();
+	ppu.state += cpu_flag::wait;
 
-	*entry = img.entry_point;
+	sys_spu_image img;
+
+	if (!img.load(elf_file))
+	{
+		return CELL_ENOEXEC;
+	}
+
+	const auto image = idm::withdraw<lv2_obj, lv2_spu_image>(img.entry_point);
+	sys_spu_image::deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(image->segs.get_ptr(), image->nsegs));
+	ensure(vm::dealloc(image->segs.addr()));
+
+	ppu.check_state();
+	*entry = image->e_entry;
 
 	return CELL_OK;
 }
