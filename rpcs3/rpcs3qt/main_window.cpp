@@ -3173,9 +3173,11 @@ void main_window::CreateConnects()
 	connect(ui->confVFSDialogAct, &QAction::triggered, this, [this]()
 	{
 		vfs_dialog dlg(m_gui_settings, this);
-		dlg.exec();
-		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
-		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
+		if (dlg.exec() == QDialog::Accepted)
+		{
+			ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
+			m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
+		}
 	});
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, this, [this]
@@ -3244,9 +3246,14 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, this, [this]
 	{
+		const u32 user_id = Emu.GetUsrId();
 		user_manager_dialog user_manager(m_gui_settings, m_persistent_settings, this);
 		user_manager.exec();
-		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+
+		if (user_id != Emu.GetUsrId() || user_manager.original_user_removed())
+		{
+			m_game_list_frame->Refresh(true); // New user may have different games unlocked.
+		}
 	});
 
 	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]

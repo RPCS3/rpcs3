@@ -500,14 +500,21 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Common/texture_cache.cpp
     RSX/Common/texture_cache_types.cpp
     RSX/Core/RSXContext.cpp
+    RSX/Core/RSXCoreRenderer.cpp
+    RSX/Core/RSXDisplayEngine.cpp
+    RSX/Core/RSXDisplayOutput.cpp
+    RSX/Core/RSXPowerMgmt.cpp
+    RSX/Core/RSXRenderBackend.cpp
+    RSX/Core/RSXRendererFactory.cpp
     RSX/Core/RSXDisplay.cpp
     RSX/Core/RSXDrawCommands.cpp
+    RSX/Core/RSXGraphEngine.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
-    RSX/GSRender.cpp
     RSX/Host/MM.cpp
     RSX/Host/RSXDMAWriter.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/context.cpp
     RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
@@ -553,6 +560,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_osk.cpp
     RSX/Overlays/overlay_osk_panel.cpp
     RSX/Overlays/overlay_perf_metrics.cpp
+    RSX/Overlays/overlay_gauge_button.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
     RSX/Overlays/overlay_select.cpp

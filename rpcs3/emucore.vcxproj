@@ -127,11 +127,23 @@
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXDisplayEngine.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXPowerMgmt.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXRenderBackend.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXRendererFactory.cpp">
+      <AdditionalIncludeDirectories>
+        $(SolutionDir)3rdparty\glslang\glslang\Public;$(SolutionDir)3rdparty\GPUOpen\VulkanMemoryAllocator\include;%(AdditionalIncludeDirectories)
+      </AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXGraphEngine.cpp" />
     <ClCompile Include="Emu\RSX\GSFrameBase.cpp" />
     <ClCompile Include="Emu\RSX\Host\MM.cpp" />
     <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp" />
+    <ClCompile Include="Emu\RSX\NV47\FW\context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\common.cpp" />
@@ -521,6 +533,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_gauge_button.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_save_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp" />
@@ -564,7 +577,6 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\CPU\CPUThread.cpp" />
     <ClCompile Include="Emu\VFS.cpp" />
-    <ClCompile Include="Emu\RSX\GSRender.cpp" />
     <ClCompile Include="Emu\RSX\RSXTexture.cpp" />
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
@@ -709,20 +721,31 @@
     <ClInclude Include="Emu\RSX\Common\time.hpp" />
     <ClInclude Include="Emu\RSX\Common\unordered_map.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXContext.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXContextResources.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDrawCommands.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDriverState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
-    <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp" />
+    <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayEngine.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXPowerMgmt.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXRendererFactory.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXDrawState.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXProgramState.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXRenderBackend.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXTextureState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDisplay.h" />
     <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\Host\MM.h" />
     <ClInclude Include="Emu\RSX\Host\RSXDMAWriter.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.hpp" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.inc.h" />
-    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\reg_context.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\RSXIOMap.hpp" />
     <ClInclude Include="Emu\RSX\NV47\HW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.define.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.undef.h" />
@@ -762,6 +785,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_gauge_button.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_select.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_slider.h" />
@@ -1080,7 +1104,6 @@
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h" />
     <ClInclude Include="Emu\RSX\Program\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
-    <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
     <ClInclude Include="Emu\RSX\Program\RSXFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
@@ -1094,6 +1117,7 @@
     <ClInclude Include="Emu\RSX\Utils\algorithm.hpp" />
     <ClInclude Include="Emu\RSX\Utils\color_utils.hpp" />
     <ClInclude Include="Emu\RSX\Utils\image_utils.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\rsx_serde.hpp" />
     <ClInclude Include="Emu\RSX\Utils\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Emu\perf_meter.hpp" />

@@ -5,6 +5,7 @@
 #include "Utilities/Config.h"
 
 #include <array>
+#include <memory>
 #include <vector>
 
 namespace pad
@@ -159,6 +160,42 @@ struct cfg_pad final : cfg::node
 	cfg::uint<0, 65535> product_id{ this, "Product ID", 0 };
 };
 
+// Input configuration of a pad handler that is currently not in use
+struct cfg_saved_config final : cfg::node
+{
+	cfg_saved_config(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), type(type) {}
+
+	const pad_handler type;
+
+	cfg::string device{ this, "Device", "" };
+	cfg::string buddy_device{ this, "Buddy Device", "" };
+	cfg_pad config{ this, "Config" };
+};
+
+// Contains the input configurations of all pad handlers that are currently not in use, mapped by handler name
+struct cfg_saved_configs final : cfg::node
+{
+	cfg_saved_configs(node* owner, const std::string& name) : cfg::node(owner, name) {}
+
+	// Get the saved config of this handler if it exists
+	cfg_saved_config* find(pad_handler type) const;
+
+	// Get the saved config of this handler. Creates a new one if necessary.
+	cfg_saved_config& add(pad_handler type);
+
+	// Remove the saved config of this handler
+	void remove(pad_handler type);
+
+	// Removes all saved configs. They are only created while parsing a config or when switching handlers.
+	void from_default() override;
+
+	// Creates a saved config while parsing a config
+	cfg::_base* create_node(const std::string& name) override;
+
+private:
+	std::vector<std::unique_ptr<cfg_saved_config>> m_configs;
+};
+
 struct cfg_player final : cfg::node
 {
 	pad_handler def_handler = pad_handler::null;
@@ -170,6 +207,17 @@ struct cfg_player final : cfg::node
 	cfg_pad config{ this, "Config" };
 
 	cfg::string buddy_device{ this, "Buddy Device", handler.to_string() };
+
+	cfg_saved_configs saved_configs{ this, "Saved Configurations" };
+
+	// Save the currently active configuration, so it can be restored if this handler is selected again.
+	// Nothing is saved if the user never configured anything: default settings, no buddy device, and the device
+	// that would be selected automatically anyway. Its name has to be passed in, only the caller knows the
+	// device list. Pass an empty name if there is none.
+	void backup_config(std::string_view default_device);
+
+	// Restore a previously saved configuration of this handler. Returns true if a saved configuration was found.
+	bool restore_config(pad_handler type);
 };
 
 struct cfg_input final : cfg::node

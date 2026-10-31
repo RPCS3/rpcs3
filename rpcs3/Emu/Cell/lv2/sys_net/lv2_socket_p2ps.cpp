@@ -298,22 +298,23 @@ lv2_socket_p2ps::lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type)
 {
 	ar(status, max_backlog, backlog, op_port, op_vport, op_addr, data_beg_seq, received_data, cur_seq);
 
-	usz received_packets = 0;
+	constexpr usz max_buffer_size = MAX_RCVBUF_SIZE;
+
 	for (auto it = received_data.begin(); it != received_data.end();)
 	{
 		const u64 seq_offset = it->first - data_beg_seq;
 		const usz packet_size = it->second.size();
+		const usz packet_cost = get_segment_cost(packet_size);
 
-		// Socket options are not serialized, so only apply the host safety limits while restoring queued data.
-		if (it->first < data_beg_seq || seq_offset > MAX_RECEIVED_BUFFER || packet_size > MAX_RECEIVED_BUFFER - seq_offset ||
-			received_packets >= MAX_RECEIVED_PACKETS || received_data_size >= MAX_RECEIVED_BUFFER || packet_size > MAX_RECEIVED_BUFFER - received_data_size)
+		// Socket options are not serialized, so only apply the maximum receive buffer size while restoring queued data.
+		if (it->first < data_beg_seq || seq_offset > max_buffer_size || packet_size > max_buffer_size - seq_offset ||
+			received_data_size >= max_buffer_size || packet_cost > max_buffer_size - received_data_size)
 		{
 			it = received_data.erase(it);
 			continue;
 		}
 
-		received_data_size += packet_size;
-		received_packets++;
+		received_data_size += packet_cost;
 		it++;
 	}
 
@@ -439,10 +440,17 @@ bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* da
 			{
 				const u64 seq_offset = tcp_header->seq - data_beg_seq;
 				const usz packet_size = tcp_header->length;
-				const usz receive_buffer_size = get_receive_buffer_size();
+				const usz packet_cost = get_segment_cost(packet_size);
+				const usz receive_buffer_size = static_cast<usz>(so_rcvbuf);
+				const u64 next_expected_seq = data_beg_seq + data_available;
 
-				if (seq_offset > receive_buffer_size || packet_size > receive_buffer_size - seq_offset ||
-					received_data.size() >= MAX_RECEIVED_PACKETS || received_data_size >= receive_buffer_size || packet_size > receive_buffer_size - received_data_size)
+				const bool fits_window = seq_offset <= receive_buffer_size && packet_size <= receive_buffer_size - seq_offset;
+				const bool fits_queue = received_data_size < receive_buffer_size && packet_cost <= receive_buffer_size - received_data_size;
+
+				// To avoid deadlocks the next expected segment is always accepted if it fits the window or if no data is available
+				const bool force_accept = tcp_header->seq == next_expected_seq && (fits_window || !data_available);
+
+				if (!force_accept && (!fits_window || !fits_queue))
 				{
 					sys_net.trace("[P2PS] Dropped packet outside the receive window or with a full receive queue");
 				}
@@ -450,7 +458,7 @@ bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* da
 				{
 					// New data
 					received_data.emplace(tcp_header->seq, std::vector<u8>(data, data + packet_size));
-					received_data_size += packet_size;
+					received_data_size += packet_cost;
 				}
 			}
 			else
@@ -522,7 +530,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 		const u16 new_op_vport     = tcp_header->src_port;
 		const u64 new_cur_seq      = send_hdr.seq + 1;
 		const u64 new_data_beg_seq = send_hdr.ack;
-		auto sock_lv2 = make_shared<lv2_socket_p2ps>(native_socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio, static_cast<s32>(get_receive_buffer_size()));
+		auto sock_lv2 = make_shared<lv2_socket_p2ps>(native_socket, port, vport, new_op_addr, new_op_port, new_op_vport, new_cur_seq, new_data_beg_seq, so_nbio, so_rcvbuf);
 		const s32 new_sock_id      = idm::import_existing<lv2_socket>(sock_lv2);
 		sock_lv2->set_lv2_id(new_sock_id);
 		const u64 key_connected = (reinterpret_cast<struct sockaddr_in*>(op_addr)->sin_addr.s_addr) | (static_cast<u64>(tcp_header->src_port) << 48) | (static_cast<u64>(tcp_header->dst_port) << 32);
@@ -916,6 +924,14 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 	u32 left_to_give = to_give;
 	while (left_to_give)
 	{
+		// Segments starting before the current position overlap data that has already been consumed
+		const u64 cur_pos = data_beg_seq + (to_give - left_to_give);
+		for (auto it = received_data.begin(); it != received_data.end() && it->first < cur_pos;)
+		{
+			received_data_size -= get_segment_cost(it->second.size());
+			it = received_data.erase(it);
+		}
+
 		auto& cur_data               = received_data.begin()->second;
 		auto to_give_for_this_packet = std::min(static_cast<u32>(cur_data.size()), left_to_give);
 		memcpy(dest_buf.data() + (to_give - left_to_give), cur_data.data(), to_give_for_this_packet);
@@ -925,7 +941,19 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 			std::vector<u8> new_vec(amount_left);
 			memcpy(new_vec.data(), cur_data.data() + to_give_for_this_packet, amount_left);
 			auto new_key = (received_data.begin()->first) + to_give_for_this_packet;
-			received_data.emplace(new_key, std::move(new_vec));
+
+			// An overlapping segment may already be stored at this key, the leftover replaces it as data_available was computed from it
+			auto [it, inserted] = received_data.try_emplace(new_key);
+			if (!inserted)
+			{
+				received_data_size -= get_segment_cost(it->second.size());
+			}
+			it->second = std::move(new_vec);
+		}
+		else
+		{
+			// The segment is fully consumed, release its overhead (partially consumed segments are replaced by their remainder)
+			received_data_size -= SEGMENT_OVERHEAD;
 		}
 
 		received_data.erase(received_data.begin());
