@@ -815,9 +815,11 @@ error_code cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<Ce
 	return CELL_OK;
 }
 
-error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<void> pMediaInfo, vm::cptr<char> pUri, vm::pptr<CellSailDescriptor> ppDesc)
+error_code cellSailPlayerCreateDescriptor(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, s32 streamType, vm::ptr<void> pMediaInfo, vm::cptr<char> pUri, vm::pptr<CellSailDescriptor> ppDesc)
 {
 	cellSail.todo("cellSailPlayerCreateDescriptor(pSelf=*0x%x, streamType=%d, pMediaInfo=*0x%x, pUri=%s, ppDesc=**0x%x)", pSelf, streamType, pMediaInfo, pUri, ppDesc);
+
+	ppu.state += cpu_flag::wait;
 
 	u32 descriptorAddress = vm::alloc(sizeof(CellSailDescriptor), vm::main);
 	auto descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);

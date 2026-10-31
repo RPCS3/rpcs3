@@ -149,7 +149,7 @@ error_code cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr
 	return CELL_OK;
 }
 
-error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
+error_code cellFontOpenFontFile(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::cptr<char> fontPath, u32 subNum, s32 uniqueId, vm::ptr<CellFont> font)
 {
 	cellFont.todo("cellFontOpenFontFile(library=*0x%x, fontPath=%s, subNum=%d, uniqueId=%d, font=*0x%x)", library, fontPath, subNum, uniqueId, font);
 
@@ -184,7 +184,13 @@ error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char>
 	}
 
 	u32 fileSize = ::size32(f);
+
+	ppu.state += cpu_flag::wait;
+
 	u32 bufferAddr = vm::alloc(fileSize, vm::main); // Freed in cellFontCloseFont
+
+	ppu.check_state();
+
 	f.read(vm::base(bufferAddr), fileSize);
 	s32 ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
@@ -192,7 +198,7 @@ error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char>
 	return ret;
 }
 
-error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+error_code cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
@@ -285,7 +291,7 @@ error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFon
 		return { CELL_FONT_ERROR_NO_SUPPORT_FONTSET, fontType->type };
 	}
 
-	error_code ret = cellFontOpenFontFile(library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
+	error_code ret = cellFontOpenFontFile(ppu, library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
 	font->origin = CELL_FONT_OPEN_FONTSET;
 
 	return ret;
@@ -846,7 +852,7 @@ error_code cellFontGetFontIdCode(vm::ptr<CellFont> font, u32 code, vm::ptr<u32> 
 	return CELL_OK;
 }
 
-error_code cellFontCloseFont(vm::ptr<CellFont> font)
+error_code cellFontCloseFont(ppu_thread& ppu, vm::ptr<CellFont> font)
 {
 	cellFont.todo("cellFontCloseFont(font=*0x%x)", font);
 
@@ -859,7 +865,11 @@ error_code cellFontCloseFont(vm::ptr<CellFont> font)
 		font->origin == CELL_FONT_OPEN_FONT_FILE ||
 		font->origin == CELL_FONT_OPEN_MEMORY)
 	{
+		ppu.state += cpu_flag::wait;
+
 		vm::dealloc(font->fontdata_addr, vm::main);
+
+		ppu.check_state();
 	}
 
 	return CELL_OK;
