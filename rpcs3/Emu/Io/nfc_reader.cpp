@@ -1,10 +1,10 @@
 #include "stdafx.h"
-#include "pn532.h"
+#include "nfc_reader.h"
 #include "usio_types.h"
 
 LOG_CHANNEL(usio_log, "USIO");
 
-bool pn532::verify_request(std::span<const u8> in)
+bool nfc_reader::verify_request(std::span<const u8> in)
 {
 	if (in.size() < ack_frame.size())
 		return false;
@@ -44,7 +44,7 @@ bool pn532::verify_request(std::span<const u8> in)
 	}
 
 	// len covers TFI + data, followed by DCS
-	if (len < 2 || len_checksum != 0x00 || tfi != frame_identifier::host_to_pn532 || in.size() < tfi_offset + len + sizeof(frame_footer::dcs))
+	if (len < 2 || len_checksum != 0x00 || tfi != frame_identifier::to_device || in.size() < tfi_offset + len + sizeof(frame_footer::dcs))
 		return false;
 
 	// TFI + data + DCS
@@ -55,7 +55,7 @@ bool pn532::verify_request(std::span<const u8> in)
 	return data_checksum == 0x00;
 }
 
-void pn532::build_response(std::vector<u8>& out, const std::vector<u8>& in, bool remove_pre_and_postamble)
+void nfc_reader::build_response(std::vector<u8>& out, const std::vector<u8>& in, bool remove_pre_and_postamble)
 {
 	if (!remove_pre_and_postamble)
 		out.push_back(preamble);
@@ -108,7 +108,7 @@ void pn532::build_response(std::vector<u8>& out, const std::vector<u8>& in, bool
 		out.push_back(footer.postamble);
 }
 
-void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, const usio_io_status& status)
+void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, const usio_io_status& status)
 {
 	const std::span<const u8> frame = find_frame(buf);
 
@@ -225,7 +225,7 @@ void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, cons
 	}
 	default:
 	{
-		usio_log.warning("Unhandled pn532 card reader command: 0x%02X", static_cast<u8>(command));
+		usio_log.warning("Unhandled nfc card reader command: 0x%02X", static_cast<u8>(command));
 		build_response(response); // Respond with an error frame
 		break;
 	}
