@@ -13,6 +13,7 @@ enum class native_core_arrangement : u32
 	undefined,
 	generic,
 	intel_ht,
+	intel_hybrid,
 	amd_ccx
 };
 
