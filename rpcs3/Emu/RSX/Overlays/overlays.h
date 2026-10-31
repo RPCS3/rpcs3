@@ -144,6 +144,7 @@ namespace rsx
 
 			virtual void on_button_pressed(pad_button /*button_press*/, bool /*is_auto_repeat*/) {}
 			virtual void on_key_pressed(u32 /*led*/, u32 /*mkey*/, u32 /*key_code*/, u32 /*out_key_code*/, bool /*pressed*/, std::u32string /*key*/) {}
+			virtual void on_button_released(pad_button /*button_released*/) {}
 
 			virtual void close(bool use_callback, bool stop_pad_interception);
 

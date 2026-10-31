@@ -186,8 +186,40 @@ namespace rsx
 		for (auto& info : result.interleaved_blocks)
 		{
 			// Calculate real data address to be used during upload
-			info->real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
+			info->real_offset_address = rsx::get_address(m_ctx, rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info->base_offset), info->memory_location);
 		}
+	}
+
+	std::pair<u32, u32> draw_command_processor::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count) const
+	{
+		u32 persistent_memory_size = 0;
+		u32 volatile_memory_size = 0;
+
+		volatile_memory_size += ::size32(layout.referenced_registers) * 16u;
+
+		if (REGS(m_ctx)->current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			for (const auto &block : layout.interleaved_blocks)
+			{
+				volatile_memory_size += block->attribute_stride * vertex_count;
+			}
+		}
+		else
+		{
+			//NOTE: Immediate commands can be index array only or both index array and vertex data
+			//Check both - but only check volatile blocks if immediate_draw flag is set
+			if (REGS(m_ctx)->current_draw_clause.is_immediate_draw)
+			{
+				for (const auto &info : layout.volatile_blocks)
+				{
+					volatile_memory_size += info.second;
+				}
+			}
+
+			persistent_memory_size = layout.calculate_interleaved_memory_requirements(first_vertex, vertex_count);
+		}
+
+		return std::make_pair(persistent_memory_size, volatile_memory_size);
 	}
 
 	std::span<const std::byte> draw_command_processor::get_raw_index_array(const draw_clause& draw_indexed_clause) const
@@ -202,7 +234,7 @@ namespace rsx
 		const u32 type_size = get_index_type_size(type);
 
 		// Force aligned indices as realhw
-		const u32 address = (0 - type_size) & get_address(REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location());
+		const u32 address = (0 - type_size) & get_address(m_ctx, REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location());
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
@@ -246,7 +278,7 @@ namespace rsx
 		// This whole thing becomes a mess if we don't have a provoking attribute.
 		const auto vertex_id = m_vertex_push_buffers[0].get_vertex_id();
 		m_vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
-		RSX(m_ctx)->m_graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
 	}
 
 	u32 draw_command_processor::get_push_buffer_vertex_count() const
@@ -270,7 +302,7 @@ namespace rsx
 
 	void draw_command_processor::clear_push_buffers()
 	{
-		auto& graphics_state = RSX(m_ctx)->m_graphics_state;
+		auto& graphics_state = m_ctx->graphics_state;
 		if (graphics_state & rsx::pipeline_state::push_buffer_arrays_dirty)
 		{
 			for (auto& push_buf : m_vertex_push_buffers)
@@ -583,6 +615,35 @@ namespace rsx
 		utils::stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
 		utils::stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
 		utils::stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
+	}
+
+	void draw_command_processor::fill_vertex_env(void* buffer, f32 point_scale) const
+	{
+		const auto buf = static_cast<u8*>(buffer);
+		fill_scale_offset_data(buf, false);
+		fill_user_clip_data(buf + 64);
+		*(reinterpret_cast<u32*>(buf + 68)) = REGS(m_ctx)->transform_branch_bits();
+		*(reinterpret_cast<f32*>(buf + 72)) = REGS(m_ctx)->point_size() * point_scale;
+		*(reinterpret_cast<f32*>(buf + 76)) = REGS(m_ctx)->clip_min();
+		*(reinterpret_cast<f32*>(buf + 80)) = REGS(m_ctx)->clip_max();
+	}
+
+	void draw_command_processor::fill_interpreter_vertex_header(void* buffer) const
+	{
+		const auto& vertex_program = m_ctx->program.vertex_program;
+		const auto header = static_cast<u32*>(buffer);
+		header[0] = vertex_program.base_address;
+		header[1] = vertex_program.entry;
+		header[2] = vertex_program.output_mask;
+		header[3] = REGS(m_ctx)->two_side_light_en() ? 1u : 0u;
+	}
+
+	void draw_command_processor::fill_interpreter_fragment_header(void* buffer) const
+	{
+		const auto header = static_cast<u32*>(buffer);
+		header[0] = REGS(m_ctx)->shader_control();
+		header[1] = m_ctx->program.fragment_program.texture_state.texture_dimensions;
+		header[2] = m_ctx->program.fp_metadata.referenced_textures_mask;
 	}
 
 	void draw_command_processor::fill_user_clip_data(void* buffer) const

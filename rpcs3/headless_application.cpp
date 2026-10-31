@@ -2,7 +2,8 @@
 
 #include "Emu/emu_callbacks.h"
 #include "Emu/system_config.h"
-#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/Core/RSXRendererFactory.h"
+#include "Emu/RSX/GSFrameBase.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
@@ -74,7 +75,7 @@ void headless_application::create_callbacks()
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
+			rsx::create_render_thread(ar);
 			break;
 		}
 		case video_renderer::opengl:

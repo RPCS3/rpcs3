@@ -29,6 +29,10 @@ protected:
 
 	virtual void create_callbacks();
 
+	// Only call from main thread.
+	// It is useful when replacing the game window without restarting the game.
+	void attach_input_to_game_window();
+
 	std::shared_ptr<render_creator> m_render_creator;
 	std::string m_active_user;
 	gs_frame* m_game_window = nullptr;
