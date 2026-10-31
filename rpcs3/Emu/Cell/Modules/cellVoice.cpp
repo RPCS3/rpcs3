@@ -60,7 +60,6 @@ namespace
 	constexpr u32 tick_samples = voice_service::tick_samples;
 	constexpr u64 tick_usec = voice_service::tick_usec;
 
-	constexpr u32 max_in_voice_frames = 25;     // IN_VOICE: what it keeps at most (latency)
 	constexpr u32 in_voice_prebuffer_ticks = 3; // IN_VOICE: how long it waits for more after silence (jitter)
 	constexpr u32 max_in_voice_bytes = 8192;    // IN_VOICE: what a write may queue
 	constexpr u32 max_out_voice_frames = 50;    // OUT_VOICE: what it keeps for the game at most
@@ -608,12 +607,8 @@ void voice_service::decode_voice(const voice_manager::port_t& port, port_data& d
 	const auto& cfg = *voice_config(d.codec_bitrate);
 	const u32 frame_bytes = cfg.bytes;
 
-	// Latency: keep the newest frames
-	if (d.bytes.size() > usz{max_in_voice_frames} * frame_bytes)
-	{
-		const usz drop = (d.bytes.size() - usz{max_in_voice_frames} * frame_bytes + frame_bytes - 1) / frame_bytes * frame_bytes;
-		d.bytes.erase(d.bytes.begin(), d.bytes.begin() + std::min(drop, d.bytes.size()));
-	}
+	// Games can deliver many frames in one network burst. Preserve accepted data;
+	// write() already bounds the input queue and reports how many bytes fit.
 
 	if (!d.playing)
 	{

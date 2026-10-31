@@ -895,3 +895,85 @@ TEST_F(CellVoiceAsync, OutputAvailabilityReportsReadableBytes)
 	EXPECT_EQ(service.read(manager, port, pcm_output, output.data(), static_cast<u32>(output.size())), output.size());
 	EXPECT_EQ(service.port_buffer_available(port, pcm_output), 0u);
 }
+
+TEST_F(CellVoiceAsync, OneSecondNarrowbandBurstsDoNotAlternateSpeechAndSilence)
+{
+	add_decoder();
+	manager.ports[pcm_output] = make_port(CELLVOICE_PORTTYPE_OUT_PCMAUDIO);
+	service.edges.emplace(encoded_input_port, pcm_output);
+	u32 decoded_frames = 0, silent_periods = 0;
+	constexpr u32 burst_periods = 50, bursts = 3, startup_periods = 3;
+	for (u32 period = 0; period < bursts * burst_periods + startup_periods; period++)
+	{
+		if (period < bursts * burst_periods && period % burst_periods == 0)
+			write_packet(encoded_input_port, packet(1, burst_periods * packet_bytes));
+		tick();
+		std::array<be_t<s16>, voice_service::tick_samples> output{};
+		ASSERT_EQ(service.read(manager, manager.ports.at(pcm_output), pcm_output,
+			reinterpret_cast<u8*>(output.data()), sizeof(output)), sizeof(output));
+		if (period >= startup_periods && std::none_of(output.begin(), output.end(), [](be_t<s16> v) { return std::abs(static_cast<s16>(v)) > 100; }))
+			silent_periods++;
+		for (const auto& job : take_requests())
+		{
+			decoded_frames++;
+			service.commit(manager, decoded(job));
+		}
+	}
+	EXPECT_EQ(decoded_frames, bursts * burst_periods);
+	EXPECT_EQ(silent_periods, 0u);
+	EXPECT_EQ(service.bytes_queued(encoded_input_port), 0u);
+}
+
+TEST_F(CellVoiceAsync, BurstReceptionPreservesEveryFrameAndPartialTailAtAllRates)
+{
+	for (const auto bitrate : {CELLVOICE_BITRATE_3850, CELLVOICE_BITRATE_4650, CELLVOICE_BITRATE_5700, CELLVOICE_BITRATE_7300,
+		CELLVOICE_BITRATE_14400, CELLVOICE_BITRATE_16000, CELLVOICE_BITRATE_22533})
+	{
+		SCOPED_TRACE(bitrate);
+		service.clear();
+		manager.ports.clear();
+		add_decoder();
+		manager.ports.at(encoded_input_port).info.voice.bitrate = bitrate;
+		const auto& cfg = *voice_firmware::find_config(bitrate);
+		constexpr u32 burst_periods = 60, bursts = 3, startup_periods = 3;
+		const u32 frame_samples = cfg.samples * voice_service::rate / cfg.sample_rate;
+		const u32 frames_per_burst = burst_periods * voice_service::tick_samples / frame_samples;
+		u32 submitted_frames = 0, decoded_frames = 0, silent_periods = 0;
+		std::vector<u8> tail;
+		for (u32 period = 0; period < bursts * burst_periods + startup_periods; period++)
+		{
+			if (!tail.empty())
+			{
+				write_packet(encoded_input_port, tail);
+				tail.clear();
+			}
+			if (period < bursts * burst_periods && period % burst_periods == 0)
+			{
+				std::vector<u8> batch;
+				for (u32 i = 0; i < frames_per_burst; i++)
+				{
+					const auto frame = packet(static_cast<u8>(submitted_frames++), cfg.bytes);
+					batch.insert(batch.end(), frame.begin(), frame.end());
+				}
+				// Leave the final frame incomplete until the next service tick.
+				tail.assign(batch.end() - (cfg.bytes - 1), batch.end());
+				batch.resize(batch.size() - tail.size());
+				write_packet(encoded_input_port, batch);
+			}
+			tick();
+			const auto& signal = service.data.at(encoded_input_port).signal;
+			if (period >= startup_periods && std::none_of(signal.begin(), signal.end(), [](f32 v) { return std::abs(v) > 100.0f; }))
+				silent_periods++;
+			for (const auto& job : take_requests())
+			{
+				EXPECT_EQ(job.packet, packet(static_cast<u8>(decoded_frames++), cfg.bytes));
+				service.commit(manager, decoded(job));
+			}
+		}
+		EXPECT_EQ(decoded_frames, submitted_frames);
+		EXPECT_EQ(silent_periods, 0u);
+		EXPECT_EQ(service.bytes_queued(encoded_input_port), 0u);
+		EXPECT_EQ(service.data.at(encoded_input_port).codec_pending, 0u);
+		EXPECT_TRUE(service.data.at(encoded_input_port).pcm.empty());
+	}
+}
