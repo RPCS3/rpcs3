@@ -17,6 +17,11 @@ R"(
 #define SDF_ELLIPSE   1
 #define SDF_BOX       2
 #define SDF_ROUND_BOX 3
+#define SDF_PIE       4
+
+#define PI                 3.14159265f
+#define RADIANS_TO_DEGREES (180.f / PI)
+#define DEGREES_TO_RADIANS (PI / 180.f)
 
 #ifdef VULKAN
 	layout(set=0, binding=0) uniform sampler2D fs0;
@@ -40,7 +45,7 @@ layout(%push_block) uniform FragmentConfiguration
 	float timestamp;
 	float blur_intensity;
 	vec4 sdf_params;
-	vec4 sdf_origin;
+	vec4 sdf_origin;                                         // xy = origin, z = cutoff angle in degrees (pie)
 	vec4 sdf_border_color;
 };
 #else
@@ -48,7 +53,7 @@ layout(%push_block) uniform FragmentConfiguration
 	uniform float timestamp;
 	uniform float blur_intensity;
 	uniform vec4 sdf_params;
-	uniform vec2 sdf_origin;
+	uniform vec4 sdf_origin;                                 // xy = origin, z = cutoff angle in degrees (pie)
 	uniform vec4 sdf_border_color;
 #endif
 
@@ -66,7 +71,7 @@ config_t unpack_fragment_options()
 	result.clip_fragments = bitfieldExtract(fragment_config, 0, 1) != 0;
 	result.use_pulse_glow = bitfieldExtract(fragment_config, 1, 1) != 0;
 	result.sampler_mode = bitfieldExtract(fragment_config, 2, 2);
-	result.sdf = bitfieldExtract(fragment_config, 4, 2);
+	result.sdf = bitfieldExtract(fragment_config, 4, 3);
 	return result;
 }
 
@@ -103,6 +108,7 @@ float SDF_fn(const in uint sdf)
 	switch (sdf)
 	{
 	case SDF_ELLIPSE:
+	case SDF_PIE: // The angular cutoff is applied as a post-SDF effect
 		// Slightly inaccurate hack, but good enough for classification and allows oval shapes
 		d = length(p / hs) - 1.f;
 		// Now we need to correct for the border because the circle was scaled down to a unit
@@ -122,6 +128,39 @@ float SDF_fn(const in uint sdf)
 	default:
 		return -1.f;
 	}
+}
+
+// Angular mask for SDF_PIE. The wedge starts vertical and sweeps clockwise up to the cutoff angle.
+float SDF_pie_coverage()
+{
+	const float cutoff = sdf_origin.z;
+	if (cutoff >= 360.f)
+	{
+		// Full circle. The start and end edges would otherwise meet at 12 o'clock and leave a seam.
+		return 1.f;
+	}
+
+	vec2 v = floor(gl_FragCoord.xy) - sdf_origin.xy;
+
+	// The angle math assumes Y-up. Vulkan framebuffer Y points down.
+#ifdef VULKAN
+	v.y = -v.y;
+#endif
+
+	// Angle between up = (0, 1) and v. The cross-product is reversed (v x up) so that positive rotation is clockwise.
+	float theta = (v.x == 0.f && v.y == 0.f) ? 0.f : atan(v.x, v.y);
+	theta = (theta < 0.f) ? (theta + 2.f * PI) : theta;  // No negative rotations please
+	theta *= RADIANS_TO_DEGREES;                         // RAD2DEG so humans can visualize
+
+	// Turn the cutoff into a distance so the cut edges get anti-aliased.
+	const float half_angle = cutoff * 0.5f;
+	float delta = theta - half_angle;
+	delta = (delta > 180.f) ? (delta - 360.f) : delta;
+
+	// Arc length to the nearest cut edge
+	const float a = (abs(delta) - half_angle) * DEGREES_TO_RADIANS * length(v);
+	const float fw = fwidth(a);
+	return smoothstep(fw, -fw, a);
 }
 
 vec4 blur_sample(sampler2D tex, vec2 coord, vec2 tex_offset)
@@ -197,6 +236,11 @@ void main()
 		const float border_w = sdf_params.w; // Border width
 		const float d = SDF_fn(config.sdf);
 		diff_color = SDF_blend(d, border_w, diff_color, sdf_border_color, vec4(0.));
+
+		if (config.sdf == SDF_PIE)
+		{
+			diff_color *= SDF_pie_coverage();
+		}
 	}
 
 	switch (config.sampler_mode)

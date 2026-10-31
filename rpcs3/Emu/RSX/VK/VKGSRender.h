@@ -252,6 +252,9 @@ private:
 	vk::vertex_upload_info upload_vertex_data();
 	rsx::simple_array<u8> m_scratch_mem;
 
+	// Warm the shader interpreter and the on-disk pipeline cache
+	void preload_shaders();
+
 	bool load_program();
 	void load_program_env();
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
