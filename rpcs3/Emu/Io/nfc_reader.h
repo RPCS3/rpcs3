@@ -15,8 +15,23 @@ struct usio_io_status;
 class nfc_reader
 {
 public:
+	// ACK frame (without preamble and postamble)
+	static constexpr std::array<u8, 4> ack_frame = {0x00, 0xFF, 0x00, 0xFF};
+
 	// Writes a response to out
-	static void write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, const usio_io_status& status);
+	static void write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, usio_io_status& status);
+
+	// Writes an ACK frame (with preamble and postamble, unless removed) to the out buffer
+	static inline void write_ack(std::vector<u8>& out, bool remove_pre_and_postamble = false)
+	{
+		if (!remove_pre_and_postamble)
+			out.push_back(preamble);
+
+		out.insert(out.end(), ack_frame.begin(), ack_frame.end());
+
+		if (!remove_pre_and_postamble)
+			out.push_back(postamble);
+	}
 
 private:
 	// Frames are wrapped in a preamble and a postamble byte, which are optional when receiving
@@ -26,8 +41,8 @@ private:
 	// Start code of every frame
 	static constexpr std::array<u8, 2> start_code = {0x00, 0xFF};
 
-	// ACK frame (without preamble and postamble)
-	static constexpr std::array<u8, 4> ack_frame = {0x00, 0xFF, 0x00, 0xFF};
+	// NACK frame (without preamble and postamble)
+	static constexpr std::array<u8, 4> nack_frame = {0x00, 0xFF, 0xFF, 0x00};
 
 	// Error frame (application level error, e.g. syntax error) (without preamble and postamble)
 	static constexpr std::array<u8, 6> error_frame = {0x00, 0xFF, 0x01, 0xFF, 0x7F, 0x81};
@@ -157,18 +172,6 @@ private:
 	{
 		const auto header = read_from_ptr<frame_header>(frame);
 		return header.len == 0xFF && header.lcs == 0xFF;
-	}
-
-	// Writes an ACK frame (with preamble and postamble, unless removed) to the out buffer
-	static inline void append_ack(std::vector<u8>& out, bool remove_pre_and_postamble = false)
-	{
-		if (!remove_pre_and_postamble)
-			out.push_back(preamble);
-
-		out.insert(out.end(), ack_frame.begin(), ack_frame.end());
-
-		if (!remove_pre_and_postamble)
-			out.push_back(postamble);
 	}
 
 	// Expects a frame starting at the start code (see find_frame), the postamble is optional

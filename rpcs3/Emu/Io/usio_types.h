@@ -86,6 +86,8 @@ struct usio_io_status
 	bool test_key_pressed = false;
 	bool coin_key_pressed = false;
 	bool card_tapped = false;
+	bool nfc_reader_send_ack = false;
+	bool nfc_reader_send_response = false;
 	le_t<u16> coin_counter = 0;
 	usz card_index = 0;
 	s8 vital_sensors[2] = {0, 0};

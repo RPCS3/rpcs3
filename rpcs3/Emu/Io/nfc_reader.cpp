@@ -12,7 +12,8 @@ bool nfc_reader::verify_request(std::span<const u8> in)
 	if (!std::equal(start_code.begin(), start_code.end(), in.begin()))
 		return false;
 
-	if (std::equal(ack_frame.begin(), ack_frame.end(), in.begin())) // Further checks are not applicable for ACK, so simply return true if it is an ACK packet
+	if (std::equal(ack_frame.begin(), ack_frame.end(), in.begin()) ||
+		std::equal(nack_frame.begin(), nack_frame.end(), in.begin())) // Further checks are not applicable for ACK and NACK, so simply return true
 		return true;
 
 	if (in.size() < sizeof(frame_header))
@@ -108,7 +109,7 @@ void nfc_reader::build_response(std::vector<u8>& out, const std::vector<u8>& in,
 		out.push_back(postamble);
 }
 
-void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, const usio_io_status& status)
+void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, usio_io_status& status)
 {
 	const std::span<const u8> frame = find_frame(buf);
 
@@ -116,8 +117,16 @@ void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response,
 		return;
 
 	// In case NACK is received, the pending response should be retransmitted.
-	// So only clear the pending response buffer when a new legitimate request or ACK, both of which can be verified by verify_request(), is received.
+	// So only clear the pending response buffer when a new legitimate request or ACK is received.
+	if (std::equal(nack_frame.begin(), nack_frame.end(), frame.begin()))
+	{
+		status.nfc_reader_send_response = true; // Only retransmit the actual response; do not retransmit ACK
+		return;
+	}
+
 	response.clear();
+	status.nfc_reader_send_ack = false;
+	status.nfc_reader_send_response = false;
 
 	// Do not respond to ACK
 	if (std::equal(ack_frame.begin(), ack_frame.end(), frame.begin()))
@@ -127,8 +136,6 @@ void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response,
 	const usz data_offset = is_extended ? sizeof(extended_frame_header) : sizeof(frame_header);
 	const usz data_len = (is_extended ? static_cast<usz>(read_from_ptr<extended_frame_header>(frame).len) : static_cast<usz>(read_from_ptr<frame_header>(frame).len)) - 1; // Excluding TFI
 	const std::span<const u8> payload = frame.subspan(data_offset, data_len); // data_offset + data_len boundary check is done in verify_request()
-
-	append_ack(response);
 
 	const auto command = static_cast<command_code>(::at32(payload, 0));
 	const u8 res = response_code(command);
@@ -230,4 +237,7 @@ void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response,
 		break;
 	}
 	}
+
+	status.nfc_reader_send_ack = true;
+	status.nfc_reader_send_response = true;
 }
