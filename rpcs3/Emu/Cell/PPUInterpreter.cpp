@@ -351,7 +351,7 @@ struct ppu_abstract_t
 	} sat{};
 };
 
-extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
+extern void do_cell_atomic_128_store(u32 addr, const void* to_write, bool lock_rsx = true);
 
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
 
