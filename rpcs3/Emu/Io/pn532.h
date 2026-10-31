@@ -157,19 +157,24 @@ private:
 		return header.len == 0xFF && header.lcs == 0xFF;
 	}
 
-	// Writes a PN532 ACK frame (with preamble and postamble) to the out buffer
-	static inline void append_ack(std::vector<u8>& out)
+	// Writes a PN532 ACK frame (with preamble and postamble, unless removed) to the out buffer
+	static inline void append_ack(std::vector<u8>& out, bool remove_pre_and_postamble = false)
 	{
-		out.push_back(preamble);
+		if (!remove_pre_and_postamble)
+			out.push_back(preamble);
+
 		out.insert(out.end(), ack_frame.begin(), ack_frame.end());
-		out.push_back(postamble);
+
+		if (!remove_pre_and_postamble)
+			out.push_back(postamble);
 	}
 
 	// Expects a frame starting at the start code (see find_frame), the postamble is optional
 	static bool verify_request(std::span<const u8> in);
 
 	// Appends to out, which already contains the ACK frame
-	static void build_response(std::vector<u8>& out, const std::vector<u8>& in = {});
+	// The preamble and postamble can be removed with the fRemovePrePost flag of SetParameters
+	static void build_response(std::vector<u8>& out, const std::vector<u8>& in = {}, bool remove_pre_and_postamble = false);
 
 	static_assert(sizeof(frame_header) == 5);
 	static_assert(sizeof(extended_frame_header) == 8);

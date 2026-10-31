@@ -55,14 +55,18 @@ bool pn532::verify_request(std::span<const u8> in)
 	return data_checksum == 0x00;
 }
 
-void pn532::build_response(std::vector<u8>& out, const std::vector<u8>& in)
+void pn532::build_response(std::vector<u8>& out, const std::vector<u8>& in, bool remove_pre_and_postamble)
 {
-	out.push_back(preamble);
+	if (!remove_pre_and_postamble)
+		out.push_back(preamble);
 
 	if (in.empty())
 	{
 		out.insert(out.end(), error_frame.begin(), error_frame.end());
-		out.push_back(postamble);
+
+		if (!remove_pre_and_postamble)
+			out.push_back(postamble);
+
 		return;
 	}
 
@@ -98,7 +102,10 @@ void pn532::build_response(std::vector<u8>& out, const std::vector<u8>& in)
 		footer.dcs -= data;
 	}
 
-	append(footer);
+	out.push_back(footer.dcs);
+
+	if (!remove_pre_and_postamble)
+		out.push_back(footer.postamble);
 }
 
 void pn532::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, const usio_io_status& status)
