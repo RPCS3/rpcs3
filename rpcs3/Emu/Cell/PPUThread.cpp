@@ -180,7 +180,7 @@ extern shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static void ppu_break(ppu_thread&, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*);
 
-extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
+extern void do_cell_atomic_128_store(u32 addr, const void* to_write, bool lock_rsx = true);
 
 const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway", [](native_asm& c, auto& args)
 {
