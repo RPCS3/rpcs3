@@ -8,6 +8,7 @@
 
 namespace rsx
 {
+	struct context;
 	struct shader_loading_dialog;
 }
 
@@ -121,14 +122,22 @@ namespace gl
 
 		std::shared_ptr<interpreter::cached_program> m_current_interpreter;
 
+		rsx::context* m_ctx = nullptr;
+
 	public:
 		shader_interpreter()
 		{
 			std::memset(&m_texture_bindings, 0, sizeof(m_texture_bindings));
 		}
 
-		void create(rsx::shader_loading_dialog* dlg);
+		void create(rsx::context* ctx);
 		void destroy();
+
+		// Preload the cache
+		void preload(rsx::shader_loading_dialog* dlg);
+
+		// Follows the backend's bound context
+		void set_context(rsx::context* ctx) { m_ctx = ctx; }
 
 		// Update texture bindings based on the incoming descriptor structures
 		void bind_fragment_texture(int i, handle64_t handle, const rsx::sampled_image_descriptor_base& descriptor);

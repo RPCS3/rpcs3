@@ -192,7 +192,7 @@ namespace rsx
 			const u32 src_line_length = (std::min<u32>(in_w, in_x + static_cast<u32>(std::ceil(clip_w / scale_x))) * in_bpp);
 
 			u32 src_address = 0;
-			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
+			const u32 dst_address = get_address(ctx, dst_offset, dst_dma, 1); // TODO: Add size
 
 			if (!dst_address)
 			{
@@ -206,7 +206,7 @@ namespace rsx
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
+				if (src_address = get_address(ctx, src_offset, src_dma, data_length); !src_address)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address for in block transfer (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
@@ -230,7 +230,7 @@ namespace rsx
 				const u16 read_h = std::max<u16>(std::min(static_cast<u16>(clip_h / scale_y), in_h), 1);
 				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
+				if (src_address = get_address(ctx, src_offset, src_dma, data_length); !src_address)
 				{
 					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
@@ -591,7 +591,7 @@ namespace rsx
 
 			if (!g_cfg.video.force_cpu_blit_processing &&
 				(dst.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) &&
-				RSX(ctx)->scaled_image_from_memory(src, dst, in_inter == blit_engine::transfer_interpolator::foh))
+				RSX(ctx)->renderer()->scaled_image_from_memory(src, dst, in_inter == blit_engine::transfer_interpolator::foh))
 			{
 				// HW-accelerated blit
 				return;

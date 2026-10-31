@@ -54,7 +54,7 @@ namespace rsx
 
 			fragment_options& set_sdf(sdf_function func)
 			{
-				value &= ~(0x3 << e_offsets::sdf_func_offset_bit);
+				value &= ~(0x7 << e_offsets::sdf_func_offset_bit);
 				value |= (static_cast<u32>(func) << e_offsets::sdf_func_offset_bit);
 				return *this;
 			}

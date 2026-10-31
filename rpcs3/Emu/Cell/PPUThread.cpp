@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Utilities/ppu_patch.h"
 #include "Utilities/JIT.h"
 #include "Utilities/StrUtil.h"
 #include "util/serialization.hpp"
@@ -180,7 +181,7 @@ extern shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static void ppu_break(ppu_thread&, ppu_opcode_t, be_t<u32>*, ppu_intrp_func*);
 
-extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
+extern void do_cell_atomic_128_store(u32 addr, const void* to_write, bool lock_rsx = true);
 
 const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway", [](native_asm& c, auto& args)
 {
@@ -1070,6 +1071,19 @@ struct ppu_far_jumps_t
 	}
 };
 
+bool ppu_has_far_jump(u32 addr, u32 size)
+{
+	if (!g_fxo->is_init<ppu_far_jumps_t>())
+	{
+		return false;
+	}
+
+	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
+	reader_lock lock(jumps.mutex);
+	const auto it = jumps.vals.lower_bound(addr);
+	return it != jumps.vals.end() && it->first - addr < size;
+}
+
 u32 ppu_get_far_jump(u32 pc)
 {
 	if (!g_fxo->is_init<ppu_far_jumps_t>())
@@ -1164,12 +1178,12 @@ bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc)
 
 bool ppu_form_branch_to_code(u32 entry, u32 target, bool link)
 {
-	return ppu_form_branch_to_code(entry, target, link, false);
+	return ppu_form_branch_to_code(entry, target, link, false, std::string{});
 }
 
 bool ppu_form_branch_to_code(u32 entry, u32 target)
 {
-	return ppu_form_branch_to_code(entry, target, false);
+	return ppu_form_branch_to_code(entry, target, false, false, std::string{});
 }
 
 void ppu_remove_hle_instructions(u32 addr, u32 size)
@@ -4747,6 +4761,194 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	exec_worker();
 }
 
+// Compile each startup calloc helper after validating its reachable instructions.
+static void ppu_initialize_patch_helpers()
+{
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm || !g_fxo->is_init<ppu_patch_block_registry_t>())
+	{
+		return;
+	}
+
+	const auto& ranges = g_fxo->get<ppu_patch_block_registry_t>().code_ranges;
+
+	for (const auto& [start, size, patch] : ranges)
+	{
+		if (Emu.IsStopped())
+		{
+			return;
+		}
+
+		if (!size || start % 4 || size % 4 || u64(start) + size > u32{umax} ||
+			!vm::check_addr(start, vm::page_executable, size))
+		{
+			continue;
+		}
+
+		const u32 end = start + size;
+		enum : u8 { entry = 1, reachable = 2, exit = 4, hook = 8, link = 16 };
+		struct instruction
+		{
+			u32 target = 0;
+			u8 flags = 0;
+		};
+		std::vector<instruction> instructions(size / 4);
+
+		if (g_fxo->is_init<ppu_far_jumps_t>())
+		{
+			auto& jumps = g_fxo->get<ppu_far_jumps_t>();
+			reader_lock lock(jumps.mutex);
+
+			for (auto it = jumps.vals.lower_bound(start); it != jumps.vals.end() && it->first < end; ++it)
+			{
+				const auto& jump = it->second;
+				const bool direct = !jump.with_toc && jump.module_name.empty();
+				auto& inst = instructions[(it->first - start) / 4];
+				inst.target = direct ? jump.target : u32{umax};
+				inst.flags = hook | ((jump.link || !direct) ? link : 0);
+			}
+		}
+
+		std::vector<u32> pending;
+
+		auto enqueue = [&](u32 addr)
+		{
+			if (addr >= start && addr < end && addr % 4 == 0 && !(instructions[(addr - start) / 4].flags & entry))
+			{
+				instructions[(addr - start) / 4].flags |= entry;
+				pending.emplace_back(addr);
+			}
+		};
+
+		enqueue(start);
+
+		for (usz i = 0; i < pending.size(); i++)
+		{
+			for (u32 pc = pending[i]; pc < end; pc += 4)
+			{
+				auto& inst = instructions[(pc - start) / 4];
+				if (inst.flags & hook)
+				{
+					enqueue(inst.target);
+
+					if (inst.flags & link)
+					{
+						enqueue(pc + 4);
+					}
+
+					break;
+				}
+
+				const ppu_opcode_t op{vm::read32(pc)};
+				const auto type = g_ppu_itype.decode(op.opcode);
+
+				// calloc helpers must use instructions supported by the LLVM translator.
+				switch (type)
+				{
+				case ppu_itype::SC:
+					if (op.opcode == ppu_instructions::SC(0))
+					{
+						break;
+					}
+					[[fallthrough]];
+				case ppu_itype::UNK:
+				case ppu_itype::ECIWX:
+				case ppu_itype::ECOWX:
+				case ppu_itype::LSWX:
+				case ppu_itype::STSWX:
+				case ppu_itype::SUBFCO:
+				case ppu_itype::SUBFCO_:
+				case ppu_itype::SUBFEO:
+				case ppu_itype::SUBFEO_:
+				case ppu_itype::ADDEO:
+				case ppu_itype::ADDEO_:
+				case ppu_itype::ADDZEO:
+				case ppu_itype::ADDZEO_:
+				case ppu_itype::SUBFZEO:
+				case ppu_itype::SUBFZEO_:
+				case ppu_itype::SUBFMEO:
+				case ppu_itype::SUBFMEO_:
+				case ppu_itype::MULLDO:
+				case ppu_itype::MULLDO_:
+				case ppu_itype::ADDMEO:
+				case ppu_itype::ADDMEO_:
+				case ppu_itype::MULLWO:
+				case ppu_itype::MULLWO_:
+				{
+					fmt::throw_exception("Unsupported calloc instruction 0x%08x at 0x%x (helper 0x%x, patch '%s')",
+						op.opcode, pc, start, patch);
+				}
+				default: break;
+				}
+
+				if (inst.flags & reachable)
+				{
+					break;
+				}
+
+				inst.flags |= reachable;
+
+				const bool direct_branch = type == ppu_itype::B || type == ppu_itype::BC;
+				const bool indirect_branch = type == ppu_itype::BCLR || type == ppu_itype::BCCTR;
+				const bool exception = type == ppu_itype::SC || (type & ppu_itype::trap);
+				if (direct_branch)
+				{
+					enqueue((op.aa ? 0 : pc) + (type == ppu_itype::B ? +op.bt24 : +op.bt14));
+				}
+
+				if (direct_branch || indirect_branch || exception)
+				{
+					// Calls, conditional branches and exceptions may resume at the next instruction.
+					if (exception || op.lk || (type != ppu_itype::B && (op.bo & 0x14) != 0x14))
+					{
+						enqueue(pc + 4);
+					}
+					inst.flags |= exit;
+					break;
+				}
+			}
+		}
+
+		ppu_module<lv2_obj> helper;
+		helper.name = fmt::format("patch-helper-%x", start);
+		helper.cache = rpcs3::utils::get_cache_dir() + "patches/";
+		if (!fs::create_path(helper.cache))
+		{
+			fmt::throw_exception("Failed to create cache directory: %s (%s)", helper.cache, fs::g_tls_error);
+		}
+		helper.segs.push_back({start, size, 1, 5, size, vm::base(start)});
+		helper.addr_to_seg_index.emplace(start, 0);
+
+		for (u32 i = 0; i < instructions.size();)
+		{
+			if (!(instructions[i].flags & reachable))
+			{
+				i++;
+				continue;
+			}
+
+			ppu_function func;
+			func.addr = start + i * 4;
+			do
+			{
+				func.size += 4;
+				if ((instructions[i++].flags & exit) || i == instructions.size() ||
+					!(instructions[i].flags & reachable) || (instructions[i].flags & entry))
+				{
+					break;
+				}
+			}
+			while (true);
+			helper.funcs.emplace_back(std::move(func));
+		}
+
+		if (!helper.funcs.empty())
+		{
+			ppu_log.notice("Compiling allocated patch helper at 0x%x: %u blocks", start, helper.funcs.size());
+			ppu_initialize(helper);
+		}
+	}
+}
+
 extern void ppu_initialize()
 {
 	if (!g_fxo->is_init<main_ppu_module<lv2_obj>>())
@@ -4886,6 +5088,8 @@ extern void ppu_initialize()
 
 		ppu_initialize(*ptr);
 	}
+
+	ppu_initialize_patch_helpers();
 }
 
 template <u32 (*Estimate)(u32, bool)>

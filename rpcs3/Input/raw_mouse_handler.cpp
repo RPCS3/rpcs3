@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "raw_mouse_handler.h"
 
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/GSFrameBase.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Io/interception.h"
 #include "Input/raw_mouse_config.h"
@@ -109,9 +109,9 @@ raw_mouse::mouse_button raw_mouse::get_mouse_button(const cfg::string& button)
 void raw_mouse::update_window_handle()
 {
 #ifdef _WIN32
-	if (GSRender* render = static_cast<GSRender*>(g_fxo->try_get<rsx::thread>()))
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
-		if (GSFrameBase* frame = render->get_frame())
+		if (GSFrameBase* frame = rsx->display().frame())
 		{
 			if (display_handle_t window_handle = frame->handle(); window_handle && window_handle == GetActiveWindow())
 			{
