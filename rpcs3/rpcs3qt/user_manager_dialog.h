@@ -19,6 +19,8 @@ class user_manager_dialog : public QDialog
 public:
 	explicit user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
 
+	bool original_user_removed() const { return m_original_user_removed; }
+
 Q_SIGNALS:
 	void OnUserLoginSuccess();
 
@@ -27,6 +29,7 @@ private Q_SLOTS:
 	void OnUserCreate();
 	void OnUserRemove();
 	void OnUserRename();
+	void OnUserAvatar();
 	void OnSort(int logicalIndex);
 
 protected:
@@ -47,6 +50,7 @@ private:
 
 	QTableWidget* m_table = nullptr;
 	std::string m_active_user;
+	std::string m_original_user;
 	std::map<u32, user_account> m_user_list;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
@@ -54,4 +58,5 @@ private:
 
 	int m_sort_column = 1;
 	bool m_sort_ascending = true;
+	bool m_original_user_removed = false;
 };

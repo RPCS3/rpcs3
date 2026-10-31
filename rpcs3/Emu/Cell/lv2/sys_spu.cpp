@@ -93,11 +93,18 @@ bool sys_spu_image::load(const fs::file& stream)
 		}
 	}
 
-	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
 	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(mem_size, 0x10000));
+
+	if (!segs)
+	{
+		sys_spu.error("Failed to allocate SPU image memory (size=0x%x)", mem_size);
+		return false;
+	}
+
+	this->type = SYS_SPU_IMAGE_TYPE_KERNEL;
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -120,15 +127,6 @@ bool sys_spu_image::load(const fs::file& stream)
 
 	vm::page_protect(segs.addr(), utils::align(mem_size, 0x10000), 0, 0, vm::page_writable);
 	return true;
-}
-
-void sys_spu_image::free() const
-{
-	if (type == SYS_SPU_IMAGE_TYPE_KERNEL)
-	{
-		// TODO: Remove, should be handled by syscalls
-		ensure(vm::dealloc(segs.addr(), vm::main));
-	}
 }
 
 void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs, bool is_verbose)
@@ -1647,7 +1645,12 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 
 	for (auto& thread : group->threads)
 	{
-		while (thread && group->running && thread->state & cpu_flag::wait)
+		if (!group->running)
+		{
+			break;
+		}
+
+		if (thread && thread->state & cpu_flag::wait)
 		{
 			thread_ctrl::notify(*thread);
 
@@ -2605,13 +2608,13 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	spu_thread::g_raw_spu_id[index] = (ensure(thread->id));
 
 	sys_spu_image img;
-	img.load(obj);
+	ensure(img.load(obj));
 
-	auto image_info = idm::get_unlocked<lv2_obj, lv2_spu_image>(img.entry_point);
+	const auto image_info = idm::withdraw<lv2_obj, lv2_spu_image>(img.entry_point);
 	img.deploy(thread->ls, std::span(image_info->segs.get_ptr(), image_info->nsegs));
 
 	thread->write_reg(ls_addr + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, image_info->e_entry);
-	ensure(idm::remove_verify<lv2_obj, lv2_spu_image>(img.entry_point, std::move(image_info)));
+	ensure(vm::dealloc(image_info->segs.addr()));
 
 	*id = index;
 	return CELL_OK;

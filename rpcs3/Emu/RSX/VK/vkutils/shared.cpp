@@ -6,11 +6,42 @@
 #include <signal.h>
 #endif
 
+extern u64 get_system_time();
+
 namespace vk
 {
 	extern void print_debug_markers();
 
-	std::string retrieve_device_fault_info()
+	// Track the timestamp of the last GPU reset if any to avoid an endless reset loop
+	static atomic_t<bool> s_allow_gpu_recovery = true;
+	static atomic_t<u64> s_last_device_reset = 0ull;
+	constexpr u64 c_min_time_between_resets_us = 10 * 1000'000ull;
+
+	static bool can_device_recover()
+	{
+		const u64 now = get_system_time();
+		const u64 prev = s_last_device_reset.exchange(now);
+
+		if (!s_allow_gpu_recovery)
+		{
+			return false;
+		}
+
+		return !prev || (now - prev) >= c_min_time_between_resets_us;
+	}
+
+	void arm_device_loss_protection()
+	{
+		s_allow_gpu_recovery = true;
+		s_last_device_reset = get_system_time();
+	}
+
+	void disable_device_loss_protection()
+	{
+		s_allow_gpu_recovery = false;
+	}
+
+	static std::string retrieve_device_fault_info()
 	{
 		if (!g_render_device || !g_render_device->get_extended_device_fault_support())
 		{
@@ -98,7 +129,7 @@ namespace vk
 		return fault_message;
 	}
 
-	void die_with_error(VkResult error_code, std::string message, std::source_location src_loc)
+	bool die_with_error(VkResult error_code, std::string message, std::source_location src_loc)
 	{
 		std::string error_message, extra_info;
 		int severity = 0; // 0 - die, 1 - warn, 2 - nothing
@@ -109,7 +140,7 @@ namespace vk
 		case VK_EVENT_SET:
 		case VK_EVENT_RESET:
 		case VK_INCOMPLETE:
-			return;
+			return false;
 		case VK_SUBOPTIMAL_KHR:
 			error_message = "Present surface is suboptimal (VK_SUBOPTIMAL_KHR)";
 			severity = 1;
@@ -199,15 +230,22 @@ namespace vk
 		{
 		default:
 		case 0:
-			print_debug_markers();
+			// Already reported if the device was lost earlier
+			if (!ensure(g_render_device)->device_lost()) return true;
 
+			print_debug_markers();
 			if (!message.empty()) message += "\n\n";
-			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
+
+			if (!can_device_recover())
+				fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc);
+
+			rsx_log.error("%sVulkan device lost, the renderer will be replaced: %s%s", message, error_message, src_loc);
+			return true;
 		case 1:
 			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc);
-			break;
+			return false;
 		case 2:
-			break;
+			return false;
 		}
 	}
 

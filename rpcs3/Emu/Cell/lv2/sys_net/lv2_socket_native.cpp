@@ -662,6 +662,11 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 		}
 		case SYS_NET_SO_RCVBUF:
 		{
+			if (s32 ret = lv2_socket::validate_so_rcvbuf(native_int); ret != CELL_OK)
+			{
+				return ret;
+			}
+
 			native_opt = SO_RCVBUF;
 			break;
 		}

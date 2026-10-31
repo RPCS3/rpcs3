@@ -61,7 +61,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_prof{ this, "SPU Profiler", false };
 		cfg::_bool ppu_prof{ this, "PPU Profiler", false };
 		cfg::uint<0, 16> mfc_transfers_shuffling{ this, "MFC Commands Shuffling Limit", 0 };
-		cfg::uint<0, 10000> mfc_transfers_timeout{ this, "MFC Commands Timeout", 0, true };
+		cfg::uint<5, 400> mfc_shuffling_instructions{ this, "MFC Shuffle Instructions Decrementer", 30, true };
 		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
 		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "SPU XFloat Accuracy", xfloat_accuracy::approximate, false };
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
@@ -79,8 +79,6 @@ struct cfg_root : cfg::node
 		cfg::_bool hook_functions{ this, "Hook static functions" };
 		cfg::set_entry libraries_control{ this, "Libraries Control" }; // Override HLE/LLE behaviour of selected libs
 		cfg::_bool hle_lwmutex{ this, "HLE lwmutex" }; // Force alternative lwmutex/lwcond implementation
-		cfg::uint64 spu_llvm_lower_bound{ this, "SPU LLVM Lower Bound" };
-		cfg::uint64 spu_llvm_upper_bound{ this, "SPU LLVM Upper Bound", 0xffffffffffffffff };
 
 		cfg::_int<10, 3000> clocks_scale{ this, "Clocks scale", 100 }; // Changing this from 100 (percentage) may affect game speed in unexpected ways
 		cfg::uint<0, 3000> spu_wakeup_delay{ this, "SPU Wake-Up Delay", 0, true };
@@ -120,9 +118,9 @@ struct cfg_root : cfg::node
 		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
 
 #if defined(HAVE_VULKAN)
-		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan };
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::vulkan, true };
 #else
-		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl };
+		cfg::_enum<video_renderer> renderer{ this, "Renderer", video_renderer::opengl, true };
 #endif
 
 		cfg::_enum<video_resolution> resolution{ this, "Resolution", video_resolution::_720p };
@@ -194,12 +192,12 @@ struct cfg_root : cfg::node
 		{
 			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
 
-			cfg::string adapter{ this, "Adapter" };
+			cfg::string adapter{ this, "Adapter", "", true };
 			cfg::_enum<vk_exclusive_fs_mode> exclusive_fullscreen_mode{ this, "Exclusive Fullscreen Mode", vk_exclusive_fs_mode::unspecified};
 			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming", false };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
 			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
-			cfg::_bool use_rebar_upload_heap{ this, "Use Re-BAR for GPU uploads", true, false };
+			cfg::_bool use_rebar_upload_heap{ this, "Use Re-BAR for GPU uploads", false, false };
 
 		} vk{ this };
 

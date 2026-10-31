@@ -58,6 +58,13 @@ enum class game_boot_result : u32
 	database_config_missing,
 };
 
+enum class boot_mode : u32
+{
+	application,   // A guest executable is running
+	cache_builder, // Renderer created to show progress during cache build
+	shell,         // Big Picture Mode host
+};
+
 constexpr bool is_error(game_boot_result res)
 {
 	return res != game_boot_result::no_errors;
@@ -145,6 +152,7 @@ class Emulator final
 
 	bs_t<SaveStateExtentionFlags1> m_savestate_extension_flags1{};
 	emu_precompilation_option_t m_precompilation_option{};
+	boot_mode m_boot_mode = boot_mode::application;
 
 public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
@@ -217,6 +225,11 @@ public:
 	u32 GetBootSourceType() const
 	{
 		return m_boot_source_type;
+	}
+
+	boot_mode GetBootMode() const
+	{
+		return m_boot_mode;
 	}
 
 	const std::string& GetBoot() const

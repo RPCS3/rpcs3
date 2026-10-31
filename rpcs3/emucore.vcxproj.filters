@@ -145,6 +145,60 @@
     <Filter Include="Emu\GPU\RSX\Overlays\BigPicture">
       <UniqueIdentifier>{37ae1158-fac7-4a4c-929a-115d8deb7505}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Io\USIO">
+      <UniqueIdentifier>{6a510c46-3499-4e33-b0f9-914535f9c308}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Skylanders">
+      <UniqueIdentifier>{1d4b3382-7de1-4544-9468-b5ad6b2700b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\MIDI">
+      <UniqueIdentifier>{1b5f706e-f0a0-4fb0-b340-eb1026f50989}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\TopShot">
+      <UniqueIdentifier>{5a14b3ee-0827-42f5-8563-00829c29c80d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Buzz">
+      <UniqueIdentifier>{a8b1fa70-0491-401a-97aa-df9e9a42919d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Camera">
+      <UniqueIdentifier>{9511a2f4-d26a-407b-8981-1ab879fb91b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\KamenRider">
+      <UniqueIdentifier>{3f3192c0-3bc1-4d0c-9243-5cf2d2f5b0bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\G27">
+      <UniqueIdentifier>{862b7ba0-6660-4bfb-9475-5ce7ff7028ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Pads">
+      <UniqueIdentifier>{0a0b8122-131d-43eb-9dbf-25d39d0921ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\GunCon">
+      <UniqueIdentifier>{f7985952-5c1a-4b02-8b0e-c294b4720726}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Infinity">
+      <UniqueIdentifier>{5701e5ee-e6a5-4774-8c83-68bd53543c14}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Keyboard">
+      <UniqueIdentifier>{ecc084b2-14ea-4fbd-88b7-c77807d926bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Mouse">
+      <UniqueIdentifier>{3c48ffcf-a779-4bd8-a23d-f42354b0e601}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\PsMove">
+      <UniqueIdentifier>{840c7baa-7d6c-4d5f-b0bf-4d604d9bd188}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Turntable">
+      <UniqueIdentifier>{c817ce44-1af8-493d-ad69-2030580ac3db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\Dimensions">
+      <UniqueIdentifier>{7c8b99b4-7908-4fd4-bb3f-5697626829bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\GameTablet">
+      <UniqueIdentifier>{6c8c34f6-098f-43cb-9665-6a07b596db77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\Io\GHLtar">
+      <UniqueIdentifier>{5a04c411-a7d7-4418-a46b-6e88ed1bdd40}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -852,9 +906,6 @@
     <ClCompile Include="Emu\Cell\lv2\sys_net\sys_net_helpers.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\PadHandler.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -882,24 +933,6 @@
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\Dimensions.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\Infinity.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\Skylander.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\SkylanderPortalIPC.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\SkylanderPortalIPC_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\KamenRider.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -921,11 +954,11 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp">
+    <ClCompile Include="Emu\RSX\Overlays\overlay_gauge_button.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\KeyboardHandler.cpp">
-      <Filter>Emu\Io</Filter>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
     <ClCompile Include="Crypto\md5.cpp">
       <Filter>Crypto</Filter>
@@ -957,30 +990,6 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\GameTablet.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\GHLtar.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\GunCon3.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\wiimote_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\Buzz.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\LogitechG27.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\LogitechG27Config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\usio.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -993,17 +1002,11 @@
     <ClCompile Include="Emu\Audio\AudioBackend.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\pad_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\system_config_types.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_fonts.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\pad_config_types.cpp">
-      <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
@@ -1030,6 +1033,9 @@
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\np_helpers.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\np_avatar.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\np_notifications.cpp">
@@ -1085,15 +1091,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp">
       <Filter>Emu\Cell\Modules</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\TopShotElite.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\TopShotFearmaster.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\Turntable.cpp">
-      <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
@@ -1155,9 +1152,6 @@
     </ClCompile>
     <ClCompile Include="Emu\vfs_config.cpp">
       <Filter>Emu</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\camera_config.cpp">
-      <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Audio\audio_resampler.cpp">
       <Filter>Emu\Audio</Filter>
@@ -1252,19 +1246,28 @@
     <ClCompile Include="Emu\games_config.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\midi_config_types.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\pad_types.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXCoreRenderer.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXDisplayEngine.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXDisplayOutput.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXPowerMgmt.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXRenderBackend.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXRendererFactory.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXGraphEngine.cpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp">
@@ -1281,12 +1284,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\RB3MidiDrums.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\rb3drums_config.cpp">
-      <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
@@ -1315,11 +1312,8 @@
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\mouse_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\MouseHandler.cpp">
-      <Filter>Emu\Io</Filter>
+    <ClCompile Include="Emu\RSX\NV47\FW\context.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\rpcn_countries.cpp">
       <Filter>Emu\NP</Filter>
@@ -1329,9 +1323,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXTexture.cpp">
       <Filter>Emu\GPU\RSX\Decoders</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\GSRender.cpp">
-      <Filter>Emu\GPU\RSX\Game Window</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\RSXOffload.cpp">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
@@ -1396,9 +1387,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_video.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\evdev_gun_handler.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Program\Assembler\FPToCFG.cpp">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClCompile>
@@ -1416,9 +1404,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Program\ShaderInterpreter.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Io\ps_move_data.cpp">
-      <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\clans_config.cpp">
       <Filter>Emu\NP</Filter>
@@ -1486,9 +1471,6 @@
     <ClCompile Include="Emu\Cell\Modules\libsvc1d.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Io\gem_config.cpp">
-      <Filter>Emu\Io</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.cpp">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClCompile>
@@ -1506,6 +1488,108 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\usio.cpp">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\nfc_reader.cpp">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC.cpp">
+      <Filter>Emu\Io\Skylanders</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC_config.cpp">
+      <Filter>Emu\Io\Skylanders</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\Skylander.cpp">
+      <Filter>Emu\Io\Skylanders</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\midi_config_types.cpp">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\RB3MidiDrums.cpp">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\RB3MidiGuitar.cpp">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\RB3MidiKeyboard.cpp">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\rb3drums_config.cpp">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\TopShotElite.cpp">
+      <Filter>Emu\Io\TopShot</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\TopShotFearmaster.cpp">
+      <Filter>Emu\Io\TopShot</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\Buzz.cpp">
+      <Filter>Emu\Io\Buzz</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\camera_config.cpp">
+      <Filter>Emu\Io\Camera</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\KamenRider.cpp">
+      <Filter>Emu\Io\KamenRider</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\LogitechG27.cpp">
+      <Filter>Emu\Io\G27</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\LogitechG27Config.cpp">
+      <Filter>Emu\Io\G27</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\pad_config.cpp">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\pad_config_types.cpp">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\pad_types.cpp">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\PadHandler.cpp">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\GunCon3.cpp">
+      <Filter>Emu\Io\GunCon</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\Infinity.cpp">
+      <Filter>Emu\Io\Infinity</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\KeyboardHandler.cpp">
+      <Filter>Emu\Io\Keyboard</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\mouse_config.cpp">
+      <Filter>Emu\Io\Mouse</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\MouseHandler.cpp">
+      <Filter>Emu\Io\Mouse</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\gem_config.cpp">
+      <Filter>Emu\Io\PsMove</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\ps_move_data.cpp">
+      <Filter>Emu\Io\PsMove</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\Turntable.cpp">
+      <Filter>Emu\Io\Turntable</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\wiimote_config.cpp">
+      <Filter>Emu\Io\GunCon</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\evdev_gun_handler.cpp">
+      <Filter>Emu\Io\PsMove</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\Dimensions.cpp">
+      <Filter>Emu\Io\Dimensions</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\GameTablet.cpp">
+      <Filter>Emu\Io\GameTablet</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\GHLtar.cpp">
+      <Filter>Emu\Io\GHLtar</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1541,15 +1625,6 @@
     </ClInclude>
     <ClInclude Include="Emu\System.h">
       <Filter>Emu</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\KeyboardHandler.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\MouseHandler.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\PadHandler.h">
-      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\MFC.h">
       <Filter>Emu\Cell</Filter>
@@ -2217,27 +2292,6 @@
     <ClInclude Include="Emu\RSX\Common\surface_utils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\Keyboard.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Dimensions.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Infinity.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Skylander.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\SkylanderPortalIPC.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\SkylanderPortalIPC_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\KamenRider.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Crypto\md5.h">
       <Filter>Crypto</Filter>
     </ClInclude>
@@ -2283,20 +2337,11 @@
     <ClInclude Include="Emu\system_config.h">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\pad_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\system_config_types.h">
       <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\pad_config_types.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\pad_types.h">
-      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
@@ -2318,27 +2363,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_compile_notification.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\GameTablet.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\GHLtar.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\GunCon3.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Buzz.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\LogitechG27.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\LogitechG27Config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\usio.h">
-      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_handler.h">
       <Filter>Emu\NP</Filter>
@@ -2418,15 +2442,6 @@
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\TopShotElite.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\TopShotFearmaster.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\Turntable.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Loader\mself.hpp">
       <Filter>Loader</Filter>
     </ClInclude>
@@ -2479,10 +2494,16 @@
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Program\ProgramStateCache512.h">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_gauge_button.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp">
@@ -2509,14 +2530,8 @@
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\camera_handler_base.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h">
       <Filter>Emu\Io\Null</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\camera_config.h">
-      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Audio\audio_resampler.h">
       <Filter>Emu\Audio</Filter>
@@ -2537,6 +2552,9 @@
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_helpers.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\np_avatar.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\music_handler_base.h">
@@ -2611,8 +2629,8 @@
     <ClInclude Include="Emu\Io\recording_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp">
-      <Filter>Emu\GPU\RSX\Core</Filter>
+    <ClInclude Include="Emu\RSX\NV47\FW\RSXIOMap.hpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXDisplay.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
@@ -2621,6 +2639,36 @@
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayEngine.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDisplayOutput.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXPowerMgmt.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXRendererFactory.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXGraphEngine.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDrawState.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXProgramState.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXRenderBackend.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXTextureState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp">
@@ -2686,42 +2734,6 @@
     <ClInclude Include="Emu\config_mode.h">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\RB3MidiGuitar.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\RB3MidiKeyboard.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\midi_config_types.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\buzz_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\turntable_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\ghltar_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\guncon3_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\wiimote_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\topshotelite_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\topshotfearmaster_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\usio_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\gem_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\Io\emulated_pad_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2732,6 +2744,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXContext.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXContextResources.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\unzip.h">
@@ -2748,12 +2763,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\RB3MidiDrums.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\rb3drums_config.h">
-      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\SPIRVCommon.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
@@ -2803,7 +2812,7 @@
     <ClInclude Include="Emu\savestate_utils.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
+    <ClInclude Include="Emu\RSX\NV47\FW\context.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
     <ClInclude Include="Emu\CPU\Hypervisor.h">
@@ -2825,9 +2834,6 @@
       <Filter>Emu\GPU\RSX\Decoders</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\GSFrameBase.h">
-      <Filter>Emu\GPU\RSX\Game Window</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\GSRender.h">
       <Filter>Emu\GPU\RSX\Game Window</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\RSXOffload.h">
@@ -2875,6 +2881,9 @@
     <ClInclude Include="Emu\RSX\Utils\image_utils.hpp">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\rsx_serde.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Utils\rsx_utils.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
@@ -2914,9 +2923,6 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Io\evdev_gun_handler.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Common\reverse_ptr.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
@@ -2946,9 +2952,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\Assembler\FPASM.h">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Io\ps_move_data.h">
-      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\clans_client.h">
       <Filter>Emu\NP</Filter>
@@ -3051,6 +3054,141 @@
     </ClInclude>
     <ClInclude Include="Emu\emu_callbacks.h">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="util\midi_types.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\usio_types.h">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\usio_config.h">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\usio.h">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\nfc_reader.h">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\mifare_types.h">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC_config.h">
+      <Filter>Emu\Io\Skylanders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC.h">
+      <Filter>Emu\Io\Skylanders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Skylander.h">
+      <Filter>Emu\Io\Skylanders</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\midi_config_types.h">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\RB3MidiKeyboard.h">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\RB3MidiDrums.h">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\RB3MidiGuitar.h">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\rb3drums_config.h">
+      <Filter>Emu\Io\MIDI</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\topshotfearmaster_config.h">
+      <Filter>Emu\Io\TopShot</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\TopShotElite.h">
+      <Filter>Emu\Io\TopShot</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\topshotelite_config.h">
+      <Filter>Emu\Io\TopShot</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\TopShotFearmaster.h">
+      <Filter>Emu\Io\TopShot</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\buzz_config.h">
+      <Filter>Emu\Io\Buzz</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Buzz.h">
+      <Filter>Emu\Io\Buzz</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\camera_handler_base.h">
+      <Filter>Emu\Io\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\camera_config.h">
+      <Filter>Emu\Io\Camera</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\KamenRider.h">
+      <Filter>Emu\Io\KamenRider</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\LogitechG27Config.h">
+      <Filter>Emu\Io\G27</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\LogitechG27.h">
+      <Filter>Emu\Io\G27</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pad_config.h">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pad_config_types.h">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pad_types.h">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\PadHandler.h">
+      <Filter>Emu\Io\Pads</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\GunCon3.h">
+      <Filter>Emu\Io\GunCon</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\guncon3_config.h">
+      <Filter>Emu\Io\GunCon</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Infinity.h">
+      <Filter>Emu\Io\Infinity</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Keyboard.h">
+      <Filter>Emu\Io\Keyboard</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\KeyboardHandler.h">
+      <Filter>Emu\Io\Keyboard</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\MouseHandler.h">
+      <Filter>Emu\Io\Mouse</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\gem_config.h">
+      <Filter>Emu\Io\PsMove</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\ps_move_data.h">
+      <Filter>Emu\Io\PsMove</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\turntable_config.h">
+      <Filter>Emu\Io\Turntable</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Turntable.h">
+      <Filter>Emu\Io\Turntable</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\wiimote_config.h">
+      <Filter>Emu\Io\GunCon</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\evdev_gun_handler.h">
+      <Filter>Emu\Io\PsMove</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Dimensions.h">
+      <Filter>Emu\Io\Dimensions</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\GameTablet.h">
+      <Filter>Emu\Io\GameTablet</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\ghltar_config.h">
+      <Filter>Emu\Io\GHLtar</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\GHLtar.h">
+      <Filter>Emu\Io\GHLtar</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

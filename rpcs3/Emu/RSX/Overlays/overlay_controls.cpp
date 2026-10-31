@@ -15,14 +15,6 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <limits.h>
-
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
-
-#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
-#include <sys/sysctl.h>
-#endif
 #endif
 
 // Definitions for common UI controls and their routines
@@ -205,45 +197,18 @@ namespace rsx
 				// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
 				if (info->get_data() == nullptr)
 				{
-					char result[ PATH_MAX ];
-#if defined(__APPLE__)
-					u32 bufsize = PATH_MAX;
-					const bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
-#elif defined(KERN_PROC_PATHNAME)
-					usz bufsize = PATH_MAX;
-					int mib[] = {
-						CTL_KERN,
-#if defined(__NetBSD__)
-						KERN_PROC_ARGS,
-						-1,
-						KERN_PROC_PATHNAME,
-#else
-						KERN_PROC,
-						KERN_PROC_PATHNAME,
-						-1,
-#endif
-					};
-					const bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
-#elif defined(__linux__)
-					const bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
-#elif defined(__sun)
-					const bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
-#else
-					const bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
-#endif
-					if (success)
+					if (const std::string& resources_dir = fs::get_resources_dir(); !resources_dir.empty())
 					{
-						std::string executablePath = dirname(result);
-#ifdef __APPLE__
-						src = executablePath + "/../Resources/Icons/ui/" + res;
-#else
-						src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
-#endif
+						src = resources_dir + "Icons/ui/" + res;
 						info = std::make_unique<image_info>(src);
-						// Check if the icons are in the same directory as the executable (local builds)
-						if (info->get_data() == nullptr)
+					}
+
+					// Check if the icons are in the same directory as the executable (local builds)
+					if (info->get_data() == nullptr)
+					{
+						if (const std::string& executable_dir = fs::get_real_executable_dir(); !executable_dir.empty())
 						{
-							src = executablePath + "/Icons/ui/" + res;
+							src = executable_dir + "/Icons/ui/" + res;
 							info = std::make_unique<image_info>(src);
 						}
 					}
@@ -1311,6 +1276,41 @@ namespace rsx
 			rounded_rect::get_compiled();
 			auto& config = compiled_resources.draw_commands.front().config;
 			configure_sdf(config, sdf_function::ellipse);
+
+			m_is_compiled = true;
+			return compiled_resources;
+		}
+
+		void pie::set_cutoff_angle(f32 degrees)
+		{
+			degrees = std::clamp(degrees, 0.f, 360.f);
+			if (degrees != m_cutoff_angle)
+			{
+				m_cutoff_angle = degrees;
+				m_is_compiled = false;
+			}
+		}
+
+		compiled_resource& pie::get_compiled()
+		{
+			if (is_compiled())
+			{
+				return compiled_resources;
+			}
+
+			compiled_resources.clear();
+
+			// An empty wedge still has a zero-distance edge along 12 o'clock which would bleed through the AA, so emit nothing instead.
+			if (!is_visible() || m_cutoff_angle <= 0.f)
+			{
+				m_is_compiled = true;
+				return compiled_resources;
+			}
+
+			ellipse::get_compiled();
+			auto& config = compiled_resources.draw_commands.front().config;
+			configure_sdf(config, sdf_function::pie);
+			config.sdf_config.ca = m_cutoff_angle;
 
 			m_is_compiled = true;
 			return compiled_resources;

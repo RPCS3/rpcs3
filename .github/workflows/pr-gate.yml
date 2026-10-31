@@ -1,0 +1,116 @@
+name: PR Gate
+
+# Pull requests from people who have never had a commit merged must link an
+# issue they have been assigned to. See .github/CONTRIBUTING.md.
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - edited
+
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+
+jobs:
+  Gate_PRs:
+    name: Check contributor status
+    runs-on: ubuntu-latest
+    if: github.repository == 'RPCS3/rpcs3'
+    permissions:
+      issues: read
+      pull-requests: write
+    steps:
+      - name: Check for an assigned issue
+        uses: actions/github-script@v9
+        with:
+          retries: 3
+          script: |
+            // Commit authors, collaborators and org members are trusted
+            const TRUSTED = ['OWNER', 'MEMBER', 'COLLABORATOR', 'CONTRIBUTOR'];
+            // Applied by the bot to PRs it closed, so they can be reopened automatically
+            const GATED = 'Needs Assigned Issue';
+            // Applied by a maintainer to let a PR through regardless
+            const APPROVED = 'Gate: Approved';
+
+            const pr = context.payload.pull_request;
+            const author = pr.user.login;
+            const labels = pr.labels.map(x => x.name);
+            const target = {...context.repo, issue_number: pr.number};
+
+            if (TRUSTED.includes(pr.author_association) || labels.includes(APPROVED)) {
+              return;
+            }
+
+            // Only the author or someone with write access can reopen. If it was not the author, treat it as a maintainer override
+            if (context.payload.action === 'reopened' && context.payload.sender.login !== author) {
+              console.log(`Reopened by ${context.payload.sender.login}, approving`);
+              await github.rest.issues.addLabels({...target, labels: [APPROVED]});
+              if (labels.includes(GATED)) {
+                await github.rest.issues.removeLabel({...target, name: GATED});
+              }
+              return;
+            }
+
+            // Leave PRs closed for any other reason (or merged) alone
+            if (pr.state === 'closed' && !labels.includes(GATED)) {
+              return;
+            }
+
+            const {repository: {pullRequest: pull}} = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 50) {
+                      nodes {
+                        number
+                        repository { nameWithOwner }
+                        assignees(first: 50) { nodes { login } }
+                      }
+                    }
+                  }
+                }
+              }`, {...context.repo, number: pr.number});
+
+            const repoName = `${context.repo.owner}/${context.repo.repo}`;
+            const assigned = pull.closingIssuesReferences.nodes.filter(issue =>
+              issue.repository.nameWithOwner === repoName &&
+              issue.assignees.nodes.some(x => x.login.toLowerCase() === author.toLowerCase()));
+
+            const guide = `https://github.com/${repoName}/blob/${context.payload.repository.default_branch}/.github/CONTRIBUTING.md`;
+
+            if (assigned.length > 0) {
+              if (labels.includes(GATED)) {
+                console.log(`Linked to assigned issue #${assigned[0].number}, reopening`);
+                if (pr.state === 'closed') {
+                  await github.rest.pulls.update({...context.repo, pull_number: pr.number, state: 'open'});
+                }
+                await github.rest.issues.removeLabel({...target, name: GATED});
+                await github.rest.issues.createComment({...target, body:
+                  `Thanks! This pull request is now linked to #${assigned[0].number}, which is assigned to you, so it has been reopened for review.`});
+              }
+              return;
+            }
+
+            if (pr.state === 'closed') {
+              // Still gated, nothing changed
+              return;
+            }
+
+            console.log(`@${author} (${pr.author_association}) has no assigned linked issue, closing`);
+            await github.rest.issues.addLabels({...target, labels: [GATED]});
+            await github.rest.issues.createComment({...target, body: [
+              `Hi @${author}, thank you for your interest in contributing to RPCS3!`,
+              '',
+              'To keep the review workload manageable, pull requests from first-time contributors must be linked to an issue that a maintainer has assigned to you. ' +
+              'This pull request does not reference such an issue, so it has been closed automatically.',
+              '',
+              'To get it reopened:',
+              '1. Open an issue (or comment on an existing one) describing what you want to change and why, or talk to us in the **#development** channel on [Discord](https://discord.gg/rpcs3).',
+              '2. Once a maintainer agrees with the approach, they will assign the issue to you.',
+              '3. Edit this pull request\'s description to include `Fixes #<issue number>`. It will be reopened automatically.',
+              '',
+              `Please read the [contribution guidelines](${guide}) for more details, including our policy on AI-assisted contributions.`,
+            ].join('\n')});
+            await github.rest.pulls.update({...context.repo, pull_number: pr.number, state: 'closed'});

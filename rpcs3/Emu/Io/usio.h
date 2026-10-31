@@ -2,6 +2,7 @@
 
 #include "Emu/system_utils.hpp"
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/usio_types.h"
 
 class usb_device_usio : public usb_device_emulated
 {
@@ -31,18 +32,5 @@ private:
 	const std::string usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
 	std::vector<u8> response;
 
-	struct io_status
-	{
-		bool test_on = false;
-		bool test_key_pressed = false;
-		bool coin_key_pressed = false;
-		bool card_tapped = false;
-		le_t<u16> coin_counter = 0;
-		usz card_index = 0;
-		s8 vital_sensors[2] = {0, 0};
-		s8 wheel_rotation = 0;
-		std::array<bool, 4> taiko_hit_already = {}; // Status of taiko_hit_side_left, taiko_hit_center_right, taiko_hit_side_right, and taiko_hit_center_left from last polling
-	};
-
-	std::array<io_status, 2> m_io_status;
+	std::array<usio_io_status, 2> m_io_status;
 };

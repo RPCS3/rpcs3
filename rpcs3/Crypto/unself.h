@@ -490,12 +490,6 @@ private:
 		// Write ELF header.
 		WriteEhdr(e, ehdr);
 
-		// Write program headers.
-		for (const PHdr& phdr : phdrs)
-		{
-			WritePhdr(e, phdr);
-		}
-
 		// Tmp buffer
 		std::vector<u8> decomp_buf;
 
@@ -565,6 +559,18 @@ private:
 			for (const SHdr& shdr : shdrs)
 			{
 				WriteShdr(e, shdr);
+			}
+		}
+		
+		// Write program headers at e_phoff. Do it at last step so segment data can't overwrite them
+		// This is needed for ELFs that have relocated tables (e.g. ELFs patched with SPRXPatcher)
+		if (!phdrs.empty())
+		{
+			e.seek(ehdr.e_phoff);
+			
+			for (const PHdr& phdr : phdrs)
+			{
+				WritePhdr(e, phdr);
 			}
 		}
 	}

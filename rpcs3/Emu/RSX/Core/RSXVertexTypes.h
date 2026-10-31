@@ -54,6 +54,8 @@ namespace rsx
 		u16 frequency;
 	};
 
+	struct context;
+
 	struct interleaved_range_info
 	{
 		bool interleaved = false;
@@ -65,6 +67,8 @@ namespace rsx
 		std::pair<u32, u32> vertex_range{};
 
 		rsx::simple_array<interleaved_attribute_t> locations;
+
+		context* ctx = nullptr; // Owning context
 
 		// Check if we need to upload a full unoptimized range, i.e [0-max_index]
 		std::pair<u32, u32> calculate_required_range(u32 first, u32 count);
@@ -91,6 +95,14 @@ namespace rsx
 		std::array<attribute_buffer_placement, 16> attribute_placement = fill_array(attribute_buffer_placement::none);
 
 		vertex_input_layout() = default;
+
+		void set_context(context* ctx)
+		{
+			for (auto& block : m_blocks_data)
+			{
+				block.ctx = ctx;
+			}
+		}
 
 		interleaved_range_info* alloc_interleaved_block()
 		{
