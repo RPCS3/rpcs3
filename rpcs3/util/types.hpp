@@ -1126,6 +1126,10 @@ concept PtrCastable = requires(const volatile X* x, const volatile Y* y)
 template <typename X, typename Y> requires PtrCastable<X, Y>
 consteval bool is_same_ptr()
 {
+#ifdef __INTELLISENSE__
+	// Confuses the code editor (unlikely to catch anything useful anyway)
+	return true;
+#else
 	if constexpr (std::is_void_v<X> || std::is_void_v<Y> || std::is_same_v<std::remove_cv_t<X>, std::remove_cv_t<Y>>)
 	{
 		return true;
@@ -1155,6 +1159,7 @@ consteval bool is_same_ptr()
 
 		return result;
 	}
+#endif
 }
 
 template <typename X, typename Y> requires PtrCastable<X, Y>
