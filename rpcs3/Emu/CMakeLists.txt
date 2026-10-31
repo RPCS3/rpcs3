@@ -436,6 +436,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/midi_config_types.cpp
     Io/mouse_config.cpp
     Io/MouseHandler.cpp
+    Io/nfc_reader.cpp
     Io/pad_config.cpp
     Io/pad_config_types.cpp
     Io/pad_types.cpp

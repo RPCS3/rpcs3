@@ -92,6 +92,7 @@
     <ClCompile Include="Emu\Io\gem_config.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
+    <ClCompile Include="Emu\Io\nfc_reader.cpp" />
     <ClCompile Include="Emu\Io\wiimote_config.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
     <ClCompile Include="Emu\Io\MouseHandler.cpp" />
@@ -674,8 +675,11 @@
     <ClInclude Include="Emu\Io\topshotfearmaster_config.h" />
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\turntable_config.h" />
+    <ClInclude Include="Emu\Io\mifare_types.h" />
+    <ClInclude Include="Emu\Io\nfc_reader.h" />
     <ClInclude Include="Emu\Io\usio.h" />
     <ClInclude Include="Emu\Io\usio_config.h" />
+    <ClInclude Include="Emu\Io\usio_types.h" />
     <ClInclude Include="Emu\Io\LogitechG27.h" />
     <ClInclude Include="Emu\Io\LogitechG27Config.h" />
     <ClInclude Include="Emu\IPC_config.h" />
