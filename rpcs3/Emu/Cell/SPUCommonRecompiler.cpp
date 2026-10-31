@@ -378,13 +378,9 @@ DECLARE(spu_runtime::tr_all) = []
 			// Load g_dispatcher
 			c.mov(a64::x4, Imm(reinterpret_cast<u64>(g_dispatcher)));
 			// Update block hash
-			c.mov(a64::x5, Imm(0));
-			c.str(a64::x5, arm::Mem(a64::x19, ::offset32(&spu_thread::block_hash))); // REG_Base + offset(spu_thread::block_hash)
+			c.str(a64::xzr, arm::Mem(a64::x19, ::offset32(&spu_thread::block_hash))); // REG_Base + offset(spu_thread::block_hash)
 			// Jump to [g_dispatcher + idx * 8]
-			c.mov(a64::x6, Imm(8));
-			c.mul(a64::x6, a64::x3, a64::x6);
-			c.add(a64::x4, a64::x4, a64::x6);
-			c.ldr(a64::x4, arm::Mem(a64::x4));
+			c.ldr(a64::x4, arm::Mem(a64::x4, a64::x3, arm::lsl(3)));
 			c.br(a64::x4);
 			// Unreachable guard
 			c.brk(0x42);
