@@ -96,6 +96,7 @@
     <ClCompile Include="test_bit_set.cpp" />
     <ClCompile Include="test_blob_detector.cpp" />
     <ClCompile Include="test_cctype.cpp" />
+    <ClCompile Include="test_cell_voice.cpp" />
     <ClCompile Include="test_dmux_pamf.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
