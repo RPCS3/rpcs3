@@ -6,6 +6,7 @@
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/Io/openxr/openxr_thread.h"
 
 #include "upscalers/bilinear_pass.hpp"
 #include "upscalers/fsr_pass.h"
@@ -255,11 +256,15 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 	ensure(ctx->swap_command_buffer);
 
 	// Perform hard swap here
-	if (ctx->swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT) != VK_SUCCESS)
+	const bool frame_finished = ctx->swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT) == VK_SUCCESS;
+	if (!frame_finished)
 	{
 		// Lost surface/device, release swapchain
 		swapchain_unavailable = true;
 	}
+
+	// The GPU finished the copy for the headset, so the OpenXR handler can use it now
+	m_openxr_share.on_frame_finished(std::exchange(ctx->openxr_frame, {}), frame_finished);
 
 	// Resource cleanup.
 	{
@@ -733,42 +738,11 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 			single_target_pass = vk::get_renderpass(*m_device, key);
 			ensure(single_target_pass != VK_NULL_HANDLE);
 
-			if (m_overlay_recording_img)
-			{
-				// Validate
-				if (m_overlay_recording_img->format() != image_to_flip->format() ||
-					m_overlay_recording_img->width() != image_to_flip->width() ||
-					m_overlay_recording_img->height() != image_to_flip->height())
-				{
-					// Dispose correctly
-					vk::remove_framebuffers_with_image(m_overlay_recording_img.get());
-					vk::get_resource_manager()->dispose(m_overlay_recording_img);
-				}
-			}
-
-			if (!m_overlay_recording_img)
-			{
-				m_overlay_recording_img = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					VK_IMAGE_TYPE_2D, image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					0, VMM_ALLOCATION_POOL_SYSTEM);
-			}
-
-			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-
 			const areai rect = areai(0, 0, buffer_width, buffer_height);
-			vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect);
-
-			image_to_flip->pop_layout(*m_current_command_buffer);
-			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-			vk::framebuffer_holder* sshot_fbo = vk::get_framebuffer(*m_device, buffer_width, buffer_height, VK_FALSE, single_target_pass, { m_overlay_recording_img.get() });
-			sshot_fbo->add_ref();
-			render_overlays(sshot_fbo, areau(rect));
-			sshot_fbo->release();
-
-			image_to_copy = m_overlay_recording_img.get();
+			image_to_copy = vk::copy_image_with_overlays(*m_device, *m_current_command_buffer, m_overlay_recording_img, image_to_flip, rect, single_target_pass, [&](vk::framebuffer_holder* fbo)
+			{
+				render_overlays(fbo, areau(rect));
+			});
 		}
 
 		image_to_copy->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -798,6 +772,30 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 		{
 			m_frame->present_frame(std::move(sshot_frame), buffer_width * 4, buffer_width, buffer_height, is_bgra);
 		}
+	}
+
+#ifdef HAVE_OPENXR
+	// Keeps the OpenXR thread running while headset rendering is enabled. The setting can change at any time.
+	openxr::set_consumer(openxr::consumer::headset_rendering, openxr::is_rendering_enabled());
+#endif
+
+	// Copy the frame for the headset. It is handed over in frame_context_cleanup once the GPU finished it.
+	if (openxr::is_rendering_enabled() && image_to_flip)
+	{
+		const auto eyes = openxr::get_eye_layout(buffer_width, buffer_height, image_to_flip->height(), avconfig.stereo_enabled, image_to_flip2 != nullptr);
+
+		// The overlays are drawn directly to the window, so the share helper draws them into copies of the images
+		vk::openxr_frame_share::overlay_callback draw_overlays;
+		if (has_overlay)
+		{
+			draw_overlays = [&](vk::framebuffer_holder* fbo, VkRenderPass pass, const areau& area)
+			{
+				single_target_pass = pass; // Used by render_overlays
+				render_overlays(fbo, area);
+			};
+		}
+
+		m_current_frame->openxr_frame = m_openxr_share.present(*m_current_command_buffer, image_to_flip, image_to_flip2, eyes, draw_overlays);
 	}
 
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)

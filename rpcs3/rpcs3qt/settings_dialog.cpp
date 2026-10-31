@@ -575,6 +575,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceComboBox(emu_settings_type::OutputScalingMode, ui->outputScalingMode, tooltips.settings.output_scaling_mode);
 
+	// VR headset
+	EnhanceComboBox(emu_settings_type::OpenXRRenderMode, ui->openxrRenderMode, tooltips.settings.openxr_render_mode, ui->gb_openxr_render_mode);
+#ifndef HAVE_OPENXR
+	ui->gb_openxr_render_mode->setVisible(false);
+#endif
+
 	// 3D
 	EnhanceComboBox(emu_settings_type::StereoRenderMode, ui->stereoRenderMode, tooltips.settings.stereo_render_mode, ui->gb_stereo);
 	EnhanceCheckBox(emu_settings_type::StereoRenderEnabled, ui->stereoRenderEnabled, {});
