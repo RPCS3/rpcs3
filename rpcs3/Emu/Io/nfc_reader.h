@@ -74,6 +74,7 @@ private:
 	// Normal information frame header
 	struct frame_header
 	{
+		//u8 preamble = nfc_reader::preamble; // Removed for separate handling of preamble and postamble
 		std::array<u8, 2> start = start_code;
 		u8 len = 0; // Length of TFI + data
 		u8 lcs = 0; // Length checksum (len + lcs == 0)
@@ -83,6 +84,7 @@ private:
 	// Extended information frame header (len and lcs are 0xFF in the normal header position)
 	struct extended_frame_header
 	{
+		//u8 preamble = nfc_reader::preamble; // Removed for separate handling of preamble and postamble
 		std::array<u8, 2> start = start_code;
 		std::array<u8, 2> marker = {0xFF, 0xFF};
 		be_t<u16, 1> len = 0; // Length of TFI + data
@@ -94,7 +96,7 @@ private:
 	struct frame_footer
 	{
 		u8 dcs = 0; // Data checksum (tfi + data + dcs == 0)
-		u8 postamble = nfc_reader::postamble;
+		//u8 postamble = nfc_reader::postamble; // Removed for separate handling of preamble and postamble
 	};
 
 	// ReadRegister request (only the first register address is inspected)
@@ -178,7 +180,7 @@ private:
 
 	static_assert(sizeof(frame_header) == 5);
 	static_assert(sizeof(extended_frame_header) == 8);
-	static_assert(sizeof(frame_footer) == 2);
+	static_assert(sizeof(frame_footer) == 1);
 	static_assert(sizeof(read_register_request) == 3);
 	static_assert(sizeof(in_data_exchange_request) == 4);
 	static_assert(sizeof(read_gpio_response) == 4);

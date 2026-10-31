@@ -102,10 +102,10 @@ void nfc_reader::build_response(std::vector<u8>& out, const std::vector<u8>& in,
 		footer.dcs -= data;
 	}
 
-	out.push_back(footer.dcs);
+	append(footer);
 
 	if (!remove_pre_and_postamble)
-		out.push_back(footer.postamble);
+		out.push_back(postamble);
 }
 
 void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, const usio_io_status& status)
