@@ -14,6 +14,7 @@
 #include "Emu/RSX/Core/RSXContext.h"
 
 #include <thread>
+#include <unordered_set>
 
 namespace vk
 {
@@ -734,6 +735,9 @@ namespace vk
 			// VK_FORMAT_R32G32B32A32_SFLOAT,
 		};
 
+		// How many variants to generate before we allow the user to skip
+		u32 min_variants_to_build = 0u;
+
 		for (const auto surface_format : possible_color_formats)
 		{
 			// Base pipeline - simple color
@@ -777,6 +781,11 @@ namespace vk
 					VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
 				pipe_properties.push_back(base_props);
 			}
+
+			if (!min_variants_to_build)
+			{
+				min_variants_to_build = ::size32(pipe_properties);
+			}
 		}
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
@@ -785,65 +794,78 @@ namespace vk
 		dlg->set_limit(0, limit1);
 		dlg->set_limit(1, limit2);
 
-		atomic_t<u32> ctr = 0;
+		// Map each base pipeline to the full variants that can alias it
+		std::unordered_set<u64> base_opts;
+		for (const auto& variant : variants.base_pipelines)
+		{
+			base_opts.insert(variant.first | variant.second);
+		}
+
+		std::unordered_map<u64, std::vector<u64>> variant_map;
+		for (const auto& variant : variants.pipelines)
+		{
+			const u64 compat_opt = variant.vs_opts.compatible_shader_opts | variant.fs_opts.compatible_shader_opts;
+			const u64 exact_opt = variant.vs_opts.shader_opt | variant.fs_opts.shader_opt;
+
+			if (!base_opts.contains(compat_opt))
+			{
+				fmt::throw_exception("Invalid interpreter configuration.");
+			}
+
+			if (compat_opt != exact_opt)
+			{
+				variant_map[compat_opt].push_back(exact_opt);
+			}
+		}
+
+		auto ctr = std::make_shared<atomic_t<u32>>(0);
 		for (const auto& props : pipe_properties)
 		{
 			for (auto& variant : variants.base_pipelines)
 			{
-				pipeline_key key{};
-				key.properties = props;
-				key.compiler_opt = variant.first | variant.second;
+				const u64 base_opt = variant.first | variant.second;
+				const auto found = variant_map.find(base_opt);
+				auto derived_opts = found != variant_map.end() ? found->second : std::vector<u64>{};
 
-				link(props, variant.first | variant.second, true, [&](std::shared_ptr<glsl::program>&) { ctr++; });
+				// The callback runs under m_program_cache_lock and may outlive this function if the user skips
+				link(props, base_opt, true, [this, ctr, props, derived_opts = std::move(derived_opts)](std::shared_ptr<glsl::program>& prog)
+				{
+					pipeline_key key{};
+					key.properties = props;
+
+					for (const u64 opt : derived_opts)
+					{
+						// Never replace an existing entry, it is either the same alias or a real pipeline
+						key.compiler_opt = opt;
+						m_program_cache.try_emplace(key, pipeline_cache_entry_t{ .flags = CACHED_PIPE_UNOPTIMIZED, .program = prog });
+					}
+
+					(*ctr)++;
+				});
 			}
 		}
 
+		// It doesn't need to be exact but at least generate enough to cover most of the base pipelines.
+		// Even if we miss the pipelines, the driver already saw them, so processing will be fast.
+		min_variants_to_build *= ::size32(variants.base_pipelines);
+
 		// Drain the queue.
-		// FIXME: Since the queue is executing from the context of the pipe compiler, we cannot properly stop this process.
 		do
 		{
 			std::this_thread::sleep_for(16ms);
 
-			const auto completed = ctr.load();
+			const auto completed = ctr->load();
 			dlg->update_msg(0, get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN, "%u %s %u", completed, get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit1));
 			dlg->set_value(0, completed);
-		}
-		while (ctr.load() < limit1);
 
-		ctr = 0;
-		std::lock_guard lock(m_program_cache_lock);
-
-		for (const auto& props : pipe_properties)
-		{
-			pipeline_key base_key;
-			base_key.properties = props;
-
-			for (auto& variant : variants.pipelines)
+			if (min_variants_to_build &&
+				completed >= min_variants_to_build)
 			{
-				// Check if we have an exact match
-				base_key.compiler_opt = variant.vs_opts.shader_opt | variant.fs_opts.shader_opt;
-				if (auto found = m_program_cache.find(base_key);
-					found != m_program_cache.end())
-				{
-					// We have a perfect match, no propagation required
-					continue;
-				}
-
-				// Find a compatible pipeline
-				auto compat_key = base_key;
-				compat_key.compiler_opt = variant.vs_opts.compatible_shader_opts | variant.fs_opts.compatible_shader_opts;
-				auto found = m_program_cache.find(compat_key);
-
-				ensure(found != m_program_cache.end(), "Invalid interpreter configuration.");
-
-				pipeline_cache_entry_t cache_entry
-				{
-					.flags = CACHED_PIPE_UNOPTIMIZED,
-					.program = found->second.program
-				};
-				m_program_cache[base_key] = cache_entry;
+				min_variants_to_build = 0u;
+				dlg->enable_hold_to_skip();
 			}
 		}
+		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && !dlg->skip_requested());
 
 		dlg->set_value(1, limit2);
 		dlg->refresh();

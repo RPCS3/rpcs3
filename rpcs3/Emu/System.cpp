@@ -978,6 +978,7 @@ bool Emulator::BootBigPictureMode()
 	sys_log.notice("Big Picture Mode: booting window");
 
 	m_state = system_state::loading;
+	m_boot_mode = boot_mode::shell;
 
 	m_path.clear();
 	m_path_old.clear();
@@ -1932,6 +1933,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		// Special boot mode (directory scan)
 		if (!launching_from_disc_archive && fs::is_dir(m_path))
 		{
+			m_boot_mode = boot_mode::cache_builder;
 			m_state = system_state::ready;
 			g_emu_callbacks.on_ready();
 			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
@@ -3627,6 +3629,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		m_savestate_extension_flags1 = {};
 		m_emu_state_close_pending = false;
 		m_precompilation_option = {};
+		m_boot_mode = boot_mode::application;
 	};
 
 	if (system_state old_state = m_state.fetch_op([](system_state& state)

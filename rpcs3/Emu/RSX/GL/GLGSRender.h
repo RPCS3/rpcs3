@@ -183,6 +183,9 @@ private:
 	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
+	// Warm the shader interpreter and the on-disk pipeline cache
+	void preload_shaders();
+
 	bool load_program();
 	void load_program_env();
 	void update_vertex_env(const gl::vertex_upload_info& upload_info);
