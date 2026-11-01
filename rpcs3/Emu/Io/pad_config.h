@@ -112,6 +112,10 @@ struct cfg_pad final : cfg::node
 	cfg::string orientation_reset_button{ this, "Orientation Reset Button", "" };
 	cfg::_bool orientation_enabled{ this, "Orientation Enabled", false };
 
+	cfg::_bool voice_push_to_talk{ this, "Voice Push To Talk", false };
+	cfg::string voice_talk_button{ this, "Voice Talk Button" };
+	cfg::string voice_mute_button{ this, "Voice Mute Button" };
+
 	cfg::string pressure_intensity_button{ this, "Pressure Intensity Button", "" };
 	cfg::uint<0, 100> pressure_intensity{ this, "Pressure Intensity Percent", 50 };
 	cfg::_bool pressure_intensity_toggle_mode{ this, "Pressure Intensity Toggle Mode", false };

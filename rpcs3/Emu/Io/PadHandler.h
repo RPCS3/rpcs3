@@ -183,6 +183,8 @@ protected:
 		pressure_intensity_button,
 		analog_limiter_button,
 		orientation_reset_button,
+		voice_talk_button,
+		voice_mute_button,
 
 		button_count
 	};

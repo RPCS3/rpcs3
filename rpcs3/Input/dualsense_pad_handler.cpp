@@ -254,6 +254,8 @@ void dualsense_pad_handler::init_config(cfg_pad* cfg)
 	cfg->pressure_intensity_button.def = ::at32(button_list, DualSenseKeyCodes::None);
 	cfg->analog_limiter_button.def = ::at32(button_list, DualSenseKeyCodes::None);
 	cfg->orientation_reset_button.def = ::at32(button_list, DualSenseKeyCodes::None);
+	cfg->voice_talk_button.def = ::at32(button_list, DualSenseKeyCodes::None);
+	cfg->voice_mute_button.def = ::at32(button_list, DualSenseKeyCodes::Mic);
 
 	// Set default misc variables
 	cfg->lstick_anti_deadzone.def = static_cast<u32>(0.13 * thumb_max); // 13%

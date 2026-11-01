@@ -346,6 +346,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/cellVideoPlayerUtility.cpp
     Cell/Modules/cellVideoUpload.cpp
     Cell/Modules/cellVoice.cpp
+    Cell/Modules/cellVoice_firmware.cpp
     Cell/Modules/cellVpost.cpp
     Cell/Modules/cellWebBrowser.cpp
     Cell/Modules/HLE_PATCHES.cpp

@@ -156,6 +156,7 @@ enum class emu_settings_type
 	AudioProvider,
 	AudioAvport,
 	AudioDevice,
+	VoiceOutputDevice,
 	AudioChannelLayout,
 	MasterVolume,
 	EnableBuffering,

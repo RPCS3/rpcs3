@@ -1,5 +1,14 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/savestate_utils.hpp"
+#include "Utilities/Thread.h"
+#include "Utilities/mutex.h"
+#include "cellVoice_firmware.h"
+
+#include <deque>
+#include <set>
+
 // libvoice = 0x80310801 - 0x803108ff
 // libvoice version 100
 
@@ -173,6 +182,20 @@ struct CellVoiceStartParam // aligned(32)
 	u8 reserved[32 - sizeof(s32) * 1];
 };
 
+// The voice service (cellVoice.cpp): the ports' data, their connections, the microphone, the headset output and the
+// PPU worker that runs them every 20 ms, as sys_audio's voice process does on the PS3.
+struct voice_service;
+struct voice_manager;
+
+enum class voice_run_state : u32
+{
+	stopped,
+	starting,
+	running,
+	stopping,
+	failed,
+};
+
 struct voice_manager
 {
 	struct port_t
@@ -192,6 +215,11 @@ struct voice_manager
 	std::unordered_map<u16, port_t> ports;
 	std::unordered_map<u64, std::deque<u64>> queue_keys;
 	bool voice_service_started = false;
+	voice_run_state run_state = voice_run_state::stopped;
+	u64 service_generation = 0;
+	u32 worker_id = 0;
+	u32 stop_caller = 0;
+	u32 last_error = 0;
 
 	port_t* access_port(u32 id)
 	{
@@ -206,13 +234,162 @@ struct voice_manager
 		return &pos->second;
 	}
 
+	// Sends an event to every queue registered with cellVoiceSetNotifyEventQueue
+	void notify(u64 event, u64 data2 = 0);
+
+	// The service (created with its thread on first use)
+	voice_service& service();
+
 	void reset();
 	shared_mutex mtx;
 	atomic_t<bool> is_init{ false };
 
+	std::unique_ptr<voice_service> m_service;
+
 	SAVESTATE_INIT_POS(17);
 
-	voice_manager() = default;
-	voice_manager(utils::serial& ar) { save(ar); }
+	voice_manager();
+	voice_manager(utils::serial& ar);
+	voice_manager(const voice_manager&) = delete;
+	voice_manager& operator=(const voice_manager&) = delete;
+	~voice_manager();
 	void save(utils::serial& ar);
+};
+
+class AudioBackend;
+class microphone_device;
+
+// On the PS3, libvoice is a client of sys_audio's voice process, which mixes each output port's connected inputs every
+// frame: IN_MIC (the headset microphone), IN_PCMAUDIO and IN_VOICE (data the game writes) into OUT_PCMAUDIO and OUT_VOICE
+// (data the game reads) and OUT_SECONDARY (the headset). Voice ports carry MPEG-4 CELP frames, whole
+// frames back to back without headers; the service runs at 16 kHz and CELP at 8 kHz. Games such as Modern Warfare 3,
+// Black Ops and Black Ops II connect IN_MIC to an OUT_VOICE port at 7300 bps (19-byte frames of 20 ms), send what they
+// read from it, write what they receive to an IN_VOICE port per talker, and connect those to OUT_SECONDARY.
+struct voice_service
+{
+	static constexpr u32 rate = 16000;          // CELLVOICE_SAMPLINGRATE_16000
+	static constexpr u32 tick_samples = 320;    // the service's period: 20 ms
+	static constexpr u64 tick_usec = 20'000;
+
+	// 2:1 between 16 and 8 kHz: a 31-tap windowed-sinc low-pass at 3.8 kHz
+	struct halfband_filter
+	{
+		std::array<f32, 31> x{};
+
+		f32 push(f32 v);
+		void down(const f32* in, u32 count, std::vector<f32>& out); // 16 kHz to 8 kHz (count even)
+		void up(const f32* in, u32 count, std::vector<f32>& out);   // 8 kHz to 16 kHz
+	};
+
+	struct port_data
+	{
+		std::vector<u8> bytes;                   // IN_VOICE / IN_PCMAUDIO: written by the game; OUT_VOICE / OUT_PCMAUDIO: for it to read
+		std::vector<f32> pcm;                    // IN_VOICE: decoded 16 kHz samples not played yet; OUT_VOICE: 8 kHz samples not encoded
+		std::array<f32, tick_samples> signal{};  // an input's samples this period (16 kHz, 16-bit scale)
+		u32 codec_bitrate = 0;
+		u64 codec_generation = 0;
+		bool codec_encode = false;
+		u32 codec_pending = 0;
+		bool codec_failed = false;
+		halfband_filter filter;
+		bool playing = false;                    // IN_VOICE: past its pre-buffering
+		u32 waited = 0;
+		u32 hangover = 0;                        // OUT_VOICE: voice activity
+		f32 noise_db = 30.0f;
+		bool energy_enabled = false;
+		f32 energy_level = 0.0f;
+		u32 vad_threshold = 0;                   // Firmware substitutes 8 for values outside 1..10 when capture starts.
+		u32 vad_activity = 0;                    // Measured local-talk activity, not the configured threshold.
+		f32 mic_noise_db = 30.0f;
+		bool attached = false;                   // IN_MIC: PORT_ATTACHED sent
+		bool paused = false;
+		bool logged = false;
+		bool read_logged = false;
+	};
+
+	std::unordered_map<u16, port_data> data;
+	std::set<std::pair<u16, u16>> edges; // (input, output)
+	bool mute_all = false;
+
+	// The headset microphone (IN_MIC): the device configured for cellMic
+	std::unique_ptr<microphone_device> mic;
+	bool mic_failed = false;
+	std::vector<f32> mic_fifo;
+	std::vector<u8> mic_raw;
+	bool mic_primed = false;
+	f64 mic_resample_pos = 0.0;
+	f32 mic_last = 0.0f;
+	u32 mic_config_type = ~0u;
+	std::string mic_config_device;
+	bool mic_source_changed = false;
+	bool mic_transmitting = true;
+	u64 mic_talk_generation = 0;
+
+	// The headset output (OUT_SECONDARY)
+	std::shared_ptr<AudioBackend> headset;
+	bool headset_failed = false;
+	u32 headset_retry_ticks = 0;
+	atomic_t<bool> headset_device_changed{false};
+	std::string headset_config_device;
+	u32 headset_config_renderer = ~0u;
+	bool headset_config_s16 = false;
+	shared_mutex headset_mtx;
+	std::deque<f32> headset_fifo;
+	bool headset_primed = false;
+	f64 headset_pos = 1.0;
+	f64 headset_step = 1.0 / 3;
+	f32 headset_prev = 0.0f, headset_cur = 0.0f, headset_volume = 1.0f;
+	u32 headset_channels = 2;
+	bool headset_s16 = false;
+
+	// Firmware ownership is used only by the PPU worker. Requests contain copied inputs.
+	std::unique_ptr<voice_firmware::backend> firmware;
+	std::vector<voice_firmware::request> requests;
+	u64 next_codec_generation = 1;
+
+	explicit voice_service(voice_manager& manager, bool run = true);
+	voice_service(const voice_service&) = delete;
+	voice_service& operator=(const voice_service&) = delete;
+	~voice_service();
+
+	bool mic_present() const;
+
+	// One period: the microphone, the inputs, each output's mix (manager.mtx held)
+	void tick(voice_manager& manager);
+
+	// Devices closed, IN_MIC ports detached, data dropped
+	void stop(voice_manager& manager);
+	void remove_port(u16 id);
+	void clear();
+	u32 set_port_attr(const voice_manager::port_t& port, u16 id, u32 attr, u32 value);
+	u32 get_port_attr(const voice_manager::port_t& port, u16 id, u32 attr, u32& value) const;
+	void commit(voice_manager& manager, const voice_firmware::result& result);
+	std::vector<voice_firmware::key> codec_keys() const;
+	void save(utils::serial& ar);
+
+	// cellVoiceWriteToIPort / cellVoiceReadFromOPort: the bytes taken or given
+	u32 write(const voice_manager::port_t& port, u16 id, const u8* src, u32 size);
+	u32 read(voice_manager& manager, const voice_manager::port_t& port, u16 id, u8* dst, u32 capacity);
+	u32 bytes_queued(u16 id) const;
+	u32 port_buffer_available(const voice_manager::port_t& port, u16 id) const;
+
+private:
+	void measure_port(port_data& d, const f32* samples, bool microphone);
+	bool ensure_codec(port_data& d, u32 bitrate, bool encode, u16 id);
+	void decode_voice(const voice_manager::port_t& port, port_data& d, u16 id);
+	void encode_voice(const voice_manager::port_t& port, port_data& d, u16 id, const f32* mix);
+	void read_pcm(const voice_manager::port_t& port, port_data& d);
+	void write_pcm(const voice_manager::port_t& port, port_data& d, const f32* mix);
+
+	void open_mic();
+	void close_mic();
+	void pull_mic();
+	void take_mic(f32* out);
+	bool update_mic_gate(voice_manager& manager);
+	void discard_mic_outputs(voice_manager& manager);
+
+	void open_headset();
+	void close_headset();
+	void play_headset(const f32* mix);
+	u32 headset_callback(u32 bytes, void* buffer);
 };
