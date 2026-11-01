@@ -529,10 +529,10 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 		return false;
 	}
 
-	const auto& display_buffer = m_ctx->display_buffers[info.buffer];
-	u32 buffer_width = display_buffer.width;
-	u32 buffer_height = display_buffer.height;
-	u32 buffer_pitch = display_buffer.pitch;
+	const bool valid_buffer = info.buffer < m_ctx->display_buffers_count;
+	u32 buffer_width  = valid_buffer ? +m_ctx->display_buffers[info.buffer].width : 0;
+	u32 buffer_height = valid_buffer ? +m_ctx->display_buffers[info.buffer].height : 0;
+	u32 buffer_pitch  = valid_buffer ? +m_ctx->display_buffers[info.buffer].pitch : 0;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
@@ -566,6 +566,8 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 	if (res() && info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
 	{
+		const auto& display_buffer = m_ctx->display_buffers[info.buffer];
+
 		vk::present_surface_info present_info
 		{
 			.address = rsx::get_address(m_ctx, display_buffer.offset, CELL_GCM_LOCATION_LOCAL),
