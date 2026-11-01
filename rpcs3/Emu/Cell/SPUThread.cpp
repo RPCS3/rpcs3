@@ -4692,6 +4692,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 
 			mov_rdata(rdata, data);
+			atomic_fence_acquire();
 
 			if (u64 time0 = vm::reservation_acquire(addr); ntime != time0)
 			{
