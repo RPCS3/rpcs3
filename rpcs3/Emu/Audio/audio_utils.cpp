@@ -22,6 +22,19 @@ namespace audio
 		rsx::overlays::queue_message(fxo.audio_muted ? localized_string_id::AUDIO_MUTED : localized_string_id::AUDIO_UNMUTED, 3'000'000);
 	}
 
+	void toggle_voice_chat_mic_mute()
+	{
+		audio_fxo& fxo = g_fxo->get<audio_fxo>();
+		fxo.voice_chat_mic_muted = !fxo.voice_chat_mic_muted;
+
+		rsx::overlays::queue_message(fxo.voice_chat_mic_muted ? localized_string_id::VOICE_CHAT_MIC_MUTED : localized_string_id::VOICE_CHAT_MIC_UNMUTED, 3'000'000);
+	}
+
+	f32 get_voice_chat_mic_volume()
+	{
+		return g_fxo->get<audio_fxo>().voice_chat_mic_muted ? 0.0f : g_cfg.audio.voice_chat_mic_volume / 100.0f;
+	}
+
 	void change_volume(s32 delta)
 	{
 		// Ignore if muted

@@ -65,6 +65,9 @@ struct nt_p2p_port
 	// Queued signaling messages
 	shared_mutex s_sign_mutex;
 	std::vector<signaling_message> sign_msgs{};
+	// Queued AV Chat2 voice packets
+	shared_mutex s_avc2_mutex;
+	std::vector<signaling_message> avc2_msgs{};
 
 	std::array<u8, 65535> p2p_recv_data{};
 
