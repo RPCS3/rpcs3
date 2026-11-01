@@ -168,6 +168,12 @@ error_code cellGifDecOpen(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::p
 
 	ppu.check_state();
 
+	if (!*subHandle)
+	{
+		idm::remove<lv2_fs_object, lv2_file>(current_subHandle.fd);
+		return CELL_GIFDEC_ERROR_FATAL;
+	}
+
 	**subHandle = current_subHandle;
 
 	return CELL_OK;
