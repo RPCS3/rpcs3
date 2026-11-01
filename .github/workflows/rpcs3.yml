@@ -215,8 +215,6 @@ jobs:
           
       - name: Setup MacPorts
         uses: melusina-org/setup-macports@v1
-        with:
-            cache: 'disable'
 
       - name: Restore Build Ccache
         if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
