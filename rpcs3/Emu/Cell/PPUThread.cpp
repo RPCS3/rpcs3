@@ -4397,7 +4397,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 							// Try to read from that address
 							if (const u128 klic_value = read_from_ptr_unsafe<u128>(klic_ptr))
 							{
-								if (!std::count_if(decrypt_klics.begin(), decrypt_klics.end(), FN(std::memcmp(&x, &klic_value, 16) == 0)))
+								if (std::ranges::none_of(decrypt_klics, FN(std::memcmp(&x, &klic_value, 16) == 0)))
 								{
 									decrypt_klics.emplace_back(klic_value);
 								}
@@ -5623,7 +5623,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 					continue;
 				}
 
-				if (std::count(part.excluded_funcs.begin(), part.excluded_funcs.end(), func.addr))
+				if (std::ranges::contains(part.excluded_funcs, func.addr))
 				{
 					continue;
 				}
@@ -6288,7 +6288,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	{
 		if (func.size)
 		{
-			if (std::count(module_part.excluded_funcs.begin(), module_part.excluded_funcs.end(), func.addr))
+			if (std::ranges::contains(module_part.excluded_funcs, func.addr))
 			{
 				continue;
 			}
@@ -6348,7 +6348,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 
 			if (mod_func.size)
 			{
-				if (std::count(module_part.excluded_funcs.begin(), module_part.excluded_funcs.end(), mod_func.addr))
+				if (std::ranges::contains(module_part.excluded_funcs, mod_func.addr))
 				{
 					continue;
 				}
