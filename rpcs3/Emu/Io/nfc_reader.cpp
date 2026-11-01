@@ -1,8 +1,35 @@
 #include "stdafx.h"
 #include "nfc_reader.h"
-#include "usio_types.h"
 
 LOG_CHANNEL(usio_log, "USIO");
+
+usz nfc_reader::get_buffer_size() const
+{
+	usz size = 0;
+
+	if (m_send_ack)
+		size += ack_frame.size() + (m_remove_pre_and_postamble ? 0 : 2);
+
+	if (m_send_response)
+		size += m_response.size();
+
+	return size;
+}
+
+void nfc_reader::write_buffer(std::vector<u8>& out)
+{
+	if (m_send_ack)
+	{
+		write_ack(out);
+		m_send_ack = false;
+	}
+
+	if (m_send_response)
+	{
+		out.insert(out.end(), m_response.begin(), m_response.end());
+		m_send_response = false;
+	}
+}
 
 bool nfc_reader::verify_request(std::span<const u8> in)
 {
@@ -56,16 +83,18 @@ bool nfc_reader::verify_request(std::span<const u8> in)
 	return data_checksum == 0x00;
 }
 
-void nfc_reader::build_response(std::vector<u8>& out, const std::vector<u8>& in, bool remove_pre_and_postamble)
+void nfc_reader::build_response(const std::vector<u8>& in)
 {
-	if (!remove_pre_and_postamble)
+	auto& out = m_response;
+
+	if (!m_remove_pre_and_postamble)
 		out.push_back(preamble);
 
 	if (in.empty())
 	{
 		out.insert(out.end(), error_frame.begin(), error_frame.end());
 
-		if (!remove_pre_and_postamble)
+		if (!m_remove_pre_and_postamble)
 			out.push_back(postamble);
 
 		return;
@@ -105,13 +134,13 @@ void nfc_reader::build_response(std::vector<u8>& out, const std::vector<u8>& in,
 
 	append(footer);
 
-	if (!remove_pre_and_postamble)
+	if (!m_remove_pre_and_postamble)
 		out.push_back(postamble);
 }
 
-void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, usio_io_status& status)
+void nfc_reader::process_request(const std::vector<u8>& in, const std::array<u8, 0x40>& card, bool card_tapped)
 {
-	const std::span<const u8> frame = find_frame(buf);
+	const std::span<const u8> frame = find_frame(in);
 
 	if (!verify_request(frame))
 		return;
@@ -120,13 +149,13 @@ void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response,
 	// So only clear the pending response buffer when a new legitimate request or ACK is received.
 	if (std::equal(nack_frame.begin(), nack_frame.end(), frame.begin()))
 	{
-		status.nfc_reader_send_response = true; // Only retransmit the actual response; do not retransmit ACK
+		m_send_response = true; // Only retransmit the actual response; do not retransmit ACK
 		return;
 	}
 
-	response.clear();
-	status.nfc_reader_send_ack = false;
-	status.nfc_reader_send_response = false;
+	m_response.clear();
+	m_send_ack = false;
+	m_send_response = false;
 
 	// Do not respond to ACK
 	if (std::equal(ack_frame.begin(), ack_frame.end(), frame.begin()))
@@ -150,50 +179,50 @@ void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response,
 
 			if ((static_cast<u16>(req.address) & 0xFF) == 0x1C)
 			{
-				build_response(response, {res, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
+				build_response({res, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1});
 			}
 			else
 			{
-				build_response(response, {res, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87});
+				build_response({res, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87});
 			}
 		}
 		break;
 	}
 	case command_code::write_register:
 	{
-		build_response(response, {res, 0x00});
+		build_response({res, 0x00});
 		break;
 	}
 	case command_code::read_gpio:
 	{
-		build_response(response, to_bytes(read_gpio_response{}));
+		build_response(to_bytes(read_gpio_response{}));
 		break;
 	}
 	case command_code::write_gpio:
 	{
-		build_response(response, {res});
+		build_response({res});
 		break;
 	}
 	case command_code::set_parameters:
 	{
-		build_response(response, {res});
+		build_response({res});
 		break;
 	}
 	case command_code::alpar_command_for_tda:
 	{
-		build_response(response, {res});
+		build_response({res});
 		break;
 	}
 	case command_code::rf_configuration:
 	{
-		build_response(response, {res});
+		build_response({res});
 		break;
 	}
 	case command_code::in_data_exchange:
 	{
-		if (payload.size() < sizeof(in_data_exchange_request) || !status.card_tapped)
+		if (payload.size() < sizeof(in_data_exchange_request) || !card_tapped)
 		{
-			build_response(response, {res, 0x01});
+			build_response({res, 0x01});
 			break;
 		}
 
@@ -203,41 +232,41 @@ void nfc_reader::write_response(std::vector<u8>& buf, std::vector<u8>& response,
 		{
 			in_data_exchange_response resp{};
 			std::memcpy(resp.block.data(), card.data() + req.block * mifare_block_size, mifare_block_size);
-			build_response(response, to_bytes(resp));
+			build_response(to_bytes(resp));
 		}
 		else
 		{
-			build_response(response, {res, 0x01});
+			build_response({res, 0x01});
 		}
 		break;
 	}
 	case command_code::in_list_passive_target:
 	{
-		if (status.card_tapped)
+		if (card_tapped)
 		{
 			in_list_passive_target_response resp{};
 			std::memcpy(resp.nfcid.data(), card.data(), mifare_uid_size);
-			build_response(response, to_bytes(resp));
+			build_response(to_bytes(resp));
 		}
 		else
 		{
-			build_response(response, {res, 0x00}); // No targets found
+			build_response({res, 0x00}); // No targets found
 		}
 		break;
 	}
 	case command_code::in_release:
 	{
-		build_response(response, {res, 0x01, 0x00});
+		build_response({res, 0x01, 0x00});
 		break;
 	}
 	default:
 	{
-		usio_log.warning("Unhandled nfc card reader command: 0x%02X", static_cast<u8>(command));
-		build_response(response); // Respond with an error frame
+		usio_log.warning("Unhandled NFC reader command: 0x%02X", static_cast<u8>(command));
+		build_response(); // Respond with an error frame
 		break;
 	}
 	}
 
-	status.nfc_reader_send_ack = true;
-	status.nfc_reader_send_response = true;
+	m_send_ack = true;
+	m_send_response = true;
 }
