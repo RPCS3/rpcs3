@@ -236,7 +236,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	u64 data_ro_ptr = 0;
 	u64 data_rw_ptr = 0;
 
-	// First fallback for non-existing symbols
+	// First checked for symbols
 	// May be a memory container internally
 	std::function<u64(const std::string&)> m_symbols_cement;
 
@@ -267,11 +267,16 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
-		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
+		u64 addr = 0;
 
-		if (!addr && m_symbols_cement)
+		if (m_symbols_cement)
 		{
 			addr = m_symbols_cement(name);
+		}
+
+		if (!addr)
+		{
+			addr = RTDyldMemoryManager::getSymbolAddress(name);
 		}
 
 		if (!addr)
@@ -379,7 +384,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 // Simple memory manager
 struct MemoryManager2 : llvm::RTDyldMemoryManager
 {
-	// First fallback for non-existing symbols
+	// First checked for symbols
 	// May be a memory container internally
 	std::function<u64(const std::string&)> m_symbols_cement;
 
@@ -394,11 +399,16 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
-		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
+		u64 addr = 0;
 
-		if (!addr && m_symbols_cement)
+		if (m_symbols_cement)
 		{
 			addr = m_symbols_cement(name);
+		}
+
+		if (!addr)
+		{
+			addr = RTDyldMemoryManager::getSymbolAddress(name);
 		}
 
 		if (!addr)
