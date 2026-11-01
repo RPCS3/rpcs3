@@ -295,7 +295,8 @@ namespace np
 		extra_nps::print_SceNpMatching2RoomDataInternal(room_info);
 		extra_nps::print_SceNpMatching2SignalingOptParam(&opt_param);
 
-		// We initiate signaling if necessary
+		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+		std::vector<u64> signaling_peers;
 		for (int i = 0; i < resp->signaling_data_size(); i++)
 		{
 			const auto& signaling_info = resp->signaling_data(i);
@@ -312,13 +313,27 @@ namespace np
 
 			rpcn_log.notice("JoinRoomResult told to connect to member(%d=%s) of room(%d): %s:%d", member_id, np::npid_to_string(*npid_p2p), room_id, ip_to_string(addr_p2p), port_p2p);
 
-			// Attempt Signaling
-			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
-			const u32 conn_id = sigh.init_sig2(*npid_p2p, room_id, member_id);
-			sigh.start_sig(conn_id, addr_p2p, port_p2p);
+			signaling_peers.push_back(sigh.prepare_sig2(cb_info_opt->ctx_id, *npid_p2p, room_id, member_id, addr_p2p, port_p2p));
 		}
 
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+
+		if (signaling_peers.empty())
+			return;
+
+		// Start signaling only after the guest has received its JoinRoom result.
+		// start_sig2 may immediately report an already-active connection. Queuing
+		// this work behind the result also places those signaling callbacks in a
+		// subsequent sysutil callback batch, after the guest can process the join.
+		sysutil_register_cb([signaling_peers = std::move(signaling_peers)](ppu_thread&) -> s32
+		{
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			for (const u64 pending_id : signaling_peers)
+			{
+				sigh.start_sig2(pending_id);
+			}
+			return CELL_OK;
+		});
 	}
 
 	u32 np_handler::leave_room(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveRoomRequest* req)
