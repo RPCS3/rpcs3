@@ -67,6 +67,21 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 namespace
 {
 	thread_local spu_llvm_compile_context* g_spu_llvm_compile_context = nullptr;
+
+	// Calculate the expected SHA state with the same instruction emitted by the JIT
+	// Keep native SHA code in a feature-targeted function for baseline ARM builds
+#if defined(__clang__)
+	__attribute__((target("sha3")))
+#elif defined(__GNUC__)
+	__attribute__((target("+sha3")))
+#endif
+	void update_sha512_checksum(u32* state, const u32* input0, const u32* input1)
+	{
+		const auto old = vreinterpretq_u64_u32(vld1q_u32(state));
+		const auto x = vreinterpretq_u64_u32(vld1q_u32(input0));
+		const auto y = vreinterpretq_u64_u32(vld1q_u32(input1));
+		vst1q_u32(state, vreinterpretq_u32_u64(vsha512su1q_u64(old, x, y)));
+	}
 }
 
 void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept
@@ -1933,337 +1948,465 @@ public:
 			if ((end - starta) >= 192 && !g_cfg.core.precise_spu_verification)
 			{
 #ifdef ARCH_ARM64
-				// Loop if there is at least 288 bytes of data to checksum on ARM.
-				// Each ARM checksum block consumes 6 NEON vectors: 2 direct adds and 2 UABD accumulates.
-				constexpr u32 checksum_block_size = 96;
+				// Each 96-byte step consumes six 16-byte NEON vectors and maintains four states:
+				// ADD, EOR3, ADD and SHA512SU1 use ADD for all states without SHA3/SHA512
+				// EOR3 and SHA512SU1 can both consume 2 loads per instr
+				const bool use_crypto = utils::has_sha512() && utils::has_sha3();
+				constexpr u32 lanes = 4;
+				constexpr u32 states = 4;
+				constexpr u32 inputs = 6;
+				constexpr u32 loop_blocks = 3;
+				constexpr u32 counter_bytes = 96;
 #else
-				// Loop if there is atleast (16 * stride) bytes of data to checksum to save some instruction cache
-				constexpr u32 checksum_block_size = 64;
+				// Each step consumes four 512-bit vectors, split between two XOR states
+				// A pair containing a protected instruction uses ADD instead
+				constexpr u32 lanes = 16;
+				constexpr u32 states = 2;
+				constexpr u32 inputs = 4;
+				constexpr u32 loop_blocks = 4;
+				constexpr u32 counter_bytes = 64;
 #endif
-				constexpr u32 checksum_loop_vectors = 16;
-				const u32 checksum_vectors_per_block = checksum_block_size / stride;
-				const u32 checksum_loop_blocks = (checksum_loop_vectors + checksum_vectors_per_block - 1) / checksum_vectors_per_block;
-				const u32 checksum_loop_size = checksum_block_size * checksum_loop_blocks;
-				const u32 checksum_loop_end = starta + ((end - starta) / checksum_loop_size) * checksum_loop_size;
+				const u32 width = lanes * 4;
+				const u32 block_bytes = inputs * width;
 
-				bool use_checksum_loop = (checksum_loop_end - starta) >= checksum_loop_size * 2;
+				// Roll three ARM steps (288 bytes) or four x86 steps (1024 bytes)
+				// into one loop body to limit instruction-cache use for large blocks
+				const u32 loop_bytes = block_bytes * loop_blocks;
+				const u32 loop_end = starta + (end - starta) / loop_bytes * loop_bytes;
+				const auto type = FixedVectorType::get(m_ir->getInt32Ty(), lanes);
+				const auto zero = ConstantAggregateZero::get(type);
 
-				for (u32 j = starta; use_checksum_loop && j < checksum_loop_end; j += 4)
+				std::array<llvm::Value*, states> accumulators;
+				accumulators.fill(zero);
+
+				using words_t = std::array<std::array<u32, 16>, inputs>;
+				std::array<std::array<u32, 16>, states> expected{};
+
+				// We are operating under the assumption that addition based "checksumming"
+				// is only required in retail games when dealing with relative branch operations
+				// so use a cursed combination of xorsum/checksum/sha operations in loop
+				// lanes that feature relative branch operations. Nuke me if this doesn't work!
+				const auto protected_word = [](u32 word)
 				{
-					if (!func.data[(j - start) / 4])
+					switch (g_spu_itype.decode(std::bit_cast<be_t<u32>>(word)))
 					{
-						use_checksum_loop = false;
-						break;
-					}
-				}
-
-#ifndef ARCH_ARM64
-				if (use_checksum_loop)
-				{
-					const auto acc_init = ConstantAggregateZero::get(get_type<u32[16]>());
-					const auto loop_block = BasicBlock::Create(m_context, "spu_checksum_loop", m_function);
-					const auto loop_next = BasicBlock::Create(m_context, "spu_checksum_next", m_function);
-					const auto loop_preheader = m_ir->GetInsertBlock();
-					m_ir->CreateBr(loop_block);
-
-					m_ir->SetInsertPoint(loop_block);
-					const auto offset = m_ir->CreatePHI(get_type<u32>(), 2);
-					const auto acc0_phi = m_ir->CreatePHI(get_type<u32[16]>(), 2);
-					const auto acc1_phi = m_ir->CreatePHI(get_type<u32[16]>(), 2);
-
-					offset->addIncoming(m_ir->getInt32(0), loop_preheader);
-					acc0_phi->addIncoming(acc_init, loop_preheader);
-					acc1_phi->addIncoming(acc_init, loop_preheader);
-
-					const auto offset64 = m_ir->CreateZExt(offset, get_type<u64>());
-					llvm::Value* next_acc0 = acc0_phi;
-					llvm::Value* next_acc1 = acc1_phi;
-
-					for (u32 block = 0; block < checksum_loop_blocks; block++)
-					{
-						const auto vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr(data_addr, m_ir->CreateAdd(offset64, m_ir->getInt64(block * checksum_block_size))), llvm::MaybeAlign{4});
-
-						if (block & 1)
-						{
-							next_acc1 = m_ir->CreateAdd(next_acc1, vls);
-						}
-						else
-						{
-							next_acc0 = m_ir->CreateAdd(next_acc0, vls);
-						}
-					}
-
-					const auto next_offset = m_ir->CreateAdd(offset, m_ir->getInt32(checksum_loop_size));
-					const auto loop_again = m_ir->CreateICmpULT(next_offset, m_ir->getInt32(checksum_loop_end - starta));
-					m_ir->CreateCondBr(loop_again, loop_block, loop_next);
-
-					offset->addIncoming(next_offset, loop_block);
-					acc0_phi->addIncoming(next_acc0, loop_block);
-					acc1_phi->addIncoming(next_acc1, loop_block);
-					acc0 = next_acc0;
-					acc1 = next_acc1;
-
-					check_iterations += (checksum_loop_end - starta) / checksum_block_size;
-
-					m_ir->SetInsertPoint(loop_next);
-				}
-
-				for (u32 j = use_checksum_loop ? checksum_loop_end : starta; j < end; j += checksum_block_size)
-				{
-					int indices[16];
-					bool holes = false;
-					bool data = false;
-
-					for (u32 i = 0; i < 16; i++)
-					{
-						const u32 k = j + i * 4;
-
-						if (k < start || k >= end || !func.data[(k - start) / 4])
-						{
-							indices[i] = 16;
-							holes      = true;
-						}
-						else
-						{
-							indices[i] = i;
-							data       = true;
-						}
-					}
-
-					if (!data)
-					{
-						// Skip full-sized holes
-						continue;
-					}
-
-					llvm::Value* vls = nullptr;
-
-					// Load unaligned code block from LS
-					vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr(data_addr, j - starta), llvm::MaybeAlign{4});
-
-					// Mask if necessary
-					if (holes)
-					{
-						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, 16));
-					}
-
-					// Interleave accumulators for more performance
-					if (toggle)
-					{
-						acc0 = acc0 ? m_ir->CreateAdd(acc0, vls) : vls;
-					}
-					else
-					{
-						acc1 = acc1 ? m_ir->CreateAdd(acc1, vls) : vls;
-					}
-					toggle = !toggle;
-					check_iterations++;
-				}
-
-				llvm::Value* acc = (acc0 && acc1) ? m_ir->CreateAdd(acc0, acc1): (acc0 ? acc0 : acc1);
-
-				// Create the checksum
-				u32 checksum[16] = {0};
-
-				for (u32 j = 0; j < func.data.size(); j += 16) // Process 16 elements per iteration
-				{
-					for (u32 i = 0; i < 16; i++)
-					{
-						if (j + i < func.data.size())
-						{
-							checksum[i] += func.data[j + i];
-						}
-					}
-				}
-
-				auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(checksum, 16));
-				acc = m_ir->CreateXor(acc, const_vector);
-
-				// Pattern for PTEST
-				acc = m_ir->CreateBitCast(acc, get_type<u64[8]>());
-
-				llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
-
-				for (u32 i = 1; i < 8; i++)
-				{
-					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
-				}
-
-				// Compare result with zero
-				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
-				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
-#else
-				// Very cursed "checksumming" code
-				// 96 bytes per ARM checksum step
-				//vls[0] -> add
-				//vls[1], vls[2] -> uaba
-				//vls[3] -> add
-				//vls[4], vls[5] -> uaba
-				//This allows us to save on some ALU ops relative to load instructions
-				const auto acc_init = ConstantAggregateZero::get(get_type<u32[4]>());
-				llvm::Value* checksum_parts[4] = {acc_init, acc_init, acc_init, acc_init};
-				u32 checksum[16] = {0};
-
-				const auto update_checksum = [&](const u32* words)
-				{
-					for (u32 i = 0; i < 4; i++)
-					{
-						checksum[i] += words[i];
-						checksum[4 + i] += words[4 + i] > words[8 + i] ? words[4 + i] - words[8 + i] : words[8 + i] - words[4 + i];
-						checksum[8 + i] += words[12 + i];
-						checksum[12 + i] += words[16 + i] > words[20 + i] ? words[16 + i] - words[20 + i] : words[20 + i] - words[16 + i];
+					case spu_itype::BR:
+					case spu_itype::BRSL:
+					case spu_itype::BRZ:
+					case spu_itype::BRNZ:
+					case spu_itype::BRHZ:
+					case spu_itype::BRHNZ:
+					case spu_itype::HBRR:
+					case spu_itype::HBRA:
+					case spu_itype::HBR:
+						return true;
+					default:
+						return false;
 					}
 				};
 
-				if (use_checksum_loop)
+				const auto get_words = [&](u32 address)
 				{
-					for (u32 j = starta; j < checksum_loop_end; j += checksum_block_size)
-					{
-						u32 words[24];
+					words_t words{};
 
-						for (u32 i = 0; i < 24; i++)
+					for (u32 part = 0; part < inputs; part++)
+					{
+						for (u32 lane = 0; lane < lanes; lane++)
 						{
-							words[i] = func.data[(j + i * 4 - start) / 4];
-						}
-
-						update_checksum(words);
-					}
-
-					const auto loop_block = BasicBlock::Create(m_context, "spu_checksum_loop", m_function);
-					const auto loop_next = BasicBlock::Create(m_context, "spu_checksum_next", m_function);
-					const auto loop_preheader = m_ir->GetInsertBlock();
-					m_ir->CreateBr(loop_block);
-
-					m_ir->SetInsertPoint(loop_block);
-					const auto offset = m_ir->CreatePHI(get_type<u32>(), 2);
-					llvm::PHINode* acc_phi[4];
-					llvm::Value* next_acc[4];
-
-					for (u32 part = 0; part < 4; part++)
-					{
-						acc_phi[part] = m_ir->CreatePHI(get_type<u32[4]>(), 2);
-						acc_phi[part]->addIncoming(checksum_parts[part], loop_preheader);
-						next_acc[part] = acc_phi[part];
-					}
-
-					offset->addIncoming(m_ir->getInt32(0), loop_preheader);
-
-					const auto offset64 = m_ir->CreateZExt(offset, get_type<u64>());
-
-					for (u32 block = 0; block < checksum_loop_blocks; block++)
-					{
-						llvm::Value* vls[6];
-
-						for (u32 part = 0; part < 6; part++)
-						{
-							vls[part] = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr(data_addr, m_ir->CreateAdd(offset64, m_ir->getInt64(block * checksum_block_size + part * 16))), llvm::MaybeAlign{4});
-						}
-
-						next_acc[0] = m_ir->CreateAdd(next_acc[0], vls[0]);
-						next_acc[1] = m_ir->CreateAdd(next_acc[1], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[1], vls[2]}));
-						next_acc[2] = m_ir->CreateAdd(next_acc[2], vls[3]);
-						next_acc[3] = m_ir->CreateAdd(next_acc[3], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[4], vls[5]}));
-					}
-
-					const auto next_offset = m_ir->CreateAdd(offset, m_ir->getInt32(checksum_loop_size));
-					const auto loop_again = m_ir->CreateICmpULT(next_offset, m_ir->getInt32(checksum_loop_end - starta));
-					m_ir->CreateCondBr(loop_again, loop_block, loop_next);
-
-					offset->addIncoming(next_offset, loop_block);
-
-					for (u32 part = 0; part < 4; part++)
-					{
-						acc_phi[part]->addIncoming(next_acc[part], loop_block);
-						checksum_parts[part] = next_acc[part];
-					}
-
-					check_iterations += (checksum_loop_end - starta) / checksum_block_size;
-
-					m_ir->SetInsertPoint(loop_next);
-				}
-
-				for (u32 j = use_checksum_loop ? checksum_loop_end : starta; j < end; j += checksum_block_size)
-				{
-					llvm::Value* vls[6] = {};
-					u32 words[24] = {};
-					bool any_data = false;
-
-					for (u32 part = 0; part < 6; part++)
-					{
-						int indices[4];
-						bool holes = false;
-						bool data = false;
-
-						for (u32 i = 0; i < 4; i++)
-						{
-							const u32 k = j + (part * 4 + i) * 4;
-
-							if (k < start || k >= end || !func.data[(k - start) / 4])
+							if (const u32 pc = address + part * width + lane * 4; pc < end)
 							{
-								indices[i] = 4;
-								holes      = true;
+								words[part][lane] = func.data[(pc - start) / 4];
+							}
+						}
+					}
+
+					return words;
+				};
+
+				// Mark windows containing relative branch instructions or relative branch hints
+				const auto protection = [&](const words_t& words)
+				{
+					std::array<bool, inputs> result{};
+
+					for (u32 part = 0; part < inputs; part++)
+					{
+						for (u32 lane = 0; lane < lanes; lane++)
+						{
+							result[part] = result[part] || protected_word(words[part][lane]);
+						}
+					}
+
+					return result;
+				};
+
+				// Map fixed operation slots to original input windows
+				// Protection flags move with the windows when their assignments change
+				struct checksum_plan
+				{
+					std::array<u32, inputs> order{};
+					std::array<bool, inputs> protect{};
+				};
+
+				// Choose the input permutation at compile time rather than emitting a runtime shuffle
+				// Use the same assignment for the expected checksum and generated verifier
+				const auto make_plan = [&](const bool* protect)
+				{
+					checksum_plan plan;
+					for (u32 part = 0; part < inputs; part++)
+					{
+						plan.order[part] = part;
+						plan.protect[part] = protect[part];
+					}
+
+#ifdef ARCH_ARM64
+					// With crypto, ARM slots 0/3 use ADD, 1/2 use EOR3, and 4/5 use SHA512SU1
+					constexpr std::array<u32, 2> xor_inputs{1, 2};
+					// Prefer individual SHA inputs before displacing an ADD input
+					constexpr std::array<u32, 4> replacements{4, 5, 0, 3};
+					if (!use_crypto)
+					{
+						return plan;
+					}
+
+					// Exchange the pairs when possible, keeping inputs 0/3 on ADD
+					// Preserve the two ADD, one EOR3 and one SHA512SU1 updates
+					if ((plan.protect[1] || plan.protect[2]) && !plan.protect[4] && !plan.protect[5])
+					{
+						std::swap(plan.order[1], plan.order[4]);
+						std::swap(plan.order[2], plan.order[5]);
+						std::swap(plan.protect[1], plan.protect[4]);
+						std::swap(plan.protect[2], plan.protect[5]);
+						return plan;
+					}
+#else
+					// With up to two protected inputs, collect them in the first pair for ADD
+					// Leave the second pair eligible for XOR, using 512-bit banks on every x86 target
+					constexpr std::array<u32, 2> xor_inputs{2, 3};
+					constexpr std::array<u32, 2> replacements{0, 1};
+#endif
+					// Without an eligible pair, retain the original order
+					// ARM uses four ADDs plus SHA512SU1, x86 uses two ADD pairs
+					if (std::count(plan.protect.begin(), plan.protect.end(), false) < 2)
+					{
+						return plan;
+					}
+
+					for (const u32 slot : xor_inputs)
+					{
+						if (!plan.protect[slot])
+						{
+							continue;
+						}
+
+						for (const u32 replacement : replacements)
+						{
+							if (plan.protect[replacement])
+							{
+								continue;
+							}
+
+							std::swap(plan.order[slot], plan.order[replacement]);
+							std::swap(plan.protect[slot], plan.protect[replacement]);
+							break;
+						}
+					}
+
+					return plan;
+				};
+
+				// Calculate the expected checksum from the original program
+				// Keep these operations in sync with the generated code in update()
+				const auto update_expected = [&](const words_t& words, const checksum_plan& plan)
+				{
+					const auto& order = plan.order;
+					const auto& protect = plan.protect;
+#ifdef ARCH_ARM64
+					for (u32 lane = 0; lane < lanes; lane++)
+					{
+						if (use_crypto)
+						{
+							expected[0][lane] += words[order[0]][lane];
+							expected[2][lane] += words[order[3]][lane];
+
+							if (protect[1] || protect[2])
+							{
+								expected[1][lane] += words[order[1]][lane] + words[order[2]][lane];
 							}
 							else
 							{
-								indices[i] = i;
-								data       = true;
-								words[part * 4 + i] = func.data[(k - start) / 4];
+								expected[1][lane] ^= words[order[1]][lane] ^ words[order[2]][lane];
 							}
+						}
+						else
+						{
+							expected[0][lane] += words[0][lane] + (protect[1] ? words[1][lane] : 0);
+							expected[2][lane] += words[3][lane] + (protect[2] ? words[2][lane] : 0);
+							expected[1][lane] += (protect[1] ? 0 : words[1][lane]) + (protect[2] ? 0 : words[2][lane]);
+							expected[3][lane] += words[4][lane] + words[5][lane];
+						}
+					}
+					if (use_crypto)
+					{
+						update_sha512_checksum(expected[3].data(), words[order[4]].data(), words[order[5]].data());
+					}
+#else
+					for (u32 lane = 0; lane < lanes; lane++)
+					{
+						for (u32 bank = 0; bank < states; bank++)
+						{
+							if (protect[bank * 2] || protect[bank * 2 + 1])
+							{
+								expected[bank][lane] += words[order[bank * 2]][lane] + words[order[bank * 2 + 1]][lane];
+							}
+							else
+							{
+								expected[bank][lane] ^= words[order[bank * 2]][lane] ^ words[order[bank * 2 + 1]][lane];
+							}
+						}
+					}
+#endif
+				};
+
+				// Generate the runtime checksum using the same operations and protected windows
+				const auto update = [&](auto& acc, const auto& value, const checksum_plan& plan)
+				{
+					const auto& order = plan.order;
+					const auto& protect = plan.protect;
+#ifdef ARCH_ARM64
+					acc[0] = m_ir->CreateAdd(acc[0], value[order[0]]);
+					acc[2] = m_ir->CreateAdd(acc[2], value[order[3]]);
+
+					if (use_crypto)
+					{
+						const auto x = value[order[1]];
+						const auto y = value[order[2]];
+						if (protect[1] || protect[2])
+						{
+							acc[1] = m_ir->CreateAdd(acc[1], m_ir->CreateAdd(x, y));
+						}
+						else if (x != zero || y != zero)
+						{
+							acc[1] = m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_crypto_eor3u), {acc[1], x, y});
+						}
+
+						if (value[order[4]] != zero || value[order[5]] != zero)
+						{
+							acc[3] = m_ir->CreateBitCast(m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::aarch64_crypto_sha512su1),
+								{m_ir->CreateBitCast(acc[3], get_type<u64[2]>()),
+									m_ir->CreateBitCast(value[order[4]], get_type<u64[2]>()),
+									m_ir->CreateBitCast(value[order[5]], get_type<u64[2]>())}), type);
+						}
+					}
+					else
+					{
+						if (protect[1])
+						{
+							acc[0] = m_ir->CreateAdd(acc[0], value[1]);
+						}
+
+						if (protect[2])
+						{
+							acc[2] = m_ir->CreateAdd(acc[2], value[2]);
+						}
+
+						const auto x = protect[1] ? zero : value[1];
+						const auto y = protect[2] ? zero : value[2];
+						acc[1] = m_ir->CreateAdd(acc[1], m_ir->CreateAdd(x, y));
+						acc[3] = m_ir->CreateAdd(acc[3], m_ir->CreateAdd(value[4], value[5]));
+					}
+#else
+					for (u32 bank = 0; bank < states; bank++)
+					{
+						if (protect[bank * 2] || protect[bank * 2 + 1])
+						{
+							acc[bank] = m_ir->CreateAdd(acc[bank], m_ir->CreateAdd(value[order[bank * 2]], value[order[bank * 2 + 1]]));
+						}
+						else
+						{
+							acc[bank] = m_ir->CreateXor(acc[bank], m_ir->CreateXor(value[order[bank * 2]], value[order[bank * 2 + 1]]));
+						}
+					}
+#endif
+				};
+
+				// Count nonempty 96-byte ARM / 64-byte x86 chunks as before
+				for (u32 j = starta; j < end; j += counter_bytes)
+				{
+					for (u32 k = j; k < std::min(end, j + counter_bytes); k += 4)
+					{
+						if (func.data[(k - start) / 4])
+						{
+							check_iterations++;
+							break;
+						}
+					}
+				}
+
+				// Keep short spans unrolled and only loop over complete, hole-free bodies
+				bool use_loop = loop_end - starta >= loop_bytes * 2;
+
+				for (u32 j = starta; use_loop && j < loop_end; j += 4)
+				{
+					if (!func.data[(j - start) / 4])
+					{
+						use_loop = false;
+					}
+				}
+
+				std::array<bool, inputs * loop_blocks> loop_protection{};
+				std::array<checksum_plan, loop_blocks> loop_plans{};
+				if (use_loop)
+				{
+					// Find protected window positions across all iterations before calculating
+					// the expected checksum
+					// Each position uses the same operation in every iteration
+					for (u32 j = starta; j < loop_end; j += block_bytes)
+					{
+						const auto flags = protection(get_words(j));
+						const u32 slot = ((j - starta) / block_bytes % loop_blocks) * inputs;
+						for (u32 part = 0; part < inputs; part++)
+						{
+							loop_protection[slot + part] |= flags[part];
+						}
+					}
+
+					// Build shared plans only after every iteration has contributed its flags
+					for (u32 block = 0; block < loop_blocks; block++)
+					{
+						loop_plans[block] = make_plan(loop_protection.data() + block * inputs);
+					}
+
+					for (u32 j = starta; j < loop_end; j += block_bytes)
+					{
+						update_expected(get_words(j), loop_plans[(j - starta) / block_bytes % loop_blocks]);
+					}
+				}
+
+
+				if (use_loop)
+				{
+					const auto preheader = m_ir->GetInsertBlock();
+					const auto body = BasicBlock::Create(m_context, "spu_checksum_loop", m_function);
+					const auto next = BasicBlock::Create(m_context, "spu_checksum_next", m_function);
+					m_ir->CreateBr(body);
+					m_ir->SetInsertPoint(body);
+					const auto offset = m_ir->CreatePHI(m_ir->getInt32Ty(), 2);
+					offset->addIncoming(m_ir->getInt32(0), preheader);
+					std::array<llvm::PHINode*, states> phis;
+					for (u32 bank = 0; bank < states; bank++)
+					{
+						phis[bank] = m_ir->CreatePHI(type, 2);
+						phis[bank]->addIncoming(accumulators[bank], preheader);
+						accumulators[bank] = phis[bank];
+					}
+					const auto offset64 = m_ir->CreateZExt(offset, m_ir->getInt64Ty());
+					for (u32 block = 0; block < loop_blocks; block++)
+					{
+						std::array<llvm::Value*, inputs> value;
+
+						for (u32 part = 0; part < inputs; part++)
+						{
+							value[part] = m_ir->CreateAlignedLoad(type, _ptr(data_addr, m_ir->CreateAdd(offset64, m_ir->getInt64(block * block_bytes + part * width))), llvm::MaybeAlign{4});
+						}
+
+						update(accumulators, value, loop_plans[block]);
+					}
+					const auto next_offset = m_ir->CreateAdd(offset, m_ir->getInt32(loop_bytes));
+					m_ir->CreateCondBr(m_ir->CreateICmpULT(next_offset, m_ir->getInt32(loop_end - starta)), body, next);
+					offset->addIncoming(next_offset, body);
+					for (u32 bank = 0; bank < states; bank++)
+					{
+						phis[bank]->addIncoming(accumulators[bank], body);
+					}
+					m_ir->SetInsertPoint(next);
+				}
+
+				for (u32 j = use_loop ? loop_end : starta; j < end; j += block_bytes)
+				{
+					const auto words = get_words(j);
+					const auto flags = protection(words);
+					const auto plan = make_plan(flags.data());
+					std::array<llvm::Value*, inputs> value;
+					value.fill(zero);
+					bool any_data = false;
+
+					for (u32 part = 0; part < inputs; part++)
+					{
+						int indices[16];
+						bool data = false;
+						bool holes = false;
+
+						for (u32 lane = 0; lane < lanes; lane++)
+						{
+							const bool active = words[part][lane] != 0;
+							indices[lane] = active ? lane : lanes;
+							data |= active;
+							holes |= !active;
 						}
 
 						if (!data)
 						{
-							vls[part] = acc_init;
 							continue;
 						}
 
 						any_data = true;
+						const u32 address = j + part * width;
 
-						// Load unaligned code block from LS
-						vls[part] = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr(data_addr, j + part * 16 - starta), llvm::MaybeAlign{4});
-
-						// Mask if necessary
-						if (holes)
+						if (address + width <= end)
 						{
-							vls[part] = m_ir->CreateShuffleVector(vls[part], acc_init, llvm::ArrayRef(indices, 4));
+							value[part] = m_ir->CreateAlignedLoad(type, _ptr(data_addr, address - starta), llvm::MaybeAlign{4});
+							if (holes)
+							{
+								value[part] = m_ir->CreateShuffleVector(value[part], zero, llvm::ArrayRef(indices, lanes));
+							}
+						}
+						else
+						{
+							// Do not read past the declared tail for an incomplete vector
+							for (u32 lane = 0; lane < lanes; lane++)
+							{
+								if (words[part][lane])
+								{
+									value[part] = m_ir->CreateInsertElement(value[part], m_ir->CreateAlignedLoad(m_ir->getInt32Ty(), _ptr(data_addr, address + lane * 4 - starta), llvm::MaybeAlign{4}), lane);
+								}
+							}
 						}
 					}
 
-					if (!any_data)
+					if (any_data)
 					{
-						// Skip full-sized holes
-						continue;
+						update(accumulators, value, plan);
+						update_expected(words, plan);
 					}
-
-					checksum_parts[0] = m_ir->CreateAdd(checksum_parts[0], vls[0]);
-					checksum_parts[1] = m_ir->CreateAdd(checksum_parts[1], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[1], vls[2]}));
-					checksum_parts[2] = m_ir->CreateAdd(checksum_parts[2], vls[3]);
-					checksum_parts[3] = m_ir->CreateAdd(checksum_parts[3], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[4], vls[5]}));
-
-					update_checksum(words);
-
-					check_iterations++;
 				}
 
-				llvm::Value* elem = nullptr;
+#ifdef ARCH_ARM64
+				constexpr u32 checksum_states = states;
+#else
+				accumulators[0] = m_ir->CreateAdd(accumulators[0], accumulators[1]);
 
-				for (u32 part = 0; part < 4; part++)
+				for (u32 lane = 0; lane < lanes; lane++)
 				{
-					auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(checksum + part * 4, 4));
-					llvm::Value* acc = m_ir->CreateXor(checksum_parts[part], const_vector);
-					acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+					expected[0][lane] += expected[1][lane];
+				}
 
-					for (u32 i = 0; i < 2; i++)
+				constexpr u32 checksum_states = 1;
+#endif
+				llvm::Value* difference = nullptr;
+
+				for (u32 bank = 0; bank < checksum_states; bank++)
+				{
+					const auto constant = ConstantDataVector::get(m_context, llvm::ArrayRef(expected[bank].data(), lanes));
+					const auto halves = m_ir->CreateBitCast(m_ir->CreateXor(accumulators[bank], constant), FixedVectorType::get(m_ir->getInt64Ty(), lanes / 2));
+					for (u32 lane = 0; lane < lanes / 2; lane++)
 					{
-						const auto lane = m_ir->CreateExtractElement(acc, i);
-						elem = elem ? m_ir->CreateOr(elem, lane) : lane;
+						const auto item = m_ir->CreateExtractElement(halves, lane);
+						difference = difference ? m_ir->CreateOr(difference, item) : item;
 					}
 				}
 
 				// Compare result with zero
-				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
-				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
-#endif
+				m_ir->CreateCondBr(m_ir->CreateICmpNE(difference, m_ir->getInt64(0)), label_diff, label_body, m_md_unlikely);
 			}
 #ifdef ARCH_ARM64
 			else
