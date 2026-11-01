@@ -208,6 +208,9 @@
     <Filter Include="Gui\sound effect manager">
       <UniqueIdentifier>{640b7d83-1522-4384-8bf7-a4fbd5873ae7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\openxr">
+      <UniqueIdentifier>{78781138-00f6-4cf0-9dbf-d9dc7f7a17af}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1362,6 +1365,9 @@
     <ClCompile Include="rpcs3qt\auto_scroll_label.cpp">
       <Filter>Gui\widgets</Filter>
     </ClCompile>
+    <ClCompile Include="Input\openxr_handler.cpp">
+      <Filter>Io\openxr</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1633,6 +1639,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\auto_scroll_label.h">
       <Filter>Gui\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\openxr_handler.h">
+      <Filter>Io\openxr</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

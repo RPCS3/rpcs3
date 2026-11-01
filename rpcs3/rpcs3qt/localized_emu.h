@@ -255,6 +255,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_RESOLUTION_SCALE_THRESHOLD: return tr("Resolution Scale Threshold", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STRETCH_TO_DISPLAY: return tr("Stretch To Display Area", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STEREO_MODE: return tr("Stereo Mode", "Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_OPENXR_RENDER_MODE: return tr("OpenXR Render Mode", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT: return tr("Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_BACKGROUND_INPUT: return tr("Background Input Enabled", "Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_KEEP_PADS_CONNECTED: return tr("Keep Pads Connected", "Input");

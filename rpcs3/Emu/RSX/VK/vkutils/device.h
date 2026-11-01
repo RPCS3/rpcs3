@@ -97,6 +97,7 @@ namespace vk
 			bool conditional_rendering = false;
 			bool debug_utils = false;
 			bool external_memory_host = false;
+			bool external_memory_import = false; // Platform specific external memory handles (used for OpenXR)
 			bool framebuffer_loops = false;
 			bool shader_stencil_export = false;
 			bool surface_capabilities_2 = false;
@@ -192,6 +193,7 @@ namespace vk
 		bool get_conditional_render_support() const { return pgpu->optional_features_support.conditional_rendering; }
 		bool get_unrestricted_depth_range_support() const { return pgpu->optional_features_support.unrestricted_depth_range; }
 		bool get_external_memory_host_support() const { return pgpu->optional_features_support.external_memory_host; }
+		bool get_external_memory_import_support() const { return pgpu->optional_features_support.external_memory_import; }
 		bool get_surface_capabilities_2_support() const { return pgpu->optional_features_support.surface_capabilities_2; }
 		bool get_debug_utils_support() const;
 		bool get_framebuffer_loops_support() const { return pgpu->optional_features_support.framebuffer_loops; }

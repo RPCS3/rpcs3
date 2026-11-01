@@ -109,6 +109,18 @@ static u32 pad_num(u32 gem_num)
 	return (CELL_PAD_MAX_PORT_NUM - 1) - gem_num;
 }
 
+// Whether the pad is an OpenXR controller that can be used as PS Move (see move_handler::openxr)
+static bool is_openxr_move_pad(const std::shared_ptr<Pad>& pad)
+{
+	return pad && pad->m_pad_handler == pad_handler::openxr && pad->is_connected() && !pad->is_copilot();
+}
+
+// The pad handler of the PS Move controllers (only for move_handler::real and move_handler::openxr)
+static pad_handler get_move_pad_handler()
+{
+	return g_cfg.io.move == move_handler::openxr ? pad_handler::openxr : pad_handler::move;
+}
+
 // **********************
 // * HLE helper structs *
 // **********************
@@ -314,6 +326,7 @@ public:
 		{
 		case move_handler::real:
 		case move_handler::fake:
+		case move_handler::openxr:
 		{
 			std::lock_guard lock(pad::g_pad_mutex);
 			const auto handler = pad::get_pad_thread(true);
@@ -323,9 +336,9 @@ public:
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
 				const bool connected = pad && pad->is_connected() && !pad->is_copilot() && i < attribute.max_connect;
-				const bool is_real_move = g_cfg.io.move != move_handler::real || (pad && pad->m_pad_handler == pad_handler::move);
+				const bool is_move = g_cfg.io.move == move_handler::fake || (pad && pad->m_pad_handler == get_move_pad_handler());
 
-				update_connection(i, connected && is_real_move);
+				update_connection(i, connected && is_move);
 			}
 			break;
 		}
@@ -454,6 +467,7 @@ public:
 			break;
 		}
 		case move_handler::fake:
+		case move_handler::openxr:
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
@@ -461,7 +475,7 @@ public:
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				if (pad && pad->is_connected() && !pad->is_copilot())
+				if (pad && pad->is_connected() && !pad->is_copilot() && (g_cfg.io.move == move_handler::fake || pad->m_pad_handler == pad_handler::openxr))
 				{
 					connected_controllers++;
 
@@ -1839,6 +1853,34 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	}
 }
 
+// Calculate handle position based on our world coordinate and the current orientation
+static inline void set_gem_handle_pos(vm::ptr<CellGemState>& gem_state, const ps_move_data::vect<4>& quat)
+{
+	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, 45.f}); // handle is ~45 mm below sphere
+	const ps_move_data::vect<3> offset_world = ps_move_data::rotate_vector(quat, offset_local_mm);
+
+	gem_state->handle_pos[0] = gem_state->pos[0] - offset_world.x(); // Flip x offset
+	gem_state->handle_pos[1] = gem_state->pos[1] - offset_world.y(); // Flip y offset
+	gem_state->handle_pos[2] = gem_state->pos[2] + offset_world.z();
+	gem_state->handle_pos[3] = 0.f;
+}
+
+// Calculate velocity and acceleration from the change of our world coordinate
+static inline void set_gem_velocity(vm::ptr<CellGemState>& gem_state, ps_move_data& move_data, u64 timestamp_us)
+{
+	move_data.update_velocity(timestamp_us, gem_state->pos);
+
+	for (u32 i = 0; i < 3; i++)
+	{
+		gem_state->vel[i] = move_data.vel_world[i];
+		gem_state->accel[i] = move_data.accel_world[i];
+
+		// TODO: maybe this also needs to be adjusted depending on the orientation
+		gem_state->handle_vel[i] = gem_state->vel[i];
+		gem_state->handle_accel[i] = gem_state->accel[i];
+	}
+}
+
 static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, f32 x_pos, f32 y_pos, ps_move_data& move_data)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
@@ -1898,29 +1940,11 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	gem_state->quat[2] = quat.z();
 	gem_state->quat[3] = quat.w();
 
-	// Calculate handle position based on our world coordinate and the current orientation
-	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, 45.f}); // handle is ~45 mm below sphere
-	const ps_move_data::vect<3> offset_world = ps_move_data::rotate_vector(quat, offset_local_mm);
+	set_gem_handle_pos(gem_state, quat);
 
-	gem_state->handle_pos[0] = gem_state->pos[0] - offset_world.x(); // Flip x offset
-	gem_state->handle_pos[1] = gem_state->pos[1] - offset_world.y(); // Flip y offset
-	gem_state->handle_pos[2] = gem_state->pos[2] + offset_world.z();
-	gem_state->handle_pos[3] = 0.f;
-
-	// Calculate velocity
 	if constexpr (!ps_move_data::use_imu_for_velocity)
 	{
-		move_data.update_velocity(shared_data.frame_timestamp_us, gem_state->pos);
-
-		for (u32 i = 0; i < 3; i++)
-		{
-			gem_state->vel[i] = move_data.vel_world[i];
-			gem_state->accel[i] = move_data.accel_world[i];
-
-			// TODO: maybe this also needs to be adjusted depending on the orientation
-			gem_state->handle_vel[i] = gem_state->vel[i];
-			gem_state->handle_accel[i] = gem_state->accel[i];
-		}
+		set_gem_velocity(gem_state, move_data, shared_data.frame_timestamp_us);
 	}
 
 	// Update visibility for fake handlers
@@ -2008,7 +2032,8 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 		}
 	};
 
-	if (g_cfg.io.move == move_handler::real)
+	// OpenXR controllers are mapped like real PS Move controllers
+	if (g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::openxr)
 	{
 		::at32(g_cfg_gem_real.players, gem_num)->handle_input(pad, true, handle_input);
 	}
@@ -2110,6 +2135,108 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
 		pos_to_gem_image_state(gem_num, controller, gem_state, info.x_pos, info.y_pos);
+	}
+}
+
+// The OpenXR handler tracks the position itself. We project it onto a virtual PS Eye camera in front of the player.
+template <typename T>
+static void openxr_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, T& gem_state)
+{
+	if (!gem_state)
+	{
+		return;
+	}
+
+	// The sphere is not visible unless we get a position below
+	controller.radius_valid = false;
+
+	if (!is_input_allowed() || input::g_pads_intercepted) // Let's intercept the PS Move just like a pad
+	{
+		return;
+	}
+
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	const auto handler = pad::get_pad_thread();
+	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+	if (!is_openxr_move_pad(pad))
+	{
+		return;
+	}
+
+	ps_move_data& move_data = pad->move_data;
+
+	if (!move_data.has_absolute_position)
+	{
+		return;
+	}
+
+	const auto& shared_data = g_fxo->get<gem_camera_shared>();
+	const f32 width = static_cast<f32>(shared_data.width);
+	const f32 height = static_cast<f32>(shared_data.height);
+
+	// Pinhole camera with roughly the horizontal field of view of the PS Eye
+	constexpr f32 horizontal_fov_deg = 60.0f;
+	const f32 focal_length_px = (width / 2.0f) / std::tan(PadHandlerBase::degree_to_rad(horizontal_fov_deg / 2.0f));
+
+	const ps_move_data::vect<3>& pos_world = move_data.position_world;
+	const f32 distance_mm = std::max(pos_world.z(), 1.0f);
+
+	// Image coordinates in pixels (they increase downwards)
+	const f32 image_x = width / 2.0f + focal_length_px * pos_world.x() / distance_mm;
+	const f32 image_y = height / 2.0f - focal_length_px * pos_world.y() / distance_mm;
+
+	controller.distance_mm = distance_mm;
+	controller.radius = focal_length_px * CELL_GEM_SPHERE_RADIUS_MM / distance_mm;
+	controller.radius_valid = pos_world.z() > 0.0f && image_x >= 0.0f && image_x < width && image_y >= 0.0f && image_y < height;
+
+	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
+	{
+		gem_state->temperature = move_data.temperature;
+
+		// World coordinates in mm
+		gem_state->pos[0] = pos_world.x();
+		gem_state->pos[1] = pos_world.y();
+		gem_state->pos[2] = pos_world.z();
+
+		const ps_move_data::vect<4>& quat = move_data.quaternion;
+		gem_state->quat[0] = quat.x();
+		gem_state->quat[1] = quat.y();
+		gem_state->quat[2] = quat.z();
+		gem_state->quat[3] = quat.w();
+
+		set_gem_handle_pos(gem_state, quat);
+		set_gem_velocity(gem_state, move_data, shared_data.frame_timestamp_us);
+
+		// The angular acceleration stays zero
+		for (u32 i = 0; i < 3; i++)
+		{
+			gem_state->angvel[i] = move_data.angvel_world[i];
+		}
+	}
+	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
+	{
+		// Image coordinates in pixels
+		gem_state->u = image_x;
+		gem_state->v = image_y;
+
+		// Projected camera coordinates
+		gem_state->projectionx = pos_world.x() / distance_mm;
+		gem_state->projectiony = pos_world.y() / distance_mm;
+	}
+
+	const f32 x_pos = image_x / width;
+	const f32 y_pos = image_y / height;
+
+	if (g_cfg.io.show_move_cursor)
+	{
+		draw_overlay_cursor(gem_num, controller, x_pos, y_pos);
+	}
+
+	if (g_cfg.io.paint_move_spheres)
+	{
+		::at32(gem::positions, gem_num).set_position(image_x, image_y);
 	}
 }
 
@@ -3209,6 +3336,9 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		case move_handler::fake:
 			ds3_pos_to_gem_state(gem_num, controller, gem_image_state);
 			break;
+		case move_handler::openxr:
+			openxr_pos_to_gem_state(gem_num, controller, gem_image_state);
+			break;
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 			mouse_pos_to_gem_state(gem_num, controller, gem_image_state);
@@ -3268,6 +3398,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		{
 		case move_handler::real:
 		case move_handler::fake:
+		case move_handler::openxr:
 		{
 			// Get temperature and sensor data
 			{
@@ -3484,6 +3615,19 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			ds3_pos_to_gem_state(gem_num, controller, gem_state);
 			break;
+		case move_handler::openxr:
+		{
+			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+			openxr_pos_to_gem_state(gem_num, controller, gem_state);
+
+			// The controller is visible while it's in the view of the virtual camera
+			if (controller.radius_valid)
+				gem_state->tracking_flags |= CELL_GEM_TRACKING_FLAG_VISIBLE;
+			else
+				gem_state->tracking_flags &= ~CELL_GEM_TRACKING_FLAG_VISIBLE;
+
+			break;
+		}
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
@@ -3976,12 +4120,14 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	gem.controllers[gem_num].rumble = rumble;
 
 	// Set actual device rumble
-	if (g_cfg.io.move == move_handler::real)
+	if (g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::openxr)
 	{
+		const pad_handler type = get_move_pad_handler();
+
 		std::lock_guard pad_lock(pad::g_pad_mutex);
 		const auto handler = pad::get_pad_thread();
 		auto& handlers = handler->get_handlers();
-		if (auto it = handlers.find(pad_handler::move); it != handlers.end() && it->second)
+		if (auto it = handlers.find(type); it != handlers.end() && it->second)
 		{
 			const u32 pad_index = pad_num(gem_num);
 			for (const auto& binding : it->second->bindings())
@@ -4021,16 +4167,18 @@ error_code cellGemSetYaw(u32 gem_num, v128 z_direction)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move != move_handler::real)
+	if (g_cfg.io.move != move_handler::real && g_cfg.io.move != move_handler::openxr)
 	{
 		return CELL_OK;
 	}
+
+	const pad_handler type = get_move_pad_handler();
 
 	std::lock_guard pad_lock(pad::g_pad_mutex);
 	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-	if (pad && pad->m_pad_handler == pad_handler::move && !pad->is_copilot())
+	if (pad && pad->m_pad_handler == type && !pad->is_copilot())
 	{
 		// z_direction is the direction of the controller's z axis (sphere -> handle) in world coordinates.
 		// This function is usually used when the game wants to re-orient the ps move towards the camera, e.g. during calibration or as a surrogate for it.
