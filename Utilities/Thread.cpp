@@ -3332,8 +3332,10 @@ bool thread_base::join(bool dtor) const
 void thread_base::notify()
 {
 	// Set notification
-	m_sync |= 4;
-	m_sync.notify_all();
+	if (~m_sync.fetch_or(4) & 4)
+	{
+		m_sync.notify_all();
+	}
 }
 
 u64 thread_base::get_native_id() const
