@@ -3672,7 +3672,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write, bool lock_rsx)
 	perf_meter<"STORE128"_u64> perf0;
 
 	const auto cpu = get_current_cpu_thread();
-	rsx::reservation_lock rsx_lock(addr, 128, lock_rsx);
+	rsx::reservation_lock rsx_lock(addr, 128, lock_rsx && g_cfg.core.rsx_accurate_res_access);
 
 	u64 shared_mem = vm::g_shmem[addr >> 16];
 
