@@ -9,37 +9,35 @@
 #include <span>
 #include <vector>
 
-struct usio_io_status;
-
 // NFC controller host protocol
 class nfc_reader
 {
 public:
-	// ACK frame (without preamble and postamble)
-	static constexpr std::array<u8, 4> ack_frame = {0x00, 0xFF, 0x00, 0xFF};
+	// Get the buffer size required by write_buffer
+	usz get_buffer_size() const;
 
-	// Writes a response to out
-	static void write_response(std::vector<u8>& buf, std::vector<u8>& response, const std::array<u8, 0x40>& card, usio_io_status& status);
+	// Writes ACK and response to an external buffer
+	void write_buffer(std::vector<u8>& out);
 
-	// Writes an ACK frame (with preamble and postamble, unless removed) to the out buffer
-	static inline void write_ack(std::vector<u8>& out, bool remove_pre_and_postamble = false)
-	{
-		if (!remove_pre_and_postamble)
-			out.push_back(preamble);
-
-		out.insert(out.end(), ack_frame.begin(), ack_frame.end());
-
-		if (!remove_pre_and_postamble)
-			out.push_back(postamble);
-	}
+	// Processes a request received from the host
+	void process_request(const std::vector<u8>& in, const std::array<u8, 0x40>& card, bool card_tapped);
 
 private:
+	// Variables for retaining internal status
+	bool m_remove_pre_and_postamble = false;
+	bool m_send_ack = false;
+	bool m_send_response = false;
+	std::vector<u8> m_response = {};
+
 	// Frames are wrapped in a preamble and a postamble byte, which are optional when receiving
 	static constexpr u8 preamble = 0x00;
 	static constexpr u8 postamble = 0x00;
 
 	// Start code of every frame
 	static constexpr std::array<u8, 2> start_code = {0x00, 0xFF};
+
+	// ACK frame (without preamble and postamble)
+	static constexpr std::array<u8, 4> ack_frame = {0x00, 0xFF, 0x00, 0xFF};
 
 	// NACK frame (without preamble and postamble)
 	static constexpr std::array<u8, 4> nack_frame = {0x00, 0xFF, 0xFF, 0x00};
@@ -159,6 +157,14 @@ private:
 		std::array<u8, mifare_uid_size> nfcid{};
 	};
 
+	// Serialize a struct into bytes
+	template <typename T> requires std::is_trivially_copyable_v<T>
+	static inline std::vector<u8> to_bytes(const T& value)
+	{
+		const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
+		return {bytes.begin(), bytes.end()};
+	}
+
 	// Skip the preamble (any bytes before the start code) and return the frame starting at the start code
 	// Returns an empty span if there is no start code
 	static inline std::span<const u8> find_frame(const std::vector<u8>& in)
@@ -174,12 +180,23 @@ private:
 		return header.len == 0xFF && header.lcs == 0xFF;
 	}
 
+	// Writes an ACK frame (with preamble and postamble, unless removed with m_remove_pre_and_postamble = true) to the out buffer
+	inline void write_ack(std::vector<u8>& out)
+	{
+		if (!m_remove_pre_and_postamble)
+			out.push_back(preamble);
+
+		out.insert(out.end(), ack_frame.begin(), ack_frame.end());
+
+		if (!m_remove_pre_and_postamble)
+			out.push_back(postamble);
+	}
+
 	// Expects a frame starting at the start code (see find_frame), the postamble is optional
 	static bool verify_request(std::span<const u8> in);
 
-	// Appends to out, which already contains the ACK frame
-	// The preamble and postamble can be removed with the fRemovePrePost flag of SetParameters
-	static void build_response(std::vector<u8>& out, const std::vector<u8>& in = {}, bool remove_pre_and_postamble = false);
+	// Builds a valid response frame with the given data from the in buffer; if no data is given, builds an error frame
+	void build_response(const std::vector<u8>& in = {});
 
 	static_assert(sizeof(frame_header) == 5);
 	static_assert(sizeof(extended_frame_header) == 8);
