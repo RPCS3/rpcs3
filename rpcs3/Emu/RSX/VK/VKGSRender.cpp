@@ -1292,6 +1292,23 @@ void VKGSRender::on_init()
 
 	create_frame_context();
 
+	if (Emu.GetBootMode() == boot_mode::application)
+	{
+		preload_shaders();
+	}
+
+	// Now we properly initialize the pipe compiler as per the user's configuration
+	if (!g_cfg.video.shader_compiler_threads_count)
+	{
+		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
+	}
+
+	// If we survived init - loading shaders, etc, then we can re-enable protection.
+	vk::arm_device_loss_protection();
+}
+
+void VKGSRender::preload_shaders()
+{
 	if (g_cfg.video.shadermode == shader_mode::async_with_interpreter ||
 		g_cfg.video.shadermode == shader_mode::interpreter_only)
 	{
@@ -1318,15 +1335,6 @@ void VKGSRender::on_init()
 			m_shaders_cache->load(&dlg);
 		}
 	}
-
-	// Now we properly initialize the pipe compiler as per the user's configuration
-	if (!g_cfg.video.shader_compiler_threads_count)
-	{
-		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
-	}
-
-	// If we survived init - loading shaders, etc, then we can re-enable protection.
-	vk::arm_device_loss_protection();
 }
 
 std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx::context* ctx)
@@ -1853,7 +1861,9 @@ bool VKGSRender::load_program()
 		m_pipeline_properties.state.ia.topology == vertex_state.primitive &&
 		m_pipeline_properties.state.ia.primitiveRestartEnable == vertex_state.restart_index_enabled)
 	{
-		if (!m_shader_interpreter.is_interpreter(m_program)) [[ likely ]]
+		if (!m_shader_interpreter.is_interpreter(m_program) &&
+			m_ctx->program.cache_hint.has_vertex_program() &&
+			m_ctx->program.cache_hint.has_fragment_program()) [[likely]]
 		{
 			return true;
 		}

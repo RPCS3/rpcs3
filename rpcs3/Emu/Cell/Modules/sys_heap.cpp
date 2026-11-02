@@ -35,25 +35,37 @@ error_code _sys_heap_delete_heap(u32 heap)
 	return CELL_OK;
 }
 
-u32 _sys_heap_malloc(u32 heap, u32 size)
+u32 _sys_heap_malloc(ppu_thread& ppu, u32 heap, u32 size)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_heap_malloc(heap=0x%x, size=0x%x)", heap, size);
 
-	return vm::alloc(size, vm::main);
+	const u32 res = vm::alloc(size, vm::main);
+	ppu.check_state();
+	return res;
 }
 
-u32 _sys_heap_memalign(u32 heap, u32 align, u32 size)
+u32 _sys_heap_memalign(ppu_thread& ppu, u32 heap, u32 align, u32 size)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_heap_memalign(heap=0x%x, align=0x%x, size=0x%x)", heap, align, size);
 
-	return vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
+	const u32 res = vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
+	ppu.check_state();
+	return res;
 }
 
-error_code _sys_heap_free(u32 heap, u32 addr)
+error_code _sys_heap_free(ppu_thread& ppu, u32 heap, u32 addr)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_heap_free(heap=0x%x, addr=0x%x)", heap, addr);
 
 	vm::dealloc(addr, vm::main);
+
+	ppu.check_state();
 
 	return CELL_OK;
 }
