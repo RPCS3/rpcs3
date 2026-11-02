@@ -18,6 +18,9 @@ namespace vk
 	bool renderpass_has_input_attachments(u64 renderpass_key);
 	bool renderpass_has_no_attachments(u64 renderpass_key);
 
+	// Decode part of the renderpass key and return only format information bits
+	u64 get_renderpass_format_key(u64 renderpass_key);
+
 	void clear_renderpass_cache(VkDevice dev);
 
 	// Renderpass scope management helpers.

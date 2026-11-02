@@ -13,6 +13,7 @@
 LOG_CHANNEL(ppu_validator);
 
 extern const ppu_decoder<ppu_itype> g_ppu_itype;
+extern bool ppu_has_far_jump(u32 addr, u32 size);
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
@@ -2945,19 +2946,59 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 	// Start with full scan
 	block_queue.emplace_back(exp, lim);
 
-	// Add entries from patches (on per-instruction basis)
-	for (u32 addr : applied)
-	{
-		if (addr % 4 == 0 && addr >= start && addr < segs[0].addr + segs[0].size && !block_set.count(addr))
-		{
-			block_queue.emplace_back(addr, addr + 4);
-			block_set.emplace(addr);
-		}
-	}
+	bool patches_added = applied.empty();
 
 	// block_queue may grow
-	for (usz i = 0; i < block_queue.size(); i++)
+	for (usz i = 0; i < block_queue.size() || !patches_added; i++)
 	{
+		if (i == block_queue.size())
+		{
+			patches_added = true;
+
+			for (u32 addr : applied)
+			{
+				if (addr % 4 || addr < start || addr >= segs[0].addr + segs[0].size || block_set.contains(addr))
+				{
+					continue;
+				}
+
+				const auto type = g_ppu_itype.decode(get_ref<u32>(addr));
+				const auto next = fmap.upper_bound(addr);
+				if (!(type & ppu_itype::branch) && !(type & ppu_itype::trap) && type != ppu_itype::SC && !ppu_has_far_jump(addr, 4) && next != fmap.begin())
+				{
+					const auto& func = std::prev(next)->second;
+					u32 begin = func.addr;
+					u32 size = func.size;
+					if (!func.blocks.empty())
+					{
+						const auto upper = func.blocks.upper_bound(addr);
+						if (upper != func.blocks.begin())
+						{
+							std::tie(begin, size) = *std::prev(upper);
+						}
+						else
+						{
+							size = 0;
+						}
+					}
+
+					// Ordinary replacements are already present in the analysed code
+					if (!(func.attr & ppu_attr::no_size) && begin <= addr && addr - begin < size)
+					{
+						continue;
+					}
+				}
+
+				block_queue.emplace_back(addr, addr + 4);
+				block_set.emplace(addr);
+			}
+
+			if (i == block_queue.size())
+			{
+				break;
+			}
+		}
+
 		std::tie(exp, lim) = block_queue[i];
 
 		if (lim == 0)

@@ -38,11 +38,8 @@ public:
 
 protected:
 	virtual bs_t<poll_t> get_pending_events() const;
-	// Keep guest-controlled buffer settings from causing excessive host allocations.
-	static constexpr usz MAX_RECEIVED_BUFFER = 10 * 1024 * 1024;
-	// Bound container overhead independently from the amount of queued payload.
-	static constexpr usz MAX_RECEIVED_PACKETS = 4096;
-	usz get_receive_buffer_size() const;
+	// Simulates the storage cost of each packet as size of sockaddr + payload
+	static constexpr usz get_packet_cost(usz payload_size) { return sizeof(sys_net_sockaddr_in_p2p) + payload_size; }
 
 	// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
 	u16 port = 3658, vport = 0;

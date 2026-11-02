@@ -233,7 +233,6 @@ struct sys_spu_image
 	}
 
 	bool load(const fs::file& stream);
-	void free() const;
 	static void deploy(u8* loc, std::span<const sys_spu_segment> segs, bool is_verbose = true);
 };
 

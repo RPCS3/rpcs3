@@ -98,6 +98,8 @@ namespace gl
 
 		CHECK_EXTENSION_SUPPORT(ARB_framebuffer_no_attachments);
 
+		CHECK_EXTENSION_SUPPORT(ARB_robustness);
+
 #undef CHECK_EXTENSION_SUPPORT
 
 		// Set GLSL version

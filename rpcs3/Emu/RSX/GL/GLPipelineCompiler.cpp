@@ -35,6 +35,8 @@ namespace gl
 
 	void pipe_compiler::operator()()
 	{
+		thread_ctrl::scoped_priority low_prio(-1);
+
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			for (auto&& job : m_work_queue.pop_all())

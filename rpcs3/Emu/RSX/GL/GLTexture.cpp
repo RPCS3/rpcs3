@@ -922,7 +922,7 @@ namespace gl
 		fill_texture(cmd, dst, gcm_format, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
 
 		// Notify the renderer of the upload
-		auto renderer = static_cast<GLGSRender*>(rsx::get_current_renderer());
+		auto renderer = static_cast<GLGSRender*>(rsx::get_current_render_backend());
 		renderer->on_guest_texture_read();
 	}
 

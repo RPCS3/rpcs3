@@ -1667,6 +1667,8 @@ public:
 			return compile_interpreter();
 		}
 
+		reset_transforms();
+
 		const u32 start0 = _func.entry_point;
 		const usz func_size = _func.data.size();
 

@@ -3,6 +3,7 @@
 #include "gui_settings.h"
 #include <QApplication>
 #include <QBitmap>
+#include <QCollator>
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QFontMetrics>
@@ -912,6 +913,32 @@ namespace gui
 		QString format_timestamp(s64 time, const QString& fmt)
 		{
 			return format_datetime(datetime(time), fmt);
+		}
+
+		template <bool CASE_SENSITIVE>
+		static int natural_compare(const QString& lhs, const QString& rhs)
+		{
+			thread_local QCollator collator = []()
+			{
+				QCollator col;
+				col.setNumericMode(true);
+				col.setCaseSensitivity(CASE_SENSITIVE ? Qt::CaseSensitive : Qt::CaseInsensitive);
+				return col;
+			}();
+
+			int result = collator.compare(lhs, rhs);
+
+			if (result == 0)
+			{
+				result = QString::compare(lhs, rhs);
+			}
+
+			return result;
+		}
+
+		bool natural_less(const QString& lhs, const QString& rhs)
+		{
+			return natural_compare<false>(lhs, rhs) < 0;
 		}
 	} // utils
 } // gui

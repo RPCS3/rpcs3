@@ -4,11 +4,10 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/gcm_enums.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 namespace rsx
 {
-	extern u32 get_address(u32 offset, u32 location, u32 size_to_check = 0, std::source_location src_loc = std::source_location::current());
-
 	namespace overlays
 	{
 		cursor_item::cursor_item()
@@ -201,7 +200,7 @@ namespace rsx
 				m_bitmap->set_pos(m_position.x, m_position.y);
 			}
 
-			auto vm_address = rsx::get_address(address, CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER);
+			auto vm_address = rsx::get_address(nullptr, address, CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER);
 			auto data = vm::get_super_ptr<const u8>(vm_address);
 			m_image_storage = { 64, 64, 4, data };
 			m_bitmap->set_raw_image(&m_image_storage);

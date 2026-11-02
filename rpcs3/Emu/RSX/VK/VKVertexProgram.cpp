@@ -80,6 +80,15 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 		"#extension GL_EXT_uniform_buffer_unsized_array : require\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
+	// When ARB_shader_draw_paramaters is available, repurpose the instance base index register to carry the draw parameters index
+	const bool use_base_instance = vk::g_render_device->get_shader_draw_parameters_support();
+	if (use_base_instance)
+	{
+		OS <<
+			"#extension GL_ARB_shader_draw_parameters : require\n"
+			"#define _VK_DRAW_ID_FROM_BASE_INSTANCE\n\n";
+	}
+
 	glsl::insert_subheader_block(OS);
 
 	OS <<
@@ -140,6 +149,13 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 		.name = "DrawParametersBuffer"
 	};
 	inputs.push_back(std::move(layouts_input));
+
+	if (use_base_instance) [[ likely ]]
+	{
+		// Skip use of push constants
+		OS << "#define draw_parameters_offset uint(gl_BaseInstanceARB)\n\n";
+		return;
+	}
 
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
