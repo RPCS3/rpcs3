@@ -749,7 +749,8 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, st
 	std::vector<std::string> attributes;
 
 #if defined(ARCH_ARM64)
-	if (utils::has_sha3())
+	// LLVM groups FEAT_SHA3 and FEAT_SHA512 under the same target feature
+	if (utils::has_sha512() && utils::has_sha3())
 		attributes.push_back("+sha3");
 	else
 		attributes.push_back("-sha3");

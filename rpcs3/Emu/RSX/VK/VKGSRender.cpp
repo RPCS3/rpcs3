@@ -1292,6 +1292,23 @@ void VKGSRender::on_init()
 
 	create_frame_context();
 
+	if (Emu.GetBootMode() == boot_mode::application)
+	{
+		preload_shaders();
+	}
+
+	// Now we properly initialize the pipe compiler as per the user's configuration
+	if (!g_cfg.video.shader_compiler_threads_count)
+	{
+		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
+	}
+
+	// If we survived init - loading shaders, etc, then we can re-enable protection.
+	vk::arm_device_loss_protection();
+}
+
+void VKGSRender::preload_shaders()
+{
 	if (g_cfg.video.shadermode == shader_mode::async_with_interpreter ||
 		g_cfg.video.shadermode == shader_mode::interpreter_only)
 	{
@@ -1318,15 +1335,6 @@ void VKGSRender::on_init()
 			m_shaders_cache->load(&dlg);
 		}
 	}
-
-	// Now we properly initialize the pipe compiler as per the user's configuration
-	if (!g_cfg.video.shader_compiler_threads_count)
-	{
-		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
-	}
-
-	// If we survived init - loading shaders, etc, then we can re-enable protection.
-	vk::arm_device_loss_protection();
 }
 
 std::unique_ptr<rsx::context_resources> VKGSRender::create_context_resources(rsx::context* ctx)
@@ -1367,7 +1375,8 @@ void VKGSRender::on_bind_context(rsx::context* ctx)
 
 void VKGSRender::on_release_context_resources(rsx::context* ctx)
 {
-	if (!m_device->is_lost())
+	if (!m_device->is_lost() &&
+		!(RSX(ctx)->state & cpu_flag::exit))
 	{
 		// FIXME: This is very slow. It needs to be done on a background worker.
 		flush_command_queue(true);
@@ -1423,9 +1432,8 @@ void VKGSRender::clear()
 
 	set_scissor();
 
-	//float depth_clear = 1.f;
-	u32   stencil_clear = 0;
-	u32   depth_stencil_mask = 0;
+	constexpr u32 stencil_clear = 0;
+	u32 depth_stencil_mask = 0;
 
 	std::vector<VkClearAttachment> clear_descriptors;
 	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
@@ -1446,7 +1454,7 @@ void VKGSRender::clear()
 	bool update_color = false, update_z = false;
 	const auto surface_depth_format = info.depth_format;
 
-	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
+	if (auto ds = std::get<1>(res()->surface_cache.m_bound_depth_stencil); ds && (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK))
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
@@ -1853,7 +1861,9 @@ bool VKGSRender::load_program()
 		m_pipeline_properties.state.ia.topology == vertex_state.primitive &&
 		m_pipeline_properties.state.ia.primitiveRestartEnable == vertex_state.restart_index_enabled)
 	{
-		if (!m_shader_interpreter.is_interpreter(m_program)) [[ likely ]]
+		if (!m_shader_interpreter.is_interpreter(m_program) &&
+			m_ctx->program.cache_hint.has_vertex_program() &&
+			m_ctx->program.cache_hint.has_fragment_program()) [[likely]]
 		{
 			return true;
 		}
@@ -2320,14 +2330,18 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	dst->fs_texture_base_index = fs_texture_base_index;
 	dst->fs_stipple_pattern_offset = fs_stipple_pattern_offset;
 
-	const u32 push_val = vertex_layout_offset + id;
-	vkCmdPushConstants(
-		*m_current_command_buffer,
-		m_program->layout(),
-		VK_SHADER_STAGE_VERTEX_BIT,
-		0,
-		4,
-		&push_val);
+	// NOTE: The vertex shader reads the draw parameters index from the instance base when possible.
+	m_draw_parameters_index = vertex_layout_offset + id;
+	if (!m_device->get_shader_draw_parameters_support())
+	{
+		vkCmdPushConstants(
+			*m_current_command_buffer,
+			m_program->layout(),
+			VK_SHADER_STAGE_VERTEX_BIT,
+			0,
+			4,
+			&m_draw_parameters_index);
+	}
 
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{

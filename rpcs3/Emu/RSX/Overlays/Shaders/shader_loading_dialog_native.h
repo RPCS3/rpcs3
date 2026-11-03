@@ -26,5 +26,6 @@ namespace rsx
 		void set_limit(u32 index, u32 limit) override;
 		void refresh() override;
 		void close() override;
+		void enable_hold_to_skip() override;
 	};
 }

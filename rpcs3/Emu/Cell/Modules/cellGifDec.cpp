@@ -97,7 +97,7 @@ error_code cellGifDecExtCreate(vm::ptr<GifDecoder> mainHandle, vm::cptr<CellGifD
 	return CELL_OK;
 }
 
-error_code cellGifDecOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> subHandle, vm::cptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
+error_code cellGifDecOpen(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> subHandle, vm::cptr<CellGifDecSrc> src, vm::ptr<CellGifDecOpnInfo> openInfo)
 {
 	cellGifDec.warning("cellGifDecOpen(mainHandle=*0x%x, subHandle=**0x%x, src=*0x%x, openInfo=*0x%x)", mainHandle, subHandle, src, openInfo);
 
@@ -162,7 +162,11 @@ error_code cellGifDecOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> su
 	}
 	}
 
+	ppu.state += cpu_flag::wait;
+
 	subHandle->set(vm::alloc(sizeof(GifStream), vm::main));
+
+	ppu.check_state();
 
 	**subHandle = current_subHandle;
 
@@ -616,7 +620,7 @@ error_code cellGifDecExtDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifS
 	return CELL_OK;
 }
 
-error_code cellGifDecClose(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> subHandle)
+error_code cellGifDecClose(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> subHandle)
 {
 	cellGifDec.warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
@@ -637,7 +641,11 @@ error_code cellGifDecClose(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStream> s
 
 	idm::remove<lv2_fs_object, lv2_file>(subHandle->fd);
 
+	ppu.state += cpu_flag::wait;
+
 	vm::dealloc(subHandle.addr());
+
+	ppu.check_state();
 
 	return CELL_OK;
 }

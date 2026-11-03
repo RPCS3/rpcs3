@@ -116,4 +116,9 @@ namespace rsx
 			utils::pause();
 		}
 	}
+
+	void shader_loading_dialog::enable_hold_to_skip()
+	{
+		// Not supported by the Qt dialog
+	}
 }

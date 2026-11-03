@@ -19,7 +19,7 @@ void shared_mutex::imp_lock_shared(u32 val)
 			return;
 		}
 
-		const u32 old = m_value;
+		const u32 old = m_value.observe();
 
 		if (old & c_sig && m_value.compare_and_swap_test(old, old - c_sig + 1))
 		{
@@ -98,7 +98,7 @@ void shared_mutex::imp_lock(u32 val)
 	{
 		busy_wait();
 
-		const u32 old = m_value;
+		const u32 old = m_value.observe();
 
 		if (!old && try_lock())
 		{
@@ -165,7 +165,7 @@ void shared_mutex::imp_lock_unlock()
 
 	for (int i = 0; i < 30; i++)
 	{
-		const u32 val = m_value;
+		const u32 val = m_value.observe();
 
 		if (val % c_one == 0 && (val / c_one < _max || val >= c_sig))
 		{

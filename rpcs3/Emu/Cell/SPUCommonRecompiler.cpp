@@ -378,13 +378,9 @@ DECLARE(spu_runtime::tr_all) = []
 			// Load g_dispatcher
 			c.mov(a64::x4, Imm(reinterpret_cast<u64>(g_dispatcher)));
 			// Update block hash
-			c.mov(a64::x5, Imm(0));
-			c.str(a64::x5, arm::Mem(a64::x19, ::offset32(&spu_thread::block_hash))); // REG_Base + offset(spu_thread::block_hash)
+			c.str(a64::xzr, arm::Mem(a64::x19, ::offset32(&spu_thread::block_hash))); // REG_Base + offset(spu_thread::block_hash)
 			// Jump to [g_dispatcher + idx * 8]
-			c.mov(a64::x6, Imm(8));
-			c.mul(a64::x6, a64::x3, a64::x6);
-			c.add(a64::x4, a64::x4, a64::x6);
-			c.ldr(a64::x4, arm::Mem(a64::x4));
+			c.ldr(a64::x4, arm::Mem(a64::x4, a64::x3, arm::lsl(3)));
 			c.br(a64::x4);
 			// Unreachable guard
 			c.brk(0x42);
@@ -2430,12 +2426,12 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 		const u32 func = op_branch_targets(addr, op)[0];
 
-		if (func == umax || addr + 4 == func || func == addr || std::count(addrs.begin(), addrs.end(), func))
+		if (func == umax || addr + 4 == func || func == addr || std::ranges::contains(addrs, func))
 		{
 			continue;
 		}
 
-		if (std::count(calls.begin(), calls.end(), func))
+		if (std::ranges::contains(calls, func))
 		{
 			// Cannot call another call instruction (link is overwritten)
 			continue;
@@ -2466,7 +2462,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 			const u32 target = op_branch_targets(next, test_op)[0];
 
-			if (target == umax || addr + 4 == target || target == addr || std::count(addrs.begin(), addrs.end(), target))
+			if (target == umax || addr + 4 == target || target == addr || std::ranges::contains(addrs, target))
 			{
 				break;
 			}
@@ -2534,7 +2530,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 
 			addr = SPU_LS_SIZE + 4; // Terminate the next condition, no further checks needed
 
-			if (std::count(addrs.begin(), addrs.end(), func))
+			if (std::ranges::contains(addrs, func))
 			{
 				break;
 			}
@@ -2585,7 +2581,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 				continue;
 			}
 
-			if (std::count(addrs.begin(), addrs.end(), func))
+			if (std::ranges::contains(addrs, func))
 			{
 				break;
 			}

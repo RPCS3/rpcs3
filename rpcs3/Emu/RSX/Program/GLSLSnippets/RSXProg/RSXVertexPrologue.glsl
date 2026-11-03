@@ -71,7 +71,10 @@ vec4 apply_depth_range_xform(const in vec4 pos, const in vec2 range)
 
 #if defined(_ENABLE_INSTANCED_CONSTANTS)
 // Workaround for GL vs VK builtin variable naming
-#ifdef VULKAN
+#if defined(VULKAN) && defined(_VK_DRAW_ID_FROM_BASE_INSTANCE)
+// The instance base carries the draw parameters index
+#define _gl_InstanceID (gl_InstanceIndex - gl_BaseInstanceARB)
+#elif defined(VULKAN)
 #define _gl_InstanceID gl_InstanceIndex
 #else
 #define _gl_InstanceID gl_InstanceID

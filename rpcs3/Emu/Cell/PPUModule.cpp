@@ -86,7 +86,7 @@ static void select_from_nids_scenpdrm_addrs(std::map<u32, std::vector<std::pair<
 
 	for (const auto& [nid, use] : fnid_to_use_addr)
 	{
-		if (std::count(std::begin(fnids_list), std::end(fnids_list), nid))
+		if (std::ranges::contains(fnids_list, nid))
 		{
 			result.emplace(use, 0);
 		}
