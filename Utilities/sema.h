@@ -30,7 +30,7 @@ protected:
 	void wait()
 	{
 		// Load value
-		const u32 value = m_value.load();
+		const u32 value = m_value.observe();
 
 		// Conditional decrement
 		if ((value & c_value_mask) == 0 || !m_value.compare_and_swap_test(value, value - c_value)) [[unlikely]]

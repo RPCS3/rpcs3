@@ -480,7 +480,7 @@ extern f64 get_cpu_program_usage_percent(u64 hash)
 		{
 			u64 total = 0;
 
-			for (auto [name, count] : prof->all_spu_threads_info.freq)
+			for (const auto& [name, count] : prof->all_spu_threads_info.freq)
 			{
 				if ((name & -65536) == hash)
 				{

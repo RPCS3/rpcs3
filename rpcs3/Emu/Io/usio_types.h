@@ -2,14 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/endian.hpp"
-
-// Serialize a struct into bytes
-template <typename T> requires std::is_trivially_copyable_v<T>
-inline std::vector<u8> to_bytes(const T& value)
-{
-	const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
-	return {bytes.begin(), bytes.end()};
-}
+#include "nfc_reader.h"
 
 // USIO USB endpoints
 enum class usio_endpoint : u8
@@ -91,4 +84,5 @@ struct usio_io_status
 	s8 vital_sensors[2] = {0, 0};
 	s8 wheel_rotation = 0;
 	std::array<bool, 4> taiko_hit_already = {}; // Status of taiko_hit_side_left, taiko_hit_center_right, taiko_hit_side_right, and taiko_hit_center_left from last polling
+	nfc_reader card_reader{};
 };

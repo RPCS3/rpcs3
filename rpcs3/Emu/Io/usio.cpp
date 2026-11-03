@@ -5,7 +5,6 @@
 #include "MouseHandler.h"
 #include "Input/pad_thread.h"
 #include "Emu/Io/usio_config.h"
-#include "Emu/Io/nfc_reader.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 
@@ -505,7 +504,6 @@ void usb_device_usio::translate_input_tekken()
 
 void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 {
-	static std::array<std::vector<u8>, 2> pending_response = {};
 	usz reader_index = 0;
 
 	switch (static_cast<usio_reg>(reg))
@@ -514,27 +512,30 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case usio_reg::card_reader_1_status:
 	{
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_status ? 0 : 1;
+		const auto& status = ::at32(m_io_status, reader_index);
+
 		buf = {0x02, 0x03, 0x00, 0x00, 0xFF, 0x0F, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x10, 0x00};
-		*reinterpret_cast<le_t<u16>*>(buf.data() + 2) = ::narrow<u16>(pending_response[reader_index].size());
+		write_to_ptr<le_t<u16>>(buf, 2, ::narrow<u16>(status.card_reader.get_buffer_size()));
 		break;
 	}
 	case usio_reg::card_reader_0_read:
 	case usio_reg::card_reader_1_read:
 	{
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_read ? 0 : 1;
-		buf = {pending_response[reader_index].begin(), pending_response[reader_index].end()};
+		auto& status = ::at32(m_io_status, reader_index);
+
+		status.card_reader.write_buffer(buf);
 		break;
 	}
 	case usio_reg::card_reader_0_write:
 	case usio_reg::card_reader_1_write:
 	{
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
-		auto& response = pending_response[reader_index];
-		const auto& status = ::at32(m_io_status, reader_index);
+		auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
 		const auto& card = g_fxo->get<usio_memory>().card_data[card_player];
 
-		nfc_reader::write_response(buf, response, card, status);
+		status.card_reader.process_request(buf, card, status.card_tapped);
 		break;
 	}
 	default:

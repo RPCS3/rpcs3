@@ -1154,7 +1154,15 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 				continue;
 			}
 
-			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value + 1) * 4, 0x10000);
+			// Include the return hook, and leave room for 64 KiB allocation alignment.
+			if (p.value.long_value >= (u32{umax} & -0x10000) / 4)
+			{
+				fmt::throw_exception("Invalid calloc instruction count %u at 0x%x (patch '%s', hash '%s')",
+					p.value.long_value, out_branch, patch.description, patch.hash);
+			}
+
+			const u32 code_size = static_cast<u32>(p.value.long_value + 1) * 4;
+			const u32 alloc_size = utils::align(code_size, 0x10000);
 
 			// Check if should maybe reuse previous code cave allocation (0 size)
 			if (alloc_size - 4 != 0)
@@ -1227,6 +1235,11 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 			// Record the insertion point as a faux block.
 			g_fxo->need<ppu_patch_block_registry_t>();
 			g_fxo->get<ppu_patch_block_registry_t>().block_addresses.insert(resval);
+
+			// Keep the initialized helper extent separate from its allocation padding
+			auto& ranges = g_fxo->get<ppu_patch_block_registry_t>().code_ranges;
+			std::erase_if(ranges, [addr](const auto& range) { return range.addr == addr; });
+			ranges.push_back({addr, code_size, fmt::format("%s (hash '%s')", patch.description, patch.hash)});
 
 			relocate_instructions_at = addr;
 			break;
@@ -1631,6 +1644,12 @@ void patch_engine::unload(const std::string& name)
 			// Deallocate used memory
 			if (u32 addr = std::exchange(entry.alloc_addr, 0))
 			{
+				if (auto* registry = g_fxo->try_get<ppu_patch_block_registry_t>())
+				{
+					std::erase_if(registry->code_ranges,
+						[addr](const auto& range) { return range.addr == addr; });
+				}
+
 				vm::dealloc(addr);
 
 				auto alloc_map = vm::get(vm::any, addr);

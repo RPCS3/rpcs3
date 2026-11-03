@@ -364,7 +364,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 			continue;
 		}
 
-		if (std::count(info.excluded_funcs.begin(), info.excluded_funcs.end(), f.addr))
+		if (std::ranges::contains(info.excluded_funcs, f.addr))
 		{
 			// Excluded function (possibly patched)
 			continue;

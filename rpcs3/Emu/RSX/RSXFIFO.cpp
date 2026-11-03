@@ -55,7 +55,7 @@ namespace rsx
 			m_fifo_pos = position - (count ? 4 : 0);
 			m_args_ptr = m_iotable->get_addr(m_fifo_pos);
 			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff) - m_command_inc;
-			m_next_cmd_entry = m_fifo_pos + m_remaining_commands * 4;
+			m_next_cmd_entry = position + m_remaining_commands * 4;
 		}
 
 		void FIFO_control::set_channel(RsxDmaControl* ctrl)
