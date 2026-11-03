@@ -69,10 +69,10 @@ std::string SaveDataEntry::data_size() const
 {
 	std::string metric = "KB";
 	u64 sz = utils::aligned_div(size, 1024);
-	if (sz > 1000)
+	if (sz >= 10000)
 	{
 		metric = "MB";
-		sz = utils::aligned_div(sz, 1000);
+		sz = utils::aligned_div(sz, 1024);
 	}
 	return fmt::format("%lu %s", sz, metric);
 }
