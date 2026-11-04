@@ -190,6 +190,21 @@ struct avc2_settings
 				return 0;
 			});
 	}
+
+	// Not tied to the callback id so that it is still delivered after a synchronous unload unregisters the callback
+	void register_leave_on_unload()
+	{
+		if (!joined || !avc2_cb)
+		{
+			return;
+		}
+
+		sysutil_register_cb([cb = avc2_cb, arg = avc2_cb_arg](ppu_thread& cb_ppu) -> s32
+			{
+				cb(cb_ppu, CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0, arg);
+				return 0;
+			});
+	}
 };
 
 namespace
@@ -1437,6 +1452,28 @@ void cellSysutilAvc2SetVoiceChatMemberMuting(const std::string& npid, bool muted
 	}
 }
 
+static void avc2_leave_session(avc2_settings& settings)
+{
+	g_fxo->get<avc2_voice_thread>().leave();
+	settings.voice_muting_players.clear();
+	settings.joined = false;
+	settings.room_id = 0;
+	settings.local_member_id = 0;
+}
+
+void cellSysutilAvc2NotifyRoomDestroyed(u64 room_id)
+{
+	auto& settings = g_fxo->get<avc2_settings>();
+	if (!settings.loaded || !settings.joined || settings.room_id != room_id)
+	{
+		return;
+	}
+
+	cellSysutilAvc2.notice("Leaving AV Chat2 session because room %llu was destroyed", room_id);
+	avc2_leave_session(settings);
+	settings.register_cb_call(CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0);
+}
+
 static bool avc2_is_room_member(u64 room_id, SceNpMatching2RoomMemberId member_id)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -1492,6 +1529,8 @@ error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id, vm::p
 
 	if (!settings.loaded)
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
+	if (settings.joined)
+		return CELL_AVC2_ERROR_INVALID_STATUS;
 
 	u64 id = 0;
 
@@ -1515,8 +1554,6 @@ error_code cellSysutilAvc2JoinChat(vm::cptr<SceNpMatching2RoomId> room_id, vm::p
 	if (eventId) *eventId = success ? CELL_AVC2_EVENT_JOIN_SUCCEEDED : CELL_AVC2_EVENT_JOIN_FAILED;
 	if (eventParam) *eventParam = success ? 0 : CELL_AVC2_EVENT_PARAM_ERROR_ROOM_DOES_NOT_EXIST;
 
-	if (!success)
-		return CELL_AVC2_ERROR_NO_SESSION;
 	return CELL_OK;
 }
 
@@ -1852,6 +1889,7 @@ error_code cellSysutilAvc2Unload()
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
 	}
 
+	settings.register_leave_on_unload();
 	g_fxo->get<avc2_voice_thread>().unload();
 	settings.loaded = false;
 	settings.joined = false;
@@ -1874,6 +1912,7 @@ error_code cellSysutilAvc2UnloadAsync()
 	auto& settings = g_fxo->get<avc2_settings>();
 	if (!settings.loaded)
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
+	settings.register_leave_on_unload();
 	g_fxo->get<avc2_voice_thread>().unload();
 	settings.loaded = false;
 	settings.joined = false;
@@ -2117,11 +2156,7 @@ error_code cellSysutilAvc2LeaveChatRequest()
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
 	if (!settings.joined)
 		return CELL_AVC2_ERROR_NO_SESSION;
-	g_fxo->get<avc2_voice_thread>().leave();
-	settings.voice_muting_players.clear();
-	settings.joined = false;
-	settings.room_id = 0;
-	settings.local_member_id = 0;
+	avc2_leave_session(settings);
 	settings.register_cb_call(CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0);
 
 	return CELL_OK;
@@ -2220,19 +2255,17 @@ error_code cellSysutilAvc2GetWindowString(SceNpMatching2RoomMemberId member_id, 
 	return CELL_OK;
 }
 
-error_code cellSysutilAvc2LeaveChat()
+error_code cellSysutilAvc2LeaveChat(vm::ptr<CellSysutilAvc2EventId> eventId, vm::ptr<CellSysutilAvc2EventParam> eventParam)
 {
-	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChat()");
+	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChat(eventId=*0x%x, eventParam=*0x%x)", eventId, eventParam);
 	auto& settings = g_fxo->get<avc2_settings>();
 	if (!settings.loaded)
 		return CELL_AVC2_ERROR_NOT_INITIALIZED;
 	if (!settings.joined)
 		return CELL_AVC2_ERROR_NO_SESSION;
-	g_fxo->get<avc2_voice_thread>().leave();
-	settings.voice_muting_players.clear();
-	settings.joined = false;
-	settings.room_id = 0;
-	settings.local_member_id = 0;
+	avc2_leave_session(settings);
+	if (eventId) *eventId = CELL_AVC2_EVENT_LEAVE_SUCCEEDED;
+	if (eventParam) *eventParam = 0;
 	return CELL_OK;
 }
 
@@ -2563,6 +2596,7 @@ error_code cellSysutilAvc2Unload2(u32 mediaType)
 		}
 
 		// TODO: return error if the video chat is still loaded (probably CELL_AVC2_ERROR_INVALID_STATUS)
+		settings.register_leave_on_unload();
 		sysutil_unregister_cb_with_id<avc2_cb_handle_t>();
 			settings.avc2_cb = vm::null;
 			settings.avc2_cb_arg = vm::null;
@@ -2600,6 +2634,7 @@ error_code cellSysutilAvc2UnloadAsync2(u32 mediaType)
 
 	if (mediaType == CELL_SYSUTIL_AVC2_VOICE_CHAT)
 	{
+		settings.register_leave_on_unload();
 		g_fxo->get<avc2_voice_thread>().unload();
 		settings.loaded = false;
 		settings.joined = false;

@@ -302,6 +302,7 @@ struct CellSysutilAvc2StreamingTarget
 };
 
 void cellSysutilAvc2MixVoice(f32* out_buffer, u32 sample_count, u32 channel_count, f32 master_volume);
+void cellSysutilAvc2NotifyRoomDestroyed(u64 room_id);
 
 struct avc2_voice_chat_member
 {
