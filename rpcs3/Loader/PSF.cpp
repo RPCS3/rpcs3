@@ -221,6 +221,8 @@ namespace psf
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
 			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, error::corrupt);
+			PSF_CHECK(indices[i].param_len <= indices[i].param_max, error::corrupt);
+			PSF_CHECK(indices[i].param_max > (indices[i].param_fmt == format::string ? 1 : 0), error::corrupt);
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);
@@ -255,6 +257,12 @@ namespace psf
 					// Find null terminator
 					if (usz nts = value.find_first_of('\0'); nts != umax)
 					{
+						if (nts < value.size() - 1)
+						{
+							// Unexpected non-NTS characters after NTS was encountered
+							PSF_CHECK(value.find_first_not_of('\0', nts + 1) == umax, error::corrupt);
+						}
+
 						value.resize(nts);
 					}
 				}
