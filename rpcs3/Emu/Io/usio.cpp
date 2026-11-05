@@ -533,7 +533,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
 		auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
-		const auto& card = g_fxo->get<usio_memory>().card_data[card_player];
+		auto& card = g_fxo->get<usio_memory>().card_data[card_player];
 
 		status.card_reader.process_request(buf, card, status.card_tapped);
 		break;
