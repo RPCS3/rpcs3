@@ -146,14 +146,14 @@ namespace rsx
 		// Indexer for memory blocks
 		u64 memory_indexer = 0x1234;
 
-		void reset()
+		void reset(const rsx_state& regs)
 		{
 			magic = c_fc_magic;
 			version = c_fc_version;
 			tile_map.clear();
 			memory_map.clear();
 			replay_commands.clear();
-			reg_state = method_registers;
+			reg_state = regs;
 		}
 	};
 

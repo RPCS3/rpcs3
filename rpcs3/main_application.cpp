@@ -109,6 +109,25 @@ void main_application::InitializeEmulator(const std::string& user, bool show_gui
 	rpcs3::utils::configure_logs(Emu.IsStopped());
 }
 
+void main_application::attach_input_to_game_window()
+{
+	auto window = reinterpret_cast<QWindow*>(m_game_window);
+	if (auto handler = dynamic_cast<basic_keyboard_handler*>(g_fxo->try_get<KeyboardHandlerBase>()))
+	{
+		handler->SetTargetWindow(window);
+	}
+
+	if (auto handler = dynamic_cast<basic_mouse_handler*>(g_fxo->try_get<MouseHandlerBase>()))
+	{
+		handler->SetTargetWindow(window);
+	}
+
+	if (auto pads = g_fxo->try_get<named_thread<pad_thread>>())
+	{
+		pads->set_target_window(window);
+	}
+}
+
 void main_application::OnEmuSettingsChange()
 {
 	// Change logging

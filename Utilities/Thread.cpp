@@ -3332,8 +3332,10 @@ bool thread_base::join(bool dtor) const
 void thread_base::notify()
 {
 	// Set notification
-	m_sync |= 4;
-	m_sync.notify_all();
+	if (~m_sync.fetch_or(4) & 4)
+	{
+		m_sync.notify_all();
+	}
 }
 
 u64 thread_base::get_native_id() const
@@ -4083,7 +4085,7 @@ usz map_workload(std::string_view thread_name, usz thread_count, usz count, std:
 		{
 			func(i);
 		}
-		return 1;
+		return thread_count;
 	}
 
 	atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
@@ -4133,7 +4135,7 @@ usz map_workload(std::string_view thread_name, usz thread_count, std::function<v
 	if (thread_count <= 1)
 	{
 		func();
-		return 1;
+		return thread_count;
 	}
 
 	atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.

@@ -2,7 +2,6 @@
 
 #include "shader_loading_dialog.h"
 
-class GSRender;
 
 namespace rsx
 {
@@ -18,7 +17,7 @@ namespace rsx
 		rsx::thread* owner = nullptr;
 		std::shared_ptr<rsx::overlays::message_dialog> dlg{};
 
-		shader_loading_dialog_native(GSRender* ptr);
+		shader_loading_dialog_native(rsx::thread* ptr);
 
 		void create(const std::string& msg, const std::string&/* title*/) override;
 		void update_msg(u32 index, std::string msg) override;
@@ -27,5 +26,6 @@ namespace rsx
 		void set_limit(u32 index, u32 limit) override;
 		void refresh() override;
 		void close() override;
+		void enable_hold_to_skip() override;
 	};
 }

@@ -180,7 +180,7 @@ namespace rsx
 
 			while (_thr.m_enqueued_count.load() > _thr.m_processed_count.load())
 			{
-				rsxthr->on_semaphore_acquire_wait();
+				rsxthr->renderer()->on_semaphore_acquire_wait();
 				utils::pause();
 			}
 		}

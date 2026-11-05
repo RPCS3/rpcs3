@@ -9,6 +9,7 @@
 #include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/localized_string.h"
+#include "Emu/RSX/Core/RSXContext.h"
 
 namespace gl
 {
@@ -16,7 +17,12 @@ namespace gl
 	using enum program_common::interpreter::compiler_option;
 	using enum program_common::interpreter::cached_pipeline_flags;
 
-	void shader_interpreter::create(rsx::shader_loading_dialog* dlg)
+	void shader_interpreter::create(rsx::context* ctx)
+	{
+		m_ctx = ctx;
+	}
+
+	void shader_interpreter::preload(rsx::shader_loading_dialog* dlg)
 	{
 		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
@@ -26,17 +32,25 @@ namespace gl
 		dlg->set_limit(0, limit1);
 		dlg->set_limit(1, limit2);
 
-		atomic_t<u32> ctr = 0;
-		auto progress_hook = [&](const std::shared_ptr<interpreter::cached_program>&) { ctr++; };
+		auto ctr = std::make_shared<atomic_t<u32>>(0);
+		auto progress_hook = [ctr](const std::shared_ptr<interpreter::cached_program>&) { (*ctr)++; };
 
 		auto update_progress = [&](u32 stage)
 		{
-			const auto completed = ctr.load();
+			const auto completed = ctr->load();
 			const auto limit = stage ? limit2 : limit1;
-			const auto message = get_localized_string(stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD, "%u %s %u", ctr.load(), get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit);
+			const auto message = get_localized_string(
+				stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD,
+				"%u %s %u",
+				ctr->load(),
+				get_localized_string(localized_string_id::PROGRESS_DIALOG_OF),
+				limit);
 			dlg->update_msg(stage, message);
 			dlg->set_value(stage, completed);
 		};
+
+		// Initial message
+		update_progress(0);
 
 		// We only need to build the base "compatible pipeline" pairs.
 		for (const auto& variant : variants.base_pipelines)
@@ -49,13 +63,19 @@ namespace gl
 			std::this_thread::sleep_for(16ms);
 			update_progress(0);
 		}
-		while (ctr < limit1);
+		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && !dlg->skip_requested());
 
 		// Show final progress
 		update_progress(0);
 
+		// If we were interrupted, return immediately.
+		if (thread_ctrl::state() == thread_state::aborting)
+		{
+			return;
+		}
+
 		// Second stage. Propagate base pipelines to all compatible
-		ctr = 0;
+		*ctr = 0;
 		std::lock_guard lock(m_program_cache_lock);
 
 		for (const auto& variant : variants.pipelines)
@@ -71,7 +91,11 @@ namespace gl
 			auto base_pipeline = m_program_cache.find(compatible_options);
 			if (base_pipeline == m_program_cache.end())
 			{
-				fmt::throw_exception("Base variant was not found in the cache.");
+				if (!dlg->skip_requested())
+				{
+					fmt::throw_exception("Base variant was not found in the cache.");
+				}
+				continue;
 			}
 
 			auto data = new interpreter::cached_program();
@@ -83,7 +107,7 @@ namespace gl
 			m_program_cache[compiler_options].reset(data);
 		}
 
-		ctr = limit2;
+		*ctr = limit2;
 		update_progress(1);
 
 		// Minor stall to avoid visual flashing
@@ -114,9 +138,9 @@ namespace gl
 	{
 		// Build options
 		u64 opt = 0;
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (fp_ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (m_ctx->draw_state.fragment_env.alpha_func)
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -150,7 +174,7 @@ namespace gl
 		if (metadata.referenced_textures_mask) opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) opt |= COMPILER_OPT_ENABLE_STIPPLING;
+		if (fp_ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE) opt |= COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) opt |= COMPILER_OPT_ENABLE_INSTANCING;
 
 		auto previous = m_current_interpreter ? m_current_interpreter.get() : nullptr;

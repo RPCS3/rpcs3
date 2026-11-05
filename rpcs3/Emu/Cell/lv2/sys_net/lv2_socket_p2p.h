@@ -38,12 +38,21 @@ public:
 
 protected:
 	virtual bs_t<poll_t> get_pending_events() const;
+	// Simulates the storage cost of each packet as size of sockaddr + payload
+	static constexpr usz get_packet_cost(usz payload_size) { return sizeof(sys_net_sockaddr_in_p2p) + payload_size; }
 
 	// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
 	u16 port = 3658, vport = 0;
 	u32 bound_addr = 0;
 	// Queue containing received packets from network_thread for SYS_NET_SOCK_DGRAM_P2P sockets
 	std::queue<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data{};
+	usz data_size = 0;
 	// List of sock options
 	std::map<u64, sockopt_cache> sockopts;
+
+	s32 so_type = 0;
+	s32 so_rcvbuf = 0;
+
+private:
+	void initialize_socket_options(lv2_socket_type type);
 };

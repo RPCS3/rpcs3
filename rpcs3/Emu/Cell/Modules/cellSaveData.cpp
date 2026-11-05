@@ -717,6 +717,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
+	const u64 op_start_time = get_guest_system_time();
+
 	if (setList)
 	{
 		if (const auto& [ok, list] = setList.try_read(); ok)
@@ -771,6 +773,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		lv2_obj::sleep(ppu);
 		lv2_obj::wait_timeout(sleep_time);
 		ppu.check_state();
+	};
+
+	const auto lv2_sleep_until = [&lv2_sleep](ppu_thread& ppu, u64 until_time)
+	{
+		if (const u64 current_time = get_guest_system_time(); current_time < until_time)
+		{
+			lv2_sleep(ppu, until_time - current_time);
+		}
 	};
 
 	lv2_sleep(ppu, 500);
@@ -952,7 +962,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (funcList)
 		{
-			listSet->focusPosition = CELL_SAVEDATA_FOCUSPOS_LISTHEAD;
+			listSet->focusPosition = operation == SAVEDATA_OP_LIST_DELETE ? CELL_SAVEDATA_FOCUSPOS_DIRNAME : CELL_SAVEDATA_FOCUSPOS_LISTHEAD;
 
 			std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
@@ -1026,6 +1036,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (listSet->newData)
 			{
+				if (operation == SAVEDATA_OP_LIST_DELETE)
+				{
+					// A delete list has no new data entry
+					cellSaveData.error("savedata_op(): listSet->newData is set for a delete list");
+					return {CELL_SAVEDATA_ERROR_PARAM, "newData in delete list"};
+				}
+
 				switch (listSet->newData->iconPosition)
 				{
 				case CELL_SAVEDATA_ICONPOS_HEAD:
@@ -1154,6 +1171,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (!listSet->newData)
 				{
+					if (operation != SAVEDATA_OP_LIST_DELETE)
+					{
+						// No new data entry is listed (e.g. the save slot limit was reached): focus the list head instead
+						cellSaveData.warning("savedata_op(): listSet->newData is null while listSet->focusPosition is NEWDATA, focusing the list head");
+						focused = save_entries.empty() ? -1 : 0;
+						break;
+					}
+
 					// ****** sysutil savedata parameter error : 34 ******
 					cellSaveData.error("savedata_op(): listSet->newData is null while listSet->focusPosition is NEWDATA");
 					return {CELL_SAVEDATA_ERROR_PARAM, "34"};
@@ -1264,7 +1289,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// UI returns -1 for new save games
 			if (selected == -1)
 			{
-				message = get_localized_string(localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION);
+				// Same title as the new data entry of the list
+				const auto icon = listSet->newData->icon;
+				const std::string title = icon && icon->title ? icon->title.get_ptr() : get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE);
+				message = get_localized_string(operation == SAVEDATA_OP_LIST_LOAD ? localized_string_id::CELL_SAVEDATA_LOAD : localized_string_id::CELL_SAVEDATA_SAVE, title.c_str());
+
 				save_entry.dirName = listSet->newData->dirName.get_ptr();
 				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
@@ -1654,6 +1683,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		std::memset(result.get_ptr(), 0, ::offset32(&CellSaveDataCBResult::userdata));
 
+		if (operation <= SAVEDATA_OP_AUTO_LOAD)
+		{
+			// Lower bound of the time measured on a PS3 from the AutoSave/AutoLoad call to funcStat:
+			// 200 ms, 80 ms for a new save
+			lv2_sleep_until(ppu, op_start_time + (save_entry.isNew ? 80'000 : 200'000));
+		}
+
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
 		ppu.state += cpu_flag::wait;
@@ -1869,6 +1905,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	error_code savedata_result = CELL_OK;
 
 	u64 delay_save_until = 0;
+	u64 file_ops = 0;
+	u64 secure_file_ops = 0;
 
 	while (funcFile)
 	{
@@ -1889,7 +1927,17 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				// Some games (Jak II [NPUA80707]) rely on this delay
 				lv2_obj::sleep(ppu);
-				delay_save_until = get_guest_system_time() + (has_modified ? 500'000 : 100'000);
+				if (operation <= SAVEDATA_OP_AUTO_LOAD)
+				{
+					// Lower bound of the time measured on a PS3 from the AutoSave/AutoLoad call to its return:
+					// 630 ms, 550 ms more when data is modified, 50 ms per file read or written, 280 ms more per secure file
+					delay_save_until = op_start_time + 630'000 + (has_modified ? 550'000 : 0) + file_ops * 50'000 + secure_file_ops * 280'000;
+				}
+				else
+				{
+					delay_save_until = get_guest_system_time() + (has_modified ? 500'000 : 100'000);
+				}
+
 				break;
 			}
 
@@ -1907,6 +1955,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		// TODO: Show progress if it's not an auto load/save
+
+		if (fileSet->fileOperation != CELL_SAVEDATA_FILEOP_DELETE)
+		{
+			file_ops++;
+			secure_file_ops += fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE;
+		}
 
 		std::string file_path;
 
@@ -2231,10 +2285,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		return display_callback_result_error_message(ppu, *result, errDialog);
 	}
 
-	if (u64 current_time = get_guest_system_time(); current_time < delay_save_until)
-	{
-		lv2_sleep(ppu, delay_save_until - current_time);
-	}
+	lv2_sleep_until(ppu, delay_save_until);
 
 	return savedata_result;
 }

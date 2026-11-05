@@ -13,6 +13,8 @@
 #include "util/asm.hpp"
 #include "util/video_provider.h"
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
 
@@ -190,16 +192,22 @@ void VKGSRender::advance_queued_frames()
 	m_device->rebalance_memory_type_usage();
 	vk::vmm_check_memory_usage();
 
-	// m_rtts storage is double buffered and should be safe to tag on frame boundary
-	m_rtts.trim(*m_current_command_buffer, vk::vmm_determine_memory_load_severity());
+	if (const auto resources = res())
+	{
+		// Surface storage is double buffered and should be safe to tag on frame boundary
+		resources->surface_cache.trim(*m_current_command_buffer, vk::vmm_determine_memory_load_severity());
 
-	// Texture cache is also double buffered to prevent use-after-free
-	m_texture_cache.on_frame_end();
+		// Texture cache is also double buffered to prevent use-after-free
+		resources->texture_cache.on_frame_end();
+	}
 	m_samplers_dirty.store(true);
 
 	vk::remove_unused_framebuffers();
 
-	m_vertex_cache->purge();
+	if (const auto resources = res())
+	{
+		resources->vertex_cache->purge();
+	}
 	m_current_frame->tag_frame_end();
 
 	m_queued_frames.push_back(m_current_frame);
@@ -255,22 +263,23 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 
 	// Resource cleanup.
 	{
-		if (m_overlay_manager && m_overlay_manager->has_dirty())
+		const auto overlay_manager = RSX(m_ctx)->overlay_manager();
+		if (overlay_manager && overlay_manager->has_dirty())
 		{
 			auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-			m_overlay_manager->lock_shared();
+			overlay_manager->lock_shared();
 
 			std::vector<u32> uids_to_dispose;
-			uids_to_dispose.reserve(m_overlay_manager->get_dirty().size());
+			uids_to_dispose.reserve(overlay_manager->get_dirty().size());
 
-			for (const auto& view : m_overlay_manager->get_dirty())
+			for (const auto& view : overlay_manager->get_dirty())
 			{
 				ui_renderer->remove_temp_resources(view->uid);
 				uids_to_dispose.push_back(view->uid);
 			}
 
-			m_overlay_manager->unlock_shared();
-			m_overlay_manager->dispose(uids_to_dispose);
+			overlay_manager->unlock_shared();
+			overlay_manager->dispose(uids_to_dispose);
 		}
 
 		vk::get_resource_manager()->trim();
@@ -312,7 +321,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 
 	// Check the surface store first
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
-	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
+	const auto overlap_info = res()->surface_cache.get_merged_texture_memory_region(*m_current_command_buffer,
 		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::transfer_read);
 
 	if (!overlap_info.empty())
@@ -349,13 +358,13 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 				image_to_flip = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
-					resolution_scaling_config,
+					RSX(m_ctx)->resolution_scaling_config,
 					std::min(surface_width, info->width),
 					std::min(surface_height, info->height));
 			}
 		}
 	}
-	else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
+	else if (auto surface = res()->texture_cache.find_texture_from_dimensions<true>(info->address, info->format);
 			 surface && surface->get_width() >= info->width && surface->get_height() >= info->height)
 	{
 		// Hack - this should be the first location to check for output
@@ -373,7 +382,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 		// Read from cell
 		const auto range = utils::address_range32::start_length(info->address, info->pitch * info->height);
 		const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
-		const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
+		const auto overlap = res()->texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
 
 		for (const auto & section : overlap)
 		{
@@ -389,13 +398,13 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 			flush_command_queue();
 		}
 
-		m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
-		image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, expected_format, info->address, info->width, info->height, info->pitch);
+		res()->texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read);
+		image_to_flip = res()->texture_cache.upload_image_simple(*m_current_command_buffer, expected_format, info->address, info->width, info->height, info->pitch);
 	}
 	else if (image_to_flip->format() != expected_format)
 	{
 		// Devs are being creative. Force-cast this to the proper pixel layout.
-		auto dst_img = m_texture_cache.create_temporary_subresource_storage(
+		auto dst_img = res()->texture_cache.create_temporary_subresource_storage(
 			RSX_FORMAT_CLASS_COLOR, expected_format, info->width, info->height, 1, 1, 1,
 			VK_IMAGE_TYPE_2D, 0, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 
@@ -416,15 +425,27 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 			}
 
 			image_to_flip = dst_img.get();
-			m_texture_cache.dispose_reusable_image(dst_img);
+			res()->texture_cache.dispose_reusable_image(dst_img);
 		}
 	}
 
 	return image_to_flip;
 }
 
-void VKGSRender::flip(const rsx::display_flip_info_t& info)
+bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 {
+	if (m_device->is_lost())
+	{
+		// A lost device presents nothing. The core replaces the renderer.
+		return false;
+	}
+
+	if (!info.emu_flip)
+	{
+		// Native UI flips are requested from the local task. Submit outstanding work first.
+		flush_command_queue(true);
+	}
+
 	// Check swapchain condition/status
 	if (!m_swapchain->supports_automatic_wm_reports())
 	{
@@ -456,8 +477,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			if (Emu.IsStopped())
 			{
 				m_frame->flip(m_context);
-				rsx::thread::flip(info);
-				return;
+				return false;
 			}
 
 			std::this_thread::sleep_for(100ms);
@@ -506,13 +526,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 
 		m_frame->flip(m_context);
-		rsx::thread::flip(info);
-		return;
+		return false;
 	}
 
-	u32 buffer_width = display_buffers[info.buffer].width;
-	u32 buffer_height = display_buffers[info.buffer].height;
-	u32 buffer_pitch = display_buffers[info.buffer].pitch;
+	const auto& display_buffer = m_ctx->display_buffers[info.buffer];
+	u32 buffer_width = display_buffer.width;
+	u32 buffer_height = display_buffer.height;
+	u32 buffer_pitch = display_buffer.pitch;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
@@ -544,11 +564,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
 
-	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
+	if (res() && info.buffer < m_ctx->display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
 		{
-			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
+			.address = rsx::get_address(m_ctx, display_buffer.offset, CELL_GCM_LOCATION_LOCAL),
 			.format = av_format,
 			.width = buffer_width,
 			.height = buffer_height,
@@ -559,14 +579,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig.stereo_enabled) [[unlikely]]
 		{
-			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
-				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
+				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffer.offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
+				present_info.address = rsx::get_address(m_ctx, image_offset, CELL_GCM_LOCATION_LOCAL);
 				present_info.eye = 1;
 
 				image_to_flip2 = get_present_source(&present_info, avconfig);
@@ -574,7 +594,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
 				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
@@ -585,7 +605,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (info.emu_flip)
 	{
-		evaluate_cpu_usage_reduction_limits();
+		RSX(m_ctx)->display_ctrl().evaluate_cpu_usage_reduction_limits();
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
@@ -622,7 +642,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			ensure(m_current_frame, "Could not reinitialize swapchain after VK_ERROR_OUT_OF_DATE_KHR signal!");
 			continue;
 		default:
-			vk::die_with_error(status);
+			if (vk::die_with_error(status))
+				return false;
 		}
 
 		if (should_reinitialize_swapchain)
@@ -658,7 +679,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::framebuffer_holder* direct_fbo = nullptr;
 	rsx::simple_array<vk::viewable_image*> calibration_src;
 
-	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
+	const auto overlay_manager = RSX(m_ctx)->overlay_manager();
+	const bool has_overlay = (overlay_manager && overlay_manager->has_visible());
 	const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
 	const bool user_is_recording = (g_recording_mode != recording_mode::stopped && m_frame->can_consume_frame());
 	const bool need_media_capture = user_asked_for_screenshot || user_is_recording;
@@ -669,10 +691,10 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		// Lock to avoid modification during run-update chain
 		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
-		std::lock_guard lock(*m_overlay_manager);
+		std::lock_guard lock(*overlay_manager);
 
 		const areau display_area = {0, 0, static_cast<u32>(m_swapchain_dims.width), static_cast<u32>(m_swapchain_dims.height)};
-		for (const auto& view : m_overlay_manager->get_views())
+		for (const auto& view : overlay_manager->get_views())
 		{
 			const areau render_area = view->use_window_space ? display_area : area;
 			ui_renderer->run(*m_current_command_buffer, render_area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
@@ -919,21 +941,21 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		render_overlays(direct_fbo, areau(aspect_ratio));
 
-		if (g_cfg.video.debug_overlay)
+		if (g_cfg.video.debug_overlay && res())
 		{
-			const auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
-			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
-			const auto tmp_texture_memory_size = m_texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
-			const auto num_flushes = m_texture_cache.get_num_flush_requests();
-			const auto num_mispredict = m_texture_cache.get_num_cache_mispredictions();
-			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
-			const auto num_misses = m_texture_cache.get_num_cache_misses();
-			const auto num_unavoidable = m_texture_cache.get_num_unavoidable_hard_faults();
-			const auto cache_miss_ratio = static_cast<u32>(ceil(m_texture_cache.get_cache_miss_ratio() * 100));
-			const auto num_texture_upload = m_texture_cache.get_texture_upload_calls_this_frame();
-			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
-			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
-			const auto texture_copies_ellided = m_texture_cache.get_texture_copies_ellided_this_frame();
+			const auto num_dirty_textures = res()->texture_cache.get_unreleased_textures_count();
+			const auto texture_memory_size = res()->texture_cache.get_texture_memory_in_use() / (1024 * 1024);
+			const auto tmp_texture_memory_size = res()->texture_cache.get_temporary_memory_in_use() / (1024 * 1024);
+			const auto num_flushes = res()->texture_cache.get_num_flush_requests();
+			const auto num_mispredict = res()->texture_cache.get_num_cache_mispredictions();
+			const auto num_speculate = res()->texture_cache.get_num_cache_speculative_writes();
+			const auto num_misses = res()->texture_cache.get_num_cache_misses();
+			const auto num_unavoidable = res()->texture_cache.get_num_unavoidable_hard_faults();
+			const auto cache_miss_ratio = static_cast<u32>(ceil(res()->texture_cache.get_cache_miss_ratio() * 100));
+			const auto num_texture_upload = res()->texture_cache.get_texture_upload_calls_this_frame();
+			const auto num_texture_upload_miss = res()->texture_cache.get_texture_upload_misses_this_frame();
+			const auto texture_upload_miss_ratio = res()->texture_cache.get_texture_upload_miss_percentage();
+			const auto texture_copies_ellided = res()->texture_cache.get_texture_copies_ellided_this_frame();
 			const auto vertex_cache_hit_count = (info.stats.vertex_cache_request_count - info.stats.vertex_cache_miss_count);
 			const auto vertex_cache_hit_ratio = info.stats.vertex_cache_request_count
 				? (vertex_cache_hit_count * 100) / info.stats.vertex_cache_request_count
@@ -961,8 +983,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				"Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)\n"
 				"Vertex cache hits: %10u/%u (%u%%)\n"
 				"Program cache lookup ellision: %u/%u (%u%%)",
-				info.stats.framebuffer_stats.to_string(resolution_scaling_config, !backend_config.supports_hw_msaa),
-				get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
+				info.stats.framebuffer_stats.to_string(RSX(m_ctx)->resolution_scaling_config, !m_config.supports_hw_msaa),
+				RSX(m_ctx)->get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
 				info.stats.textures_upload_time, info.stats.draw_exec_time, info.stats.flip_time,
 				num_dirty_textures, texture_memory_size, tmp_texture_memory_size,
 				num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate,
@@ -982,11 +1004,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	queue_swap_request();
 
-	m_frame_stats.flip_time = m_profiler.duration();
+	m_ctx->stats.flip_time = m_profiler.duration();
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(info);
+	return true;
+}
 
+void VKGSRender::post_present()
+{
 	// Data sync
 	const rsx::surface_scaling_config_t active_res_scaling_config =
 	{
@@ -994,22 +1019,22 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
 	};
 
-	if (active_res_scaling_config != this->resolution_scaling_config)
+	if (res() && active_res_scaling_config != res()->surface_cache.scaling_config())
 	{
 		// First, try to reclaim any memory since the res scale upgrade is so memory intensive
 		if (const auto severity = vk::vmm_determine_memory_load_severity();
-			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+			severity > rsx::problem_severity::low && res()->surface_cache.handle_memory_pressure(*m_current_command_buffer, severity))
 		{
 			flush_command_queue(true);
 		}
 
 		// Then apply the change
-		m_rtts.sync_scaling_config(*m_current_command_buffer, active_res_scaling_config);
-		this->resolution_scaling_config = active_res_scaling_config;
+		res()->surface_cache.sync_scaling_config(*m_current_command_buffer, active_res_scaling_config);
+		RSX(m_ctx)->resolution_scaling_config = active_res_scaling_config;
 
 		// Finally reclaim any unused resources
 		if (const auto severity = vk::vmm_determine_memory_load_severity();
-			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+			severity > rsx::problem_severity::low && res()->surface_cache.handle_memory_pressure(*m_current_command_buffer, severity))
 		{
 			flush_command_queue(true);
 		}

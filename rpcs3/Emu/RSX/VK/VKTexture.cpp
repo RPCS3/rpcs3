@@ -1410,7 +1410,7 @@ namespace vk
 			dst_image->queue_release(cmd2, cmd.get_queue_family(), dst_image->current_layout);
 		}
 
-		if (auto rsxthr = static_cast<VKGSRender*>(rsx::get_current_renderer()))
+		if (auto rsxthr = static_cast<VKGSRender*>(rsx::get_current_render_backend()))
 		{
 			rsxthr->on_guest_texture_read(cmd2);
 		}

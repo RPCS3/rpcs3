@@ -521,7 +521,7 @@ namespace vm
 	std::array<atomic_t<reservation_waiter_t, 128>, 1024> g_resrv_waiters_count{};
 }
 
-void do_cell_atomic_128_store(u32 addr, const void* to_write);
+void do_cell_atomic_128_store(u32 addr, const void* to_write, bool lock_rsx = true);
 
 extern thread_local u64 g_tls_fault_spu;
 
@@ -2269,7 +2269,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 		for (u32 size = args.size, size0; is_get; size -= size0, dst += size0, src += size0, eal += size0)
 		{
-			size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
+			size0 = std::min<u32>(128 - (eal & 127), size);
 
 			for (u64 i = 0;; [&]()
 			{
@@ -2400,12 +2400,12 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 		{
 			for (u32 size0, size = args.size;; size -= size0, dst += size0, src += size0, eal += size0)
 			{
-				size0 = std::min<u32>(128 - (eal & 127), std::min<u32>(size, 128));
+				size0 = std::min<u32>(128 - (eal & 127), size);
 
 				if (size0 == 128u)
 				{
 					// As atomic as PUTLLUC
-					do_cell_atomic_128_store(eal, src);
+					do_cell_atomic_128_store(eal, src, false);
 
 					if (size == size0)
 					{
@@ -3667,12 +3667,12 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 	}
 }
 
-void do_cell_atomic_128_store(u32 addr, const void* to_write)
+void do_cell_atomic_128_store(u32 addr, const void* to_write, bool lock_rsx)
 {
 	perf_meter<"STORE128"_u64> perf0;
 
 	const auto cpu = get_current_cpu_thread();
-	rsx::reservation_lock rsx_lock(addr, 128);
+	rsx::reservation_lock rsx_lock(addr, 128, lock_rsx && g_cfg.core.rsx_accurate_res_access);
 
 	u64 shared_mem = vm::g_shmem[addr >> 16];
 
@@ -4692,6 +4692,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 
 			mov_rdata(rdata, data);
+			atomic_fence_acquire();
 
 			if (u64 time0 = vm::reservation_acquire(addr); ntime != time0)
 			{
@@ -5492,7 +5493,7 @@ void spu_thread::set_interrupt_status(bool enable)
 
 			if (!g_cfg.core.mfc_transfers_shuffling)
 			{
-				fmt::throw_exception("Enable \"Delay Each Odd MFC comman in advanced\" tab.");
+				fmt::throw_exception("Enable \"Delay Each Odd MFC command in advanced\" tab.");
 			}
 
 			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);

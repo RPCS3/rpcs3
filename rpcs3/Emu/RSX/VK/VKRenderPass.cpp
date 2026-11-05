@@ -420,6 +420,14 @@ namespace vk
 		return key.has_no_attachments();
 	}
 
+	u64 get_renderpass_format_key(u64 renderpass_key)
+	{
+		renderpass_key_blob key(renderpass_key);
+		key.layout_blob = 0;
+		key.input_attachments_mask = 0;
+		return key.encoded;
+	}
+
 	void clear_renderpass_cache(VkDevice dev)
 	{
 		// Wipe current status

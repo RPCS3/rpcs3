@@ -578,9 +578,11 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 
 	// A game is validated file by file against the IRD file of the disc it comes from: it is the only place the
 	// MD5 hash of each file of the disc can be read from (and the key of an encrypted image, when its key file is
-	// missing), so the user has to provide it
+	// missing), so the user has to provide it.
+	// The dialog opens on the folder holding an ISO file, not on the ISO file itself, which would be preselected
+	const std::string dialog_dir = fs::is_file(game_path) ? fs::get_parent_dir(game_path) : game_path;
 	const QString ird_path = QFileDialog::getOpenFileName(nullptr, tr("Select the IRD file of the game"),
-		QString::fromStdString(game_path), tr("IRD files (*.ird *.IRD);;All files (*.*)"));
+		QString::fromStdString(dialog_dir), tr("IRD files (*.ird *.IRD);;All files (*.*)"));
 
 	if (ird_path.isEmpty())
 	{

@@ -119,6 +119,7 @@ public:
 
 protected:
 	lv2_socket(utils::serial&, bool);
+	static s32 validate_so_rcvbuf(s32 size);
 
 	shared_mutex mutex;
 	s32 lv2_id = 0;
@@ -153,6 +154,8 @@ protected:
 #endif
 
 	sys_net_sockaddr last_bound_addr{};
+
+	static constexpr s32 MAX_RCVBUF_SIZE = 512 * 1024; // 512K, true for all socket types
 
 public:
 	u64 so_rcvtimeo = 0;

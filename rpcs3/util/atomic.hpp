@@ -321,15 +321,17 @@ struct atomic_storage
 
 	static inline T load(const T& dest)
 	{
+		// Put fence BEFORE the instruction, the compiler tends to put it afterwards
+		atomic_fence_acquire();
 #ifdef __clang__
 		type result;
-		__atomic_load(reinterpret_cast<const type*>(&dest), MAYBE_CAST(&result), __ATOMIC_SEQ_CST);
-		return std::bit_cast<T>(result);
+		__atomic_load(reinterpret_cast<const type*>(&dest), MAYBE_CAST(&result), __ATOMIC_RELAXED);
 #else
 		alignas(sizeof(T)) T result;
-		__atomic_load(&dest, &result, __ATOMIC_SEQ_CST);
-		return result;
+		__atomic_load(&dest, &result, __ATOMIC_RELAXED);
 #endif
+		atomic_fence_acquire();
+		return std::bit_cast<T>(result);
 	}
 
 	static inline T observe(const T& dest)
@@ -962,12 +964,14 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #elif defined(ARCH_X64)
 	static inline T load(const T& dest)
 	{
+		atomic_fence_acquire();
 		alignas(16) T r;
 #ifdef __AVX__
 		__asm__ volatile("vmovdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
 #else
 		__asm__ volatile("movdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
 #endif
+		atomic_fence_acquire();
 		return r;
 	}
 
@@ -1041,16 +1045,20 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline void release(T& dest, T value)
 	{
 		u128 val = std::bit_cast<u128>(value);
+		atomic_fence_release();
 #ifdef __AVX__
 		__asm__ volatile("vmovdqa %0, %1;" :: "x" (val), "m" (dest) : "memory");
 #else
 		__asm__ volatile("movdqa %0, %1;" :: "x" (val), "m" (dest) : "memory");
 #endif
+		atomic_fence_release();
 	}
 #elif defined(ARCH_ARM64)
 
 	static inline T load(const T& dest)
 	{
+		atomic_fence_acquire();
+
 		if (utils::g_atomic_lse2) [[likely]]
 		{
 			u64 data[2];
@@ -1062,6 +1070,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 				: "memory");
 			T result;
 			std::memcpy(&result, data, 16);
+			atomic_fence_acquire();
 			return result;
 		}
 		else
@@ -1078,6 +1087,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 			);
 			T result;
 			std::memcpy(&result, data, 16);
+			atomic_fence_acquire();
 			return result;
 		}
 	}
@@ -1090,6 +1100,29 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
+#if defined(__ARM_FEATURE_ATOMICS)
+		u64 expected[2], desired[2];
+		std::memcpy(expected, &comp, 16);
+		std::memcpy(desired, &exch, 16);
+		register u64 previous0 __asm__("x4") = expected[0];
+		register u64 previous1 __asm__("x5") = expected[1];
+		register u64 desired0 __asm__("x2") = desired[0];
+		register u64 desired1 __asm__("x3") = desired[1];
+		__asm__ volatile("caspal %x[previous0], %x[previous1], %x[desired0], %x[desired1], %[dest]"
+			: [previous0] "+&r" (previous0), [previous1] "+&r" (previous1), [dest] "+Q" (dest)
+			: [desired0] "r" (desired0), [desired1] "r" (desired1)
+			: "memory"
+		);
+
+		if (previous0 == expected[0] && previous1 == expected[1])
+		{
+			return true;
+		}
+
+		const u64 previous[2] = {previous0, previous1};
+		std::memcpy(&comp, previous, 16);
+		return false;
+#else
 		bool result;
 		u64 cmp[2];
 		std::memcpy(cmp, &comp, 16);
@@ -1117,10 +1150,37 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 		std::memcpy(&comp, prev, 16);
 		return false;
+#endif
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
+#if defined(__ARM_FEATURE_ATOMICS)
+		u64 desired[2];
+		std::memcpy(desired, &value, 16);
+		register u64 previous0 __asm__("x4");
+		register u64 previous1 __asm__("x5");
+		register u64 desired0 __asm__("x2") = desired[0];
+		register u64 desired1 __asm__("x3") = desired[1];
+		u64 cmp0, cmp1;
+		__asm__ volatile("ldp %x[previous0], %x[previous1], %[dest]\n"
+			"1:\n"
+			"mov %x[cmp0], %x[previous0]\n"
+			"mov %x[cmp1], %x[previous1]\n"
+			"caspal %x[previous0], %x[previous1], %x[desired0], %x[desired1], %[dest]\n"
+			"cmp %x[previous0], %x[cmp0]\n"
+			"ccmp %x[previous1], %x[cmp1], #0, eq\n"
+			"b.ne 1b\n"
+			: [previous0] "=&r" (previous0), [previous1] "=&r" (previous1),
+			  [cmp0] "=&r" (cmp0), [cmp1] "=&r" (cmp1), [dest] "+Q" (dest)
+			: [desired0] "r" (desired0), [desired1] "r" (desired1)
+			: "cc", "memory"
+		);
+		const u64 previous[2] = {previous0, previous1};
+		T result;
+		std::memcpy(&result, previous, 16);
+		return result;
+#else
 		u32 tmp;
 		u64 src[2];
 		u64 data[2];
@@ -1136,6 +1196,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 		T result;
 		std::memcpy(&result, data, 16);
 		return result;
+#endif
 	}
 
 	static inline void store(T& dest, T value)
@@ -1265,7 +1326,9 @@ public:
 		requires (!std::is_invocable_v<F, const T> && !std::is_invocable_v<F, volatile T>)
 	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F func)
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
+		atomic_fence_acq_rel();
+
+		type _new, old = atomic_storage<type>::observe(m_data);
 
 		while (true)
 		{
@@ -1297,7 +1360,9 @@ public:
 		requires (!std::is_invocable_v<F, const T> && !std::is_invocable_v<F, volatile T>)
 	RT atomic_op(F func)
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
+		atomic_fence_acq_rel();
+
+		type _new, old = atomic_storage<type>::observe(m_data);
 
 		while (true)
 		{
@@ -1621,7 +1686,9 @@ public:
 	// Conditionally decrement
 	bool try_dec(std::common_type_t<T> greater_than)
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
+		atomic_fence_acq_rel();
+
+		type _new, old = atomic_storage<type>::observe(m_data);
 
 		while (true)
 		{
@@ -1644,7 +1711,9 @@ public:
 	// Conditionally increment
 	bool try_inc(std::common_type_t<T> less_than)
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
+		atomic_fence_acq_rel();
+
+		type _new, old = atomic_storage<type>::observe(m_data);
 
 		while (true)
 		{

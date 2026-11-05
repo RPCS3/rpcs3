@@ -427,6 +427,25 @@ bool utils::has_sha3()
 	return g_value;
 }
 
+bool utils::has_sha512()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__) && defined(HWCAP_SHA512)
+		return (getauxval(AT_HWCAP) & HWCAP_SHA512) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		return sysctlbyname("hw.optional.arm.FEAT_SHA512", &val, &len, nullptr, 0) == 0 && val != 0;
+#elif defined(_WIN32) && defined(PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE)
+		return IsProcessorFeaturePresent(PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE) != 0;
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+
 bool utils::has_dotprod()
 {
 	static const bool g_value = []() -> bool

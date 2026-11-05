@@ -10,6 +10,7 @@ class VKFragmentProgram;
 
 namespace rsx
 {
+	struct context;
 	struct shader_loading_dialog;
 }
 
@@ -23,6 +24,7 @@ namespace vk
 		using async_build_fn_callback = std::function<void(std::shared_ptr<glsl::program>&)>;
 
 		VkDevice m_device = VK_NULL_HANDLE;
+		rsx::context* m_ctx = nullptr;
 
 		struct pipeline_key
 		{
@@ -85,8 +87,11 @@ namespace vk
 		const pipeline_info_ex_t* get_pipeline_info_ex(u64 compiler_opt);
 
 	public:
-		void init(const vk::render_device& dev);
+		void init(rsx::context* ctx, const vk::render_device& dev);
 		void destroy();
+
+		// Follows the backend's bound context
+		void set_context(rsx::context* ctx) { m_ctx = ctx; }
 
 		void preload(rsx::shader_loading_dialog* dlg);
 

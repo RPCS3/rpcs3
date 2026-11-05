@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "display.h"
+#include "Emu/system_config_types.h"
 
 class GSFrameBase
 {
@@ -14,6 +15,10 @@ public:
 
 	virtual void close() = 0;
 	virtual void reset() = 0;
+
+	// The renderer the window was created for. Windows are set up for a specific backend (e.g. OpenGL window management is handled by Qt).
+	virtual video_renderer renderer() const = 0;
+
 	virtual bool shown() = 0;
 	virtual void hide() = 0;
 	virtual void show() = 0;

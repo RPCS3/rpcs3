@@ -12,10 +12,9 @@
 
 namespace rsx
 {
-	rsx_state method_registers;
-
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 	std::array<u32, 0x10000 / 4> state_signals{};
+	std::array<u8, 0x10000 / 4> draw_state_signals{};
 
 	void invalid_method(context* ctx, u32 reg, u32 arg)
 	{
@@ -41,10 +40,7 @@ namespace rsx
 	{
 		ensure(RSX(ctx)->isHLE);
 
-		if (RSX(ctx)->vblank_at_flip != umax)
-		{
-			RSX(ctx)->flip_notification_count++;
-		}
+		RSX(ctx)->display_ctrl().on_flip_queued();
 
 		if (auto ptr = RSX(ctx)->queue_handler)
 		{
@@ -60,9 +56,9 @@ namespace rsx
 		}
 
 		RSX(ctx)->reset();
-		RSX(ctx)->on_frame_end(arg);
-		RSX(ctx)->request_emu_flip(arg);
-		vm::_ptr<atomic_t<u128>>(RSX(ctx)->label_addr + 0x10)->store(u128{});
+		RSX(ctx)->on_frame_end(ctx, arg);
+		RSX(ctx)->request_emu_flip(ctx, arg);
+		vm::_ptr<atomic_t<u128>>(ctx->fw.label_addr + 0x10)->store(u128{});
 	}
 
 	void user_command(context* ctx, u32, u32 arg)
@@ -72,7 +68,7 @@ namespace rsx
 
 		if (!RSX(ctx)->isHLE)
 		{
-			sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
+			sys_rsx_context_attribute(ctx->id(), 0xFEF, 0, arg, 0, 0);
 			return;
 		}
 
@@ -95,9 +91,9 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(context*, u32 /*reg*/, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
+				sys_rsx_context_attribute(ctx->id(), 0x102, index, arg, 0, 0);
 			}
 		};
 
@@ -106,12 +102,9 @@ namespace rsx
 		{
 			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				if (RSX(ctx)->vblank_at_flip != umax)
-				{
-					RSX(ctx)->flip_notification_count++;
-				}
+				RSX(ctx)->display_ctrl().on_flip_queued();
 
-				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
+				sys_rsx_context_attribute(ctx->id(), 0x103, index, arg, 0, 0);
 			}
 		};
 	}
@@ -120,7 +113,7 @@ namespace rsx
 	{
 		void draw_barrier(context* ctx, u32, u32)
 		{
-			if (RSX(ctx)->in_begin_end)
+			if (ctx->in_begin_end)
 			{
 				if (!REGS(ctx)->current_draw_clause.is_disjoint_primitive)
 				{
@@ -135,7 +128,6 @@ namespace rsx
 	{
 		// Reset all regsiters
 		registers.fill(0);
-		state_signals.fill(0);
 		transform_program.fill(0);
 		transform_constants = {};
 		current_draw_clause = {};
@@ -696,93 +688,137 @@ namespace rsx
 				rsx->ctrl->ref = u32{ umax };
 			}
 		}
+	}
 
+	static void init_draw_state_signals()
+	{
+		// Every register read by a draw state decoder must be listed under its group, or the decoded state goes stale.
+		// The core renderer only re-decodes groups that have been signalled.
+		const auto raster = static_cast<u8>(draw_state_t::group::raster);
+		const auto depth_stencil = static_cast<u8>(draw_state_t::group::depth_stencil);
+		const auto blend = static_cast<u8>(draw_state_t::group::blend);
+		const auto multisample = static_cast<u8>(draw_state_t::group::multisample);
+		const auto viewport = static_cast<u8>(draw_state_t::group::viewport);
+		const auto input_assembly = static_cast<u8>(draw_state_t::group::input_assembly);
+		const auto stipple = static_cast<u8>(draw_state_t::group::stipple);
+		const auto fragment_env = static_cast<u8>(draw_state_t::group::fragment_env);
+
+		static_assert(static_cast<u32>(draw_state_t::group::decoded) <= 0xFF, "Signalled draw state groups must fit in draw_state_signals entries");
+
+		for (const u32 reg :
 		{
-			// Signal definitions
-			state_signals[NV4097_SET_SHADER_CONTROL] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 0] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 1] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 2] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 3] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 4] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 5] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 6] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 7] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 8] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TEX_COORD_CONTROL + 9] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_TWO_SIDE_LIGHT_EN] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_POINT_SPRITE_CONTROL] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_USER_CLIP_PLANE_CONTROL] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_TRANSFORM_BRANCH_BITS] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_CLIP_MIN] = rsx::invalidate_zclip_bits;
-			state_signals[NV4097_SET_CLIP_MAX] = rsx::invalidate_zclip_bits;
-			state_signals[NV4097_SET_POINT_SIZE] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_ALPHA_FUNC] = rsx::fragment_state_dirty;
-			state_signals[NV4097_SET_ALPHA_REF] = rsx::fragment_state_dirty;
-			state_signals[NV4097_SET_ALPHA_TEST_ENABLE] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_SHADER_PACKER] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_SHADER_WINDOW] = rsx::fragment_state_dirty;
-			state_signals[NV4097_SET_FOG_MODE] = rsx::fragment_state_dirty;
-			state_signals[NV4097_SET_SCISSOR_HORIZONTAL] = rsx::scissor_config_state_dirty;
-			state_signals[NV4097_SET_SCISSOR_VERTICAL] = rsx::scissor_config_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_HORIZONTAL] = rsx::scissor_config_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_VERTICAL] = rsx::scissor_config_state_dirty;
-			state_signals[NV4097_SET_FOG_PARAMS + 0] = rsx::fragment_state_dirty;
-			state_signals[NV4097_SET_FOG_PARAMS + 1] = rsx::fragment_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_SCALE + 0] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_SCALE + 1] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_SCALE + 2] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_OFFSET + 0] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_OFFSET + 1] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_VIEWPORT_OFFSET + 2] = rsx::vertex_state_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE] = rsx::fragment_program_state_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 0] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 1] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 2] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 3] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 4] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 5] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 6] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 7] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 8] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 9] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 10] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 11] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 12] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 13] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 14] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 15] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 16] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 17] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 18] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 19] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 20] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 21] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 22] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 23] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 24] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 25] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 26] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 27] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 28] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 29] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 30] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLYGON_STIPPLE_PATTERN + 31] = rsx::polygon_stipple_pattern_dirty;
-			state_signals[NV4097_SET_POLY_OFFSET_FILL_ENABLE] = rsx::polygon_offset_state_dirty;
-			state_signals[NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR] = rsx::polygon_offset_state_dirty;
-			state_signals[NV4097_SET_POLYGON_OFFSET_BIAS] = rsx::polygon_offset_state_dirty;
-			state_signals[NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE] = rsx::depth_bounds_state_dirty;
-			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
-			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
-			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
-			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
+			NV4097_SET_CULL_FACE_ENABLE, NV4097_SET_CULL_FACE, NV4097_SET_FRONT_FACE, NV4097_SET_FRONT_POLYGON_MODE,
+			NV4097_SET_BACK_POLYGON_MODE, NV4097_SET_LINE_WIDTH, NV4097_SET_LINE_SMOOTH_ENABLE,
+			NV4097_SET_POLY_OFFSET_POINT_ENABLE, NV4097_SET_POLY_OFFSET_LINE_ENABLE, NV4097_SET_POLY_OFFSET_FILL_ENABLE,
+			NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, NV4097_SET_POLYGON_OFFSET_BIAS
+		})
+		{
+			draw_state_signals[reg] |= raster;
 		}
+
+		// SURFACE_FORMAT and CONTROL0 select the depth format that the depth bounds are saturated to
+		for (const u32 reg :
+		{
+			NV4097_SET_DEPTH_TEST_ENABLE, NV4097_SET_DEPTH_MASK, NV4097_SET_DEPTH_FUNC, NV4097_SET_ZMIN_MAX_CONTROL,
+			NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, NV4097_SET_DEPTH_BOUNDS_MIN, NV4097_SET_DEPTH_BOUNDS_MAX,
+			NV4097_SET_SURFACE_FORMAT, NV4097_SET_CONTROL0, NV4097_SET_STENCIL_TEST_ENABLE,
+			NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, NV4097_SET_STENCIL_FUNC, NV4097_SET_STENCIL_FUNC_REF,
+			NV4097_SET_STENCIL_FUNC_MASK, NV4097_SET_STENCIL_MASK, NV4097_SET_STENCIL_OP_FAIL, NV4097_SET_STENCIL_OP_ZFAIL,
+			NV4097_SET_STENCIL_OP_ZPASS, NV4097_SET_BACK_STENCIL_FUNC, NV4097_SET_BACK_STENCIL_FUNC_REF,
+			NV4097_SET_BACK_STENCIL_FUNC_MASK, NV4097_SET_BACK_STENCIL_MASK, NV4097_SET_BACK_STENCIL_OP_FAIL,
+			NV4097_SET_BACK_STENCIL_OP_ZFAIL, NV4097_SET_BACK_STENCIL_OP_ZPASS
+		})
+		{
+			draw_state_signals[reg] |= depth_stencil;
+		}
+
+		// SURFACE_FORMAT selects the color mask remap and the blend constant color format
+		for (const u32 reg :
+		{
+			NV4097_SET_COLOR_MASK, NV4097_SET_COLOR_MASK_MRT, NV4097_SET_SURFACE_FORMAT, NV4097_SET_DITHER_ENABLE,
+			NV4097_SET_LOGIC_OP_ENABLE, NV4097_SET_LOGIC_OP, NV4097_SET_BLEND_ENABLE, NV4097_SET_BLEND_ENABLE_MRT,
+			NV4097_SET_BLEND_FUNC_SFACTOR, NV4097_SET_BLEND_FUNC_DFACTOR, NV4097_SET_BLEND_EQUATION,
+			NV4097_SET_BLEND_COLOR, NV4097_SET_BLEND_COLOR2
+		})
+		{
+			draw_state_signals[reg] |= blend;
+		}
+
+		// SURFACE_FORMAT holds the antialiasing mode
+		for (const u32 reg : { NV4097_SET_ANTI_ALIASING_CONTROL, NV4097_SET_SURFACE_FORMAT })
+		{
+			draw_state_signals[reg] |= multisample;
+		}
+
+		for (const u32 reg : { NV4097_SET_SURFACE_CLIP_HORIZONTAL, NV4097_SET_SURFACE_CLIP_VERTICAL, NV4097_SET_CLIP_MIN, NV4097_SET_CLIP_MAX })
+		{
+			draw_state_signals[reg] |= viewport;
+		}
+
+		// The restart index is only usable if it fits in the index type
+		for (const u32 reg : { NV4097_SET_RESTART_INDEX_ENABLE, NV4097_SET_RESTART_INDEX, NV4097_SET_INDEX_ARRAY_DMA })
+		{
+			draw_state_signals[reg] |= input_assembly;
+		}
+
+		// The pattern is only decoded while stipple is enabled. Enabling it decodes the current pattern.
+		draw_state_signals[NV4097_SET_POLYGON_STIPPLE] |= stipple;
+		for (u32 reg = NV4097_SET_POLYGON_STIPPLE_PATTERN; reg < NV4097_SET_POLYGON_STIPPLE_PATTERN + 32; ++reg)
+		{
+			draw_state_signals[reg] |= stipple;
+		}
+
+		draw_state_signals[NV4097_SET_ALPHA_FUNC] |= fragment_env;
+	}
+
+	static void init_state_signals()
+	{
+		// Signal definitions
+		state_signals[NV4097_SET_SHADER_CONTROL] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 0] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 1] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 2] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 3] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 4] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 5] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 6] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 7] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 8] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TEX_COORD_CONTROL + 9] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_TWO_SIDE_LIGHT_EN] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_POINT_SPRITE_CONTROL] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_USER_CLIP_PLANE_CONTROL] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_TRANSFORM_BRANCH_BITS] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_CLIP_MIN] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_CLIP_MAX] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_POINT_SIZE] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_ALPHA_FUNC] = rsx::fragment_state_dirty;
+		state_signals[NV4097_SET_ALPHA_REF] = rsx::fragment_state_dirty;
+		state_signals[NV4097_SET_ALPHA_TEST_ENABLE] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_SHADER_PACKER] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_SHADER_WINDOW] = rsx::fragment_state_dirty;
+		state_signals[NV4097_SET_FOG_MODE] = rsx::fragment_state_dirty;
+		state_signals[NV4097_SET_SCISSOR_HORIZONTAL] = rsx::scissor_config_state_dirty;
+		state_signals[NV4097_SET_SCISSOR_VERTICAL] = rsx::scissor_config_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_HORIZONTAL] = rsx::scissor_config_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_VERTICAL] = rsx::scissor_config_state_dirty;
+		state_signals[NV4097_SET_FOG_PARAMS + 0] = rsx::fragment_state_dirty;
+		state_signals[NV4097_SET_FOG_PARAMS + 1] = rsx::fragment_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_SCALE + 0] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_SCALE + 1] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_SCALE + 2] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_OFFSET + 0] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_OFFSET + 1] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_VIEWPORT_OFFSET + 2] = rsx::vertex_state_dirty;
+		state_signals[NV4097_SET_POLYGON_STIPPLE] = rsx::fragment_program_state_dirty;
+		state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
+		state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
+		state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
+		state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
+		state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
+		state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+		state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
+		state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
 
 		// Sanity checks
 		for (size_t id = 0; id < methods.size(); ++id)
@@ -1739,8 +1775,8 @@ namespace rsx
 		// FIFO
 		bind(FIFO::FIFO_DRAW_BARRIER >> 2, fifo::draw_barrier);
 
-		// REGS(ctx)->init();
-		method_registers.init();
+		init_state_signals();
+		init_draw_state_signals();
 
 		return true;
 	}();

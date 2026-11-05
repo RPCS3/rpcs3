@@ -5,11 +5,21 @@ cd build || exit 1
 
 cd bin
 mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
+
+# Install the MoltenVK ICD
 wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2/MoltenVK-macos-privateapi.tar
 tar -xvf MoltenVK-macos-privateapi.tar
 cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
 cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
 sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+# And now let's install the KosmicKrisp ICD on aarch64
+if [ "$(arch)" = "arm64" ]; then
+  cp "$WORKDIR/kosmickrisp/build/src/kosmickrisp/vulkan/libvulkan_kosmickrisp.dylib" "rpcs3.app/Contents/Frameworks/libvulkan_kosmickrisp.dylib"
+  cp "$WORKDIR/kosmickrisp/build/src/kosmickrisp/vulkan/kosmickrisp_mesa_icd.aarch64.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+  cp "$(realpath /opt/homebrew/lib/libSPIRV-Tools.dylib)" "rpcs3.app/Contents/Frameworks/libSPIRV-Tools.dylib"
+  install_name_tool -change "/opt/homebrew/opt/spirv-tools/lib/libSPIRV-Tools.dylib" "@rpath/libSPIRV-Tools.dylib" "rpcs3.app/Contents/Frameworks/libvulkan_kosmickrisp.dylib"
+  sed -i '' "s/\/opt\/homebrew\/lib\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+fi
 
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \

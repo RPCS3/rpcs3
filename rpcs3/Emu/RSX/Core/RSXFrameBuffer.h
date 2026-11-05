@@ -3,9 +3,18 @@
 #include <util/types.hpp>
 #include "../gcm_enums.h"
 #include "../GCM.h"
+#include "../Utils/rsx_utils.h"
 
 namespace rsx
 {
+	enum framebuffer_creation_context : u8
+	{
+		context_draw = 0,
+		context_clear_color = 1,
+		context_clear_depth = 2,
+		context_clear_all = context_clear_color | context_clear_depth
+	};
+
 	struct tiled_region
 	{
 		u32 address;
@@ -38,5 +47,15 @@ namespace rsx
 		rsx::surface_raster_type raster_type;
 		u32 aa_factors[2];
 		bool ignore_change;
+	};
+
+	// Per-context framebuffer configuration as decoded from the surface registers
+	struct framebuffer_state
+	{
+		gcm_framebuffer_info surface_info[limits::color_buffers_count];
+		gcm_framebuffer_info depth_surface_info;
+		framebuffer_layout layout{};
+		framebuffer_creation_context current_context = context_draw;
+		bool zcull_surface_active = false;
 	};
 }

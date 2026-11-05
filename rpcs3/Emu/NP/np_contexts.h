@@ -251,6 +251,7 @@ struct lookup_transaction_ctx : public generic_async_transaction_context
 };
 s32 create_lookup_transaction_context(const shared_ptr<lookup_title_ctx>& lt_ctx);
 bool destroy_lookup_transaction_context(s32 ctx_id);
+shared_ptr<lookup_transaction_ctx> get_lookup_transaction_context(s32 ctx_id);
 
 struct commerce2_ctx
 {

@@ -11,6 +11,8 @@
 
 #include <thread>
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace rsx
 {
 	be_t<u32> rsx_replay_thread::allocate_context()
@@ -48,7 +50,7 @@ namespace rsx
 		if (sys_rsx_context_allocate(*this, contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
-		get_current_renderer()->main_mem_size = buffer_size;
+		get_current_renderer()->find_context(contextInfo->context_id)->fw.main_mem_size = buffer_size;
 
 		if (sys_rsx_context_iomap(*this, contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
@@ -116,7 +118,7 @@ namespace rsx
 				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
 			const auto& data_block = it_data->first;
-			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
+			std::memcpy(vm::base(get_address(get_current_renderer()->find_context(context_id), memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -179,15 +181,21 @@ namespace rsx
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
+			auto render = get_current_renderer();
+			rsx::context* const replay_ctx = render->find_context(context_id);
+
 			// Load registers while the RSX is still idle
-			method_registers = frame->reg_state;
+			*REGS(replay_ctx) = frame->reg_state;
+			replay_ctx->draw_state.pending.set(rsx::draw_state_t::group::all);
 			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
-			auto render = get_current_renderer();
-			auto last_flip = render->int_flip_index;
+			auto last_flip = render->display_ctrl().get_flip_index();
+
+			// The replayed context's FIFO
+			RsxDmaControl* const ctrl = replay_ctx->fifo.ctrl;
 
 			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
@@ -203,7 +211,9 @@ namespace rsx
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
-				while (thread_ctrl::state() != thread_state::aborting && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
+				while (thread_ctrl::state() != thread_state::aborting &&
+					   !render->is_fifo_idle(replay_ctx) &&
+						ctrl->get != fifo_stops[stopIdx])
 				{
 					if (Emu.IsPaused())
 						thread_ctrl::wait_for(10'000);
@@ -219,14 +229,14 @@ namespace rsx
 				if (stopIdx >= fifo_stops.size())
 					fmt::throw_exception("Capture Replay: StopIdx greater than size of fifo_stops");
 
-				render->ctrl->put = fifo_stops[stopIdx];
+				ctrl->put = fifo_stops[stopIdx];
 			}
 
 			// dump put to end of stops, which should have actual end
 			u32 end = fifo_stops.back();
-			render->ctrl->put = end;
+			ctrl->put = end;
 
-			while (!render->is_fifo_idle() && thread_ctrl::state() != thread_state::aborting)
+			while (!render->is_fifo_idle(replay_ctx) && thread_ctrl::state() != thread_state::aborting)
 			{
 				if (Emu.IsPaused())
 					thread_ctrl::wait_for(10'000);
@@ -235,10 +245,10 @@ namespace rsx
 			}
 
 			// Check if the captured application used syscall instead of a gcm command to flip
-			if (render->int_flip_index == last_flip)
+			if (render->display_ctrl().get_flip_index() == last_flip)
 			{
 				// Capture did not include a display flip, flip manually
-				render->request_emu_flip(1u);
+				render->request_emu_flip(replay_ctx, 1u);
 			}
 
 			// random pause to not destroy gpu

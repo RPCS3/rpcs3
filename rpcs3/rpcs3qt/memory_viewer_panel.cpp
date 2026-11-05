@@ -756,7 +756,11 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 
 		for (u32 i = addr; i >> 20 <= (addr + size - 1) >> 20; i += 0x100000)
 		{
-			const u32 temp = rsx::get_address(i - (i >= local_mem ? local_mem : 0), i < local_mem ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL, true);
+			const u32 temp = rsx::get_address(
+				rsx::get_current_renderer()->get_context(),
+				i - (i >= local_mem ? local_mem : 0),
+				i < local_mem ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL,
+				true);
 
 			if (!temp)
 			{

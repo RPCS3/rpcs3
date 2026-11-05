@@ -68,6 +68,8 @@ namespace utils
 
 	bool has_sha3();
 
+	bool has_sha512();
+
 	bool has_dotprod();
 
 	bool has_i8mm();

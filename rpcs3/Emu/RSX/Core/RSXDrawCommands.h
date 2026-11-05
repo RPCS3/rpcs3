@@ -41,10 +41,22 @@ namespace rsx
 		void init(context* ctx)
 		{
 			m_ctx = ctx;
+
+			for (auto& buffer : m_vertex_push_buffers)
+			{
+				buffer.ctx = ctx;
+			}
 		}
 
 		// Analyze vertex inputs and group all interleaved blocks
 		void analyse_inputs_interleaved(vertex_input_layout& layout, const vertex_program_metadata_t& vp_metadata);
+
+		/**
+		 * Computes VRAM requirements needed to upload raw vertex streams
+		 * result.first contains persistent memory requirements
+		 * result.second contains volatile memory requirements
+		 */
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count) const;
 
 		// Retrieve raw bytes for the index array (untyped)
 		std::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
@@ -97,6 +109,19 @@ namespace rsx
 		 * Fill buffer with user clip information
 		 */
 		void fill_user_clip_data(void* buffer) const;
+
+		/**
+		 * Fill the 96-byte vertex environment block: scale/offset matrix, user clip planes, transform branch bits,
+		 * point size and depth clip range. point_scale is the host's resolution scale for the point size.
+		 */
+		void fill_vertex_env(void* buffer, f32 point_scale) const;
+
+		/**
+		 * Fill the 16-byte headers in front of the shader interpreter's instruction blocks.
+		 * Vertex: base address, entry, output mask, two-sided lighting. Fragment: shader control, texture dimensions, referenced textures.
+		 */
+		void fill_interpreter_vertex_header(void* buffer) const;
+		void fill_interpreter_fragment_header(void* buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
