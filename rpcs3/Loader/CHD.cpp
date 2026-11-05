@@ -94,9 +94,8 @@ namespace
 		{
 		}
 
-		bool open()
+		bool read_header(chd_header& header)
 		{
-			chd_header header{};
 			const auto header_error = chd_read_header_core_file_callbacks(&s_callbacks, this, &header);
 			if (header_error != CHDERR_NONE)
 			{
@@ -134,6 +133,16 @@ namespace
 			if (hunks > (384ull * 1024 * 1024) / 12)
 			{
 				chd_log.error("CHD map exceeds the map memory limit: '%s'", m_path);
+				return false;
+			}
+			return true;
+		}
+
+		bool open()
+		{
+			chd_header header{};
+			if (!read_header(header))
+			{
 				return false;
 			}
 			chd_file* decoder = nullptr;
@@ -251,6 +260,12 @@ bool is_chd_image(const fs::file& file)
 	std::array<char, 8> magic{};
 	return file && file.read_at(0, magic.data(), magic.size()) == magic.size()
 		&& std::memcmp(magic.data(), "MComprHD", magic.size()) == 0;
+}
+
+bool is_supported_chd_image(fs::file file, const std::string& path)
+{
+	chd_header header{};
+	return file && chd_image(std::move(file), path).read_header(header);
 }
 
 std::unique_ptr<fs::file_base> open_chd_image(fs::file file, const std::string& path)

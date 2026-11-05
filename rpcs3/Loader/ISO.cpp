@@ -134,7 +134,26 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 		*is_raw_device = raw_device;
 	}
 
-	auto source = open_iso_source(new_path, raw_device);
+	fs::file image(new_path);
+
+	if (!raw_device && is_chd_image(image))
+	{
+		const u64 physical_size = image.size();
+
+		if (!is_supported_chd_image(std::move(image), new_path))
+		{
+			return false;
+		}
+
+		if (size)
+		{
+			*size = physical_size;
+		}
+
+		return true;
+	}
+
+	auto source = std::make_shared<fs::file>(std::move(image));
 	iso_file file(source, raw_device, { .name = new_path, .extents = {{0, *source ? source->size() : 0}} });
 
 	return is_iso_file(file, size);
