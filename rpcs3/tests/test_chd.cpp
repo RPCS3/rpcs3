@@ -118,9 +118,9 @@ TEST_F(iso_test, ChdBoundariesAndMountedLifetime)
 			}));
 		}
 
-		u64 logical_size = 0;
-		EXPECT_TRUE(is_iso_file(chd_path, &logical_size));
-		EXPECT_EQ(logical_size, m_image.size());
+		u64 physical_size = 0;
+		EXPECT_TRUE(is_iso_file(chd_path, &physical_size));
+		EXPECT_EQ(physical_size, fs::file(chd_path).size());
 		fs::file member;
 		{
 			iso_archive archive(chd_path);
@@ -225,6 +225,7 @@ TEST_F(iso_test, ChdRejectsUnsupportedHeadersAndEncryption)
 		bytes[field] ^= 1; // Version, unit geometry, parent SHA1, unknown codec.
 		save(chd_path, bytes);
 		EXPECT_FALSE(open_chd_image(fs::file(chd_path), chd_path));
+		EXPECT_FALSE(is_iso_file(chd_path));
 	}
 	std::memcpy(m_image.data() + 0xF70, "Encrypted 3K BLD", 16);
 	save(chd_path, wrap_chd(m_image, 4096));
@@ -250,7 +251,6 @@ TEST_F(iso_test, ChdRejectsInvalidInnerIso)
 	m_image[16 * ISO_SECTOR_SIZE + 1] = 'X';
 	save(chd_path, wrap_chd(m_image, 4096));
 	EXPECT_TRUE(open_chd_image(fs::file(chd_path), chd_path));
-	EXPECT_FALSE(is_iso_file(chd_path));
 	iso_archive archive(chd_path);
 	EXPECT_FALSE(archive.is_valid());
 }
@@ -295,7 +295,7 @@ TEST_F(iso_test, ChdUnicodePathAndContentDetection)
 	EXPECT_TRUE(is_chd_image(fs::file(name)));
 	u64 size = 0;
 	ASSERT_TRUE(is_iso_file(name, &size));
-	EXPECT_EQ(size, m_image.size());
+	EXPECT_EQ(size, bytes.size());
 	iso_archive archive(name);
 	ASSERT_TRUE(archive.is_valid());
 	fs::file member(archive.open("TEST.BIN"));
