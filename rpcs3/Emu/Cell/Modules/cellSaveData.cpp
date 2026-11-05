@@ -241,24 +241,19 @@ static bool is_valid_dir_name(const std::string& dir_name)
 	return sysutil_check_name_string(dir_name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) == 0;
 }
 
-static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
+// Every save of the user, newest first
+static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir)
 {
 	std::vector<SaveDataEntry> save_entries;
 
-	if (base_dir.empty() || prefix.empty())
+	if (base_dir.empty())
 	{
 		return save_entries;
 	}
 
-	// get the saves matching the supplied prefix
 	for (auto&& entry : fs::dir(base_dir))
 	{
 		if (!entry.is_directory || sysutil_check_name_string(entry.name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) != 0)
-		{
-			continue;
-		}
-
-		if (!entry.name.starts_with(prefix))
 		{
 			continue;
 		}
@@ -284,16 +279,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 			continue;
 		}
 
-		for (const auto& entry2 : fs::dir(base_dir + entry.name))
-		{
-			if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
-			{
-				continue;
-			}
-
-			save_entry.size += entry2.size;
-		}
-
+		save_entry.size  = get_save_data_size(fs::dir(base_dir + entry.name));
 		save_entry.atime = entry.atime;
 		save_entry.mtime = entry.mtime;
 		save_entry.ctime = entry.ctime;
@@ -304,6 +290,8 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		save_entry.escaped = std::move(entry.name);
 		save_entries.emplace_back(save_entry);
 	}
+
+	std::stable_sort(save_entries.begin(), save_entries.end(), [](const SaveDataEntry& entry1, const SaveDataEntry& entry2) { return entry1.mtime > entry2.mtime; });
 
 	return save_entries;
 }
@@ -327,7 +315,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 
 	const std::string base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", Emu.GetUsrId()));
 
-	auto save_entries = get_save_entries(base_dir, Emu.GetTitleID());
+	auto save_entries = get_save_entries(base_dir);
 
 	s32 selected = -1;
 	s32 focused  = -1;
@@ -363,14 +351,14 @@ static error_code select_and_delete(ppu_thread& ppu)
 		const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
 
 		// Reusable display message string
-		std::string msg = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION, info.c_str());
+		std::string msg = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION, fmt::format("%s\n%s\n%s\n%s\n\n%s", entry.title, entry.subtitle, entry.date(), entry.data_size(), entry.details).c_str());
 
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);
 
 		// Get user confirmation by opening a blocking dialog
 		s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
-		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO | CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO, vm::make_str(msg), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
