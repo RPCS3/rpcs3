@@ -1089,6 +1089,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		const auto cat = psf::get_string(sfo, "CATEGORY", "");
 		if (cat != "GD" && cat != "DG")
 		{
+			// Same delay as the regular path: a caller running on a helper thread may publish its
+			// completion right after this returns, which must not happen before its creator resumes
+			lv2_sleep(5000, &ppu);
+
 			return CELL_GAMEDATA_ERROR_BROKEN;
 		}
 	}
