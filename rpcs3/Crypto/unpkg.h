@@ -376,6 +376,7 @@ public:
 	static package_install_result extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths, bool from_optical_drive);
 	const psf::registry& get_psf() const { return m_psf; }
 	result get_result() const { return m_result; };
+	std::string get_install_path() const;
 
 	int get_progress(int maximum = 100) const;
 
