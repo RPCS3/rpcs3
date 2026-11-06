@@ -50,7 +50,6 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, bool from_boot,
 
 		// We have to build our complicated localized string in some annoying manner
 		QString accumulated_info;
-		QString tooltip;
 
 		const auto append_info = [&accumulated_info](const QString& info)
 		{
@@ -88,13 +87,11 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, bool from_boot,
 			append_info(tr("v.%0", "Version info").arg(info.version));
 		}
 
-		if (info.changelog.isEmpty())
+		QString tooltip = tr("Installation path: %0", "Installation path").arg(info.dest_dir);
+
+		if (!info.changelog.isEmpty())
 		{
-			tooltip = tr("No info", "Changelog info placeholder");
-		}
-		else
-		{
-			tooltip = tr("Changelog:\n\n%0", "Changelog info").arg(info.changelog);
+			tooltip += tr("\nChangelog:\n\n%0", "Changelog info").arg(info.changelog);
 		}
 
 		append_info(file_info.fileName());
@@ -252,7 +249,8 @@ void pkg_install_dialog::update_info(QLabel* installation_info, QDialogButtonBox
 	u64 free_space = 0;
 
 	// Retrieve disk space info on data path's drive
-	if (fs::device_stat stat{}; fs::statfs(rpcs3::utils::get_hdd0_game_dir(), stat))
+	const std::string install_dir = rpcs3::utils::get_hdd0_dir();
+	if (fs::device_stat stat{}; fs::statfs(install_dir, stat))
 	{
 		free_space = stat.avail_free;
 	}
@@ -267,7 +265,7 @@ void pkg_install_dialog::update_info(QLabel* installation_info, QDialogButtonBox
 
 	installation_info->setText(gui::utils::make_paragraph(
 		tr("Installation path: %0\nAvailable disk space: %1%2\nRequired disk space: %3")
-		.arg(QString::fromStdString(rpcs3::utils::get_hdd0_game_dir()))
+		.arg(QString::fromStdString(install_dir))
 		.arg(gui::utils::format_byte_size(free_space))
 		.arg(data_size <= free_space ? QString() : tr(" - <b>NOT ENOUGH SPACE</b>"))
 		.arg(gui::utils::format_byte_size(data_size))));

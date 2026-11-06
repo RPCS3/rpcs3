@@ -274,6 +274,7 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, con
 	std::string_view localized_title = psf::get_string(psf, localized_title_key);
 
 	info.path     = pkg_path;
+	info.dest_dir = QString::fromStdString(reader.get_install_path());
 	info.title    = QString::fromStdString(std::string(localized_title.empty() ? psf::get_string(psf, "TITLE") : localized_title));
 	info.title_id = QString::fromStdString(std::string(psf::get_string(psf, "TITLE_ID")));
 	info.category = QString::fromStdString(std::string(psf::get_string(psf, "CATEGORY")));
