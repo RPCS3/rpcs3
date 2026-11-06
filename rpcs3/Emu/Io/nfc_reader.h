@@ -107,7 +107,6 @@ private:
 		set_parameters           = 0x12,
 		sam_configuration        = 0x14,
 		power_down               = 0x16,
-		reset                    = 0x18,
 
 		// RF configuration (UM0701-02 Section 7.3.1)
 		rf_configuration         = 0x32,
@@ -135,6 +134,10 @@ private:
 		tg_response_to_initiator = 0x90,
 		tg_set_general_bytes     = 0x92,
 		tg_set_meta_data         = 0x94,
+
+		// Sony RC-S620/S extension commands (RC-S620/S User's Manual Section 8.2.5 - 8.2.11)
+		reset                    = 0x18,
+		communicate_thru_ex      = 0xA0,
 	};
 
 	// Status byte of InDataExchange, InDeselect, InRelease, InSelect and PowerDown responses
@@ -205,6 +208,25 @@ private:
 	static constexpr usz mifare_1k_blocks = 64;
 	static constexpr usz mifare_4k_blocks = 256;
 
+	// Card types and contactless protocols supported or referenced by NFC reader commands
+	enum class card_type : u8
+	{
+		unknown           = 0,
+		mifare_classic    = 1, // MIFARE Classic 1K / 4K (ISO/IEC 14443-3 Type A)
+		mifare_ultralight = 2, // MIFARE Ultralight / Ultralight C (ISO/IEC 14443-3 Type A)
+		felica            = 3, // FeliCa (JIS X 6319-4 / ISO/IEC 18092 212/424 kbps)
+		iso14443_4        = 4, // ISO/IEC 14443-4 Type A/B (T=CL, e.g. MIFARE DESFire)
+		iso14443_3b       = 5, // ISO/IEC 14443-3 Type B
+		jewel             = 6, // Innovision Jewel / Topaz
+		nfcip_dep         = 7, // ISO/IEC 18092 NFCIP-1 Data Exchange Protocol (DEP)
+	};
+
+	static inline card_type get_card_type([[maybe_unused]] std::span<const u8> card)
+	{
+		// Currently the emulator only emulates MIFARE Classic 1K / 4K.
+		return card_type::mifare_classic;
+	}
+
 	static inline bool is_4k_card(std::span<const u8> card)
 	{
 		return card.size() > mifare_1k_size;
@@ -237,6 +259,21 @@ private:
 	static access_bits get_access_bits(const std::array<u8, mifare_block_size>& trailer, u8 cond_index);
 	static std::array<u8, mifare_block_size> format_value_block(s32 value, u8 addr);
 	static bool get_value_from_block(std::span<const u8> block, s32& out_value, u8& out_addr);
+
+	struct mifare_check_result
+	{
+		mifare_block_info info{};
+		access_bits bits{};
+		u8 c = 0;
+		usz offset = 0;
+		status error = status::success;
+
+		bool ok() const { return error == status::success; }
+	};
+
+	void reset_card_session();
+	void reset_target_state();
+	mifare_check_result check_mifare_block_access(std::span<const u8> card, u8 block, bool allow_trailer, bool allow_block_0 = false) const;
 
 	// ReadGPIO response
 	struct read_gpio_response

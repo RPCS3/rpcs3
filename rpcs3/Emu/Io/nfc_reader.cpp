@@ -294,209 +294,206 @@ void nfc_reader::write_register_value(u16 address, u8 value)
 	case 0x6103: // Config I0_I1: pad_I1 (bit 5) & pad_I0 (bit 3) are read-only pin states
 	{
 		const u8 pad_bits = ((m_gpio_i0i1 & 0x02) << 4) | ((m_gpio_i0i1 & 0x01) << 3);
-		m_registers[0x6103] = (value & 0x87) | pad_bits;
-		return;
+		value = (value & 0x87) | pad_bits;
+		break;
 	}
 	case 0x6104: // Observe_testbus: only bit 0 (observe_ciu) is writable
 	{
-		m_registers[0x6104] = value & 0x01;
-		return;
+		value &= 0x01;
+		break;
 	}
 	case 0x6106: // Control_switch_rng: bits 6, 4, 2, 1 writable (0x56); bit 5 sic_switch_overload is R
 	{
-		m_registers[0x6106] = (m_registers[0x6106] & ~0x56) | (value & 0x56);
-		return;
+		value = (m_registers[0x6106] & ~0x56) | (value & 0x56);
+		break;
 	}
 	case 0x6109: // LDO: bits 4..0 are writable (0x1F), bit 5 is read-only overcurrent status
 	{
-		m_registers[0x6109] = (m_registers[0x6109] & ~0x1F) | (value & 0x1F);
-		return;
+		value = (m_registers[0x6109] & ~0x1F) | (value & 0x1F);
+		break;
 	}
 	case 0x610A: // i2c_wu_control: bits 2..0 are writable (0x07)
 	{
-		m_registers[0x610A] = value & 0x07;
-		return;
+		value &= 0x07;
+		break;
 	}
 	case 0x610C: // Andet_control: bits 5..0 are writable (0x3F), bits 7..6 are read-only
 	{
-		m_registers[0x610C] = (m_registers[0x610C] & ~0x3F) | (value & 0x3F);
-		return;
+		value = (m_registers[0x610C] & ~0x3F) | (value & 0x3F);
+		break;
 	}
 	case 0x610E: // NFC_WI_control: bits 1..0 are writable (0x03), bit 3 is read-only nfc_wi_status
 	{
-		m_registers[0x610E] = (m_registers[0x610E] & ~0x03) | (value & 0x03);
-		return;
+		value = (m_registers[0x610E] & ~0x03) | (value & 0x03);
+		break;
 	}
 	case 0x6200: // PCR CFR: bits 1..0 cpu_freq (0x03)
 	{
-		m_registers[0x6200] = value & 0x03;
-		return;
+		value &= 0x03;
+		break;
 	}
 	case 0x6201: // PCR CER: bit 3 hsu_enable (0x08)
 	{
-		m_registers[0x6201] = (m_registers[0x6201] & ~0x08) | (value & 0x08);
-		return;
+		value = (m_registers[0x6201] & ~0x08) | (value & 0x08);
+		break;
 	}
 	case 0x6202: // PCR ILR: bits 6, 4, 2..0 writable (0x57)
 	{
-		m_registers[0x6202] = (m_registers[0x6202] & ~0x57) | (value & 0x57);
-		return;
+		value = (m_registers[0x6202] & ~0x57) | (value & 0x57);
+		break;
 	}
 	case 0x6203: // PCR Control: bits 7..6 reserved (0xC0), bits 1..0 writable (0x03)
 	{
-		m_registers[0x6203] = 0xC0 | (value & 0x03);
-		return;
+		value = 0xC0 | (value & 0x03);
+		break;
 	}
 	case 0x6205: // PCR Wakeupen: bit 2 reserved (0xFB)
 	{
-		m_registers[0x6205] = value & 0xFB;
-		return;
+		value &= 0xFB;
+		break;
 	}
 	case 0x6308: // CIU_RxThreshold: bit 3 reserved (0xF7)
 	{
-		m_registers[0x6308] = value & 0xF7;
-		return;
+		value &= 0xF7;
+		break;
 	}
 	case 0x630D: // CIU_ManualRCV: bit 7 reserved (0x7F)
 	{
-		m_registers[0x630D] = value & 0x7F;
-		return;
+		value &= 0x7F;
+		break;
 	}
 	case 0x630E: // CIU_TypeB: bit 5 reserved (0xDF)
 	{
-		m_registers[0x630E] = value & 0xDF;
-		return;
+		value &= 0xDF;
+		break;
 	}
 	case 0x6318: // CIU_CWGsP: bits 5..0 writable (0x3F)
 	case 0x6319: // CIU_ModGsP: bits 5..0 writable (0x3F)
 	{
-		m_registers[canonical_addr] = value & 0x3F;
-		return;
+		value &= 0x3F;
+		break;
 	}
 	case 0x6326: // CIU_AutoTest: bits 3..0 writable (0x0F), bit 6 AmpRcv preserved
 	{
-		m_registers[0x6326] = (m_registers[0x6326] & ~0x0F) | (value & 0x0F);
-		return;
+		value = (m_registers[0x6326] & ~0x0F) | (value & 0x0F);
+		break;
 	}
 	case 0x6329: // CIU_TestDAC1: bits 5..0 writable (0x3F)
 	case 0x632A: // CIU_TestDAC2: bits 5..0 writable (0x3F)
 	{
-		m_registers[canonical_addr] = value & 0x3F;
-		return;
+		value &= 0x3F;
+		break;
 	}
 	case 0x6330: // CIU_SIC_CLK_en: bits 7, 3..0 writable (0x8F)
 	{
-		m_registers[0x6330] = value & 0x8F;
-		return;
+		value &= 0x8F;
+		break;
 	}
 	case 0x6331: // CIU_Command: bits 5..0 writable (0x3F)
 	{
-		m_registers[0x6331] = value & 0x3F;
-		return;
+		value &= 0x3F;
+		break;
 	}
 	case 0x6332: // CIU_CommIEn: bits 6..0 writable (0x7F)
 	{
-		m_registers[0x6332] = value & 0x7F;
-		return;
+		value &= 0x7F;
+		break;
 	}
 	case 0x6333: // CIU_DivIEn: bits 4..0 writable (0x1F)
 	{
-		m_registers[0x6333] = value & 0x1F;
-		return;
+		value &= 0x1F;
+		break;
 	}
 	case 0x6334: // CIU_CommIrq / SFR D4h: bit 7 is Set1 (1: set bits, 0: clear bits)
 	{
 		if (value & 0x80)
-			m_registers[0x6334] |= (value & 0x7F);
+			value = m_registers[0x6334] | (value & 0x7F);
 		else
-			m_registers[0x6334] &= ~(value & 0x7F);
-		return;
+			value = m_registers[0x6334] & ~(value & 0x7F);
+		break;
 	}
 	case 0x6335: // CIU_DivIrq / SFR D5h: bit 7 is Set2 (1: set bits, 0: clear bits)
 	{
 		if (value & 0x80)
-			m_registers[0x6335] |= (value & 0x1F);
+			value = m_registers[0x6335] | (value & 0x1F);
 		else
-			m_registers[0x6335] &= ~(value & 0x1F);
-		return;
+			value = m_registers[0x6335] & ~(value & 0x1F);
+		break;
 	}
 	case 0x6338: // CIU_Status2 / SFR E9h: bit 7 TempSensClear is writable, bits 5..0 are read-only
 	{
-		m_registers[0x6338] = (m_registers[0x6338] & 0x7F) | (value & 0x80);
-		return;
+		value = (m_registers[0x6338] & 0x7F) | (value & 0x80);
+		break;
 	}
 	case 0x633A: // CIU_FIFOLevel / SFR EBh: bit 7 FlushBuffer flushes FIFO, bits 6..0 read-only
 	{
 		if (value & 0x80)
-		{
-			m_registers[0x633A] = 0x00;
-		}
-		return;
+			value = 0x00;
+		else
+			return;
+		break;
 	}
 	case 0x633B: // CIU_WaterLevel / SFR ECh: bits 5..0 writable (0x3F)
 	{
-		m_registers[0x633B] = value & 0x3F;
-		return;
+		value &= 0x3F;
+		break;
 	}
 	case 0x633C: // CIU_Control / SFR EDh: bits 2..0 (RxLastBits) are read-only
 	{
-		m_registers[0x633C] = (m_registers[0x633C] & 0x07) | (value & 0xF0);
-		return;
+		value = (m_registers[0x633C] & 0x07) | (value & 0xF0);
+		break;
 	}
 	case 0x633D: // CIU_BitFraming / SFR EEh: bit 3 reserved (0xF7)
 	{
-		m_registers[0x633D] = value & 0xF7;
-		return;
+		value &= 0xF7;
+		break;
 	}
 	case 0x633E: // CIU_Coll / SFR EFh: bit 7 ValuesAfterColl is writable, bits 5..0 are read-only
 	{
-		m_registers[0x633E] = (m_registers[0x633E] & 0x7F) | (value & 0x80);
-		return;
+		value = (m_registers[0x633E] & 0x7F) | (value & 0x80);
+		break;
 	}
 	case 0xFF9E: // SFF: bit 7 FIFO_EN is writable, bits 6..0 are read-only flags
 	{
-		m_registers[0xFF9E] = (m_registers[0xFF9E] & 0x7F) | (value & 0x80);
-		return;
+		value = (m_registers[0xFF9E] & 0x7F) | (value & 0x80);
+		break;
 	}
 	case 0xFF9F: // FIT: bit 7 Reset flushes flags
 	{
-		if (value & 0x80)
-			m_registers[0xFF9F] = 0x00;
-		else
-			m_registers[0xFF9F] = value & 0x3F;
-		return;
+		value = (value & 0x80) ? 0x00 : (value & 0x3F);
+		break;
 	}
 	case 0xFFB0: // P3: bits 7..6 reserved (0xC0), bits 5..0 are GPIO
 	{
 		m_gpio_p3 = value & 0x3F;
-		m_registers[0xFFB0] = 0xC0 | m_gpio_p3;
-		return;
+		value = 0xC0 | m_gpio_p3;
+		break;
 	}
 	case 0xFFF7: // P7: bits 7..3 reserved (0xF8), bits 2..0 are GPIO/IRQ
 	{
 		m_gpio_p7 = value & 0x06;
-		m_registers[0xFFF7] = 0xF8 | (m_registers[0xFFF7] & 0x01) | (value & 0x06);
-		return;
+		value = 0xF8 | (m_registers[0xFFF7] & 0x01) | (value & 0x06);
+		break;
 	}
 	case 0xFFF4: // P7CFGA: bits 7..3 reserved (0xF8)
 	{
-		m_registers[0xFFF4] = 0xF8 | (value & 0x07);
-		return;
+		value = 0xF8 | (value & 0x07);
+		break;
 	}
 	case 0xFFF5: // P7CFGB: bits 7..3 reserved (0x00)
 	{
-		m_registers[0xFFF5] = value & 0x07;
-		return;
+		value &= 0x07;
+		break;
 	}
 	case 0xFFFC: // P3CFGA: bits 7..6 reserved (0xC0)
 	{
-		m_registers[0xFFFC] = 0xC0 | (value & 0x3F);
-		return;
+		value = 0xC0 | (value & 0x3F);
+		break;
 	}
 	case 0xFFFD: // P3CFGB: bits 7..6 reserved (0x00)
 	{
-		m_registers[0xFFFD] = value & 0x3F;
-		return;
+		value &= 0x3F;
+		break;
 	}
 	default:
 		break;
@@ -751,25 +748,11 @@ nfc_reader::access_bits nfc_reader::get_access_bits(const std::array<u8, mifare_
 std::array<u8, mifare_block_size> nfc_reader::format_value_block(s32 value, u8 addr)
 {
 	std::array<u8, mifare_block_size> b{};
-	const u32 v = static_cast<u32>(value);
-	const u32 inv_v = ~v;
+	write_to_ptr<le_t<s32>>(b, 0, value);
+	write_to_ptr<le_t<s32>>(b, 4, ~value);
+	write_to_ptr<le_t<s32>>(b, 8, value);
+
 	const u8 inv_a = static_cast<u8>(~addr);
-
-	b[0] = static_cast<u8>(v & 0xFF);
-	b[1] = static_cast<u8>((v >> 8) & 0xFF);
-	b[2] = static_cast<u8>((v >> 16) & 0xFF);
-	b[3] = static_cast<u8>((v >> 24) & 0xFF);
-
-	b[4] = static_cast<u8>(inv_v & 0xFF);
-	b[5] = static_cast<u8>((inv_v >> 8) & 0xFF);
-	b[6] = static_cast<u8>((inv_v >> 16) & 0xFF);
-	b[7] = static_cast<u8>((inv_v >> 24) & 0xFF);
-
-	b[8]  = b[0];
-	b[9]  = b[1];
-	b[10] = b[2];
-	b[11] = b[3];
-
 	b[12] = addr;
 	b[13] = inv_a;
 	b[14] = addr;
@@ -794,15 +777,70 @@ bool nfc_reader::get_value_from_block(std::span<const u8> block, s32& out_value,
 	if (block[12] != static_cast<u8>(~block[13]) || block[12] != block[14] || block[13] != block[15])
 		return false;
 
-	const u32 v = static_cast<u32>(block[0]) |
-	              (static_cast<u32>(block[1]) << 8) |
-	              (static_cast<u32>(block[2]) << 16) |
-	              (static_cast<u32>(block[3]) << 24);
-
-	out_value = static_cast<s32>(v);
+	out_value = read_from_ptr<le_t<s32>>(block, 0);
 	out_addr = block[12];
 	return true;
 }
+
+void nfc_reader::reset_card_session()
+{
+	m_authenticated_sector = -1;
+	m_authenticated_key = auth_key::none;
+	m_transfer_buffer_valid = false;
+	m_transfer_buffer.fill(0);
+}
+
+void nfc_reader::reset_target_state()
+{
+	reset_card_session();
+	m_target_state = 0x00;
+}
+
+nfc_reader::mifare_check_result nfc_reader::check_mifare_block_access(std::span<const u8> card, u8 block, bool allow_trailer, bool allow_block_0) const
+{
+	const usz total_blocks = is_4k_card(card) ? mifare_4k_blocks : mifare_1k_blocks;
+	if (block >= total_blocks)
+	{
+		return {.error = status::timeout};
+	}
+
+	const auto info = get_mifare_block_info(block);
+
+	// Must be authenticated to the target block's sector
+	if (m_authenticated_sector != info.sector || m_authenticated_key == auth_key::none)
+	{
+		return {.error = status::mifare_auth_error};
+	}
+
+	// Block 0 (Manufacturer Block) is read-only
+	if (!allow_block_0 && block == 0)
+	{
+		return {.error = status::mifare_auth_error};
+	}
+
+	// Value operations cannot target Sector Trailer
+	if (!allow_trailer && info.is_trailer)
+	{
+		return {.error = status::mifare_auth_error};
+	}
+
+	const auto trailer = get_block_data(card, info.trailer_block);
+	const auto bits = get_access_bits(trailer, info.cond_index);
+	if (!bits.valid)
+	{
+		return {.error = status::mifare_auth_error};
+	}
+
+	const usz offset = static_cast<usz>(block) * mifare_block_size;
+	if (!allow_block_0 && (offset + mifare_block_size > card.size()))
+	{
+		return {.error = status::mifare_auth_error};
+	}
+
+	const u8 c = (bits.c1 << 2) | (bits.c2 << 1) | bits.c3;
+	return {info, bits, c, offset, status::success};
+}
+
 void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, bool card_tapped)
 {
 	const std::span<const u8> frame = find_frame(in);
@@ -824,10 +862,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 
 	if (!card_tapped)
 	{
-		m_authenticated_sector = -1;
-		m_authenticated_key = auth_key::none;
-		m_transfer_buffer_valid = false;
-		m_transfer_buffer.fill(0);
+		reset_target_state();
 	}
 
 	// Do not respond to ACK
@@ -1137,14 +1172,12 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 
 		if (p3_in & 0x80) // Bit 7: Val validates P30..P35
 		{
-			m_gpio_p3 = p3_in & 0x3F;
-			m_registers[0xFFB0] = 0xC0 | m_gpio_p3;
+			write_register_value(0xFFB0, p3_in & 0x3F);
 		}
 
 		if (p7_in & 0x80) // Bit 7: Val validates P71, P72
 		{
-			m_gpio_p7 = p7_in & 0x06;
-			m_registers[0xFFF7] = 0xF8 | (m_registers[0xFFF7] & 0x01) | (p7_in & 0x07);
+			write_register_value(0xFFF7, p7_in & 0x06);
 		}
 
 		build_response({res});
@@ -1295,11 +1328,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 		//   Length: 1 byte
 		//   Data:   [0] 0x19 (Response Code)
 		// -------------------------------------------------------------------------
-		m_authenticated_sector = -1;
-		m_authenticated_key = auth_key::none;
-		m_transfer_buffer_valid = false;
-		m_transfer_buffer.fill(0);
-		m_target_state = 0x00;
+		reset_target_state();
 		build_response({res});
 		break;
 	}
@@ -1350,21 +1379,21 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			// Bit 0: RF on/off -> controls CIU_TxControl (0x6304) Tx1RFEn and Tx2RFEn (bits 1:0)
 			if (rf_field & 0x01)
 			{
-				m_registers[0x6304] |= 0x03;
+				write_register_value(0x6304, read_register_value(0x6304) | 0x03);
 			}
 			else
 			{
-				m_registers[0x6304] &= ~0x03;
+				write_register_value(0x6304, read_register_value(0x6304) & ~0x03);
 			}
 
 			// Bit 1: AutoRFCA -> controls CIU_TxAuto (0x6305) CAOn and InitialRFOn (bits 3:2)
 			if (rf_field & 0x02)
 			{
-				m_registers[0x6305] |= 0x0C;
+				write_register_value(0x6305, read_register_value(0x6305) | 0x0C);
 			}
 			else
 			{
-				m_registers[0x6305] &= ~0x0C;
+				write_register_value(0x6305, read_register_value(0x6305) & ~0x0C);
 			}
 
 			build_response({res});
@@ -1425,16 +1454,16 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			}
 
 			// Table 19: 11 bytes of analog settings for 106 kbps type A
-			m_registers[0x6316] = payload[2];  // CIU_RFCfg
-			m_registers[0x6317] = payload[3];  // CIU_GsNOn
-			m_registers[0x6318] = payload[4];  // CIU_CWGsP
-			m_registers[0x6319] = payload[5];  // CIU_ModGsP
-			m_registers[0x6309] = payload[6];  // CIU_Demod (when own RF is On)
-			m_registers[0x6308] = payload[7];  // CIU_RxThreshold
-			m_registers[0x6313] = payload[9];  // CIU_GsNOff
-			m_registers[0x6314] = payload[10]; // CIU_ModWidth
-			m_registers[0x630C] = payload[11]; // CIU_MifNFC
-			m_registers[0x6315] = payload[12]; // CIU_TxBitPhase
+			write_register_value(0x6316, payload[2]);  // CIU_RFCfg
+			write_register_value(0x6317, payload[3]);  // CIU_GsNOn
+			write_register_value(0x6318, payload[4]);  // CIU_CWGsP
+			write_register_value(0x6319, payload[5]);  // CIU_ModGsP
+			write_register_value(0x6309, payload[6]);  // CIU_Demod (when own RF is On)
+			write_register_value(0x6308, payload[7]);  // CIU_RxThreshold
+			write_register_value(0x6313, payload[9]);  // CIU_GsNOff
+			write_register_value(0x6314, payload[10]); // CIU_ModWidth
+			write_register_value(0x630C, payload[11]); // CIU_MifNFC
+			write_register_value(0x6315, payload[12]); // CIU_TxBitPhase
 
 			// Also synchronize to XRAM 106 kbps analog configuration table (0xA010..0xA01A)
 			// Note: payload[8] (Table 19 Byte 7, "CIU_Demod when own RF is Off") is NOT written
@@ -1443,7 +1472,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			// applied at runtime by PN532 firmware when the RF field is switched off.
 			for (usz i = 0; i < 11; ++i)
 			{
-				m_registers[0xA010 + i] = payload[2 + i];
+				write_register_value(0xA010 + i, payload[2 + i]);
 			}
 
 			build_response({res});
@@ -1458,13 +1487,13 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			}
 
 			// Table 20: 8 bytes of analog settings for 212/424 kbps
-			m_registers[0x6316] = payload[2];  // CIU_RFCfg
-			m_registers[0x6317] = payload[3];  // CIU_GsNOn
-			m_registers[0x6318] = payload[4];  // CIU_CWGsP
-			m_registers[0x6319] = payload[5];  // CIU_ModGsP
-			m_registers[0x6309] = payload[6];  // CIU_Demod (when own RF is On)
-			m_registers[0x6308] = payload[7];  // CIU_RxThreshold
-			m_registers[0x6313] = payload[9];  // CIU_GsNOff
+			write_register_value(0x6316, payload[2]);  // CIU_RFCfg
+			write_register_value(0x6317, payload[3]);  // CIU_GsNOn
+			write_register_value(0x6318, payload[4]);  // CIU_CWGsP
+			write_register_value(0x6319, payload[5]);  // CIU_ModGsP
+			write_register_value(0x6309, payload[6]);  // CIU_Demod (when own RF is On)
+			write_register_value(0x6308, payload[7]);  // CIU_RxThreshold
+			write_register_value(0x6313, payload[9]);  // CIU_GsNOff
 
 			// Synchronize to XRAM 212/424 kbps analog configuration table (0xA01B..0xA022)
 			// Note: payload[8] (Table 20 Byte 7, "CIU_Demod when own RF is Off") is NOT written
@@ -1473,14 +1502,14 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			// applied at runtime by PN532 firmware when the RF field is switched off.
 			for (usz i = 0; i < 8; ++i)
 			{
-				m_registers[0xA01B + i] = payload[2 + i];
+				write_register_value(0xA01B + i, payload[2 + i]);
 			}
 
 			// Synchronize shared 424 kbps driver conductance cache (0xA0CB..0xA0CE)
-			m_registers[0xA0CB] = payload[3]; // CIU_GsNOn
-			m_registers[0xA0CC] = payload[4]; // CIU_CWGsP
-			m_registers[0xA0CD] = payload[5]; // CIU_ModGsP
-			m_registers[0xA0CE] = payload[9]; // CIU_GsNOff
+			write_register_value(0xA0CB, payload[3]); // CIU_GsNOn
+			write_register_value(0xA0CC, payload[4]); // CIU_CWGsP
+			write_register_value(0xA0CD, payload[5]); // CIU_ModGsP
+			write_register_value(0xA0CE, payload[9]); // CIU_GsNOff
 
 			build_response({res});
 			break;
@@ -1494,9 +1523,9 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			}
 
 			// Table 21: 3 bytes of analog settings for Type B
-			m_registers[0x6317] = payload[2]; // CIU_GsNOn
-			m_registers[0x6319] = payload[3]; // CIU_ModGsP
-			m_registers[0x6308] = payload[4]; // CIU_RxThreshold
+			write_register_value(0x6317, payload[2]); // CIU_GsNOn
+			write_register_value(0x6319, payload[3]); // CIU_ModGsP
+			write_register_value(0x6308, payload[4]); // CIU_RxThreshold
 
 			build_response({res});
 			break;
@@ -1511,9 +1540,9 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 
 			// Table 22: 9 bytes of analog settings (RxThreshold, ModWidth, MifNFC for 212k, 424k, 848k)
 			// Apply the 212 kbps active settings to current CIU registers
-			m_registers[0x6308] = payload[2]; // CIU_RxThreshold (212k)
-			m_registers[0x6314] = payload[3]; // CIU_ModWidth (212k)
-			m_registers[0x630C] = payload[4]; // CIU_MifNFC (212k)
+			write_register_value(0x6308, payload[2]); // CIU_RxThreshold (212k)
+			write_register_value(0x6314, payload[3]); // CIU_ModWidth (212k)
+			write_register_value(0x630C, payload[4]); // CIU_MifNFC (212k)
 
 			build_response({res});
 			break;
@@ -1599,10 +1628,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 		// -------------------------------------------------------------------------
 		if (payload.size() < 2 || !card_tapped)
 		{
-			m_authenticated_sector = -1;
-			m_authenticated_key = auth_key::none;
-			m_transfer_buffer_valid = false;
-			m_transfer_buffer.fill(0);
+			reset_target_state();
 			build_response({res, static_cast<u8>(status::timeout)});
 			break;
 		}
@@ -1619,8 +1645,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 			{
 				if (payload.size() < sizeof(mifare_auth_request))
 				{
-					m_authenticated_sector = -1;
-					m_authenticated_key = auth_key::none;
+					reset_card_session();
 					build_response({res, static_cast<u8>(status::mifare_auth_error)});
 					break;
 				}
@@ -1631,8 +1656,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 				// Verify block boundary for 1K (64 blocks) or 4K (256 blocks)
 				if (block >= total_blocks)
 				{
-					m_authenticated_sector = -1;
-					m_authenticated_key = auth_key::none;
+					reset_card_session();
 					build_response({res, static_cast<u8>(status::mifare_auth_error)});
 					break;
 				}
@@ -1644,8 +1668,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 				// Verify Access Bits integrity in Sector Trailer
 				if (!trailer_bits.valid)
 				{
-					m_authenticated_sector = -1;
-					m_authenticated_key = auth_key::none;
+					reset_card_session();
 					build_response({res, static_cast<u8>(status::mifare_auth_error)});
 					break;
 				}
@@ -1654,8 +1677,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 				const auto card_uid = get_card_uid(card);
 				if (auth_req.uid != card_uid)
 				{
-					m_authenticated_sector = -1;
-					m_authenticated_key = auth_key::none;
+					reset_card_session();
 					build_response({res, static_cast<u8>(status::mifare_auth_error)});
 					break;
 				}
@@ -1709,43 +1731,21 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 				}
 				else
 				{
-					m_authenticated_sector = -1;
-					m_authenticated_key = auth_key::none;
+					reset_card_session();
 					build_response({res, static_cast<u8>(status::mifare_auth_error)});
 				}
 				break;
 			}
 			case static_cast<u8>(mifare_cmd::read_16_bytes):
 			{
-				const u8 block = req.block;
-
-				if (block >= total_blocks)
+				const auto check = check_mifare_block_access(card, req.block, true, true);
+				if (!check.ok())
 				{
-					build_response({res, static_cast<u8>(status::timeout)});
+					build_response({res, static_cast<u8>(check.error)});
 					break;
 				}
 
-				const auto info = get_mifare_block_info(block);
-
-				// In Mifare Classic, reading requires prior authentication of the target sector
-				if (m_authenticated_sector != info.sector || m_authenticated_key == auth_key::none)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const auto trailer = get_block_data(card, info.trailer_block);
-				const auto bits = get_access_bits(trailer, info.cond_index);
-
-				if (!bits.valid)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 c = (bits.c1 << 2) | (bits.c2 << 1) | bits.c3;
-
-				if (!info.is_trailer)
+				if (!check.info.is_trailer)
 				{
 					// Data Block: Table 7 access conditions
 					// Key A: can read if C in {0, 1, 2, 4, 6}
@@ -1753,11 +1753,11 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 					bool can_read = false;
 					if (m_authenticated_key == auth_key::key_a)
 					{
-						can_read = (c == 0 || c == 1 || c == 2 || c == 4 || c == 6);
+						can_read = (check.c == 0 || check.c == 1 || check.c == 2 || check.c == 4 || check.c == 6);
 					}
 					else if (m_authenticated_key == auth_key::key_b)
 					{
-						can_read = (c != 7);
+						can_read = (check.c != 7);
 					}
 
 					if (!can_read)
@@ -1766,7 +1766,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 						break;
 					}
 
-					const auto block_data = get_block_data(card, block);
+					const auto block_data = get_block_data(card, req.block);
 					in_data_exchange_response resp{};
 					resp.status = static_cast<u8>(status::success);
 					std::memcpy(resp.block.data(), block_data.data(), mifare_block_size);
@@ -1775,104 +1775,64 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 				else
 				{
 					// Sector Trailer: Table 6 access conditions
-					// Key A: can read in all configurations {0..7}
-					// Key B: can read if C in {3, 4, 5, 6, 7}
-					bool can_read = false;
-					if (m_authenticated_key == auth_key::key_a)
-					{
-						can_read = true;
-					}
-					else if (m_authenticated_key == auth_key::key_b)
-					{
-						can_read = (c == 3 || c == 4 || c == 5 || c == 6 || c == 7);
-					}
-
-					if (!can_read)
-					{
-						build_response({res, static_cast<u8>(status::mifare_auth_error)});
-						break;
-					}
-
-					auto trailer_data = trailer;
-
-					// Key A is NEVER readable in Mifare Classic; always return 0x00
-					std::fill_n(trailer_data.begin(), 6, 0x00);
-
-					// Key B is readable ONLY if C in {0, 1, 2} and authenticated with Key A
-					const bool key_b_readable = (c == 0 || c == 1 || c == 2) && (m_authenticated_key == auth_key::key_a);
-					if (!key_b_readable)
-					{
-						std::fill_n(trailer_data.begin() + 10, 6, 0x00);
-					}
-
+					// Key A: NEVER readable
+					// Access Bits: readable by Key A or Key B in all valid states
+					// Key B: readable by Key A or Key B only if C in {0, 1, 2}
+					const auto trailer = get_block_data(card, check.info.trailer_block);
 					in_data_exchange_response resp{};
 					resp.status = static_cast<u8>(status::success);
-					std::memcpy(resp.block.data(), trailer_data.data(), mifare_block_size);
+
+					// Key A is always blanked out (zeros)
+					std::fill_n(resp.block.begin(), 6, 0x00);
+
+					// Access bits (bytes 6..9)
+					std::memcpy(resp.block.data() + 6, trailer.data() + 6, 4);
+
+					// Key B (bytes 10..15): readable only if C in {0, 1, 2}
+					if (check.c <= 2)
+					{
+						std::memcpy(resp.block.data() + 10, trailer.data() + 10, 6);
+					}
+					else
+					{
+						std::fill_n(resp.block.begin() + 10, 6, 0x00);
+					}
+
 					build_response(to_bytes(resp));
 				}
 				break;
 			}
 			case static_cast<u8>(mifare_cmd::write_16_bytes):
 			{
-				// Write 16 bytes: request needs header (4B) + 16B data = 20B
-				if (payload.size() < 20)
+				if (payload.size() < 4 + mifare_block_size)
 				{
 					build_response({res, static_cast<u8>(status::mifare_auth_error)});
 					break;
 				}
 
-				const u8 block = req.block;
-
-				if (block >= total_blocks)
+				const auto check = check_mifare_block_access(card, req.block, true, false);
+				if (!check.ok())
 				{
-					build_response({res, static_cast<u8>(status::timeout)});
+					build_response({res, static_cast<u8>(check.error)});
 					break;
 				}
 
-				const auto info = get_mifare_block_info(block);
-
-				// Must be authenticated to the sector
-				if (m_authenticated_sector != info.sector || m_authenticated_key == auth_key::none)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				// Sector 0 Block 0 (Manufacturer block) is strictly read-only
-				if (block == 0)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const auto trailer = get_block_data(card, info.trailer_block);
-				const auto bits = get_access_bits(trailer, info.cond_index);
-
-				if (!bits.valid)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 c = (bits.c1 << 2) | (bits.c2 << 1) | bits.c3;
-
-				if (!info.is_trailer)
+				if (!check.info.is_trailer)
 				{
 					// Table 7 Data block write:
 					// C=0 (000): Key A | B
 					// C=3 (011): Key B
 					// C=4 (100): Key B
-					// C=5 (101): Key B
 					// C=6 (110): Key B
-					// C=1, 2, 7: Never
+					// C=1, 2, 5, 7: Never
 					bool can_write = false;
 					if (m_authenticated_key == auth_key::key_a)
 					{
-						can_write = (c == 0);
+						can_write = (check.c == 0);
 					}
 					else if (m_authenticated_key == auth_key::key_b)
 					{
-						can_write = (c == 0 || c == 3 || c == 4 || c == 5 || c == 6);
+						can_write = (check.c == 0 || check.c == 3 || check.c == 4 || check.c == 6);
 					}
 
 					if (!can_write)
@@ -1881,20 +1841,14 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 						break;
 					}
 
-					// Directly write data back to card array (supports current and future expanded card array)
-					const usz offset = static_cast<usz>(block) * mifare_block_size;
-					if (offset + mifare_block_size <= card.size())
-					{
-						std::memcpy(card.data() + offset, payload.data() + 4, mifare_block_size);
-					}
-
+					std::memcpy(card.data() + check.offset, payload.data() + 4, mifare_block_size);
 					build_response({res, static_cast<u8>(status::success)});
 				}
 				else
 				{
 					// Table 6 Sector trailer write:
 					// Key A write: C in {0, 1} with Key A; C in {3, 4} with Key B
-					// Access Bits write: C=1 with Key A; C in {3, 5} with Key B
+					// Access bits write: C in {0, 1, 3, 4} with Key B; C == 1 with Key A
 					// Key B write: C in {0, 1} with Key A; C in {3, 4} with Key B
 					bool can_write_key_a = false;
 					bool can_write_access = false;
@@ -1902,15 +1856,15 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 
 					if (m_authenticated_key == auth_key::key_a)
 					{
-						can_write_key_a = (c == 0 || c == 1);
-						can_write_access = (c == 1);
-						can_write_key_b = (c == 0 || c == 1);
+						can_write_key_a = (check.c == 0 || check.c == 1);
+						can_write_access = (check.c == 1);
+						can_write_key_b = (check.c == 0 || check.c == 1);
 					}
 					else if (m_authenticated_key == auth_key::key_b)
 					{
-						can_write_key_a = (c == 3 || c == 4);
-						can_write_access = (c == 3 || c == 5);
-						can_write_key_b = (c == 3 || c == 4);
+						can_write_key_a = (check.c == 3 || check.c == 4);
+						can_write_access = (check.c == 0 || check.c == 1 || check.c == 3 || check.c == 4);
+						can_write_key_b = (check.c == 3 || check.c == 4);
 					}
 
 					if (!can_write_key_a && !can_write_access && !can_write_key_b)
@@ -1919,280 +1873,178 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 						break;
 					}
 
-					// Directly write allowed trailer fields back to card array
-					const usz offset = static_cast<usz>(block) * mifare_block_size;
-					if (offset + mifare_block_size <= card.size())
-					{
-						if (can_write_key_a)
-						{
-							std::memcpy(card.data() + offset, payload.data() + 4, 6);
-						}
-						if (can_write_access)
-						{
-							std::memcpy(card.data() + offset + 6, payload.data() + 10, 4);
-						}
-						if (can_write_key_b)
-						{
-							std::memcpy(card.data() + offset + 10, payload.data() + 14, 6);
-						}
-					}
-
-					build_response({res, static_cast<u8>(status::success)});
-				}
-				break;
-			}
-			case static_cast<u8>(mifare_cmd::write_4_bytes):
-			{
-				if (payload.size() < 8)
+				if (can_write_key_a)
 				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
+					std::memcpy(card.data() + check.offset, payload.data() + 4, 6);
 				}
-
-				const u8 page = req.block; // In Ultralight, req.block is the page number
-				const usz page_offset = static_cast<usz>(page) * 4;
-
-				// Pages 0 and 1 are read-only (serial number and internal)
-				if (page < 2 || page_offset + 4 > card.size())
+				if (can_write_access)
 				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
+					std::memcpy(card.data() + check.offset + 6, payload.data() + 10, 4);
 				}
-
-				std::memcpy(card.data() + page_offset, payload.data() + 4, 4);
-				build_response({res, static_cast<u8>(status::success)});
-				break;
-			}
-			case static_cast<u8>(mifare_cmd::increment):
-			case static_cast<u8>(mifare_cmd::decrement):
-			{
-				if (payload.size() < 8)
+				if (can_write_key_b)
 				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
+					std::memcpy(card.data() + check.offset + 10, payload.data() + 14, 6);
 				}
-
-				const u8 block = req.block;
-				if (block >= total_blocks)
-				{
-					build_response({res, static_cast<u8>(status::timeout)});
-					break;
-				}
-
-				const auto info = get_mifare_block_info(block);
-
-				// Must be authenticated to the sector
-				if (m_authenticated_sector != info.sector || m_authenticated_key == auth_key::none)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				// Cannot be block 0 or trailer
-				if (block == 0 || info.is_trailer)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const auto trailer = get_block_data(card, info.trailer_block);
-				const auto bits = get_access_bits(trailer, info.cond_index);
-				if (!bits.valid)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 c = (bits.c1 << 2) | (bits.c2 << 1) | bits.c3;
-				const u8 cmd_byte = payload[2];
-
-				// Access rules (Table 7):
-				// Increment (0xC1): Key A if C == 0; Key B if C in {0, 6}
-				// Decrement (0xC0): Key A or Key B if C in {0, 1, 6}
-				bool can_do = false;
-				if (cmd_byte == 0xC1)
-				{
-					if (m_authenticated_key == auth_key::key_a)
-						can_do = (c == 0);
-					else if (m_authenticated_key == auth_key::key_b)
-						can_do = (c == 0 || c == 6);
-				}
-				else // 0xC0
-				{
-					can_do = (c == 0 || c == 1 || c == 6);
-				}
-
-				if (!can_do)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const usz offset = static_cast<usz>(block) * mifare_block_size;
-				if (offset + mifare_block_size > card.size())
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				s32 current_val = 0;
-				u8 current_addr = 0;
-				if (!get_value_from_block(std::span<const u8>(card.data() + offset, mifare_block_size), current_val, current_addr))
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const s32 operand = static_cast<s32>(
-					static_cast<u32>(payload[4]) |
-					(static_cast<u32>(payload[5]) << 8) |
-					(static_cast<u32>(payload[6]) << 16) |
-					(static_cast<u32>(payload[7]) << 24));
-
-				const s32 new_val = (cmd_byte == 0xC1) ? (current_val + operand) : (current_val - operand);
-
-				m_transfer_buffer = format_value_block(new_val, current_addr);
-				m_transfer_buffer_valid = true;
 
 				build_response({res, static_cast<u8>(status::success)});
-				break;
 			}
-			case static_cast<u8>(mifare_cmd::restore):
+			break;
+		}
+		case static_cast<u8>(mifare_cmd::write_4_bytes):
+		{
+			// -------------------------------------------------------------------------
+			// Write 4 bytes (0xA2): Exclusive to MIFARE Ultralight (MF0ICU1).
+			// MIFARE Classic (1K/4K) does not support command 0xA2.
+			// Sending 0xA2 to a MIFARE Classic card returns an error (NACK / timeout).
+			// -------------------------------------------------------------------------
+			if (get_card_type(card) != card_type::mifare_ultralight)
 			{
-				if (payload.size() < 4)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 block = req.block;
-				if (block >= total_blocks)
-				{
-					build_response({res, static_cast<u8>(status::timeout)});
-					break;
-				}
-
-				const auto info = get_mifare_block_info(block);
-
-				// Must be authenticated to the sector
-				if (m_authenticated_sector != info.sector || m_authenticated_key == auth_key::none)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				// Cannot be block 0 or trailer
-				if (block == 0 || info.is_trailer)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const auto trailer = get_block_data(card, info.trailer_block);
-				const auto bits = get_access_bits(trailer, info.cond_index);
-				if (!bits.valid)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 c = (bits.c1 << 2) | (bits.c2 << 1) | bits.c3;
-
-				// Access rules (Table 7): Restore allowed if C in {0, 1, 6}
-				const bool can_restore = (c == 0 || c == 1 || c == 6);
-				if (!can_restore)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const usz offset = static_cast<usz>(block) * mifare_block_size;
-				if (offset + mifare_block_size > card.size())
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				s32 current_val = 0;
-				u8 current_addr = 0;
-				if (!get_value_from_block(std::span<const u8>(card.data() + offset, mifare_block_size), current_val, current_addr))
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				std::memcpy(m_transfer_buffer.data(), card.data() + offset, mifare_block_size);
-				m_transfer_buffer_valid = true;
-
-				build_response({res, static_cast<u8>(status::success)});
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
 				break;
 			}
-			case static_cast<u8>(mifare_cmd::transfer):
+
+			if (payload.size() < 8)
 			{
-				if (payload.size() < 4)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				if (!m_transfer_buffer_valid)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 block = req.block;
-				if (block >= total_blocks)
-				{
-					build_response({res, static_cast<u8>(status::timeout)});
-					break;
-				}
-
-				const auto info = get_mifare_block_info(block);
-
-				// Must be authenticated to the sector
-				if (m_authenticated_sector != info.sector || m_authenticated_key == auth_key::none)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				// Cannot be block 0 or trailer
-				if (block == 0 || info.is_trailer)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const auto trailer = get_block_data(card, info.trailer_block);
-				const auto bits = get_access_bits(trailer, info.cond_index);
-				if (!bits.valid)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const u8 c = (bits.c1 << 2) | (bits.c2 << 1) | bits.c3;
-
-				// Access rules (Table 7): Transfer allowed if C in {0, 1, 6}
-				const bool can_transfer = (c == 0 || c == 1 || c == 6);
-				if (!can_transfer)
-				{
-					build_response({res, static_cast<u8>(status::mifare_auth_error)});
-					break;
-				}
-
-				const usz offset = static_cast<usz>(block) * mifare_block_size;
-				if (offset + mifare_block_size <= card.size())
-				{
-					std::memcpy(card.data() + offset, m_transfer_buffer.data(), mifare_block_size);
-				}
-
-				m_transfer_buffer_valid = false;
-				build_response({res, static_cast<u8>(status::success)});
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
 				break;
 			}
-			default:
+
+			const u8 page = req.block; // In Ultralight, req.block is the page number
+			const usz page_offset = static_cast<usz>(page) * 4;
+
+			// Pages 0 and 1 are read-only (serial number and internal)
+			if (page < 2 || page_offset + 4 > card.size())
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			std::memcpy(card.data() + page_offset, payload.data() + 4, 4);
+			build_response({res, static_cast<u8>(status::success)});
+			break;
+		}
+		case static_cast<u8>(mifare_cmd::increment):
+		case static_cast<u8>(mifare_cmd::decrement):
+		{
+			if (payload.size() < 8)
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			const auto check = check_mifare_block_access(card, req.block, false, false);
+			if (!check.ok())
+			{
+				build_response({res, static_cast<u8>(check.error)});
+				break;
+			}
+
+			const u8 cmd_byte = payload[2];
+			bool can_do = false;
+			if (cmd_byte == 0xC1)
+			{
+				if (m_authenticated_key == auth_key::key_a)
+					can_do = (check.c == 0);
+				else if (m_authenticated_key == auth_key::key_b)
+					can_do = (check.c == 0 || check.c == 6);
+			}
+			else // 0xC0
+			{
+				can_do = (check.c == 0 || check.c == 1 || check.c == 6);
+			}
+
+			if (!can_do)
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			s32 current_val = 0;
+			u8 current_addr = 0;
+			if (!get_value_from_block(std::span<const u8>(card.data() + check.offset, mifare_block_size), current_val, current_addr))
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			const s32 operand = read_from_ptr<le_t<s32>>(payload, 4);
+			const s32 new_val = static_cast<s32>((cmd_byte == 0xC1)
+				? (static_cast<u32>(current_val) + static_cast<u32>(operand))
+				: (static_cast<u32>(current_val) - static_cast<u32>(operand)));
+
+			m_transfer_buffer = format_value_block(new_val, current_addr);
+			m_transfer_buffer_valid = true;
+
+			build_response({res, static_cast<u8>(status::success)});
+			break;
+		}
+		case static_cast<u8>(mifare_cmd::restore):
+		{
+			const auto check = check_mifare_block_access(card, req.block, false, false);
+			if (!check.ok())
+			{
+				build_response({res, static_cast<u8>(check.error)});
+				break;
+			}
+
+			// Table 7: Restore allowed if C in {0, 1, 6}
+			const bool can_restore = (check.c == 0 || check.c == 1 || check.c == 6);
+			if (!can_restore)
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			s32 current_val = 0;
+			u8 current_addr = 0;
+			if (!get_value_from_block(std::span<const u8>(card.data() + check.offset, mifare_block_size), current_val, current_addr))
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			std::memcpy(m_transfer_buffer.data(), card.data() + check.offset, mifare_block_size);
+			m_transfer_buffer_valid = true;
+
+			build_response({res, static_cast<u8>(status::success)});
+			break;
+		}
+		case static_cast<u8>(mifare_cmd::transfer):
+		{
+			if (payload.size() < 4)
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			if (!m_transfer_buffer_valid)
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			const auto check = check_mifare_block_access(card, req.block, false, false);
+			if (!check.ok())
+			{
+				build_response({res, static_cast<u8>(check.error)});
+				break;
+			}
+
+			// Access rules (Table 7): Transfer allowed if C in {0, 1, 6}
+			const bool can_transfer = (check.c == 0 || check.c == 1 || check.c == 6);
+			if (!can_transfer)
+			{
+				build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				break;
+			}
+
+			std::memcpy(card.data() + check.offset, m_transfer_buffer.data(), mifare_block_size);
+
+			m_transfer_buffer_valid = false;
+			build_response({res, static_cast<u8>(status::success)});
+			break;
+		}
+	default:
 			{
 				// Requires further hardware implementation (NFC-DEP, FeliCa, ISO/IEC 14443-4 APDU, Jewel)
 				build_response({res, static_cast<u8>(status::success)});
@@ -2253,11 +2105,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 		//   Data:   [0] 0x45 (Response Code)
 		//           [1] Status: 0x00 = Success, 0x27 = Unknown target
 		// -------------------------------------------------------------------------
-		m_authenticated_sector = -1;
-		m_authenticated_key = auth_key::none;
-		m_transfer_buffer_valid = false;
-		m_transfer_buffer.fill(0);
-		m_target_state = 0x00;
+		reset_target_state();
 		build_response({res, static_cast<u8>(status::success)});
 		break;
 	}
@@ -2441,11 +2289,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 		//   Data:   [0] 0x53 (Response Code)
 		//           [1] Status: 0x00 = Success
 		// -------------------------------------------------------------------------
-		m_authenticated_sector = -1;
-		m_authenticated_key = auth_key::none;
-		m_transfer_buffer_valid = false;
-		m_transfer_buffer.fill(0);
-		m_target_state = 0x00;
+		reset_target_state();
 		build_response({res, static_cast<u8>(status::success)});
 		break;
 	}
@@ -2787,6 +2631,55 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card, 
 		//   Data:   [0] 0x95 (Response Code)
 		//           [1] Status: 0x00 = Success
 		// -------------------------------------------------------------------------
+		build_response({res, static_cast<u8>(status::success)});
+		break;
+	}
+	case command_code::communicate_thru_ex:
+	{
+		// -------------------------------------------------------------------------
+		// Sony RC-S620/S Section 8.2.11 CommunicateThruEX (0xA0)
+		// Direct RF raw transceiver data exchange extension for FeliCa (212/424 kbps).
+		//
+		// Transmits DataOut directly as an RF command packet to the Target at 212/424 kbps,
+		// and returns the received RF response packet as DataIn to the host controller.
+		//
+		// Expected Request Frame Parameters:
+		//   Length: >= 3 bytes (up to 258 bytes in normal/extended frame)
+		//   Data:   [0]    0xA0 (Command Code)
+		//           [1..2] Timeout (2 bytes, little-endian, unit: 0.5 ms)
+		//           [3..n] DataOut: Command data sent to Target (0 to 255 bytes)
+		//
+		// Expected Response Frame Parameters:
+		//   Length: >= 2 bytes
+		//   Data:   [0]    0xA1 (Response Code)
+		//           [1]    Status: RF transaction status
+		//                  0x00 = Success (正常終了)
+		//                  0x01 = Timeout (RF 通信中にタイムアウトエラーが発生)
+		//                  0x02 = CRC Error (RF 通信中にCRC エラーが発生)
+		//                  0x0D = Temperature anomaly (温度異常が発生)
+		//                  0x31 = Target mode RF error (Target モードでRF 通信中にRF エラー)
+		//                  0x35 = Response length exceeded (受信RF レスポンスがデータ長より大きい)
+		//           [2..m] DataIn: Response data received from Target (0 to 255 bytes)
+		// -------------------------------------------------------------------------
+		if (payload.size() < 3 || payload.size() > 258)
+		{
+			build_response(); // Syntax error: missing Timeout parameter or DataOut exceeds 255 bytes
+			break;
+		}
+
+		[[maybe_unused]] const u16 timeout = read_from_ptr<le_t<u16>>(payload, 1);
+		[[maybe_unused]] const std::span<const u8> data_out = payload.subspan(3);
+
+		// CommunicateThruEX is dedicated to 212/424 kbps FeliCa (ISO/IEC 18092 / JIS X 6319-4) communication.
+		// If no card is tapped or the tapped card is not FeliCa (e.g. MIFARE Classic 1K/4K operates on
+		// ISO/IEC 14443 Type A 106 kbps), the RF communication receives no response, resulting in a timeout.
+		if (!card_tapped || get_card_type(card) != card_type::felica)
+		{
+			build_response({res, static_cast<u8>(status::timeout)});
+			break;
+		}
+
+		// Future implementation: process FeliCa command packet in data_out and return RF response in DataIn.
 		build_response({res, static_cast<u8>(status::success)});
 		break;
 	}
