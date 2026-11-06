@@ -1605,6 +1605,20 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue; // system files are not included in the file list
 				}
 
+				// RPCS3-created exclusive file filtering:
+				// Filter files not presernt in RPCS3_BLIST PARAM.SFO entry
+				// This is to deal with MacOs resource forks
+				if (!blist.empty() && !std::ranges::contains(blist, entry.name))
+				{
+					continue;
+				}
+
+#ifdef __APPLE__
+				if (entry.name.size() >= 3 && entry.name.starts_with("._"))
+				{
+					cellSaveData.error("Savedata may contain a resource fork file: %s", entry.name);
+				}
+#endif
 				files_sorted.push_back(entry);
 			}
 		}
@@ -1847,6 +1861,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			entry.name = vfs::unescape(entry.name);
 
 			if (check_filename(entry.name, false, true))
+			{
+				continue;
+			}
+
+			// RPCS3-created exclusive file filtering:
+			// Filter files not presernt in RPCS3_BLIST PARAM.SFO entry
+			// This is to deal with MacOs resource forks
+			if (!blist.empty() && !std::ranges::contains(blist, entry.name))
 			{
 				continue;
 			}
