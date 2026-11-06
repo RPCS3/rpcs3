@@ -221,7 +221,8 @@ enum
 	TITLEID_SFO_ENTRY_SIZE = 16, // This is the true length on PS3 (TODO: Fix in more places)
 };
 
-struct CellGameDataSystemFileParam
+template <u32 ReservedSize>
+struct game_system_file_param
 {
 	char title[CELL_GAMEDATA_SYSP_TITLE_SIZE];
 	char titleLang[CELL_GAMEDATA_SYSP_LANGUAGE_NUM][CELL_GAMEDATA_SYSP_TITLE_SIZE]; // 0x80
@@ -233,8 +234,11 @@ struct CellGameDataSystemFileParam
 	be_t<u32> attribute;
 	be_t<u32> resolution; // cellHddGameCheck member: GD doesn't have this value
 	be_t<u32> soundFormat; // cellHddGameCheck member: GD doesn't have this value
-	char reserved2[248];
+	char reserved2[ReservedSize];
 };
+
+using CellGameDataSystemFileParam = game_system_file_param<248>;
+using CellHddGameSystemFileParam = game_system_file_param<256>;
 
 struct CellDiscGameSystemFileParam
 {
@@ -244,7 +248,8 @@ struct CellDiscGameSystemFileParam
 	char reserved1[16];
 };
 
-struct CellGameDataStatGet
+template <typename SystemFileParam>
+struct game_stat_get
 {
 	be_t<s32> hddFreeSizeKB;
 	be_t<u32> isNewData;
@@ -254,17 +259,26 @@ struct CellGameDataStatGet
 	be_t<s64> st_atime_; // 0x848
 	be_t<s64> st_mtime_; // 0x850
 	be_t<s64> st_ctime_; // 0x858
-	CellGameDataSystemFileParam getParam; // 0x860
+	SystemFileParam getParam; // 0x860
 	be_t<s32> sizeKB;
 	be_t<s32> sysSizeKB;
 	char reserved1[68];
 };
 
-struct CellGameDataStatSet
+template <typename SystemFileParam>
+struct game_stat_set
 {
-	vm::bptr<CellGameDataSystemFileParam> setParam;
+	vm::bptr<SystemFileParam> setParam;
 	be_t<u32> reserved;
 };
+
+using CellGameDataStatGet = game_stat_get<CellGameDataSystemFileParam>;
+using CellGameDataStatSet = game_stat_set<CellGameDataSystemFileParam>;
+using CellHddGameStatGet = game_stat_get<CellHddGameSystemFileParam>;
+using CellHddGameStatSet = game_stat_set<CellHddGameSystemFileParam>;
+
+CHECK_SIZE(CellGameDataStatGet, 0x1448);
+CHECK_SIZE(CellHddGameStatGet, 0x1450);
 
 typedef void(CellGameDataStatCallback)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set);
 
@@ -314,9 +328,6 @@ enum
 	CELL_HDDGAME_SIZEKB_NOTCALC        = -1,
 };
 
-using CellHddGameStatGet = CellGameDataStatGet;
-using CellHddGameStatSet = CellGameDataStatSet;
-using CellHddGameSystemFileParam = CellGameDataSystemFileParam;
 using CellHddGameCBResult = CellGameDataCBResult;
 
 typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);

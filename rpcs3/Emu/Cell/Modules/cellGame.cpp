@@ -442,7 +442,10 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		const auto cat = psf::get_string(sfo, "CATEGORY", "");
 		if (!psf::is_cat_hdd(cat))
 		{
-			return { CELL_GAMEDATA_ERROR_BROKEN, "CATEGORY='%s'", cat };
+			// Same delay as the regular path, see cellGameDataCheckCreate2
+			lv2_sleep(5000, &ppu);
+
+			return { CELL_HDDGAME_ERROR_BROKEN, "CATEGORY='%s'", cat };
 		}
 	}
 
@@ -463,7 +466,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	// after said overflow, the number would still be high enough to contain the game's data.
 	get->hddFreeSizeKB = 40 * 1024 * 1024 - 256;
 	get->isNewData = CELL_HDDGAME_ISNEWDATA_EXIST;
-	get->sysSizeKB = 0; // TODO
+	get->sysSizeKB = 4;
 	get->st_atime_ = 0; // TODO
 	get->st_ctime_ = 0; // TODO
 	get->st_mtime_ = 0; // TODO
@@ -477,6 +480,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	if (!fs::is_dir(local_dir))
 	{
 		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
+		get->sizeKB = 0;
 		get->getParam = {};
 
 		cellGame.warning("cellHddGameCheck(): New data.");
@@ -1100,8 +1104,10 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	const std::string usrdir = dir + "/USRDIR";
 
 	auto& cbResult = g_cb_result;
-	auto& cbGet = g_stat_get;
-	auto& cbSet = g_stat_set;
+
+	// Shares the buffers of cellHddGameCheck, whose layout is the larger one
+	const auto cbGet = vm::unsafe_ptr_cast<CellGameDataStatGet>(g_stat_get);
+	const auto cbSet = vm::unsafe_ptr_cast<CellGameDataStatSet>(g_stat_set);
 
 	std::memset(cbGet.get_ptr(), 0, sizeof(*cbGet));
 	std::memset(cbSet.get_ptr(), 0, sizeof(*cbSet));
@@ -1121,8 +1127,8 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	cbGet->st_mtime_ = 0;
 
 	// TODO: calculate data size, if necessary
-	cbGet->sizeKB = CELL_GAMEDATA_SIZEKB_NOTCALC;
-	cbGet->sysSizeKB = 0; // TODO
+	cbGet->sizeKB = new_data ? 0 : CELL_GAMEDATA_SIZEKB_NOTCALC;
+	cbGet->sysSizeKB = 3;
 
 	cbGet->getParam.attribute = CELL_GAMEDATA_ATTR_NORMAL;
 	cbGet->getParam.parentalLevel = psf::get_integer(sfo, "PARENTAL_LEVEL", 0);
