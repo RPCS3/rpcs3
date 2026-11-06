@@ -62,7 +62,7 @@ void config_event_entry(ppu_thread& ppu)
 		}
 
 		// Some delay
-		thread_ctrl::wait_for(10000);
+		thread_ctrl::wait_for(100);
 
 		// Wakeup
 		ppu.check_state();
@@ -76,7 +76,7 @@ void config_event_entry(ppu_thread& ppu)
 
 		if (arg1 == 1)
 		{
-			while (!cellPad_NotifyStateChange(arg2, arg3, false))
+			while (!cellPad_NotifyStateChange(arg2, arg3, true, false))
 			{
 				if (!queue->exists)
 				{
@@ -141,21 +141,21 @@ extern void send_sys_io_connect_event(usz index, u32 state)
 	}
 }
 
-error_code sys_config_start(ppu_thread& ppu)
+// Queues a connection event for each index before the event handler thread starts, when this call is the one to start it.
+// The handler then finds them on its first receive, while sys_ppu_thread_start still holds a lower priority caller.
+extern error_code sys_config_start_with_events(ppu_thread& ppu, const std::vector<usz>& indices, u32 state)
 {
-	sys_io.warning("sys_config_start()");
+	sys_io.warning("sys_config_start_with_events(events=%d, state=0x%x)", indices.size(), state);
 
 	auto& cfg = g_fxo->get<libio_sys_config>();
 
 	auto lock = lock_lv2_mutex_alike(cfg.mtx, &ppu);
 
-	if (cfg.init_ctr++ == 0)
-	{
-		// Run thread
-		vm::var<u64> _tid;
-		vm::var<u32> queue_id;
-		vm::var<char[]> _name = vm::make_str("_cfg_evt_hndlr");
+	const bool start_thread = cfg.init_ctr++ == 0;
 
+	if (start_thread)
+	{
+		vm::var<u32> queue_id;
 		vm::var<sys_event_queue_attribute_t> attr;
 		attr->protocol = SYS_SYNC_PRIORITY;
 		attr->type = SYS_PPU_QUEUE;
@@ -164,6 +164,21 @@ error_code sys_config_start(ppu_thread& ppu)
 		ensure(CELL_OK == sys_event_queue_create(ppu, queue_id, attr, 0, 0x20));
 		ppu.check_state();
 		cfg.queue_id = *queue_id;
+	}
+
+	if (auto port = idm::get_unlocked<lv2_obj, lv2_event_queue>(cfg.queue_id))
+	{
+		for (const usz index : indices)
+		{
+			port->send(0, 1, index, state);
+		}
+	}
+
+	if (start_thread)
+	{
+		// Run thread
+		vm::var<u64> _tid;
+		vm::var<char[]> _name = vm::make_str("_cfg_evt_hndlr");
 
 		ensure(CELL_OK == ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(config_event_entry)), 0, 512, 0x2000, SYS_PPU_THREAD_CREATE_JOINABLE, +_name));
 		ppu.check_state();
@@ -172,6 +187,11 @@ error_code sys_config_start(ppu_thread& ppu)
 	}
 
 	return CELL_OK;
+}
+
+error_code sys_config_start(ppu_thread& ppu)
+{
+	return sys_config_start_with_events(ppu, {}, 0);
 }
 
 error_code sys_config_stop(ppu_thread& ppu)
