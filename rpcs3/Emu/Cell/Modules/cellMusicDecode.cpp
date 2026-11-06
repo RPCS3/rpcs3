@@ -230,25 +230,24 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 			}
 		}
 
+		s64 start_time_ms = 0;
 		const u64 read_size = dec.decoder.read(buf.get_ptr(), dec.read_pos, reqSize);
 		*readSize = read_size;
 
-		if (read_size == 0)
+		if (read_size > 0)
 		{
-			return { CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "read_size == 0" }; // TODO: speculative
+			if (read_size < reqSize)
+			{
+				// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
+				std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + read_size, 0, reqSize - read_size);
+			}
+
+			dec.read_pos += read_size;
+
+			start_time_ms = dec.decoder.get_start_time_ms(dec.read_pos);
+
+			*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
 		}
-
-		if (read_size < reqSize)
-		{
-			// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
-			std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + read_size, 0, reqSize - read_size);
-		}
-
-		dec.read_pos += read_size;
-
-		const s64 start_time_ms = dec.decoder.get_start_time_ms(dec.read_pos);
-
-		*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
 
 		cellMusicDecode.trace("cell_music_decode_read(read_size=%d, samples=%d, start_time_ms=%d)", read_size, read_size / sizeof(u64), start_time_ms);
 	}
@@ -271,6 +270,10 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	}
 	default:
 	{
+		if (size_to_read == 0)
+		{
+			return {CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "size_to_read=0"}; // TODO: speculative
+		}
 		break;
 	}
 	}
