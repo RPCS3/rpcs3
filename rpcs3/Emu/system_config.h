@@ -271,14 +271,15 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 0xFF> formats{ this, "Audio Formats", static_cast<u32>(audio_format_flag::lpcm_2_48khz), false };
 		cfg::_enum<audio_channel_layout> channel_layout{ this, "Audio Channel Layout", audio_channel_layout::automatic, false };
 		cfg::string audio_device{ this, "Audio Device", "@@@default@@@", true };
+		cfg::string voice_output_device{ this, "Voice Chat Output Device", "", true };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 34, true };
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_bool disable_sampling_skip{ this, "Disable Sampling Skip", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
-		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
-		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
+		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null, true };
+		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@", true };
 		cfg::_enum<music_handler> music{ this, "Music Handler", music_handler::qt };
 	} audio{ this };
 

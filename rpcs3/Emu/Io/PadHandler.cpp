@@ -538,6 +538,12 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad)
 		config->pressure_intensity
 	);
 
+	pad->m_voice_push_to_talk = config->voice_push_to_talk.get();
+	pad->m_buttons.emplace_back(special_button_offset, mapping[button::voice_talk_button], special_button_value::voice_talk);
+	pad->m_voice_talk_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+	pad->m_buttons.emplace_back(special_button_offset, mapping[button::voice_mute_button], special_button_value::voice_mute);
+	pad->m_voice_mute_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
+
 	if (b_has_pressure_intensity_button)
 	{
 		pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
@@ -655,6 +661,9 @@ std::array<std::vector<std::set<u32>>, PadHandlerBase::button::button_count> Pad
 	{
 		mapping[button::orientation_reset_button] = find_key_combos(button_list, cfg->orientation_reset_button.to_string());
 	}
+
+	mapping[button::voice_talk_button] = find_key_combos(button_list, cfg->voice_talk_button.to_string());
+	mapping[button::voice_mute_button] = find_key_combos(button_list, cfg->voice_mute_button.to_string());
 
 	return mapping;
 }

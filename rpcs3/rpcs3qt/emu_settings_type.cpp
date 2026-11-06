@@ -165,6 +165,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AudioProvider,           get_cfg_location(local_cfg.audio.provider) },
 	{ emu_settings_type::AudioAvport,             get_cfg_location(local_cfg.audio.rsxaudio_port) },
 	{ emu_settings_type::AudioDevice,             get_cfg_location(local_cfg.audio.audio_device) },
+	{ emu_settings_type::VoiceOutputDevice,       get_cfg_location(local_cfg.audio.voice_output_device) },
 	{ emu_settings_type::AudioChannelLayout,      get_cfg_location(local_cfg.audio.channel_layout) },
 	{ emu_settings_type::MasterVolume,            get_cfg_location(local_cfg.audio.volume) },
 	{ emu_settings_type::EnableBuffering,         get_cfg_location(local_cfg.audio.enable_buffering) },

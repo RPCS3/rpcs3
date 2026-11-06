@@ -1098,6 +1098,25 @@
                 </widget>
                </item>
                <item>
+                <widget class="QGroupBox" name="gb_voice_output_device">
+                 <property name="title">
+                  <string>Voice Chat Output Device</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="gb_voice_output_device_layout">
+                  <item>
+                   <widget class="QComboBox" name="voiceOutputDeviceBox"/>
+                  </item>
+                  <item>
+                   <widget class="QPushButton" name="refreshVoiceOutputDevices">
+                    <property name="text">
+                     <string>Refresh</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
                 <widget class="QGroupBox" name="gb_audio_format">
                  <property name="title">
                   <string>Audio Format</string>

@@ -13,6 +13,7 @@
 #include <QScreen>
 #include <QShortcut>
 #include <QStyleFactory>
+#include <QFileDialog>
 
 #include "gui_settings.h"
 #include "qt_utils.h"
@@ -957,32 +958,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		auto dev_enum = g_emu_callbacks.get_audio_enumerator(value);
 		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
 
-		ui->audioDeviceBox->clear();
-		ui->audioDeviceBox->blockSignals(true);
-		ui->audioDeviceBox->addItem(tr("Default"), QString(audio_device_enumerator::DEFAULT_DEV_ID.data()));
-
-		const std::string selected_device = m_emu_settings->GetSetting(emu_settings_type::AudioDevice);
-		int device_index = 0;
-
-		for (const audio_device_enumerator::audio_device& dev : dev_array)
+		const auto populate = [this, &dev_array, keep_old](QComboBox* box, emu_settings_type setting, bool voice)
 		{
-			const QString cur_item = QString::fromStdString(dev.id);
-			ui->audioDeviceBox->addItem(QString::fromStdString(dev.name), cur_item);
-			if (selected_device == dev.id)
+			box->blockSignals(true);
+			box->clear();
+			if (voice) box->addItem(tr("Same as Audio Device"), QString());
+			box->addItem(voice ? tr("System Default") : tr("Default"), QString(audio_device_enumerator::DEFAULT_DEV_ID.data()));
+
+			const QString selected_device = QString::fromStdString(m_emu_settings->GetSetting(setting));
+			for (const auto& dev : dev_array)
 			{
-				device_index = ui->audioDeviceBox->findData(cur_item);
+				box->addItem(QString::fromStdString(dev.name), QString::fromStdString(dev.id));
 			}
-		}
 
-		if (device_index == 0 && keep_old && selected_device != audio_device_enumerator::DEFAULT_DEV_ID)
-		{
-			cfg_log.error("The selected audio device (%s) was not found", selected_device);
-			ui->audioDeviceBox->addItem(tr("Unknown device"), QString::fromStdString(selected_device));
-			device_index = ui->audioDeviceBox->count() - 1;
-		}
+			int device_index = box->findData(selected_device);
+			if (device_index < 0 && keep_old)
+			{
+				box->addItem(tr("Unknown device"), selected_device);
+				device_index = box->count() - 1;
+			}
 
-		ui->audioDeviceBox->blockSignals(false);
-		ui->audioDeviceBox->setCurrentIndex(std::max(device_index, 0));
+			box->setCurrentIndex(std::max(device_index, 0));
+			box->blockSignals(false);
+		};
+
+		populate(ui->audioDeviceBox, emu_settings_type::AudioDevice, false);
+		populate(ui->voiceOutputDeviceBox, emu_settings_type::VoiceOutputDevice, true);
 	};
 
 	const auto change_audio_output_device = [this](int index)
@@ -997,6 +998,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->audioDeviceBox->setCurrentIndex(index);
 	};
 
+	const auto change_voice_output_device = [this](int index)
+	{
+		if (index < 0) return;
+		m_emu_settings->SetSetting(emu_settings_type::VoiceOutputDevice, ui->voiceOutputDeviceBox->itemData(index).toString().toStdString());
+		ui->voiceOutputDeviceBox->setCurrentIndex(index);
+	};
+
 	// Comboboxes
 
 #ifdef WIN32
@@ -1004,10 +1012,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 #else
 	EnhanceComboBox(emu_settings_type::AudioRenderer, ui->audioOutBox, tooltips.settings.audio_out_linux, ui->gb_audio_out);
 #endif
-	connect(ui->audioOutBox, &QComboBox::currentIndexChanged, this, [change_audio_output_device, get_audio_output_devices](int)
+	connect(ui->audioOutBox, &QComboBox::currentIndexChanged, this, [change_audio_output_device, change_voice_output_device, get_audio_output_devices](int)
 	{
 		get_audio_output_devices(false);
 		change_audio_output_device(0); // Set device to 'Default'
+		change_voice_output_device(0); // Device identifiers belong to the selected backend.
 	});
 
 	EnhanceComboBox(emu_settings_type::AudioChannelLayout, ui->combo_audio_channel_layout, tooltips.settings.audio_channel_layout, ui->gb_audio_channel_layout);
@@ -1076,6 +1085,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_audio_device, tooltips.settings.audio_device);
 	connect(ui->audioDeviceBox, &QComboBox::currentIndexChanged, this, change_audio_output_device);
 	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_audio_output_device]() { change_audio_output_device(0); }); // Set device to 'Default'
+	SubscribeTooltip(ui->gb_voice_output_device, tr("Output device for separate voice-chat playback. Same as Audio Device follows the main audio device; System Default follows the operating system default. Apply changes while playing to switch without restarting. Voice already mixed into game audio follows the main audio device."));
+	connect(ui->voiceOutputDeviceBox, &QComboBox::currentIndexChanged, this, change_voice_output_device);
+	connect(ui->refreshVoiceOutputDevices, &QPushButton::clicked, this, [get_audio_output_devices]() { get_audio_output_devices(); });
+	connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [change_voice_output_device]() { change_voice_output_device(0); });
 	get_audio_output_devices();
 
 	// Microphone Comboboxes
@@ -1115,6 +1128,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceComboBox(emu_settings_type::MicrophoneType, ui->microphoneBox, tooltips.settings.microphone);
 	connect(ui->microphoneBox, &QComboBox::currentIndexChanged, change_microphone_type);
 	propagate_used_devices(); // Enables/Disables comboboxes and checks values from config for sanity
+
 
 	// Checkboxes
 
