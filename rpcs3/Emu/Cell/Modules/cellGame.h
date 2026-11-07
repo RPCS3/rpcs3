@@ -231,10 +231,10 @@ struct CellGameDataSystemFileParam
 	char reserved1[2];
 	be_t<u32> parentalLevel;
 	be_t<u32> attribute;
-	be_t<u32> resolution; // cellHddGameCheck member: GD doesn't have this value
-	be_t<u32> soundFormat; // cellHddGameCheck member: GD doesn't have this value
-	char reserved2[248];
+	char reserved2[256];
 };
+
+CHECK_SIZE(CellGameDataSystemFileParam, 0xb9c);
 
 struct CellDiscGameSystemFileParam
 {
@@ -255,10 +255,12 @@ struct CellGameDataStatGet
 	be_t<s64> st_mtime_; // 0x850
 	be_t<s64> st_ctime_; // 0x858
 	CellGameDataSystemFileParam getParam; // 0x860
-	be_t<s32> sizeKB;
+	be_t<s32> sizeKB; // 0x13FC
 	be_t<s32> sysSizeKB;
 	char reserved1[68];
 };
+
+CHECK_SIZE(CellGameDataStatGet, 0x1448);
 
 struct CellGameDataStatSet
 {
@@ -314,9 +316,47 @@ enum
 	CELL_HDDGAME_SIZEKB_NOTCALC        = -1,
 };
 
-using CellHddGameStatGet = CellGameDataStatGet;
-using CellHddGameStatSet = CellGameDataStatSet;
-using CellHddGameSystemFileParam = CellGameDataSystemFileParam;
+struct CellHddGameSystemFileParam
+{
+	char title[CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE]; // 0x80
+	char titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE]; // 0xA80
+	char reserved0[2];
+	char dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
+	char reserved1[2];
+	be_t<u32> parentalLevel;
+	be_t<u32> attribute;
+	be_t<u32> resolution; // 0xA9C
+	be_t<u32> soundFormat;
+	char reserved2[256];
+};
+
+CHECK_SIZE(CellHddGameSystemFileParam, 0xba4);
+
+struct CellHddGameStatGet
+{
+	be_t<s32> hddFreeSizeKB;
+	be_t<u32> isNewData;
+	char contentInfoPath[CELL_HDDGAME_PATH_MAX]; // 0x8
+	char gameDataPath[CELL_HDDGAME_PATH_MAX]; // 0x427
+	char reserved0[2]; // 0x846
+	be_t<s64> st_atime_; // 0x848
+	be_t<s64> st_mtime_; // 0x850
+	be_t<s64> st_ctime_; // 0x858
+	CellHddGameSystemFileParam getParam; // 0x860
+	be_t<s32> sizeKB; // 0x1404
+	be_t<s32> sysSizeKB;
+	char reserved1[68];
+};
+
+CHECK_SIZE(CellHddGameStatGet, 0x1450);
+
+struct CellHddGameStatSet
+{
+	vm::bptr<CellHddGameSystemFileParam> setParam;
+	be_t<u32> reserved;
+};
+
 using CellHddGameCBResult = CellGameDataCBResult;
 
 typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
