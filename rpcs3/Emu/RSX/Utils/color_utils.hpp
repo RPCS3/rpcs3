@@ -38,6 +38,7 @@ namespace rsx
 		FF_BIASED_RENORM_BIT,
 		FF_GAMMA_BIT,
 		FF_16BIT_CHANNELS_BIT,
+		SNAP_TEXCOORDS_BIT,
 
 		// Meta
 		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
