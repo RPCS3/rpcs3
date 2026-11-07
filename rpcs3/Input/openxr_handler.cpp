@@ -303,6 +303,9 @@ void openxr_handler::get_extended_info(const pad_ensemble& binding)
 		pad->m_sensors[2].m_value = DEFAULT_MOTION_Z;
 		pad->m_sensors[3].m_value = DEFAULT_MOTION_G;
 		pad->move_data.has_absolute_position = false;
+
+		// Games read the PS Move sensors even without tracking (see cellGemGetInertialState)
+		pad->move_data.reset_sensors();
 		return;
 	}
 
