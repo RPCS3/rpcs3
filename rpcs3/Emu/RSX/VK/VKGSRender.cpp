@@ -1256,8 +1256,10 @@ void VKGSRender::set_scissor()
 	const auto& region = m_ctx->draw_state.scissor;
 
 	areau scissor;
-	std::tie(scissor.x1, scissor.y1) = rsx::apply_resolution_scale<false>(RSX(m_ctx)->resolution_scaling_config, region.x1, region.y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
-	std::tie(scissor.x2, scissor.y2) = rsx::apply_resolution_scale<true>(RSX(m_ctx)->resolution_scaling_config, region.x2, region.y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+	std::tie(scissor.x1, scissor.y1, scissor.x2, scissor.y2) = rsx::apply_resolution_scale_to_area(RSX(m_ctx)->resolution_scaling_config, region.x1, region.y1, region.x2, region.y2,
+		m_ctx->fb.layout.width, m_ctx->fb.layout.height, REGS(m_ctx)->surface_clip_width(), REGS(m_ctx)->surface_clip_height());
+	scissor.x2 = std::max<u32>(scissor.x2, 1);
+	scissor.y2 = std::max<u32>(scissor.y2, 1);
 
 	m_scissor.extent.height = scissor.height();
 	m_scissor.extent.width = scissor.width();

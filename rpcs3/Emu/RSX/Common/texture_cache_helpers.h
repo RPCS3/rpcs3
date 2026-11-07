@@ -576,7 +576,8 @@ namespace rsx
 			sampled_image_descriptor& desc,
 			const position2i& offset,
 			const size2i& desired_dimensions,
-			const size2i& actual_dimensions)
+			const size2i& actual_dimensions,
+			const size2i& host_dimensions = {})
 		{
 			// Back up the transformation before we destructively modify it.
 			desc.push_texcoord_xform();
@@ -590,6 +591,30 @@ namespace rsx
 			desc.texcoord_xform.clamp_max[0] = (offset.x + desired_dimensions.width - 0.50001f) / actual_dimensions.width;
 			desc.texcoord_xform.clamp_max[1] = (offset.y + desired_dimensions.height - 0.50001f) / actual_dimensions.height;
 			desc.texcoord_xform.clamp = true;
+
+			// With resolution scaling at a non-integer scale the region edges fall inside host texels. A filtered tap clamped to the
+			// centre of the first or last guest texel still reads the host texel that straddles the edge, mostly outside the region.
+			// Keep the clamp on the centres of the outermost host texels that lie fully inside the region.
+			// An axis whose host size is not given or is a multiple of its guest size (no scaling, integer scales) keeps the guest clamp.
+			const auto clamp_to_host_texels = [](f32& clamp_min, f32& clamp_max, s64 region_offset, s64 region_size, s64 guest_size, s64 host_size)
+			{
+				if (guest_size <= 0 || host_size <= 0 || host_size % guest_size == 0)
+				{
+					return;
+				}
+
+				const s64 first = (region_offset * host_size + guest_size - 1) / guest_size;  // ceil(start * scale)
+				const s64 end = ((region_offset + region_size) * host_size) / guest_size;     // floor(end * scale)
+
+				if (first < end)
+				{
+					clamp_min = std::max(clamp_min, (first + 0.5f) / host_size);
+					clamp_max = std::min(clamp_max, (end - 0.5f) / host_size);
+				}
+			};
+
+			clamp_to_host_texels(desc.texcoord_xform.clamp_min[0], desc.texcoord_xform.clamp_max[0], offset.x, desired_dimensions.width, actual_dimensions.width, host_dimensions.width);
+			clamp_to_host_texels(desc.texcoord_xform.clamp_min[1], desc.texcoord_xform.clamp_max[1], offset.y, desired_dimensions.height, actual_dimensions.height, host_dimensions.height);
 		}
 
 		template <typename sampled_image_descriptor>
@@ -797,7 +822,10 @@ namespace rsx
 
 				if (requires_clip)
 				{
-					calculate_sample_clip_parameters(result, position2i(offset.x, offset.y), size2i(attr.width, attr.height), size2i(surface_width, surface_height));
+					const size2i host_dimensions = (viewed_surface->samples() == 1)
+						? size2i(viewed_surface->width(), viewed_surface->height())
+						: size2i(surface_width, surface_height);
+					calculate_sample_clip_parameters(result, position2i(offset.x, offset.y), size2i(attr.width, attr.height), size2i(surface_width, surface_height), host_dimensions);
 				}
 
 				return result;
