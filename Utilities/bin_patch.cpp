@@ -1236,6 +1236,10 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 			g_fxo->need<ppu_patch_block_registry_t>();
 			g_fxo->get<ppu_patch_block_registry_t>().block_addresses.insert(resval);
 
+			// The return hook is a host callback too, not a non-returning GHC function
+			// ARM64 must escape to the gateway if this callback returns
+			g_fxo->get<ppu_patch_block_registry_t>().block_addresses.insert(addr + static_cast<u32>(p.value.long_value) * 4);
+
 			// Keep the initialized helper extent separate from its allocation padding
 			auto& ranges = g_fxo->get<ppu_patch_block_registry_t>().code_ranges;
 			std::erase_if(ranges, [addr](const auto& range) { return range.addr == addr; });
