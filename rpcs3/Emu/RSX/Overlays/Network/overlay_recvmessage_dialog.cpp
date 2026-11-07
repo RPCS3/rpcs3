@@ -210,7 +210,6 @@ namespace rsx
 				break; // Title already set in constructor
 			}
 
-			const bool preserve         = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE;
 			const bool include_bootable = options & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE;
 
 			m_rpcn = rpcn::rpcn_client::get_instance(0, true);
@@ -276,7 +275,7 @@ namespace rsx
 				return result;
 			}
 
-			auto accept_or_deny = [preserve, this, &result, &recv_result, &chosen_msg_id](SceNpBasicMessageRecvAction result_from_action)
+			auto accept_or_deny = [this, &result, &recv_result, &chosen_msg_id](SceNpBasicMessageRecvAction result_from_action)
 			{
 				{
 					std::lock_guard lock(m_mutex);
@@ -292,11 +291,6 @@ namespace rsx
 				}
 				recv_result   = result_from_action;
 				result        = CELL_OK;
-
-				if (!preserve)
-				{
-					m_rpcn->mark_message_used(chosen_msg_id);
-				}
 			};
 
 			switch (return_code)
