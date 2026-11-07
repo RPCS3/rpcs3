@@ -21,10 +21,12 @@ namespace openxr
 			VkDevice vk_device = VK_NULL_HANDLE;
 			u32 vk_queue_family = 0;
 			u32 vk_queue_index = 0;
+			bool has_semaphores = false; // The semaphore extension was enabled (see get_device_extensions)
 		};
 
-		// Returns the device extensions needed for headset rendering, or false if they are not supported
-		static bool get_device_extensions(VkPhysicalDevice physical_device, u32 vk_api_version, std::vector<const char*>& extensions);
+		// Returns the device extensions needed for headset rendering, or false if they are not supported.
+		// has_semaphores is set if the optional semaphore extension (needed by the OpenGL backend of RSX) is supported.
+		static bool get_device_extensions(VkPhysicalDevice physical_device, u32 vk_api_version, std::vector<const char*>& extensions, bool& has_semaphores);
 
 		// Has to be called after the session was created. The device has to be created with get_device_extensions.
 		bool init(const context& ctx);
