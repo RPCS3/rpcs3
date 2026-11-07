@@ -16,6 +16,7 @@
 
 class gui_settings;
 class PadHandlerBase;
+class pad_skateboard_settings_dialog;
 
 namespace Ui
 {
@@ -67,6 +68,13 @@ class pad_settings_dialog : public QDialog
 		id_pressure_intensity, // Special button for pressure intensity
 		id_analog_limiter, // Special button for analog limiter
 		id_orientation_reset, // Special button for orientation reset
+
+		id_skateboard_ir_nose, // Skateboard infrared nose
+		id_skateboard_ir_tail, // Skateboard infrared tail
+		id_skateboard_ir_left, // Skateboard infrared left
+		id_skateboard_ir_right, // Skateboard infrared right
+		id_skateboard_tilt_left, // Skateboard tilt left
+		id_skateboard_tilt_right, // Skateboard tilt right
 
 		id_pad_end, // end
 
@@ -149,6 +157,9 @@ private:
 	bool m_enable_pressure_intensity_button{ true };
 	bool m_enable_analog_limiter_button{ true };
 	bool m_enable_orientation_reset_button{ true };
+
+	// Skateboard settings
+	pad_skateboard_settings_dialog* m_skateboard_dialog = nullptr;
 
 	// Button Mapping
 	QButtonGroup* m_pad_buttons = nullptr;
@@ -239,6 +250,7 @@ private:
 	void ReactivateButtons();
 
 	void InitButtons();
+	void InitSkateboardDialog();
 	void ReloadButtons();
 
 	/** Repaints a stick deadzone preview label */
