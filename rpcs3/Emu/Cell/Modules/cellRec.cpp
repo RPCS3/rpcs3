@@ -236,6 +236,7 @@ struct rec_info
 	vm::ptr<CellRecCallback> cb{};
 	vm::ptr<void> cbUserData{};
 	atomic_t<rec_state> state = rec_state::closed;
+	atomic_t<bool> cb_pending = false; // The callback of a successful cellRecOpen/cellRecClose/cellRecStart/cellRecStop has not run yet
 	rec_param param{};
 
 	// These buffers are used by the game to inject one frame into the recording.
@@ -918,7 +919,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::closed)
+	if (rec.state != rec_state::closed || rec.cb_pending)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
@@ -940,28 +941,9 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 
 	const u32 mem_size = cellRecQueryMemSize(pParam);
 
-	if (container == SYS_MEMORY_CONTAINER_ID_INVALID)
+	if (container == SYS_MEMORY_CONTAINER_ID_INVALID && mem_size != 0)
 	{
-		if (mem_size != 0)
-		{
-			return CELL_REC_ERROR_INVALID_VALUE;
-		}
-	}
-	else
-	{
-		// NOTE: Most likely tries to allocate a complete container. But we use g_fxo instead.
-		// TODO: how much data do we actually need ?
-		ppu.state += cpu_flag::wait;
-
-		rec.video_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
-		rec.audio_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
-
-		ppu.check_state();
-
-		if (!rec.video_input_buffer || !rec.audio_input_buffer)
-		{
-			return CELL_REC_ERROR_OUT_OF_MEMORY;
-		}
+		return CELL_REC_ERROR_INVALID_VALUE;
 	}
 
 	switch (pParam->videoFmt)
@@ -1250,6 +1232,29 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 		return CELL_REC_ERROR_INVALID_VALUE;
 	}
 
+	if (container != SYS_MEMORY_CONTAINER_ID_INVALID)
+	{
+		// NOTE: Most likely tries to allocate a complete container. But we use g_fxo instead.
+		// TODO: how much data do we actually need ?
+		ppu.state += cpu_flag::wait;
+
+		rec.video_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
+		rec.audio_input_buffer = vm::cast(rec.video_input_buffer ? vm::alloc(mem_size, vm::main) : 0);
+
+		if (!rec.audio_input_buffer && rec.video_input_buffer)
+		{
+			vm::dealloc(rec.video_input_buffer.addr(), vm::main);
+			rec.video_input_buffer = vm::null;
+		}
+
+		ppu.check_state();
+
+		if (!rec.audio_input_buffer)
+		{
+			return CELL_REC_ERROR_OUT_OF_MEMORY;
+		}
+	}
+
 	cellRec.notice("cellRecOpen: Using parameters: %s", rec.param.to_string());
 
 	rec.cb = cb;
@@ -1301,9 +1306,12 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 	rec.encoder->set_audio_codec(rec.audio_codec_id, "");
 	rec.encoder->set_output_format(rec.output_format);
 
+	rec.cb_pending = true;
+
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
 		rec.state = rec_state::stopped;
+		rec.cb_pending = false;
 		rec.cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
@@ -1317,10 +1325,12 @@ error_code cellRecClose(s32 isDiscard)
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state == rec_state::closed)
+	if (rec.state == rec_state::closed || rec.cb_pending)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
+
+	rec.cb_pending = true;
 
 	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
 	{
@@ -1373,6 +1383,9 @@ error_code cellRecClose(s32 isDiscard)
 
 		ppu.check_state();
 
+		rec.video_input_buffer = vm::null;
+		rec.audio_input_buffer = vm::null;
+
 		// Release the video sink if it was used
 		if (rec.param.use_internal_video() || rec.param.use_internal_audio())
 		{
@@ -1397,6 +1410,7 @@ error_code cellRecClose(s32 isDiscard)
 		rec.audio_ringbuffer.clear();
 		rec.video_ringbuffer.clear();
 		rec.state = rec_state::closed;
+		rec.cb_pending = false;
 
 		if (is_valid_range)
 		{
@@ -1418,10 +1432,12 @@ error_code cellRecStop()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::started)
+	if (rec.state != rec_state::started || rec.cb_pending)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
+
+	rec.cb_pending = true;
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
@@ -1438,6 +1454,7 @@ error_code cellRecStop()
 
 		rec.recording_time_total = rec.encoder->get_timestamp_ms(rec.encoder->last_video_pts());
 		rec.state = rec_state::stopped;
+		rec.cb_pending = false;
 
 		rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
 		return CELL_OK;
@@ -1452,10 +1469,12 @@ error_code cellRecStart()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::stopped)
+	if (rec.state != rec_state::stopped || rec.cb_pending)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
+
+	rec.cb_pending = true;
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
@@ -1475,6 +1494,7 @@ error_code cellRecStart()
 			if (rec.sink && !video_provider.set_video_sink(rec.sink, recording_mode::cell))
 			{
 				cellRec.error("Failed to set video sink");
+				rec.cb_pending = false;
 				rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FATAL, rec.cbUserData);
 				return CELL_OK;
 			}
@@ -1497,11 +1517,13 @@ error_code cellRecStart()
 
 		if (rec.encoder->has_error)
 		{
+			rec.cb_pending = false;
 			rec.cb(ppu, CELL_REC_STATUS_ERR, CELL_REC_ERROR_FILE_OPEN, rec.cbUserData);
 		}
 		else
 		{
 			rec.state = rec_state::started;
+			rec.cb_pending = false;
 			rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
 		}
 		return CELL_OK;

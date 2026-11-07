@@ -822,10 +822,17 @@ error_code cellSailPlayerCreateDescriptor(ppu_thread& ppu, vm::ptr<CellSailPlaye
 	ppu.state += cpu_flag::wait;
 
 	u32 descriptorAddress = vm::alloc(sizeof(CellSailDescriptor), vm::main);
+
+	if (!descriptorAddress)
+	{
+		return CELL_SAIL_ERROR_MEMORY;
+	}
+
 	auto descriptor = vm::ptr<CellSailDescriptor>::make(descriptorAddress);
-	*ppDesc = descriptor;
 	descriptor->streamType = streamType;
 	descriptor->registered = false;
+	descriptor->buffer = 0;
+	descriptor->sp_ = 0;
 
 	//pSelf->descriptors = 0;
 	pSelf->repeatMode = 0;
@@ -841,10 +848,18 @@ error_code cellSailPlayerCreateDescriptor(ppu_thread& ppu, vm::ptr<CellSailPlaye
 				{
 					u32 size = ::size32(f);
 					u32 buffer = vm::alloc(size, vm::main);
+					u32 sp_ = buffer ? vm::alloc(sizeof(CellPamfReader), vm::main) : 0;
+
+					if (!sp_)
+					{
+						vm::dealloc(buffer, vm::main);
+						vm::dealloc(descriptorAddress, vm::main);
+						return CELL_SAIL_ERROR_MEMORY;
+					}
+
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
 					ensure(f.read(buf, size) == size);
-					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
 					[[maybe_unused]] u32 err = cellPamfReaderInitialize(sp, bufPtr, size, 0);
 
@@ -866,15 +881,25 @@ error_code cellSailPlayerCreateDescriptor(ppu_thread& ppu, vm::ptr<CellSailPlaye
 			cellSail.error("Unhandled stream type: %d", streamType);
 	}
 
+	*ppDesc = descriptor;
+
 	return CELL_OK;
 }
 
-error_code cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
+error_code cellSailPlayerDestroyDescriptor(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
 	cellSail.todo("cellSailPlayerAddDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
 
 	if (pDesc->registered)
 		return CELL_SAIL_ERROR_INVALID_STATE;
+
+	ppu.state += cpu_flag::wait;
+
+	vm::dealloc(pDesc->buffer, vm::main);
+	vm::dealloc(pDesc->sp_, vm::main);
+	vm::dealloc(pDesc.addr(), vm::main);
+
+	ppu.check_state();
 
 	return CELL_OK;
 }
