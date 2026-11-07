@@ -87,7 +87,7 @@ pad_thread::~pad_thread()
 
 void pad_thread::Init()
 {
-	std::lock_guard lock(pad::g_pad_mutex);
+	std::unique_lock lock(pad::g_pad_mutex);
 
 	// Reset mouse-based gyro state
 	m_mouse_gyro.set_enabled(g_cfg.io.mouse_based_gyro_enabled.get());
@@ -268,8 +268,13 @@ void pad_thread::Init()
 	input::set_mouse_and_keyboard(m_handlers.contains(pad_handler::keyboard) ? input::active_mouse_and_keyboard::pad : input::active_mouse_and_keyboard::emulated);
 
 #ifdef HAVE_OPENXR
+	const bool uses_openxr = m_handlers.contains(pad_handler::openxr);
+
+	// Stopping the OpenXR thread can take a while, so we must not block cellPad and cellGem in the meantime
+	lock.unlock();
+
 	// Only updated once all handlers exist, so that the OpenXR session keeps running while the handlers are recreated
-	openxr::set_consumer(openxr::consumer::pad_thread, m_handlers.contains(pad_handler::openxr));
+	openxr::set_consumer(openxr::consumer::pad_thread, uses_openxr);
 #endif
 }
 
