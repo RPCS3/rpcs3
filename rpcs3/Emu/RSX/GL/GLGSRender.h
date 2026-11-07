@@ -149,8 +149,10 @@ class GLGSRender : public rsx::render_backend, public ::rsx::reports::occlusion_
 	std::unique_ptr<gl::texture> m_sshot_tex;
 	std::unique_ptr<gl::upscaler> m_upscaler;
 
+#ifdef HAVE_OPENXR
 	// Shares presented frames with the OpenXR handler for headset rendering
 	gl::openxr_frame_share m_openxr_share;
+#endif
 
 	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 	int m_last_client_width = 0;  // Window size of the last presented frame

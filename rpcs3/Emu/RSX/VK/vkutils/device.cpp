@@ -585,11 +585,13 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		}
 
+#ifdef HAVE_OPENXR
 		if (pgpu->optional_features_support.external_memory_import)
 		{
 			// Imports the frames shared by the OpenXR handler
 			requested_extensions.push_back(openxr::shared_memory_extension_name);
 		}
+#endif
 
 		if (pgpu->optional_features_support.shader_stencil_export)
 		{

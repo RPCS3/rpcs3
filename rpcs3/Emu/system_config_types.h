@@ -145,7 +145,9 @@ enum class move_handler
 	fake,
 	mouse,
 	raw_mouse,
+#ifdef HAVE_OPENXR
 	openxr, // VR controllers tracked by an OpenXR runtime (see openxr_handler)
+#endif
 #ifdef HAVE_LIBEVDEV
 	gun
 #endif

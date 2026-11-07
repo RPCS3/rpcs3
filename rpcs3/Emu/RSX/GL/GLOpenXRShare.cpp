@@ -1,3 +1,5 @@
+#ifdef HAVE_OPENXR
+
 #include "stdafx.h"
 #include "GLOpenXRShare.h"
 #include "GLHelpers.h"
@@ -277,3 +279,5 @@ namespace gl
 		glFlush();
 	}
 }
+
+#endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "openxr_common.h"
 
 #include <array>
@@ -95,3 +97,5 @@ namespace openxr
 		XrCompositionLayerQuad m_layer{};
 	};
 }
+
+#endif

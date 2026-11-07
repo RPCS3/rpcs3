@@ -1,3 +1,5 @@
+#ifdef HAVE_OPENXR
+
 #include "stdafx.h"
 #include "VKOpenXRShare.h"
 #include "VKFramebuffer.h"
@@ -320,3 +322,5 @@ namespace vk
 		openxr::g_shared_frames.publish_slot(token.slot, token.generation, success);
 	}
 }
+
+#endif

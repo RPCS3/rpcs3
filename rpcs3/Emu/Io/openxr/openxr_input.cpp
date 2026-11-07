@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#ifdef HAVE_OPENXR
+
 #include "openxr_input.h"
 #include "openxr_common.h"
 
@@ -23,7 +26,6 @@ struct input_option
 		return get_hand_path(controller_index) + path_suffix;
 	}
 };
-
 
 static const std::map<action_id, input_option> generic_input_options =
 {
@@ -715,3 +717,5 @@ void input::pose_space::reset_motion()
 	has_last_velocity = false;
 }
 }
+
+#endif

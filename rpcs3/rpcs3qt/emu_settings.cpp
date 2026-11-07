@@ -1212,7 +1212,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case move_handler::fake: return tr("Fake", "Move handler");
 		case move_handler::mouse: return tr("Mouse", "Move handler");
 		case move_handler::raw_mouse: return tr("Raw Mouse", "Move handler");
+#ifdef HAVE_OPENXR
 		case move_handler::openxr: return tr("OpenXR (VR Controllers)", "Move handler");
+#endif
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun: return tr("Gun", "Gun handler");
 #endif

@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#ifdef HAVE_OPENXR
+
 #include "openxr_renderer.h"
 #include "openxr_frame_share_vk.h"
 
@@ -826,3 +829,5 @@ void placeholder_layer::destroy()
 }
 
 }
+
+#endif
