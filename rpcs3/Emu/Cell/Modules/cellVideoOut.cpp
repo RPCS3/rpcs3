@@ -285,6 +285,9 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
+template <typename F>
+static void for_each_available_mode(F&& add_mode);
+
 error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutDeviceInfo> info)
 {
 	cellSysutil.warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info=*0x%x)", videoOut, deviceIndex, info);
@@ -329,6 +332,16 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 		mode_count++;
 	};
 
+	for_each_available_mode(add_mode);
+
+	info->availableModeCount = mode_count;
+
+	return CELL_OK;
+}
+
+template <typename F>
+static void for_each_available_mode(F&& add_mode)
+{
 	switch (g_cfg.video.resolution.get())
 	{
 	case video_resolution::_1080p:
@@ -416,10 +429,6 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 			add_mode(CELL_VIDEO_OUT_RESOLUTION_640x720_SIMULVIEW_FRAME_PACKING, CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE, CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING, CELL_VIDEO_OUT_ASPECT_16_9);
 		}
 	}
-
-	info->availableModeCount = mode_count;
-
-	return CELL_OK;
 }
 
 error_code cellVideoOutGetNumberOfDevice(u32 videoOut)
@@ -470,7 +479,15 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 			}
 		}
 
-		return not_an_error(0);
+		// Any mode listed by cellVideoOutGetDeviceInfo is available (e.g. the 1080 sub-HD modes at 1080p)
+		bool available = false;
+
+		for_each_available_mode([&](u8 mode_resolution_id, u8 /*scanMode*/, u8 /*conversion*/, u8 mode_aspect)
+		{
+			available |= mode_resolution_id == resolutionId && (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || mode_aspect == aspect);
+		});
+
+		return not_an_error(available);
 	}
 
 	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
