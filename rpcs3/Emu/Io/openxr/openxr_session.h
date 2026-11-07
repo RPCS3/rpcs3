@@ -51,6 +51,7 @@ namespace openxr
 		void poll_events();
 		void handle_session_state_change(XrSessionState state);
 		bool run_frame(XrTime& predicted_time);
+		void handle_frame_error(const char* function, XrResult result);
 
 		XrInstance m_instance{XR_NULL_HANDLE};
 		XrSystemId m_system{};
@@ -61,6 +62,7 @@ namespace openxr
 		XrEnvironmentBlendMode m_blend_mode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 		bool m_session_running = false;
 		bool m_restart_required = false;
+		u32 m_failed_frames = 0; // Frames that failed in a row
 		std::chrono::steady_clock::time_point m_next_init_attempt{};
 
 		// The session is visible but has no input focus since this time (see handle_session_state_change)
@@ -78,6 +80,7 @@ namespace openxr
 		VkDevice m_vk_device{};
 		u32 m_vk_queue_family{};
 		bool m_rendering_supported = false; // The device supports headset rendering
+		bool m_semaphores_supported = false; // The device supports the semaphores needed by the OpenGL backend of RSX
 		bool m_rendering_requested = false; // Headset rendering is enabled in the config (see update_renderer)
 
 		void update_renderer();

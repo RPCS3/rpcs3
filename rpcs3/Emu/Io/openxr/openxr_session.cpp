@@ -15,6 +15,9 @@ namespace openxr
 // How long to wait before trying again if there is no runtime or headset
 static constexpr auto init_retry_delay = std::chrono::seconds(5);
 
+// How many frames in a row may fail before we recreate the session (we wait 10ms after each failure)
+static constexpr u32 max_failed_frames = 100;
+
 // The OpenXR version macros use C-style casts
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -299,6 +302,7 @@ void session_thread::shutdown()
 	m_unfocused_since = {};
 	m_unfocused_warning_shown = false;
 	m_restart_required = false;
+	m_failed_frames = 0;
 
 	// Destroy the OpenXR instance before our Vulkan objects.
 	// Runtimes may still release resources that belong to our Vulkan device when the instance is destroyed
@@ -327,6 +331,7 @@ void session_thread::shutdown()
 
 	m_vk_physical = VK_NULL_HANDLE;
 	m_rendering_supported = false;
+	m_semaphores_supported = false;
 }
 bool session_thread::create_instance()
 {
@@ -525,7 +530,7 @@ bool session_thread::create_vulkan_device()
 	// Headset rendering is optional. Input keeps working if the device doesn't support it.
 	std::vector<const char*> device_extensions;
 	// Rendering can be enabled at any time, so we always enable the extensions if they are supported.
-	m_rendering_supported = renderer::get_device_extensions(m_vk_physical, vk_api_version, device_extensions);
+	m_rendering_supported = renderer::get_device_extensions(m_vk_physical, vk_api_version, device_extensions, m_semaphores_supported);
 
 	vk_device_info.enabledExtensionCount = static_cast<u32>(device_extensions.size());
 	vk_device_info.ppEnabledExtensionNames = device_extensions.data();
@@ -695,17 +700,17 @@ bool session_thread::run_frame(XrTime& predicted_time)
 	XrFrameWaitInfo wait_info{XR_TYPE_FRAME_WAIT_INFO};
 	XrFrameState frame_state{XR_TYPE_FRAME_STATE};
 
-	if (XR_FAILED(xrWaitFrame(m_session, &wait_info, &frame_state)))
+	if (const XrResult result = xrWaitFrame(m_session, &wait_info, &frame_state); XR_FAILED(result))
 	{
-		openxr_log.error("xrWaitFrame failed");
+		handle_frame_error("xrWaitFrame", result);
 		return false;
 	}
 
 	XrFrameBeginInfo begin_info{XR_TYPE_FRAME_BEGIN_INFO};
 
-	if (XR_FAILED(xrBeginFrame(m_session, &begin_info)))
+	if (const XrResult result = xrBeginFrame(m_session, &begin_info); XR_FAILED(result))
 	{
-		openxr_log.error("xrBeginFrame failed");
+		handle_frame_error("xrBeginFrame", result);
 		return false;
 	}
 
@@ -725,14 +730,41 @@ bool session_thread::run_frame(XrTime& predicted_time)
 	end_info.layerCount = layer_count;
 	end_info.layers = layers.data();
 
-	if (XR_FAILED(xrEndFrame(m_session, &end_info)))
+	if (const XrResult result = xrEndFrame(m_session, &end_info); XR_FAILED(result))
 	{
-		openxr_log.error("xrEndFrame failed");
+		handle_frame_error("xrEndFrame", result);
 		return false;
+	}
+
+	if (m_failed_frames)
+	{
+		openxr_log.notice("Frames are running again after %d failed frames", m_failed_frames);
+		m_failed_frames = 0;
 	}
 
 	predicted_time = frame_state.predictedDisplayTime;
 	return true;
+}
+
+void session_thread::handle_frame_error(const char* function, XrResult result)
+{
+	// Only log the first failure in a row, since this can happen every frame
+	if (m_failed_frames++ == 0)
+	{
+		openxr_log.error("%s failed (result=%d)", function, static_cast<s32>(result));
+	}
+
+	// If the runtime died, it may not be able to send us an event about it
+	if (result == XR_ERROR_INSTANCE_LOST || result == XR_ERROR_SESSION_LOST || result == XR_ERROR_RUNTIME_FAILURE)
+	{
+		openxr_log.error("Lost the OpenXR runtime (result=%d)", static_cast<s32>(result));
+		m_restart_required = true;
+	}
+	else if (m_failed_frames >= max_failed_frames)
+	{
+		openxr_log.error("%d frames failed in a row. Recreating the OpenXR session.", m_failed_frames);
+		m_restart_required = true;
+	}
 }
 
 bool session_thread::update()
@@ -754,7 +786,13 @@ bool session_thread::update()
 
 	XrTime predicted_time{};
 	if (!run_frame(predicted_time))
+	{
+		if (m_restart_required)
+			return false;
+
+		thread_ctrl::wait_for(10'000);
 		return true;
+	}
 
 	// Sync the actions every frame while the session runs. Runtimes may wait for this before they give us input focus.
 	// Without focus, xrSyncActions returns XR_SESSION_NOT_FOCUSED (not an error) and all actions are inactive.
@@ -819,6 +857,7 @@ void session_thread::update_renderer()
 		.vk_device = m_vk_device,
 		.vk_queue_family = m_vk_queue_family,
 		.vk_queue_index = vk_queue_index,
+		.has_semaphores = m_semaphores_supported,
 	};
 
 	if (!m_renderer.init(ctx))
