@@ -316,6 +316,7 @@ public:
 		const QString sdl         = tr("The SDL handler supports a variety of controllers across different platforms.");
 
 		const QString orientation_reset  = tr("Resets the sensor orientation when pressed.<br>Toggle the checkbox to enable or disable the orientation feature.<br>Currently only used for PS Move interactions.");
+		const QString skateboard_buttons = tr("Assigns the infrared sensors and tilt values of the Tony Hawk RIDE skateboard.<br>Analog inputs like triggers or sticks are recommended, since the skateboard reports gradual values.<br>Only used if the device class is set to Skateboard.");
 		const QString analog_limiter     = tr("Applies the stick multipliers while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the analog limiter on button press instead.<br>If no button has been assigned, the stick multipliers are always applied.");
 		const QString pressure_intensity = tr("Controls the intensity of pressure sensitive buttons while this special button is pressed.<br>Enable \"Toggle\" if you want to toggle the intensity on button press instead.<br>Use the percentage to change how hard you want to press a button.");
 		const QString pressure_deadzone  = tr("Controls the deadzone of pressure sensitive buttons. It determines how far the button has to be pressed until it is recognized by the game. The resulting range will be projected onto the full button sensitivity range.");
