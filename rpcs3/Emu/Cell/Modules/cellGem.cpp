@@ -460,6 +460,9 @@ public:
 		switch (g_cfg.io.move)
 		{
 		case move_handler::real:
+#ifdef HAVE_OPENXR
+		case move_handler::openxr:
+#endif
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
@@ -467,7 +470,7 @@ public:
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				if (pad && pad->m_pad_handler == pad_handler::move && pad->is_connected() && !pad->is_copilot())
+				if (pad && pad->m_pad_handler == get_move_pad_handler() && pad->is_connected() && !pad->is_copilot())
 				{
 					connected_controllers++;
 
@@ -481,9 +484,6 @@ public:
 			break;
 		}
 		case move_handler::fake:
-#ifdef HAVE_OPENXR
-		case move_handler::openxr:
-#endif
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
@@ -491,11 +491,7 @@ public:
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				if (pad && pad->is_connected() && !pad->is_copilot() && (g_cfg.io.move == move_handler::fake
-#ifdef HAVE_OPENXR
-					|| pad->m_pad_handler == pad_handler::openxr
-#endif
-					))
+				if (pad && pad->is_connected() && !pad->is_copilot())
 				{
 					connected_controllers++;
 
