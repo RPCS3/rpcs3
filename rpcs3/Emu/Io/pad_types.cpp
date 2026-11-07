@@ -268,3 +268,20 @@ bool Pad::get_orientation_reset_button_active()
 
 	return m_buttons[m_orientation_reset_button_index].m_pressed;
 }
+
+void Pad::clear_buffer()
+{
+	// Set 'm_buffer_cleared' to force a resend of everything
+	// might as well also reset everything in our pad 'buffer' to nothing as well
+
+	m_buffer_cleared = true;
+	data = {};
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X] = 128;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y] = 128;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = 128;
+	data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = 128;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_X] = DEFAULT_MOTION_X;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Y] = DEFAULT_MOTION_Y;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_Z] = DEFAULT_MOTION_Z;
+	data.button[CELL_PAD_BTN_OFFSET_SENSOR_G] = DEFAULT_MOTION_G;
+}
