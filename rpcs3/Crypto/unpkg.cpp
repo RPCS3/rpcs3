@@ -858,14 +858,12 @@ package_install_result package_reader::check_target_app_version() const
 	};
 }
 
-bool package_reader::set_install_path()
+std::string package_reader::get_install_path() const
 {
 	if (!m_is_valid)
 	{
-		return false;
+		return {};
 	}
-
-	m_install_path.clear();
 
 	// Get full path
 	std::string dir = rpcs3::utils::get_hdd0_dir();
@@ -905,16 +903,34 @@ bool package_reader::set_install_path()
 		if (m_install_dir.empty() || leaves_directory(m_install_dir))
 		{
 			pkg_log.error("Invalid installation directory name '%s'", m_install_dir);
-			return false;
+			return {};
 		}
 
 		dir += vfs::escape(m_install_dir) + '/';
 	}
 
+	return dir;
+}
+
+bool package_reader::set_install_path()
+{
+	if (!m_is_valid)
+	{
+		return false;
+	}
+
+	m_install_path.clear();
+
+	std::string dir = get_install_path();
+	if (dir.empty())
+	{
+		return false;
+	}
+
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	m_was_null = !fs::is_dir(dir);
 
-	m_install_path = dir;
+	m_install_path = std::move(dir);
 	return true;
 }
 

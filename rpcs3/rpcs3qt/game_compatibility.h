@@ -103,6 +103,7 @@ namespace compat
 		bool is_valid = true;
 
 		QString path;        // File path
+		QString dest_dir;    // Destination path
 		QString title_id;    // TEST12345
 		QString title;       // Localized
 		QString changelog;   // Localized, may be empty
