@@ -571,11 +571,13 @@ void GLGSRender::on_shutdown()
 
 	m_upscaler.reset();
 
+#ifdef HAVE_OPENXR
 	// No more frames for the headset
 	openxr::set_consumer(openxr::consumer::headset_rendering, false);
 
 	// Images imported from the OpenXR handler
 	m_openxr_share.destroy();
+#endif
 
 	for (auto& flip_tex_image : m_flip_tex_color)
 	{

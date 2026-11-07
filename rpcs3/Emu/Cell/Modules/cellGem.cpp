@@ -109,16 +109,16 @@ static u32 pad_num(u32 gem_num)
 	return (CELL_PAD_MAX_PORT_NUM - 1) - gem_num;
 }
 
-// Whether the pad is an OpenXR controller that can be used as PS Move (see move_handler::openxr)
-static bool is_openxr_move_pad(const std::shared_ptr<Pad>& pad)
-{
-	return pad && pad->m_pad_handler == pad_handler::openxr && pad->is_connected() && !pad->is_copilot();
-}
-
 // The pad handler of the PS Move controllers (only for move_handler::real and move_handler::openxr)
 static pad_handler get_move_pad_handler()
 {
-	return g_cfg.io.move == move_handler::openxr ? pad_handler::openxr : pad_handler::move;
+#ifdef HAVE_OPENXR
+	if (g_cfg.io.move == move_handler::openxr)
+	{
+		return pad_handler::openxr;
+	}
+#endif
+	return pad_handler::move;
 }
 
 // **********************
@@ -326,7 +326,9 @@ public:
 		{
 		case move_handler::real:
 		case move_handler::fake:
+#ifdef HAVE_OPENXR
 		case move_handler::openxr:
+#endif
 		{
 			std::lock_guard lock(pad::g_pad_mutex);
 			const auto handler = pad::get_pad_thread(true);
@@ -467,7 +469,9 @@ public:
 			break;
 		}
 		case move_handler::fake:
+#ifdef HAVE_OPENXR
 		case move_handler::openxr:
+#endif
 		{
 			connected_controllers = 0;
 			std::lock_guard lock(pad::g_pad_mutex);
@@ -475,7 +479,11 @@ public:
 			for (u32 i = 0; i < std::min<u32>(attribute.max_connect, CELL_GEM_MAX_NUM); i++)
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
-				if (pad && pad->is_connected() && !pad->is_copilot() && (g_cfg.io.move == move_handler::fake || pad->m_pad_handler == pad_handler::openxr))
+				if (pad && pad->is_connected() && !pad->is_copilot() && (g_cfg.io.move == move_handler::fake
+#ifdef HAVE_OPENXR
+					|| pad->m_pad_handler == pad_handler::openxr
+#endif
+					))
 				{
 					connected_controllers++;
 
@@ -2033,7 +2041,11 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 	};
 
 	// OpenXR controllers are mapped like real PS Move controllers
-	if (g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::openxr)
+	if (g_cfg.io.move == move_handler::real
+#ifdef HAVE_OPENXR
+		|| g_cfg.io.move == move_handler::openxr
+#endif
+	)
 	{
 		::at32(g_cfg_gem_real.players, gem_num)->handle_input(pad, true, handle_input);
 	}
@@ -2138,6 +2150,7 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 	}
 }
 
+#ifdef HAVE_OPENXR
 // The OpenXR handler tracks the position itself. We project it onto a virtual PS Eye camera in front of the player.
 template <typename T>
 static void openxr_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, T& gem_state)
@@ -2160,7 +2173,7 @@ static void openxr_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	const auto handler = pad::get_pad_thread();
 	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
 
-	if (!is_openxr_move_pad(pad))
+	if (!pad || pad->m_pad_handler != pad_handler::openxr || !pad->is_connected() || pad->is_copilot())
 	{
 		return;
 	}
@@ -2239,6 +2252,7 @@ static void openxr_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		::at32(gem::positions, gem_num).set_position(image_x, image_y);
 	}
 }
+#endif
 
 static const std::unordered_map<gem_btn, u16> ext_btn_map =
 {
@@ -3336,9 +3350,11 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		case move_handler::fake:
 			ds3_pos_to_gem_state(gem_num, controller, gem_image_state);
 			break;
+#ifdef HAVE_OPENXR
 		case move_handler::openxr:
 			openxr_pos_to_gem_state(gem_num, controller, gem_image_state);
 			break;
+#endif
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 			mouse_pos_to_gem_state(gem_num, controller, gem_image_state);
@@ -3398,7 +3414,9 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		{
 		case move_handler::real:
 		case move_handler::fake:
+#ifdef HAVE_OPENXR
 		case move_handler::openxr:
+#endif
 		{
 			// Get temperature and sensor data
 			{
@@ -3615,6 +3633,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			ds3_pos_to_gem_state(gem_num, controller, gem_state);
 			break;
+#ifdef HAVE_OPENXR
 		case move_handler::openxr:
 		{
 			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
@@ -3628,6 +3647,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 			break;
 		}
+#endif
 		case move_handler::mouse:
 		case move_handler::raw_mouse:
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
@@ -4120,7 +4140,11 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	gem.controllers[gem_num].rumble = rumble;
 
 	// Set actual device rumble
-	if (g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::openxr)
+	if (g_cfg.io.move == move_handler::real
+#ifdef HAVE_OPENXR
+		|| g_cfg.io.move == move_handler::openxr
+#endif
+	)
 	{
 		const pad_handler type = get_move_pad_handler();
 
@@ -4167,7 +4191,11 @@ error_code cellGemSetYaw(u32 gem_num, v128 z_direction)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move != move_handler::real && g_cfg.io.move != move_handler::openxr)
+	if (g_cfg.io.move != move_handler::real
+#ifdef HAVE_OPENXR
+		&& g_cfg.io.move != move_handler::openxr
+#endif
+	)
 	{
 		return CELL_OK;
 	}

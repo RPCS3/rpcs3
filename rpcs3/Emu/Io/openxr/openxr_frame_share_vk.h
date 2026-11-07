@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 // The Vulkan specific part of openxr_frame_share.h, used by the OpenXR renderer and the Vulkan backend of RSX
 
 #include "openxr_frame_share.h"
@@ -45,3 +47,5 @@ namespace openxr
 
 	static_assert(vk_format_r8g8b8a8_unorm == VK_FORMAT_R8G8B8A8_UNORM);
 }
+
+#endif

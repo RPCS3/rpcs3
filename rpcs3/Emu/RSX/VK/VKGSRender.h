@@ -207,8 +207,10 @@ private:
 
 	std::unique_ptr<vk::image> m_overlay_recording_img;
 
+#ifdef HAVE_OPENXR
 	// Shares presented frames with the OpenXR handler for headset rendering
 	vk::openxr_frame_share m_openxr_share;
+#endif
 
 	// Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;

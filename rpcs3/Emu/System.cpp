@@ -4398,8 +4398,10 @@ bool Emulator::Quit(bool force_quit)
 
 void Emulator::CleanUp()
 {
+#ifdef HAVE_OPENXR
 	// The OpenXR thread is not part of the emulation, so it has to be stopped separately before the program exits
 	openxr::stop_thread();
+#endif
 
 	// Deinitialize object manager to prevent any hanging objects at program exit
 	g_fxo->clear();

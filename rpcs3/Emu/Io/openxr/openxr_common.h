@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 // Common includes and helpers of the OpenXR session, input and rendering code
 
 #ifndef HAVE_VULKAN
@@ -42,3 +44,5 @@ namespace openxr
 		return true;
 	}
 }
+
+#endif

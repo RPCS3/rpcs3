@@ -210,8 +210,10 @@ namespace vk
 		data_heap_manager::managed_heap_snapshot_t heap_snapshot;
 		u64 last_frame_sync_time = 0;
 
+#ifdef HAVE_OPENXR
 		// The OpenXR slot that this frame was copied to (see openxr_frame_share)
 		openxr_frame_share::frame_token openxr_frame{};
+#endif
 
 		void init(VkDevice dev)
 		{

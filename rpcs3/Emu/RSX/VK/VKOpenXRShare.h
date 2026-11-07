@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "VulkanAPI.h"
 #include "Utilities/geometry.h"
 #include "Emu/Io/openxr/openxr_frame_share.h"
@@ -69,3 +71,5 @@ namespace vk
 		bool m_import_failed = false; // Only try once per generation
 	};
 }
+
+#endif

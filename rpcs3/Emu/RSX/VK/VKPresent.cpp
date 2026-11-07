@@ -263,8 +263,10 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx)
 		swapchain_unavailable = true;
 	}
 
+#ifdef HAVE_OPENXR
 	// The GPU finished the copy for the headset, so the OpenXR handler can use it now
 	m_openxr_share.on_frame_finished(std::exchange(ctx->openxr_frame, {}), frame_finished);
+#endif
 
 	// Resource cleanup.
 	{
@@ -777,7 +779,6 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 #ifdef HAVE_OPENXR
 	// Keeps the OpenXR thread running while headset rendering is enabled. The setting can change at any time.
 	openxr::set_consumer(openxr::consumer::headset_rendering, openxr::is_rendering_enabled());
-#endif
 
 	// Copy the frame for the headset. It is handed over in frame_context_cleanup once the GPU finished it.
 	if (openxr::is_rendering_enabled() && image_to_flip)
@@ -797,6 +798,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 
 		m_current_frame->openxr_frame = m_openxr_share.present(*m_current_command_buffer, image_to_flip, image_to_flip2, eyes, draw_overlays);
 	}
+#endif
 
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
