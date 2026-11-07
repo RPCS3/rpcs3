@@ -197,6 +197,10 @@ if(HAS_MEMORY_BREAKPOINTS)
     target_compile_definitions(rpcs3_ui PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
 endif()
 
+if(TARGET 3rdparty_openxr)
+    target_sources(rpcs3_ui PRIVATE ../Input/openxr_handler.cpp)
+endif()
+
 if(WIN32)
     target_sources(rpcs3_ui PRIVATE "../windows.qrc")
     set_source_files_properties("../windows.qrc" PROPERTIES 
