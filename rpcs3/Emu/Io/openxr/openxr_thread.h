@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 // Interface to the OpenXR thread that does not depend on the OpenXR SDK.
 // Without OpenXR support the functions do nothing, so callers don't need to check HAVE_OPENXR.
 
@@ -13,7 +15,6 @@ namespace openxr
 		headset_rendering, // A renderer wants to show the game in the headset
 	};
 
-#ifdef HAVE_OPENXR
 	// Activates or deactivates a consumer. Can be called repeatedly with the same state.
 	// The thread is started for the first active consumer and stopped once there are none left.
 	// Stopping waits until the session was destroyed, so this can take a moment.
@@ -24,9 +25,6 @@ namespace openxr
 
 	// Returns true if an OpenXR runtime is installed
 	bool is_openxr_available();
-#else
-	inline void set_consumer(consumer, bool) {}
-	inline void stop_thread() {}
-	inline bool is_openxr_available() { return false; }
-#endif
 }
+
+#endif

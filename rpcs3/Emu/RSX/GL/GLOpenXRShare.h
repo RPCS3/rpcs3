@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "glutils/fbo.h"
 #include "Utilities/geometry.h"
 #include "Emu/Io/openxr/openxr_frame_share.h"
@@ -57,3 +59,5 @@ namespace gl
 		fbo m_blit_dst;
 	};
 }
+
+#endif

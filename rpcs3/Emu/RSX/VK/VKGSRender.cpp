@@ -471,7 +471,9 @@ VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept 
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
 	m_device->set_error_handler(vk::on_device_lost);
 
+#ifdef HAVE_OPENXR
 	m_openxr_share.create(m_device);
+#endif
 
 	vk::set_current_renderer(m_swapchain->get_device());
 	vk::init();
@@ -852,11 +854,13 @@ VKGSRender::~VKGSRender()
 	// Upscaler (references some global resources)
 	m_upscaler.reset();
 
+#ifdef HAVE_OPENXR
 	// No more frames for the headset
 	openxr::set_consumer(openxr::consumer::headset_rendering, false);
 
 	// Images imported from the OpenXR handler. The device is idle at this point.
 	m_openxr_share.destroy();
+#endif
 
 	// Heaps
 	vk::data_heap_manager::reset();

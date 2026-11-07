@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "openxr/openxr.h"
 
 #include "util/types.hpp"
@@ -151,3 +153,5 @@ namespace openxr
 		std::array<steady_clock::time_point, 2> m_last_vibration_time{};
 	};
 }
+
+#endif

@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Utilities/geometry.h"
@@ -197,3 +199,5 @@ namespace openxr
 	// Vulkan values needed by the OpenGL backend, which doesn't include the Vulkan headers (checked in openxr_frame_share_vk.h)
 	constexpr u32 vk_format_r8g8b8a8_unorm = 37; // VK_FORMAT_R8G8B8A8_UNORM, the only format OpenGL can import (GL_RGBA8)
 }
+
+#endif

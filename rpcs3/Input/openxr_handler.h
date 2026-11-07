@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/openxr/openxr_input.h"
 
@@ -84,3 +86,5 @@ private:
 	std::unordered_map<u32, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& buttons) override;
 };
+
+#endif
