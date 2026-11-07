@@ -754,7 +754,10 @@ bool session_thread::update()
 
 	XrTime predicted_time{};
 	if (!run_frame(predicted_time))
+	{
+		thread_ctrl::wait_for(10'000);
 		return true;
+	}
 
 	// Sync the actions every frame while the session runs. Runtimes may wait for this before they give us input focus.
 	// Without focus, xrSyncActions returns XR_SESSION_NOT_FOCUSED (not an error) and all actions are inactive.
