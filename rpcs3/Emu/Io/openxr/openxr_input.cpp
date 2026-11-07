@@ -4,6 +4,7 @@
 
 #include "openxr_input.h"
 #include "openxr_common.h"
+#include "Emu/Io/ps_move_data.h"
 
 namespace openxr
 {
@@ -642,19 +643,9 @@ bool input::sync_actions() const
 // Rotates a vector from the reference space into the frame of a pose with this orientation
 static XrVector3f rotate_into_pose(const XrQuaternionf& q, const XrVector3f& v)
 {
-	// Rotate by the conjugate: v' = v + w * t + cross(u, t) with u = -q.xyz and t = 2 * cross(u, v)
-	const XrVector3f u{ -q.x, -q.y, -q.z };
-	const XrVector3f t{
-		2.0f * (u.y * v.z - u.z * v.y),
-		2.0f * (u.z * v.x - u.x * v.z),
-		2.0f * (u.x * v.y - u.y * v.x)
-	};
-
-	return {
-		v.x + q.w * t.x + (u.y * t.z - u.z * t.y),
-		v.y + q.w * t.y + (u.z * t.x - u.x * t.z),
-		v.z + q.w * t.z + (u.x * t.y - u.y * t.x)
-	};
+	// Rotate by the conjugate of the orientation
+	const ps_move_data::vect<3> result = ps_move_data::rotate_vector(ps_move_data::vect<4>({ -q.x, -q.y, -q.z, q.w }), ps_move_data::vect<3>({ v.x, v.y, v.z }));
+	return { result.x(), result.y(), result.z() };
 }
 
 void input::pose_space::update_motion(pose_state& state, const XrSpaceVelocity& velocity, XrTime time)
