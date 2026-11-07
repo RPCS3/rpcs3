@@ -239,7 +239,9 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::get_handler(pad_handler type)
 	case pad_handler::null:
 	case pad_handler::keyboard:
 	case pad_handler::move:
+#ifdef HAVE_OPENXR
 	case pad_handler::openxr:
+#endif
 		// Makes no sense to use this if we are in the GUI anyway
 		return nullptr;
 	case pad_handler::ds3:

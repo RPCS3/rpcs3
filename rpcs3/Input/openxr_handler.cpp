@@ -1,3 +1,5 @@
+#ifdef HAVE_OPENXR
+
 #include "stdafx.h"
 #include "openxr_handler.h"
 #include "Emu/Io/openxr/openxr_thread.h"
@@ -476,3 +478,5 @@ pad_preview_values openxr_handler::get_preview_values(const std::unordered_map<u
 		get(right_hand, key_id::stick_up) - get(right_hand, key_id::stick_down)
 	};
 }
+
+#endif

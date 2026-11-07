@@ -1,5 +1,7 @@
 #pragma once
 
+#ifdef HAVE_OPENXR
+
 #include "openxr_common.h"
 #include "openxr_input.h"
 #include "openxr_renderer.h"
@@ -84,3 +86,5 @@ namespace openxr
 		placeholder_layer m_placeholder;
 	};
 }
+
+#endif

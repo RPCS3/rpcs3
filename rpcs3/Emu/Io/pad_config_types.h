@@ -11,7 +11,9 @@ enum class pad_handler
 	dualsense,
 	skateboard,
 	move,
+#ifdef HAVE_OPENXR
 	openxr,
+#endif
 #ifdef _WIN32
 	xinput,
 	mm,

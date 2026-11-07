@@ -1,4 +1,7 @@
 #include "stdafx.h"
+
+#ifdef HAVE_OPENXR
+
 #include "openxr_session.h"
 #include "openxr_thread.h"
 #include "openxr_frame_share.h"
@@ -841,3 +844,5 @@ bool session_thread::create_reference_space()
 }
 
 }
+
+#endif
