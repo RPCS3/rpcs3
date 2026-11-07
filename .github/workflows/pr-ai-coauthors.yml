@@ -1,0 +1,52 @@
+name: Check Co-authors
+
+# Commit messages must be written by the PR author, who has to be able to discuss the change with developers.
+# AI assistance is credited in the PR description instead (which earns the label from pr-labels.yml)
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - edited # A base branch change alters the commit list
+      - synchronize
+
+concurrency:
+  group: pr-coauthors-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  Check_Coauthors:
+    name: Check AI co-authors
+    runs-on: ubuntu-latest
+    if: github.repository == 'RPCS3/rpcs3'
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Look for AI agents in commits
+        uses: actions/github-script@v9
+        with:
+          retries: 3
+          script: |
+            // Trailers, Claude Code session links and the author identity. Keep in sync with AI_COMMIT in pr-labels.yml
+            const AI = /^\s*((author|co-authored-by):.*\b(claude|anthropic|copilot|cursor|openai|chatgpt|gemini|codex|aider|devin-ai|google-labs-jules|amazon-q)\b|claude-session:).*$/im;
+
+            const commits = await github.paginate(github.rest.pulls.listCommits, {...context.repo, pull_number: context.issue.number, per_page: 100});
+            const found = commits.flatMap(c => {
+              const m = `Author: ${c.commit.author?.name} <${c.commit.author?.email}>\n${c.commit.message}`.match(AI);
+              return m ? [`${c.sha.slice(0, 9)}: ${m[0].trim()}`] : [];
+            });
+
+            if (found.length === 0) {
+              core.info(`No AI agents in ${commits.length} commit(s).`);
+              return;
+            }
+
+            // One annotation carries the whole list. GitHub keeps at most 10 error annotations per step and
+            // drops the rest silently, so an annotation per commit would push this message out.
+            core.setFailed([
+              'Commits must not be AI-generated. Write the commit messages yourself,',
+              'and credit any AI assistance in the PR description instead.',
+              `AI-generated commits found (${found.length} of ${commits.length}):`,
+              ...found.map(x => `  ${x}`),
+            ].join('\n'));

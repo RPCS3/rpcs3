@@ -24,7 +24,16 @@ jobs:
             const AREAS = [
               'Build and CI', 'CLI', 'Filesystem', 'GUI', 'Input', 'ISO', 'Localization', 'Overlay', 'Render: Vulkan', 'RSX', 'Savestates',
             ];
-            const AI = /^\s*co-authored-by:.*\b(claude|anthropic|copilot|cursor|openai|chatgpt|gemini|codex)\b|generated with \[claude code\]/im;
+            // How agents sign commits: trailers, Claude Code session links and the author identity. Keep in sync with pr-ai-coauthors.yml
+            const AI_COMMIT = /^\s*((author|co-authored-by):.*\b(claude|anthropic|copilot|cursor|openai|chatgpt|gemini|codex|aider|devin-ai|google-labs-jules|amazon-q)\b|claude-session:).*$/im;
+            // AI credit in the description, written in any form the AI Use section of CONTRIBUTING.md allows
+            const AI_CREDIT = new RegExp([
+              String.raw`\b(claude|anthropic|openai|chatgpt|copilot|codex|gemini|aider|deepseek|qwen|opus|sonnet|haiku|fable|llms?)\b`,
+              String.raw`\bgpt-?\d|\bcursor (ai|agent|ide|editor)\b|\bcursor\.com\b|\bdevin([.-]ai| ai)\b|\bgoogle-labs-jules\b|\bjules\.google\b|\bamazon[- ]q\b`,
+              String.raw`\bai[- ](generated|assisted|assistance|assistants?|written|authored|disclosure|disclaimer|involvement|usage|use|agents?|tools?|models?|coding|helped)\b`,
+              String.raw`\b(generated|written|authored|assisted|drafted) (by|with|using) (an? |the )?(ai|llms?)\b`,
+              String.raw`\bai (was|were|is) used\b|\b(i|we) used (an? )?(ai|llms?)\b|\bwith the help of (an? )?(ai|llms?)\b`,
+            ].join('|'), 'i');
 
             const {repository: {pullRequest: pull}} = await github.graphql(`
               query($owner: String!, $repo: String!, $number: Int!) {
@@ -33,7 +42,7 @@ jobs:
                     labels(first: 100) { nodes { name } }
                     closingIssuesReferences(first: 50) { nodes { labels(first: 100) { nodes { name } } } }
                     timelineItems(itemTypes: [UNLABELED_EVENT], last: 100) { nodes { ... on UnlabeledEvent { label { name } } } }
-                    commits(last: 100) { nodes { commit { message } } }
+                    commits(last: 100) { nodes { commit { message author { name email } } } }
                   }
                 }
               }`, {...context.repo, number: context.issue.number});
@@ -42,7 +51,10 @@ jobs:
             const removed = pull.timelineItems.nodes.map(x => x.label.name);
             const fromTitle = /^(\[TESTERS NEEDED\]\s*)?rsx\b/i.test(context.payload.pull_request.title) ? ['RSX'] : [];
             const fromIssues = pull.closingIssuesReferences.nodes.flatMap(i => i.labels.nodes.map(x => x.name));
-            const fromAI = [context.payload.pull_request.body ?? '', ...pull.commits.nodes.map(x => x.commit.message)].some(x => AI.test(x)) ? ['Beep bop 🤖'] : [];
+            // HTML comments are skipped so instructions left in the description template do not count as credit
+            const description = (context.payload.pull_request.body ?? '').replace(/<!--[\s\S]*?-->/g, '');
+            const commits = pull.commits.nodes.map(({commit: c}) => `Author: ${c.author?.name} <${c.author?.email}>\n${c.message}`);
+            const fromAI = (AI_CREDIT.test(description) || commits.some(x => AI_COMMIT.test(x))) ? ['Beep bop 🤖'] : [];
             const current = pull.labels.nodes.map(x => x.name);
             const areas = current.some(name => AREAS.includes(name)) ? [] : [...fromTitle, ...fromIssues].filter(name => AREAS.includes(name));
             const labels = [...new Set([...areas, ...fromAI])]
