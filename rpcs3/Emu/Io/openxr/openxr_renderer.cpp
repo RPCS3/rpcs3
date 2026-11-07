@@ -84,8 +84,10 @@ namespace
 	}
 }
 
-bool renderer::get_device_extensions(VkPhysicalDevice physical_device, u32 vk_api_version, std::vector<const char*>& extensions)
+bool renderer::get_device_extensions(VkPhysicalDevice physical_device, u32 vk_api_version, std::vector<const char*>& extensions, bool& has_semaphores)
 {
+	has_semaphores = false;
+
 	// We share images with RSX, which requires exportable memory (core in Vulkan 1.1 except for the platform handles)
 	if (vk_api_version < VK_API_VERSION_1_1)
 	{
@@ -119,6 +121,7 @@ bool renderer::get_device_extensions(VkPhysicalDevice physical_device, u32 vk_ap
 	if (is_supported(shared_semaphore_extension_name))
 	{
 		extensions.push_back(shared_semaphore_extension_name);
+		has_semaphores = true;
 	}
 	else
 	{
@@ -375,7 +378,8 @@ bool renderer::create_shared_images()
 		return true;
 	};
 
-	bool has_semaphores = !!get_semaphore_handle;
+	// The function pointer alone is not enough, since the extension has to be enabled as well
+	bool has_semaphores = m_ctx.has_semaphores && get_semaphore_handle;
 
 	VkPhysicalDeviceMemoryProperties memory_properties{};
 	vkGetPhysicalDeviceMemoryProperties(m_ctx.vk_physical, &memory_properties);
@@ -667,11 +671,20 @@ void renderer::copy_latest_frame()
 
 	for (u32 i = 0; i < openxr::shared_frames::slot_count; i++)
 	{
-		if (taken[i])
+		if (!taken[i])
 		{
-			shared.slots[i].semaphore_signaled = false;
-			shared.slots[i].state = openxr::slot_state::free;
+			continue;
 		}
+
+		if (!submitted && shared.slots[i].semaphore_signaled)
+		{
+			// Nothing waited for the semaphore, so OpenGL must not signal it again. We try again with the next frame.
+			shared.slots[i].state = openxr::slot_state::ready;
+			continue;
+		}
+
+		shared.slots[i].semaphore_signaled = false;
+		shared.slots[i].state = openxr::slot_state::free;
 	}
 
 	if (submitted && released)
