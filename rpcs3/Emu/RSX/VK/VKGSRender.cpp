@@ -858,7 +858,14 @@ VKGSRender::~VKGSRender()
 	// No more frames for the headset
 	openxr::set_consumer(openxr::consumer::headset_rendering, false);
 
-	// Images imported from the OpenXR handler. The device is idle at this point.
+	// The device is idle, so the copies of the frames that were not cleaned up yet are finished.
+	// Hand them to the OpenXR handler, so that their slots are freed.
+	for (auto& ctx : m_frame_context_storage)
+	{
+		m_openxr_share.on_frame_finished(std::exchange(ctx.openxr_frame, {}), true);
+	}
+
+	// Images imported from the OpenXR handler
 	m_openxr_share.destroy();
 #endif
 

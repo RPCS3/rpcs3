@@ -18,6 +18,22 @@ namespace gl
 {
 	void openxr_frame_share::destroy()
 	{
+		// Hand the copies in flight to the OpenXR handler, so that their slots are freed and their semaphores are waited for
+		for (u32 i = 0; i < m_slots.size(); i++)
+		{
+			imported_slot& slot = m_slots[i];
+			if (!slot.fence)
+			{
+				continue;
+			}
+
+			const GLenum status = glClientWaitSync(slot.fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000); // 1 second
+			glDeleteSync(slot.fence);
+			slot.fence = nullptr;
+
+			openxr::g_shared_frames.publish_slot(static_cast<s32>(i), m_generation, status == GL_ALREADY_SIGNALED || status == GL_CONDITION_SATISFIED);
+		}
+
 		destroy_slots();
 		m_blit_src.remove();
 		m_blit_dst.remove();
@@ -42,7 +58,12 @@ namespace gl
 		for (imported_slot& slot : m_slots)
 		{
 			if (slot.fence) glDeleteSync(slot.fence);
-			if (slot.texture) glDeleteTextures(1, &slot.texture);
+			if (slot.texture)
+			{
+				// The state tracker has to forget the texture, since OpenGL reuses its name
+				gl::get_command_context()->unbind_texture(GL_TEXTURE_2D, slot.texture);
+				glDeleteTextures(1, &slot.texture);
+			}
 			if (slot.memory) glDeleteMemoryObjectsEXT(1, &slot.memory);
 			if (slot.semaphore) glDeleteSemaphoresEXT(1, &slot.semaphore);
 		}
