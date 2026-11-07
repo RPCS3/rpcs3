@@ -67,20 +67,29 @@
         -DCMAKE_C_COMPILER="cl.exe" ^
         -DCMAKE_BUILD_TYPE="Debug" ^
         -DCMAKE_INSTALL_PREFIX="./Debug" ^
-        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebugDLL ^
         -DCMAKE_SYSTEM_VERSION=10.0 ^
         -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=$(SolutionDir)3rdparty\OpenXR\force_mt.cmake ^
         "$(SolutionDir)3rdparty\OpenXR\OpenXR-SDK"
     </CmakeDebugCLI>
-    <CmakeCopyCLI>
+    <CmakeCopyReleaseCLI>
       echo Copying..
       copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\src\loader\openxr_loader.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)"
-    </CmakeCopyCLI>
-    <CmakeCleanCLI>
+    </CmakeCopyReleaseCLI>
+    <CmakeCleanReleaseCLI>
       echo Cleaning..
       del "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\openxr_loader.lib"
       rmdir /s /q "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
-    </CmakeCleanCLI>
+    </CmakeCleanReleaseCLI>
+    <CmakeCopyDebugCLI>
+      echo Copying..
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\src\loader\openxr_loaderd.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)"
+    </CmakeCopyDebugCLI>
+    <CmakeCleanDebugCLI>
+      echo Cleaning..
+      del "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\openxr_loaderd.lib"
+      rmdir /s /q "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+    </CmakeCleanDebugCLI>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
@@ -88,16 +97,16 @@
     <NMakeBuildCommandLine>
       $(CmakeDebugCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyDebugCLI)
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
-      $(CmakeCleanCLI)
+      $(CmakeCleanDebugCLI)
       $(CmakeDebugCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyDebugCLI)
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
-      $(CmakeCleanCLI)
+      $(CmakeCleanDebugCLI)
     </NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -106,16 +115,16 @@
     <NMakeBuildCommandLine>
       $(CmakeReleaseCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyReleaseCLI)
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
-      $(CmakeCleanCLI)
+      $(CmakeCleanReleaseCLI)
       $(CmakeReleaseCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyReleaseCLI)
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
-      $(CmakeCleanCLI)
+      $(CmakeCleanReleaseCLI)
     </NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>

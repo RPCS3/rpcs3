@@ -62,7 +62,7 @@
         -DCMAKE_C_COMPILER="cl.exe" ^
         %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_BUILD_TYPE="Debug" ^
-        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebugDLL ^
         -DGLSLANG_TESTS=OFF ^
         -DENABLE_GLSLANG_BINARIES=OFF ^
         -DBUILD_EXTERNAL=OFF ^
