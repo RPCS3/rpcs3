@@ -221,8 +221,7 @@ enum
 	TITLEID_SFO_ENTRY_SIZE = 16, // This is the true length on PS3 (TODO: Fix in more places)
 };
 
-template <u32 ReservedSize>
-struct game_system_file_param
+struct CellGameDataSystemFileParam
 {
 	char title[CELL_GAMEDATA_SYSP_TITLE_SIZE];
 	char titleLang[CELL_GAMEDATA_SYSP_LANGUAGE_NUM][CELL_GAMEDATA_SYSP_TITLE_SIZE]; // 0x80
@@ -232,13 +231,10 @@ struct game_system_file_param
 	char reserved1[2];
 	be_t<u32> parentalLevel;
 	be_t<u32> attribute;
-	be_t<u32> resolution; // cellHddGameCheck member: GD doesn't have this value
-	be_t<u32> soundFormat; // cellHddGameCheck member: GD doesn't have this value
-	char reserved2[ReservedSize];
+	char reserved2[256];
 };
 
-using CellGameDataSystemFileParam = game_system_file_param<248>;
-using CellHddGameSystemFileParam = game_system_file_param<256>;
+CHECK_SIZE(CellGameDataSystemFileParam, 0xb9c);
 
 struct CellDiscGameSystemFileParam
 {
@@ -248,8 +244,7 @@ struct CellDiscGameSystemFileParam
 	char reserved1[16];
 };
 
-template <typename SystemFileParam>
-struct game_stat_get
+struct CellGameDataStatGet
 {
 	be_t<s32> hddFreeSizeKB;
 	be_t<u32> isNewData;
@@ -259,26 +254,19 @@ struct game_stat_get
 	be_t<s64> st_atime_; // 0x848
 	be_t<s64> st_mtime_; // 0x850
 	be_t<s64> st_ctime_; // 0x858
-	SystemFileParam getParam; // 0x860
-	be_t<s32> sizeKB;
+	CellGameDataSystemFileParam getParam; // 0x860
+	be_t<s32> sizeKB; // 0x13FC
 	be_t<s32> sysSizeKB;
 	char reserved1[68];
 };
 
-template <typename SystemFileParam>
-struct game_stat_set
+CHECK_SIZE(CellGameDataStatGet, 0x1448);
+
+struct CellGameDataStatSet
 {
-	vm::bptr<SystemFileParam> setParam;
+	vm::bptr<CellGameDataSystemFileParam> setParam;
 	be_t<u32> reserved;
 };
-
-using CellGameDataStatGet = game_stat_get<CellGameDataSystemFileParam>;
-using CellGameDataStatSet = game_stat_set<CellGameDataSystemFileParam>;
-using CellHddGameStatGet = game_stat_get<CellHddGameSystemFileParam>;
-using CellHddGameStatSet = game_stat_set<CellHddGameSystemFileParam>;
-
-CHECK_SIZE(CellGameDataStatGet, 0x1448);
-CHECK_SIZE(CellHddGameStatGet, 0x1450);
 
 typedef void(CellGameDataStatCallback)(vm::ptr<CellGameDataCBResult> cbResult, vm::ptr<CellGameDataStatGet> get, vm::ptr<CellGameDataStatSet> set);
 
@@ -326,6 +314,47 @@ enum
 
 	// Stat Get
 	CELL_HDDGAME_SIZEKB_NOTCALC        = -1,
+};
+
+struct CellHddGameSystemFileParam
+{
+	char title[CELL_HDDGAME_SYSP_TITLE_SIZE];
+	char titleLang[CELL_HDDGAME_SYSP_LANGUAGE_NUM][CELL_HDDGAME_SYSP_TITLE_SIZE]; // 0x80
+	char titleId[CELL_HDDGAME_SYSP_TITLEID_SIZE]; // 0xA80
+	char reserved0[2];
+	char dataVersion[CELL_HDDGAME_SYSP_VERSION_SIZE];
+	char reserved1[2];
+	be_t<u32> parentalLevel;
+	be_t<u32> attribute;
+	be_t<u32> resolution; // 0xA9C
+	be_t<u32> soundFormat;
+	char reserved2[256];
+};
+
+CHECK_SIZE(CellHddGameSystemFileParam, 0xba4);
+
+struct CellHddGameStatGet
+{
+	be_t<s32> hddFreeSizeKB;
+	be_t<u32> isNewData;
+	char contentInfoPath[CELL_HDDGAME_PATH_MAX]; // 0x8
+	char gameDataPath[CELL_HDDGAME_PATH_MAX]; // 0x427
+	char reserved0[2]; // 0x846
+	be_t<s64> st_atime_; // 0x848
+	be_t<s64> st_mtime_; // 0x850
+	be_t<s64> st_ctime_; // 0x858
+	CellHddGameSystemFileParam getParam; // 0x860
+	be_t<s32> sizeKB; // 0x1404
+	be_t<s32> sysSizeKB;
+	char reserved1[68];
+};
+
+CHECK_SIZE(CellHddGameStatGet, 0x1450);
+
+struct CellHddGameStatSet
+{
+	vm::bptr<CellHddGameSystemFileParam> setParam;
+	be_t<u32> reserved;
 };
 
 using CellHddGameCBResult = CellGameDataCBResult;
