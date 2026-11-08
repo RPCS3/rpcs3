@@ -403,6 +403,8 @@ namespace rsx
 		m_ctx = m_contexts.at(bound_id).get();
 		load_fifo_channel(m_ctx->fifo);
 		restore_fifo_position = m_ctx->fifo.get;
+
+
 	}
 
 	context* thread::find_context(u32 id)
@@ -426,6 +428,8 @@ namespace rsx
 
 	void thread::save_context(utils::serial& ar, context& ctx)
 	{
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+
 		ar(*ctx.register_state);
 		for (auto& v : ctx.draw_processor.m_vertex_push_buffers)
 		{
@@ -443,6 +447,11 @@ namespace rsx
 		if (!ar.is_writing())
 		{
 			channel.ctrl = channel.dma_address ? vm::_ptr<RsxDmaControl>(channel.dma_address) : nullptr;
+		}
+
+		if (version >= 9)
+		{
+			ar(ctx.fw.is_fifo_rsx_local);
 		}
 	}
 
