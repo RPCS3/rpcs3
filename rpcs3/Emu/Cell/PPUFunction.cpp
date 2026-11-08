@@ -1964,6 +1964,7 @@ std::vector<ppu_intrp_func_t>& ppu_function_manager::access(bool ghc)
 		{
 			ppu.cia = vm::get_addr(this_op);
 			ppu_log.error("Unregistered function called (LR=0x%x)", ppu.lr);
+			ppu_log.error("PPU callstack: %s", ppu.dump_callstack());
 			ppu.gpr[3] = 0;
 			ppu.cia = static_cast<u32>(ppu.lr) & ~3;
 		},
