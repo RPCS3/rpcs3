@@ -108,12 +108,14 @@ namespace rsx
 		{
 		public:
 			home_menu_checkbox(cfg::_bool* setting, const std::string& text);
+			home_menu_checkbox(std::function<bool()> getter, const std::string& text);
 
 			void set_size(u16 w, u16 h = element_height) override;
 			compiled_resource& get_compiled() override;
 
 		private:
 			checkbox* m_checkbox = nullptr;
+			std::function<bool()> m_getter;
 		};
 
 		template <typename T>

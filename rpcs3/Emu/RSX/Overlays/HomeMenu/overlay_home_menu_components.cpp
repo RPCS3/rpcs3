@@ -83,6 +83,13 @@ namespace rsx
 			: home_menu_setting(setting, text)
 		{}
 
+		home_menu_checkbox::home_menu_checkbox(std::function<bool()> getter, const std::string& text)
+			: home_menu_setting(nullptr, text)
+			, m_getter(std::move(getter))
+		{
+			m_last_value = m_getter();
+		}
+
 		void home_menu_checkbox::set_size(u16 w, u16 h)
 		{
 			set_reserved_width(menu_checkbox_size * 2 + menu_entry_margin);
@@ -96,7 +103,18 @@ namespace rsx
 
 		compiled_resource& home_menu_checkbox::get_compiled()
 		{
-			update_value();
+			if (m_getter)
+			{
+				if (const bool new_value = m_getter(); new_value != m_last_value)
+				{
+					m_last_value = new_value;
+					m_is_compiled = false;
+				}
+			}
+			else
+			{
+				update_value();
+			}
 
 			if (is_compiled())
 			{

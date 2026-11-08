@@ -3,6 +3,7 @@
 #include "overlay_home_menu_components.h"
 #include "overlay_home_menu_settings.h"
 #include "overlay_home_menu_savestate.h"
+#include "overlay_home_menu_voice_chat.h"
 #include "Emu/RSX/Overlays/FriendsList/overlay_friends_list_dialog.h"
 #include "Emu/RSX/Overlays/Trophies/overlay_trophy_list_dialog.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
@@ -56,10 +57,12 @@ namespace rsx
 					});
 					return page_navigation::stay;
 				});
+
+				add_page(home_menu::fa_icon::audio, std::make_shared<home_menu_voice_chat>(x, y, width, height, use_separators, this));
 			}
 			else
 			{
-				rsx_log.notice("Friends list hidden in home menu. RPCN is not configured.");
+				rsx_log.notice("Friends list and voice chat hidden in home menu. RPCN is not configured.");
 			}
 
 			// get current trophy name for trophy list overlay
