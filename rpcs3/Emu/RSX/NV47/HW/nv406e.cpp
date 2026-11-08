@@ -52,6 +52,9 @@ namespace rsx
 			else
 			{
 				//RSX(ctx)->flush_fifo();
+
+				// The application may wait on GET reaching PUT while the puller is blocked
+				RSX(ctx)->fifo_ctrl->sync_get_for_wait();
 			}
 
 			u64 start = get_system_time();

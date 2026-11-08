@@ -36,13 +36,15 @@ namespace rsx
 
 		void FIFO_control::sync_get() const
 		{
-			if (m_fifo_pos - m_cache_addr <= m_cache_size)
+			if (m_fifo_pos - m_cache_addr <= m_cache_size && !m_cache_ends_at_put)
 			{
 				// Atomic FIFO only path
 				m_ctrl->get.release(m_cache_addr + m_cache_size);
 			}
 			else
 			{
+				// The application may reuse the memory before GET as soon as it moves PUT, including the command
+				// it wrote at the old PUT, which the cache does not hold. GET stays at the execution position.
 				m_ctrl->get.release(m_fifo_pos);
 			}
 		}
@@ -134,6 +136,7 @@ namespace rsx
 					 	// No GET update here
 					 	m_cache_addr = addr;
 					 	m_cache_size = 4;
+					 	m_cache_ends_at_put = false;
 					 	return {true, cmd};
 					 }
 				}
@@ -268,6 +271,9 @@ namespace rsx
 					}
 				}
 
+				// PUT as seen by this fetch, a later move does not make the next word available in the cache
+				m_cache_ends_at_put = m_cache_addr + m_cache_size == put;
+
 				// Update FIFO GET
 				sync_get();
 				atomic_fence_seq_cst();
@@ -296,6 +302,17 @@ namespace rsx
 			// Update ctrl registers
 			m_ctrl->get.release(m_fifo_pos = get);
 			m_remaining_commands = 0;
+		}
+
+		void FIFO_control::sync_get_for_wait()
+		{
+			if (m_cache_ends_at_put && m_fifo_pos - m_cache_addr <= m_cache_size)
+			{
+				// GET reaches the end of the cache, as sync_get does when the cache does not end at PUT,
+				// and stays there until the next fetch so that it never moves backwards
+				m_ctrl->get.release(m_cache_addr + m_cache_size);
+				m_cache_ends_at_put = false;
+			}
 		}
 
 		std::span<const u32> FIFO_control::get_current_arg_ptr(u32 length_in_words) const
@@ -391,6 +408,12 @@ namespace rsx
 				return true;
 			}
 
+			if (std::exchange(m_packet_aborted, false))
+			{
+				// The position already points at the next command to execute, there is no argument to step over
+				return false;
+			}
+
 			m_fifo_pos += 4;
 			return false;
 		}
@@ -416,10 +439,13 @@ namespace rsx
 		void FIFO_control::abort()
 		{
 			m_remaining_commands = 0;
+			m_packet_aborted = true;
 		}
 
 		void FIFO_control::read(register_pair& data)
 		{
+			m_packet_aborted = false;
+
 			if (m_remaining_commands)
 			{
 				// Previous block aborted to wait for PUT pointer

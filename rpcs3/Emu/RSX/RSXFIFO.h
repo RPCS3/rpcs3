@@ -163,8 +163,12 @@ namespace rsx
 			u32 m_cmd = ~0u;
 			u32 m_next_cmd_entry = ~0u;
 
+			// The current packet was dropped and the position reset (e.g. FIFO recovery from a method handler)
+			bool m_packet_aborted = false;
+
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;
+			bool m_cache_ends_at_put = false; // The last fetch stopped at PUT (Atomic FIFO)
 			alignas(64) std::byte m_cache[8][128];
 
 		public:
@@ -179,6 +183,8 @@ namespace rsx
 			u32 get_pos() const { return m_fifo_pos; }
 			u32 last_cmd() const { return m_cmd; }
 			void sync_get() const;
+			// GET when the puller blocks on a semaphore acquire: the end of the words already fetched
+			void sync_get_for_wait();
 			std::span<const u32> get_current_arg_ptr(u32 length_in_words) const;
 			u32 get_remaining_args_count() const { return m_remaining_commands; }
 			void restore_state(u32 cmd, u32 count, u32 position);
