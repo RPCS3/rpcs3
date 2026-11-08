@@ -42,7 +42,7 @@ static bool has_waitv()
 #ifndef ANDROID
 		// FIXME: it produces SIGSYS signal
 		syscall(SYS_futex_waitv, 0, 0, 0, 0, 0);
-		return errno != ENOSYS;
+		return errno != ENOSYS && errno != EPERM;
 #endif
 		return false;
 	}();
