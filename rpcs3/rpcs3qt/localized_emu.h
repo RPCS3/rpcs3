@@ -75,6 +75,8 @@ private:
 		case localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_OFF: return tr("Analog limiter of player %0 disabled", "Analog limiter toggled off").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_ON: return tr("Analog limiter of player %0 enabled", "Analog limiter toggled on").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED: return tr("Mouse and keyboard are now used as emulated devices.", "Mouse and keyboard emulated");
+		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED_MOUSE_ONLY: return tr("Mouse is now used as emulated device.", "Mouse emulated");
+		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED_KB_ONLY: return tr("Keyboard is now used as emulated device.", "Keyboard emulated");
 		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD: return tr("Mouse and keyboard are now used as pad.", "Mouse and keyboard pad");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME: return tr("ERROR: HDD boot game is corrupted. The application will continue.", "Game Error");

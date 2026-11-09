@@ -393,7 +393,71 @@ void keyboard_pad_handler::release_all_keys()
 		}
 	}
 
-	m_keys_released = true;
+	m_kb_keys_released = true;
+	m_mouse_keys_released = true;
+}
+
+bool keyboard_pad_handler::is_mouse_code(u32 code)
+{
+	return (code & mouse::button) || (code >= mouse::move_left && code <= mouse::wheel_right);
+}
+
+void keyboard_pad_handler::release_keys(bool release_kb, bool release_mouse)
+{
+	if (release_kb && release_mouse)
+	{
+		release_all_keys();
+		return;
+	}
+
+	if (release_kb)
+	{
+		m_kb_keys_released = true;
+	}
+
+	if (release_mouse)
+	{
+		m_mouse_keys_released = true;
+	}
+
+	if (!release_kb && !release_mouse)
+	{
+		return;
+	}
+
+	// Collect all currently pressed codes of the requested device type
+	std::set<u32> codes;
+
+	const auto collect = [&](const std::map<u32, u16>& pressed_keys)
+	{
+		for (const auto& [code, value] : pressed_keys)
+		{
+			if (is_mouse_code(code) ? release_mouse : release_kb)
+			{
+				codes.insert(code);
+			}
+		}
+	};
+
+	for (const Pad& pad : m_pads_internal)
+	{
+		for (const Button& button : pad.m_buttons)
+		{
+			collect(button.m_pressed_keys);
+		}
+
+		for (const AnalogStick& stick : pad.m_sticks)
+		{
+			collect(stick.m_pressed_keys_min);
+			collect(stick.m_pressed_keys_max);
+		}
+	}
+
+	// Release them properly, so that combos and other mapped keys are re-evaluated
+	for (u32 code : codes)
+	{
+		Key(code, false, 0);
+	}
 }
 
 bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
@@ -403,16 +467,20 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 		return false;
 	}
 
-	if (input::g_active_mouse_and_keyboard != input::active_mouse_and_keyboard::pad)
+	const input::active_mouse_and_keyboard kbm_mode = input::g_active_mouse_and_keyboard;
+	const bool kb_emulated = kbm_mode == input::active_mouse_and_keyboard::emulated || kbm_mode == input::active_mouse_and_keyboard::emulated_kb_only;
+	const bool mouse_emulated = kbm_mode == input::active_mouse_and_keyboard::emulated || kbm_mode == input::active_mouse_and_keyboard::emulated_mouse_only;
+
+	// Release the keys of all devices that just became emulated
+	release_keys(kb_emulated && !m_kb_keys_released, mouse_emulated && !m_mouse_keys_released);
+
+	if (!kb_emulated) m_kb_keys_released = false;
+	if (!mouse_emulated) m_mouse_keys_released = false;
+
+	if (kb_emulated && mouse_emulated)
 	{
-		if (!m_keys_released)
-		{
-			release_all_keys();
-		}
 		return false;
 	}
-
-	m_keys_released = false;
 
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
@@ -421,22 +489,22 @@ bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
 		switch (ev->type())
 		{
 		case QEvent::KeyPress:
-			keyPressEvent(static_cast<QKeyEvent*>(ev));
+			if (!kb_emulated) keyPressEvent(static_cast<QKeyEvent*>(ev));
 			break;
 		case QEvent::KeyRelease:
-			keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+			if (!kb_emulated) keyReleaseEvent(static_cast<QKeyEvent*>(ev));
 			break;
 		case QEvent::MouseButtonPress:
-			mousePressEvent(static_cast<QMouseEvent*>(ev));
+			if (!mouse_emulated) mousePressEvent(static_cast<QMouseEvent*>(ev));
 			break;
 		case QEvent::MouseButtonRelease:
-			mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
+			if (!mouse_emulated) mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
 			break;
 		case QEvent::MouseMove:
-			mouseMoveEvent(static_cast<QMouseEvent*>(ev));
+			if (!mouse_emulated) mouseMoveEvent(static_cast<QMouseEvent*>(ev));
 			break;
 		case QEvent::Wheel:
-			mouseWheelEvent(static_cast<QWheelEvent*>(ev));
+			if (!mouse_emulated) mouseWheelEvent(static_cast<QWheelEvent*>(ev));
 			break;
 		case QEvent::FocusOut:
 			release_all_keys();
@@ -1072,6 +1140,28 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 		if (!combos.empty())
 		{
+			if (!m_mouse_used)
+			{
+				if (std::any_of(combos.cbegin(), combos.cend(), [](const std::set<u32>& keys)
+					{
+						return std::any_of(keys.cbegin(), keys.cend(), [](u32 key){ return is_mouse_code(key); });
+					}))
+				{
+					m_mouse_used = true;
+				}
+			}
+
+			if (!m_keyboard_used)
+			{
+				if (std::any_of(combos.cbegin(), combos.cend(), [](const std::set<u32>& keys)
+					{
+						return std::any_of(keys.cbegin(), keys.cend(), [](u32 key){ return !is_mouse_code(key); });
+					}))
+				{
+					m_keyboard_used = true;
+				}
+			}
+
 			if (!m_mouse_move_used)
 			{
 				if (std::any_of(combos.cbegin(), combos.cend(), [](const std::set<u32>& keys)
