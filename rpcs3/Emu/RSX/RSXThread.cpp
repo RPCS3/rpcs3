@@ -426,6 +426,8 @@ namespace rsx
 
 	void thread::save_context(utils::serial& ar, context& ctx)
 	{
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+
 		ar(*ctx.register_state);
 		for (auto& v : ctx.draw_processor.m_vertex_push_buffers)
 		{
@@ -436,6 +438,11 @@ namespace rsx
 		ar(ctx.display_buffers, ctx.display_buffers_count, ctx.current_display_buffer);
 		ar(ctx.in_begin_end, ctx.register_state->current_draw_clause);
 		ar(ctx.fw.label_addr, ctx.fw.main_mem_size, ctx.fw.rsx_event_port, ctx.fw.driver_info, ctx.fw.unsent_gcm_events);
+
+		if (ar.is_writing() || version >= 9)
+		{
+			ar(ctx.fw.is_fifo_rsx_local);
+		}
 
 		auto& channel = ctx.fifo;
 		ar(channel.dma_address, channel.get, channel.ret_addr, channel.saved_ret_addr, channel.restore_point);

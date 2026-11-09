@@ -45,6 +45,7 @@ namespace rsx
 		u32 main_mem_size{ 0 };
 		u32 rsx_event_port{ 0 };
 		u32 driver_info{ 0 };
+		bool is_fifo_rsx_local = false;
 
 		// Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
 		atomic_t<u64> unsent_gcm_events = 0;
