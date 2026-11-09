@@ -49,6 +49,10 @@ namespace openxr
 			// Signaled by the OpenGL backend of RSX (see openxr_frame_share.h)
 			VkSemaphore semaphore{};
 			u64 semaphore_handle = invalid_handle;
+
+			// Signaled by us after reading a frame of the OpenGL backend, so that it can take the image back
+			VkSemaphore release_semaphore{};
+			u64 release_semaphore_handle = invalid_handle;
 		};
 
 		bool create_swapchain();
