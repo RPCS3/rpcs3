@@ -31,7 +31,7 @@ namespace rsx
 
 		u32 FIFO_control::translate_address(u32 address) const
 		{
-			if (m_thread->m_ctx->fw.is_fifo_rsx_local)
+			if (m_thread->get_context()->fw.is_fifo_rsx_local)
 			{
 				if (address >= m_thread->local_mem_size)
 				{
