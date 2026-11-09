@@ -66,6 +66,7 @@ namespace gl
 			}
 			if (slot.memory) glDeleteMemoryObjectsEXT(1, &slot.memory);
 			if (slot.semaphore) glDeleteSemaphoresEXT(1, &slot.semaphore);
+			if (slot.release_semaphore) glDeleteSemaphoresEXT(1, &slot.release_semaphore);
 		}
 
 		m_slots.clear();
@@ -167,26 +168,31 @@ namespace gl
 			glMemoryObjectParameterivEXT(slot.memory, GL_DEDICATED_MEMORY_OBJECT_EXT, &dedicated);
 
 			glGenSemaphoresEXT(1, &slot.semaphore);
+			glGenSemaphoresEXT(1, &slot.release_semaphore);
 
 #ifdef _WIN32
 			// Importing a Win32 handle does not take ownership of it
 			glImportMemoryWin32HandleEXT(slot.memory, shared.allocation_size, handle_type, reinterpret_cast<void*>(shared.slots[i].memory_handle));
 			glImportSemaphoreWin32HandleEXT(slot.semaphore, handle_type, reinterpret_cast<void*>(shared.slots[i].semaphore_handle));
+			glImportSemaphoreWin32HandleEXT(slot.release_semaphore, handle_type, reinterpret_cast<void*>(shared.slots[i].release_semaphore_handle));
 #else
 			// Importing a file descriptor takes ownership of it, so we import duplicates
 			const int memory_fd = dup(static_cast<int>(shared.slots[i].memory_handle));
 			const int semaphore_fd = dup(static_cast<int>(shared.slots[i].semaphore_handle));
+			const int release_semaphore_fd = dup(static_cast<int>(shared.slots[i].release_semaphore_handle));
 
-			if (memory_fd < 0 || semaphore_fd < 0)
+			if (memory_fd < 0 || semaphore_fd < 0 || release_semaphore_fd < 0)
 			{
 				rsx_log.error("OpenXR: Failed to duplicate the shared file descriptors");
 				if (memory_fd >= 0) close(memory_fd);
 				if (semaphore_fd >= 0) close(semaphore_fd);
+				if (release_semaphore_fd >= 0) close(release_semaphore_fd);
 				return false;
 			}
 
 			glImportMemoryFdEXT(slot.memory, shared.allocation_size, handle_type, memory_fd);
 			glImportSemaphoreFdEXT(slot.semaphore, handle_type, semaphore_fd);
+			glImportSemaphoreFdEXT(slot.release_semaphore, handle_type, release_semaphore_fd);
 #endif
 
 			// The Vulkan image uses optimal tiling
@@ -254,6 +260,16 @@ namespace gl
 			return;
 		}
 
+		imported_slot& slot = m_slots[slot_index];
+
+		// Take the image back from OpenXR if it read it since we last wrote it. OpenXR releases it in GL_LAYOUT_TRANSFER_SRC_EXT.
+		// We wait right away, so that the signal is consumed even if we don't write anything below.
+		if (::at32(openxr::g_shared_frames.slots, slot_index).release_pending.exchange(false))
+		{
+			const GLenum release_layout = GL_LAYOUT_TRANSFER_SRC_EXT;
+			glWaitSemaphoreEXT(slot.release_semaphore, 0, nullptr, 1, &slot.texture, &release_layout);
+		}
+
 		const auto overlays = [&](gl::texture* src, u32 index, std::initializer_list<areai> areas)
 		{
 			return add_overlays(cmd, src, index, areas, draw_overlays);
@@ -267,8 +283,6 @@ namespace gl
 			openxr::g_shared_frames.publish_slot(slot_index, m_generation, false);
 			return;
 		}
-
-		imported_slot& slot = m_slots[slot_index];
 
 		cmd->disable(GL_SCISSOR_TEST);
 
