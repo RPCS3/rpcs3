@@ -43,8 +43,41 @@ namespace vk
 		m_retired.clear();
 
 		m_overlay_images = {};
+		m_blank_image.reset();
 
 		m_device = nullptr;
+	}
+
+	image* openxr_frame_share::get_blank_image(const command_buffer& cmd, u32 width, u32 height)
+	{
+		if (m_blank_image && (m_blank_image->width() != width || m_blank_image->height() != height))
+		{
+			// Dispose correctly, since frames in flight may still use it
+			vk::remove_framebuffers_with_image(m_blank_image.get());
+			vk::get_resource_manager()->dispose(m_blank_image);
+		}
+
+		if (m_blank_image)
+		{
+			// We never write to it after the clear. The overlays are drawn into a copy (see add_overlays).
+			return m_blank_image.get();
+		}
+
+		// The usual format of the RSX display buffers, so that the overlays use the same render pass as for a game frame
+		m_blank_image = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			0, VMM_ALLOCATION_POOL_SYSTEM);
+
+		const VkImageSubresourceRange range{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+		VkClearColorValue black{};
+		black.float32[3] = 1.0f;
+
+		m_blank_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		vkCmdClearColorImage(cmd, m_blank_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &black, 1, &range);
+		m_blank_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		return m_blank_image.get();
 	}
 
 	image* openxr_frame_share::add_overlays(const command_buffer& cmd, image* src, u32 index, std::initializer_list<areai> areas, const overlay_callback& draw_overlays)

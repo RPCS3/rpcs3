@@ -33,10 +33,15 @@ namespace gl
 		// Has to be called once per flip with the OpenGL context of RSX. Changes the framebuffer bindings, so the caller has to bind its framebuffer again.
 		void present(gl::command_context& cmd, gl::texture* left_image, gl::texture* right_image, const openxr::eye_layout& eyes, const overlay_callback& draw_overlays);
 
+		// Returns a black texture of the given size. It's used as the frame while RSX has nothing to present,
+		// so that the overlays (e.g. the progress dialogs while shaders are compiled) are shown in the headset as well.
+		gl::texture* get_blank_texture(gl::command_context& cmd, u32 width, u32 height);
+
 	private:
 		gl::texture* add_overlays(gl::command_context& cmd, gl::texture* src, u32 index, std::initializer_list<areai> areas, const overlay_callback& draw_overlays);
 
 		std::array<std::unique_ptr<gl::texture>, 2> m_overlay_textures; // Copies of the eye images with overlays
+		std::unique_ptr<gl::texture> m_blank_texture; // See get_blank_texture
 
 		struct imported_slot
 		{
