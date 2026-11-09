@@ -12,8 +12,11 @@
 namespace openxr
 {
 
-// How long to wait before trying again if there is no runtime or headset
+// How long to wait before trying again if there is no runtime or the initialization failed
 static constexpr auto init_retry_delay = std::chrono::seconds(5);
+
+// How long to wait before asking the runtime for the headset again. We keep the instance in the meantime, so this is cheap.
+static constexpr auto headset_retry_delay = std::chrono::seconds(1);
 
 // How many frames in a row may fail before we recreate the session (we wait 10ms after each failure)
 static constexpr u32 max_failed_frames = 100;
@@ -217,7 +220,7 @@ void session_thread::operator()()
 {
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!m_instance)
+		if (!m_session)
 		{
 			if (std::chrono::steady_clock::now() < m_next_init_attempt)
 			{
@@ -225,12 +228,32 @@ void session_thread::operator()()
 				continue;
 			}
 
-			if (!init())
+			switch (init())
+			{
+			case init_result::success:
+			{
+				break;
+			}
+			case init_result::no_headset:
+			{
+				// Keep the instance and only ask for the headset again
+				poll_events();
+
+				if (m_restart_required)
+				{
+					shutdown();
+				}
+
+				m_next_init_attempt = std::chrono::steady_clock::now() + headset_retry_delay;
+				continue;
+			}
+			case init_result::failed:
 			{
 				shutdown();
 				m_next_init_attempt = std::chrono::steady_clock::now() + init_retry_delay;
 				openxr_log.notice("Trying again in %d seconds", init_retry_delay.count());
 				continue;
+			}
 			}
 		}
 
@@ -245,20 +268,30 @@ void session_thread::operator()()
 	shutdown();
 }
 
-bool session_thread::init()
+session_thread::init_result session_thread::init()
 {
-	openxr_log.notice("Initializing OpenXR");
-
 	// Every step logs its own errors
-	if (!is_openxr_available() ||
-		!create_instance() ||
-		!get_system_info() ||
-		!create_vulkan_device() ||
+	if (!m_instance)
+	{
+		openxr_log.notice("Initializing OpenXR");
+
+		if (!is_openxr_available() || !create_instance())
+		{
+			return init_result::failed;
+		}
+	}
+
+	if (!get_system_info())
+	{
+		return m_waiting_for_headset ? init_result::no_headset : init_result::failed;
+	}
+
+	if (!create_vulkan_device() ||
 		!create_session() ||
 		!create_reference_space() ||
 		!m_input.init(m_instance, m_session, m_enabled_extensions))
 	{
-		return false;
+		return init_result::failed;
 	}
 
 	m_input_active = true;
@@ -270,7 +303,7 @@ bool session_thread::init()
 
 	// Headset rendering is set up in update_renderer, since it can be enabled at any time.
 	// The session is started in poll_events once the runtime reports XR_SESSION_STATE_READY.
-	return true;
+	return init_result::success;
 }
 
 void session_thread::shutdown()
@@ -315,6 +348,8 @@ void session_thread::shutdown()
 	}
 
 	m_enabled_extensions.clear();
+	m_system = XR_NULL_SYSTEM_ID;
+	m_waiting_for_headset = false;
 
 	// Our Vulkan objects stay valid without the OpenXR instance, since they belong to us
 	if (m_vk_device)
@@ -396,9 +431,25 @@ bool session_thread::get_system_info()
 	XrSystemGetInfo info{XR_TYPE_SYSTEM_GET_INFO};
 	info.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 
-	if (XR_FAILED(xrGetSystem(m_instance, &info, &m_system)))
+	const XrResult result = xrGetSystem(m_instance, &info, &m_system);
+
+	// The runtime is running, but the headset is off or not connected. This is only logged once while we wait.
+	if (result == XR_ERROR_FORM_FACTOR_UNAVAILABLE)
 	{
-		openxr_log.error("xrGetSystem failed");
+		if (!m_waiting_for_headset)
+		{
+			openxr_log.notice("No headset is available. Waiting until one is connected.");
+			m_waiting_for_headset = true;
+		}
+
+		return false;
+	}
+
+	m_waiting_for_headset = false;
+
+	if (XR_FAILED(result))
+	{
+		openxr_log.error("xrGetSystem failed (result=%d)", static_cast<s32>(result));
 		return false;
 	}
 

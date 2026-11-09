@@ -34,7 +34,15 @@ namespace openxr
 	private:
 		static bool is_rendering_wanted();
 
-		bool init();
+		enum class init_result
+		{
+			success,
+			no_headset, // The instance stays alive, so that only the system has to be queried again
+			failed,
+		};
+
+		// Creates the instance (if there is none yet), the session and everything that depends on them
+		init_result init();
 		void shutdown();
 
 		// Polls runtime events, runs one frame and updates the input.
@@ -55,6 +63,7 @@ namespace openxr
 
 		XrInstance m_instance{XR_NULL_HANDLE};
 		XrSystemId m_system{};
+		bool m_waiting_for_headset = false; // xrGetSystem reported that no headset is available
 		std::set<std::string> m_enabled_extensions;
 		XrSession m_session{XR_NULL_HANDLE};
 		XrSessionState m_session_state = XR_SESSION_STATE_UNKNOWN;
