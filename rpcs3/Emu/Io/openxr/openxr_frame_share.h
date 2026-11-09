@@ -17,6 +17,8 @@
 // RSX only marks a slot as ready after it waited for the frame to finish.
 // The Vulkan backend needs no semaphores. The OpenGL backend signals the slot's semaphore, because OpenGL can only
 // hand the image over to Vulkan in a defined layout through a semaphore (see EXT_external_objects).
+// For the same reason OpenXR signals the slot's release semaphore after reading a frame written by OpenGL,
+// and OpenGL waits for it before it writes the image again.
 namespace openxr
 {
 	// Set in the config (Video: "OpenXR Render Mode"). This is a dynamic setting, so it can change at any time.
@@ -37,11 +39,15 @@ namespace openxr
 	{
 		u64 memory_handle = 0;    // HANDLE on Windows, file descriptor on other platforms
 		u64 semaphore_handle = 0; // Same, only valid if shared_frames::has_semaphores is set
+		u64 release_semaphore_handle = 0; // Same. Signaled by OpenXR, waited for by OpenGL.
 		atomic_t<slot_state> state = slot_state::free;
 		atomic_t<u64> frame_number = 0;
 
 		// Set by RSX while writing
 		atomic_t<bool> semaphore_signaled = false; // OpenXR has to wait for the semaphore exactly once before reading
+
+		// Set by OpenXR before it frees the slot
+		atomic_t<bool> release_pending = false; // OpenGL has to wait for the release semaphore exactly once before writing
 	};
 
 	struct shared_frames

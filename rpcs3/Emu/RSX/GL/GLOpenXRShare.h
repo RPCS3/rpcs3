@@ -42,7 +42,8 @@ namespace gl
 		{
 			GLuint memory = GL_NONE;
 			GLuint texture = GL_NONE;
-			GLuint semaphore = GL_NONE;
+			GLuint semaphore = GL_NONE;         // Signaled by us after writing
+			GLuint release_semaphore = GL_NONE; // Signaled by OpenXR after reading
 			GLsync fence = nullptr; // Set while a copy is in flight
 		};
 

@@ -4,6 +4,7 @@
 
 #include "openxr_renderer.h"
 #include "openxr_frame_share_vk.h"
+#include "Utilities/Thread.h"
 
 #include <algorithm>
 #include <cstring>
@@ -17,6 +18,9 @@ namespace openxr
 {
 namespace
 {
+	// How long a single xrWaitSwapchainImage call may block before we check if the thread has to stop
+	constexpr XrDuration swapchain_wait_timeout_ns = 100'000'000; // 100ms
+
 	// Placement of the virtual screen, relative to the initial head pose (in meters)
 	constexpr float virtual_screen_distance = 2.5f;
 	constexpr float virtual_screen_width = 2.4f;
@@ -231,9 +235,11 @@ void renderer::destroy()
 			if (img.image) vkDestroyImage(m_ctx.vk_device, img.image, nullptr);
 			if (img.memory) vkFreeMemory(m_ctx.vk_device, img.memory, nullptr);
 			if (img.semaphore) vkDestroySemaphore(m_ctx.vk_device, img.semaphore, nullptr);
+			if (img.release_semaphore) vkDestroySemaphore(m_ctx.vk_device, img.release_semaphore, nullptr);
 
 			close_handle(img.handle);
 			close_handle(img.semaphore_handle);
+			close_handle(img.release_semaphore_handle);
 		}
 
 		if (m_vk_fence) vkDestroyFence(m_ctx.vk_device, m_vk_fence, nullptr);
@@ -346,7 +352,7 @@ bool renderer::create_shared_images()
 #endif
 	};
 
-	const auto create_semaphore = [&](shared_image& img) -> bool
+	const auto create_semaphore = [&](VkSemaphore& semaphore, u64& handle) -> bool
 	{
 		VkExportSemaphoreCreateInfo export_info{VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO};
 		export_info.handleTypes = openxr::shared_semaphore_handle_type;
@@ -354,7 +360,7 @@ bool renderer::create_shared_images()
 		VkSemaphoreCreateInfo info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 		info.pNext = &export_info;
 
-		if (vkCreateSemaphore(m_ctx.vk_device, &info, nullptr, &img.semaphore) != VK_SUCCESS)
+		if (vkCreateSemaphore(m_ctx.vk_device, &info, nullptr, &semaphore) != VK_SUCCESS)
 		{
 			openxr_log.error("vkCreateSemaphore failed");
 			return false;
@@ -365,17 +371,23 @@ bool renderer::create_shared_images()
 #else
 		VkSemaphoreGetFdInfoKHR handle_info{VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR};
 #endif
-		handle_info.semaphore = img.semaphore;
+		handle_info.semaphore = semaphore;
 		handle_info.handleType = openxr::shared_semaphore_handle_type;
 
-		img.semaphore_handle = export_handle(get_semaphore_handle, handle_info);
-		if (img.semaphore_handle == invalid_handle)
+		handle = export_handle(get_semaphore_handle, handle_info);
+		if (handle == invalid_handle)
 		{
 			openxr_log.error("Failed to export the semaphore");
 			return false;
 		}
 
 		return true;
+	};
+
+	const auto create_semaphores = [&](shared_image& img) -> bool
+	{
+		return create_semaphore(img.semaphore, img.semaphore_handle) &&
+			create_semaphore(img.release_semaphore, img.release_semaphore_handle);
 	};
 
 	// The function pointer alone is not enough, since the extension has to be enabled as well
@@ -395,7 +407,7 @@ bool renderer::create_shared_images()
 
 	for (shared_image& img : m_shared_images)
 	{
-		if (has_semaphores && !create_semaphore(img))
+		if (has_semaphores && !create_semaphores(img))
 		{
 			// The Vulkan backend of RSX still works without them
 			openxr_log.error("Failed to create the shared semaphores. Headset rendering with OpenGL will not be available.");
@@ -486,9 +498,11 @@ bool renderer::create_shared_images()
 	{
 		shared.slots[i].memory_handle = m_shared_images[i].handle;
 		shared.slots[i].semaphore_handle = has_semaphores ? m_shared_images[i].semaphore_handle : invalid_handle;
+		shared.slots[i].release_semaphore_handle = has_semaphores ? m_shared_images[i].release_semaphore_handle : invalid_handle;
 		shared.slots[i].state = openxr::slot_state::free;
 		shared.slots[i].frame_number = 0;
 		shared.slots[i].semaphore_signaled = false;
+		shared.slots[i].release_pending = false;
 	}
 
 	shared.generation++;
@@ -534,13 +548,21 @@ void renderer::copy_latest_frame()
 	std::array<VkPipelineStageFlags, openxr::shared_frames::slot_count> wait_stages{};
 	u32 wait_count = 0;
 
+	// OpenGL waits for these before it writes the images again (see openxr_frame_share.h)
+	std::array<VkSemaphore, openxr::shared_frames::slot_count> release_semaphores{};
+	std::array<bool, openxr::shared_frames::slot_count> released_to_gl{};
+	u32 release_count = 0;
+
 	for (u32 i = 0; i < openxr::shared_frames::slot_count; i++)
 	{
-		if (taken[i] && shared.slots[i].semaphore_signaled && m_shared_images[i].semaphore)
+		if (taken[i] && shared.slots[i].semaphore_signaled && m_shared_images[i].semaphore && m_shared_images[i].release_semaphore)
 		{
 			wait_semaphores[wait_count] = m_shared_images[i].semaphore;
 			wait_stages[wait_count] = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			wait_count++;
+
+			release_semaphores[release_count++] = m_shared_images[i].release_semaphore;
+			released_to_gl[i] = true;
 		}
 	}
 
@@ -556,19 +578,32 @@ void renderer::copy_latest_frame()
 	}
 	else
 	{
+		// We wait in small steps, so that a runtime that never hands out the image can't keep the thread from stopping
 		XrSwapchainImageWaitInfo wait_info{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
-		wait_info.timeout = XR_INFINITE_DURATION;
+		wait_info.timeout = swapchain_wait_timeout_ns;
 
-		if (XR_FAILED(xrWaitSwapchainImage(m_swapchain, &wait_info)))
+		XrResult result = xrWaitSwapchainImage(m_swapchain, &wait_info);
+
+		while (result == XR_TIMEOUT_EXPIRED && thread_ctrl::state() != thread_state::aborting)
 		{
-			openxr_log.error("xrWaitSwapchainImage failed");
+			result = xrWaitSwapchainImage(m_swapchain, &wait_info);
+		}
 
-			XrSwapchainImageReleaseInfo release_info{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-			xrReleaseSwapchainImage(m_swapchain, &release_info);
+		if (result == XR_SUCCESS)
+		{
+			acquired = true;
+		}
+		else if (result == XR_TIMEOUT_EXPIRED)
+		{
+			// The image can only be released after a successful wait. The swapchain is destroyed while the thread stops.
+			openxr_log.error("Stopped waiting for the swapchain image");
 		}
 		else
 		{
-			acquired = true;
+			openxr_log.error("xrWaitSwapchainImage failed (result=%d)", static_cast<s32>(result));
+
+			XrSwapchainImageReleaseInfo release_info{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+			xrReleaseSwapchainImage(m_swapchain, &release_info);
 		}
 	}
 
@@ -632,6 +667,23 @@ void renderer::copy_latest_frame()
 		present_barrier.subresourceRange = range;
 
 		vkCmdPipelineBarrier(m_vk_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &present_barrier);
+
+		// Give an image written by OpenGL back in the layout that OpenGL expects when it waits for the release semaphore.
+		// The other images were never acquired by our queue, so they are still owned by OpenGL.
+		if (released_to_gl[newest])
+		{
+			VkImageMemoryBarrier release_barrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+			release_barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			release_barrier.dstAccessMask = 0;
+			release_barrier.oldLayout = openxr::shared_image_released_layout;
+			release_barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL; // GL_LAYOUT_TRANSFER_SRC_EXT
+			release_barrier.srcQueueFamilyIndex = m_ctx.vk_queue_family;
+			release_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_EXTERNAL;
+			release_barrier.image = src_image;
+			release_barrier.subresourceRange = range;
+
+			vkCmdPipelineBarrier(m_vk_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &release_barrier);
+		}
 	}
 
 	vkEndCommandBuffer(m_vk_command_buffer);
@@ -642,6 +694,8 @@ void renderer::copy_latest_frame()
 	submit_info.pWaitDstStageMask = wait_stages.data();
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &m_vk_command_buffer;
+	submit_info.signalSemaphoreCount = release_count;
+	submit_info.pSignalSemaphores = release_semaphores.data();
 
 	const bool submitted = vkQueueSubmit(m_vk_queue, 1, &submit_info, m_vk_fence) == VK_SUCCESS;
 	if (!submitted)
@@ -663,9 +717,14 @@ void renderer::copy_latest_frame()
 
 	// Wait for the copy, so that RSX can reuse the slots. The copy is tiny compared to a frame.
 	// A failed submission leaves the fence unsignaled, so it can be used again.
+	// No timeout is needed here: a hung GPU returns VK_ERROR_DEVICE_LOST, and destroy has to wait for the device anyway.
 	if (submitted)
 	{
-		vkWaitForFences(m_ctx.vk_device, 1, &m_vk_fence, VK_TRUE, umax);
+		if (const VkResult result = vkWaitForFences(m_ctx.vk_device, 1, &m_vk_fence, VK_TRUE, umax); result != VK_SUCCESS)
+		{
+			openxr_log.error("vkWaitForFences failed (result=%d)", static_cast<s32>(result));
+		}
+
 		vkResetFences(m_ctx.vk_device, 1, &m_vk_fence);
 	}
 
@@ -683,6 +742,12 @@ void renderer::copy_latest_frame()
 			continue;
 		}
 
+		// OpenGL waits for the release semaphore before it writes the slot again. It's set before the slot is freed.
+		// It's never cleared here, since only OpenGL can consume the signal (another writer may have used the slot in the meantime).
+		if (released_to_gl[i])
+		{
+			shared.slots[i].release_pending = true;
+		}
 		shared.slots[i].semaphore_signaled = false;
 		shared.slots[i].state = openxr::slot_state::free;
 	}
