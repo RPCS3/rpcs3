@@ -87,6 +87,7 @@ enum class emu_settings_type
 	ShaderPrecisionQuality,
 	StereoRenderEnabled,
 	StereoRenderMode,
+	OpenXRRenderMode,
 	ScreenSize,
 	AnisotropicFilterOverride,
 	TextureLodBias,

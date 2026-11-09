@@ -91,6 +91,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::EmulateDepthCompare,        get_cfg_location(local_cfg.video.emulate_depth_compare) },
 	{ emu_settings_type::StereoRenderEnabled,        get_cfg_location(local_cfg.video.stereo_enabled) },
 	{ emu_settings_type::StereoRenderMode,           get_cfg_location(local_cfg.video.stereo_render_mode) },
+	{ emu_settings_type::OpenXRRenderMode,           get_cfg_location(local_cfg.video.openxr_rendering) },
 	{ emu_settings_type::ScreenSize,                 get_cfg_location(local_cfg.video.screen_size) },
 	{ emu_settings_type::StrictTextureFlushing,      get_cfg_location(local_cfg.video.strict_texture_flushing) },
 	{ emu_settings_type::ForceCPUBlitEmulation,      get_cfg_location(local_cfg.video.force_cpu_blit_processing) },

@@ -46,6 +46,12 @@ namespace gl
 		bool ARB_shader_storage_buffer_object_supported = false;
 		bool ARB_framebuffer_no_attachments_supported = false;
 		bool ARB_robustness_supported = false;
+		bool EXT_memory_object_supported = false;
+		bool EXT_memory_object_win32_supported = false;
+		bool EXT_memory_object_fd_supported = false;
+		bool EXT_semaphore_supported = false;
+		bool EXT_semaphore_win32_supported = false;
+		bool EXT_semaphore_fd_supported = false;
 
 		bool vendor_INTEL = false;  // has broken GLSL compiler
 		bool vendor_AMD = false;    // has broken ARB_multidraw
