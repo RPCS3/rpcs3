@@ -39,6 +39,25 @@ namespace gl
 		m_blit_dst.remove();
 
 		m_overlay_textures = {};
+		m_blank_texture.reset();
+	}
+
+	gl::texture* openxr_frame_share::get_blank_texture(gl::command_context& cmd, u32 width, u32 height)
+	{
+		if (m_blank_texture && m_blank_texture->width() == width && m_blank_texture->height() == height)
+		{
+			// We never write to it after the clear. The overlays are drawn into a copy (see add_overlays).
+			return m_blank_texture.get();
+		}
+
+		// OpenGL keeps the old texture alive until pending commands that use it are finished
+		m_blank_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, width, height, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
+
+		// The clear respects the scissor test
+		cmd->disable(GL_SCISSOR_TEST);
+		gl::g_hw_blitter->fast_clear_image(cmd, m_blank_texture.get(), color4f(0.f, 0.f, 0.f, 1.f));
+
+		return m_blank_texture.get();
 	}
 
 	gl::texture* openxr_frame_share::add_overlays(gl::command_context& cmd, gl::texture* src, u32 index, std::initializer_list<areai> areas, const overlay_callback& draw_overlays)

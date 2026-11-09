@@ -352,13 +352,32 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 	openxr::set_consumer(openxr::consumer::headset_rendering, openxr::is_rendering_enabled());
 
 	// Copy the frame for the headset. It is handed over on a later flip, once the GPU finished it.
-	if (openxr::is_rendering_enabled() && image_to_flip)
+	// Without a frame (e.g. while the progress dialogs are shown before the game presents anything) we only show the overlays.
+	const bool has_overlay = overlay_manager && overlay_manager->has_visible();
+
+	if (openxr::is_rendering_enabled() && (image_to_flip || has_overlay))
 	{
-		const auto eyes = openxr::get_eye_layout(buffer_width, buffer_height, image_to_flip->height(), avconfig.stereo_enabled, image_to_flip2 != nullptr);
+		gl::texture* left_image = image_to_flip;
+		gl::texture* right_image = image_to_flip2;
+		openxr::eye_layout eyes{};
+
+		if (image_to_flip)
+		{
+			eyes = openxr::get_eye_layout(buffer_width, buffer_height, image_to_flip->height(), avconfig.stereo_enabled, image_to_flip2 != nullptr);
+		}
+		else
+		{
+			const u32 width = buffer_width ? buffer_width : 1280;
+			const u32 height = buffer_height ? buffer_height : 720;
+
+			left_image = m_openxr_share.get_blank_texture(cmd, width, height);
+			right_image = nullptr;
+			eyes = openxr::get_eye_layout(width, height, height, false, false);
+		}
 
 		// The overlays are drawn directly to the window, so the share helper draws them into copies of the images
 		gl::openxr_frame_share::overlay_callback draw_overlays;
-		if (overlay_manager && overlay_manager->has_visible())
+		if (has_overlay)
 		{
 			draw_overlays = [&](gl::texture* dst, const areau& area)
 			{
@@ -369,7 +388,7 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 			};
 		}
 
-		m_openxr_share.present(cmd, image_to_flip, image_to_flip2, eyes, draw_overlays);
+		m_openxr_share.present(cmd, left_image, right_image, eyes, draw_overlays);
 
 		// The copies changed the framebuffer bindings, so draw to the screen again
 		gl::screen.bind();

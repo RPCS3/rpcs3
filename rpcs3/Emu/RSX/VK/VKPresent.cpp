@@ -781,9 +781,26 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 	openxr::set_consumer(openxr::consumer::headset_rendering, openxr::is_rendering_enabled());
 
 	// Copy the frame for the headset. It is handed over in frame_context_cleanup once the GPU finished it.
-	if (openxr::is_rendering_enabled() && image_to_flip)
+	// Without a frame (e.g. while the progress dialogs are shown before the game presents anything) we only show the overlays.
+	if (openxr::is_rendering_enabled() && (image_to_flip || has_overlay))
 	{
-		const auto eyes = openxr::get_eye_layout(buffer_width, buffer_height, image_to_flip->height(), avconfig.stereo_enabled, image_to_flip2 != nullptr);
+		vk::image* left_image = image_to_flip;
+		vk::image* right_image = image_to_flip2;
+		openxr::eye_layout eyes{};
+
+		if (image_to_flip)
+		{
+			eyes = openxr::get_eye_layout(buffer_width, buffer_height, image_to_flip->height(), avconfig.stereo_enabled, image_to_flip2 != nullptr);
+		}
+		else
+		{
+			const u32 width = buffer_width ? buffer_width : 1280;
+			const u32 height = buffer_height ? buffer_height : 720;
+
+			left_image = m_openxr_share.get_blank_image(*m_current_command_buffer, width, height);
+			right_image = nullptr;
+			eyes = openxr::get_eye_layout(width, height, height, false, false);
+		}
 
 		// The overlays are drawn directly to the window, so the share helper draws them into copies of the images
 		vk::openxr_frame_share::overlay_callback draw_overlays;
@@ -796,7 +813,7 @@ bool VKGSRender::present_frame(const rsx::display_flip_info_t& info)
 			};
 		}
 
-		m_current_frame->openxr_frame = m_openxr_share.present(*m_current_command_buffer, image_to_flip, image_to_flip2, eyes, draw_overlays);
+		m_current_frame->openxr_frame = m_openxr_share.present(*m_current_command_buffer, left_image, right_image, eyes, draw_overlays);
 	}
 #endif
 

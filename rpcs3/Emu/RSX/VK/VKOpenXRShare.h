@@ -42,10 +42,15 @@ namespace vk
 		// Has to be called once the command buffer containing the copy has finished (or failed)
 		void on_frame_finished(const frame_token& token, bool success);
 
+		// Returns a black image of the given size. It's used as the frame while RSX has nothing to present,
+		// so that the overlays (e.g. the progress dialogs while shaders are compiled) are shown in the headset as well.
+		image* get_blank_image(const command_buffer& cmd, u32 width, u32 height);
+
 	private:
 		image* add_overlays(const command_buffer& cmd, image* src, u32 index, std::initializer_list<areai> areas, const overlay_callback& draw_overlays);
 
 		std::array<std::unique_ptr<image>, 2> m_overlay_images; // Copies of the eye images with overlays
+		std::unique_ptr<image> m_blank_image; // See get_blank_image
 
 		struct imported_slot
 		{
