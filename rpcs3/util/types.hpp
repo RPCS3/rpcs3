@@ -1423,7 +1423,7 @@ extern bool serialize(utils::serial& ar, T& obj);
 {\
 	extern void using_##name##_serialization();\
 	extern s32 get_##name##_serialization_version();\
-	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version());\
+	return (static_cast<bool>(cond) ? (using_##name##_serialization(), s32{smax}) : get_##name##_serialization_version());\
 }()
 
 #define GET_SERIALIZATION_VERSION(name) []()\

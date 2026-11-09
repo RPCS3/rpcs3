@@ -403,8 +403,6 @@ namespace rsx
 		m_ctx = m_contexts.at(bound_id).get();
 		load_fifo_channel(m_ctx->fifo);
 		restore_fifo_position = m_ctx->fifo.get;
-
-
 	}
 
 	context* thread::find_context(u32 id)
@@ -441,17 +439,17 @@ namespace rsx
 		ar(ctx.in_begin_end, ctx.register_state->current_draw_clause);
 		ar(ctx.fw.label_addr, ctx.fw.main_mem_size, ctx.fw.rsx_event_port, ctx.fw.driver_info, ctx.fw.unsent_gcm_events);
 
+		if (ar.is_writing() || version >= 9)
+		{
+			ar(ctx.fw.is_fifo_rsx_local);
+		}
+
 		auto& channel = ctx.fifo;
 		ar(channel.dma_address, channel.get, channel.ret_addr, channel.saved_ret_addr, channel.restore_point);
 
 		if (!ar.is_writing())
 		{
 			channel.ctrl = channel.dma_address ? vm::_ptr<RsxDmaControl>(channel.dma_address) : nullptr;
-		}
-
-		if (version >= 9)
-		{
-			ar(ctx.fw.is_fifo_rsx_local);
 		}
 	}
 
