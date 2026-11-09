@@ -5,6 +5,7 @@
 // MIFARE Classic card layout
 constexpr usz mifare_block_size = 0x10;
 constexpr usz mifare_uid_size = 4;
+constexpr usz mifare_ultralight_uid_size = 7;
 
 // MIFARE specific command codes
 enum class mifare_cmd : u8

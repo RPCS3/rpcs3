@@ -23,7 +23,7 @@ public:
 	void write_buffer(std::vector<u8>& out);
 
 	// Processes a request received from the host (accepts arbitrary card size, e.g. 0x40 sector 0 or 0x400 full 1K)
-	void process_request(const std::vector<u8>& in, std::span<u8> card, bool card_tapped);
+	void process_request(const std::vector<u8>& in, std::span<u8> card);
 
 private:
 	// Mifare Classic authentication key type
@@ -52,11 +52,12 @@ private:
 	void write_register_value(u16 address, u8 value);
 
 	std::unordered_map<u16, u8> m_registers = {};
-	u8 m_gpio_p3 = 0x00;
+	u8 m_gpio_p3 = 0x3F;
 	u8 m_gpio_p7 = 0x06;
 	u8 m_gpio_i0i1 = 0x00;
 	u8 m_target_state = 0x00;
-	u8 m_parameters_flags = 0x00;
+	u8 m_parameters_flags = 0x34; // UM0701-02 Table 15 default: fAutomaticATR_RES(bit 2) | fAutomaticRATS(bit 4) | fISO14443-4_PICC(bit 5)
+	u8 m_last_error = 0x00;
 	u8 m_sam_mode = 0x01;
 	u8 m_atr_res_timeout = 0x0B;
 	u8 m_retry_timeout = 0x0A;
@@ -68,6 +69,15 @@ private:
 	u8 m_dep_atr_res_to = 0x0E;         // RFConfiguration CfgItem 0x82: gbyAtrResTo (Sony RC-S620/S extension)
 	u8 m_dep_rtox = 0x07;               // RFConfiguration CfgItem 0x82: gbyRtox (Sony RC-S620/S extension)
 	u8 m_dep_target_sto_to = 0x0E;      // RFConfiguration CfgItem 0x82: gbyTargetStoTo (Sony RC-S620/S extension)
+
+	// Target activation state in Initiator mode
+	enum class initiator_target_state : u8
+	{
+		released = 0,
+		selected = 1,
+		deselected = 2,
+	};
+	initiator_target_state m_initiator_state = initiator_target_state::released;
 
 	// Frames are wrapped in a preamble and a postamble byte, which are optional when receiving
 	static constexpr u8 preamble = 0x00;
@@ -107,7 +117,6 @@ private:
 		set_parameters           = 0x12,
 		sam_configuration        = 0x14,
 		power_down               = 0x16,
-		reset                    = 0x18,
 
 		// RF configuration (UM0701-02 Section 7.3.1)
 		rf_configuration         = 0x32,
@@ -135,6 +144,10 @@ private:
 		tg_response_to_initiator = 0x90,
 		tg_set_general_bytes     = 0x92,
 		tg_set_meta_data         = 0x94,
+
+		// Sony RC-S620/S extension commands (RC-S620/S User's Manual Section 8.2.5 - 8.2.11)
+		reset                    = 0x18,
+		communicate_thru_ex      = 0xA0,
 	};
 
 	// Status byte of InDataExchange, InDeselect, InRelease, InSelect and PowerDown responses
@@ -205,6 +218,21 @@ private:
 	static constexpr usz mifare_1k_blocks = 64;
 	static constexpr usz mifare_4k_blocks = 256;
 
+	// Card types and contactless protocols supported or referenced by NFC reader commands
+	enum class card_type : u8
+	{
+		unknown           = 0,
+		mifare_classic    = 1, // MIFARE Classic 1K / 4K (ISO/IEC 14443-3 Type A)
+		mifare_ultralight = 2, // MIFARE Ultralight / Ultralight C (ISO/IEC 14443-3 Type A)
+		felica            = 3, // FeliCa (JIS X 6319-4 / ISO/IEC 18092 212/424 kbps)
+		iso14443_4        = 4, // ISO/IEC 14443-4 Type A/B (T=CL, e.g. MIFARE DESFire)
+		iso14443_3b       = 5, // ISO/IEC 14443-3 Type B
+		jewel             = 6, // Innovision Jewel / Topaz
+		nfcip_dep         = 7, // ISO/IEC 18092 NFCIP-1 Data Exchange Protocol (DEP)
+	};
+
+	static card_type get_card_type(std::span<const u8> card);
+
 	static inline bool is_4k_card(std::span<const u8> card)
 	{
 		return card.size() > mifare_1k_size;
@@ -233,10 +261,26 @@ private:
 
 	// Helpers for Mifare Classic 1K / 4K card emulation
 	std::array<u8, mifare_uid_size> get_card_uid(std::span<const u8> card) const;
+	std::vector<u8> get_card_uid_bytes(std::span<const u8> card) const;
 	std::array<u8, mifare_block_size> get_block_data(std::span<const u8> card, u8 block) const;
 	static access_bits get_access_bits(const std::array<u8, mifare_block_size>& trailer, u8 cond_index);
 	static std::array<u8, mifare_block_size> format_value_block(s32 value, u8 addr);
 	static bool get_value_from_block(std::span<const u8> block, s32& out_value, u8& out_addr);
+
+	struct mifare_check_result
+	{
+		mifare_block_info info{};
+		access_bits bits{};
+		u8 c = 0;
+		usz offset = 0;
+		status error = status::success;
+
+		bool ok() const { return error == status::success; }
+	};
+
+	void reset_card_session();
+	void reset_target_state();
+	mifare_check_result check_mifare_block_access(std::span<const u8> card, u8 block, bool allow_trailer, bool allow_block_0 = false) const;
 
 	// ReadGPIO response
 	struct read_gpio_response
@@ -261,7 +305,7 @@ private:
 		u8 cmd = response_code(command_code::in_list_passive_target);
 		u8 nb_tg = 0x01;
 		u8 tg = 0x01;
-		be_t<u16, 1> sens_res = 0x0004; // ATQA
+		std::array<u8, 2> sens_res = {0x04, 0x00}; // ATQA: Mifare Classic 1K on-the-wire order (UM0701-02 §7.3.5 Page 120)
 		u8 sel_res = 0x08;              // SAK: MIFARE Classic 1K
 		u8 nfcid_length = mifare_uid_size;
 		std::array<u8, mifare_uid_size> nfcid{};
