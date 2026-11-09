@@ -2,9 +2,7 @@
 
 #ifdef HAVE_OPENXR
 
-// Interface to the OpenXR thread that does not depend on the OpenXR SDK.
-// Without OpenXR support the functions do nothing, so callers don't need to check HAVE_OPENXR.
-
+// Interface to the OpenXR thread.
 namespace openxr
 {
 	// Everything that needs the OpenXR session. The OpenXR thread only runs while at least one of them is active.
