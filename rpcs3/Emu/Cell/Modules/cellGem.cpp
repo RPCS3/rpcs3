@@ -2185,6 +2185,13 @@ static void openxr_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 
 	if (!move_data.has_absolute_position)
 	{
+		if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
+		{
+			gem_state->quat[0] = ps_move_data::default_quaternion.x();
+			gem_state->quat[1] = ps_move_data::default_quaternion.y();
+			gem_state->quat[2] = ps_move_data::default_quaternion.z();
+			gem_state->quat[3] = ps_move_data::default_quaternion.w();
+		}
 		return;
 	}
 
