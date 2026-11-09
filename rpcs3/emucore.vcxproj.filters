@@ -1488,6 +1488,14 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp">
       <Filter>Emu\Cell\lv2</Filter>
+    <ClCompile Include="Emu\NP\cmrc2_entitlements.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\cmrc2_products.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\cmrc2_util.cpp">
+      <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Io\usio.cpp">
       <Filter>Emu\Io\USIO</Filter>
@@ -3058,6 +3066,15 @@
     <ClInclude Include="util\midi_types.h">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\NP\cmrc2_entitlements.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\cmrc2_products.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\NP\cmrc2_util.h">
+      <Filter>Emu\NP</Filter>
+    </ClIndluce>
     <ClInclude Include="Emu\Io\usio_types.h">
       <Filter>Emu\Io\USIO</Filter>
     </ClInclude>

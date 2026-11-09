@@ -483,6 +483,9 @@ target_sources(rpcs3_emu PRIVATE
     NP/upnp_config.cpp
     NP/upnp_handler.cpp
     NP/ip_address.cpp
+	NP/cmrc2_entitlements.cpp
+	NP/cmrc2_products.cpp
+	NP/cmrc2_util.cpp
     NP/generated/np2_structs.pb.cc
 )
 

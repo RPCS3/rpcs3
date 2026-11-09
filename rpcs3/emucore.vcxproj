@@ -120,6 +120,9 @@
     <ClCompile Include="Emu\Io\SkylanderPortalIPC_config.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
     <ClCompile Include="Emu\NP\clans_config.cpp" />
+    <ClCompile Include="Emu\NP\cmrc2_entitlements.cpp" />
+    <ClCompile Include="Emu\NP\cmrc2_products.cpp" />
+    <ClCompile Include="Emu\NP\cmrc2_util.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
     <ClCompile Include="Emu\NP\rpcn_countries.cpp" />
     <ClCompile Include="Emu\NP\upnp_config.cpp" />
@@ -689,6 +692,9 @@
     <ClInclude Include="Emu\localized_string_id.h" />
     <ClInclude Include="Emu\NP\clans_client.h" />
     <ClInclude Include="Emu\NP\clans_config.h" />
+    <ClInclude Include="Emu\NP\cmrc2_entitlements.h" />
+    <ClInclude Include="Emu\NP\cmrc2_products.h" />
+    <ClInclude Include="Emu\NP\cmrc2_util.h" />
     <ClInclude Include="Emu\NP\pb_helpers.h" />
     <ClInclude Include="Emu\NP\generated\np2_structs.pb.h" />
     <ClInclude Include="Emu\NP\np_contexts.h" />

@@ -17,6 +17,8 @@
 #include "Emu/NP/np_event_data.h"
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/upnp_handler.h"
+#include "Emu/NP/cmrc2_products.h"
+#include "Emu/NP/cmrc2_entitlements.h"
 
 namespace np
 {
@@ -284,6 +286,26 @@ namespace np
 		void upnp_add_port_mapping(u16 internal_port, std::string_view protocol);
 		void upnp_remove_port_mapping(u16 internal_port, std::string_view protocol);
 
+		// For commerce
+		bool add_entitlements(vm::cpptr<char> entitlement_ids, u32 num_ids);
+		bool has_entitlement(const std::string& entitlement_id) const;
+		void upsert_entitlement(const std::string& service_id, const commerce2::entitlement_info& entitlement);
+		error_code get_entitlement(const char* id_str, vm::ptr<SceNpEntitlement> entitlement);
+		error_code get_entitlement_id_list(vm::ptr<SceNpEntitlementId> ids, u32 num_ids_to_get);
+		error_code consume_entitlement(const char* service_id, const char* entitlement_id, u32 count);
+		u32 get_num_entitlement_ids() const;
+
+		void load_owned_entitlements(const std::string title_id);
+		bool save_owned_entitlements(const std::string title_id);
+
+		mutable shared_mutex mutex_entitlements;
+		mutable shared_mutex mutex_entitlements_save;
+		std::unordered_map<std::string /* service ID */, std::vector<commerce2::entitlement_info>> entitlements;
+		std::optional<commerce2::entitlement_info> get_entitlement_info(const std::string& service_id, const std::string& entitlement_id);
+
+		void set_commerce_session_info(SceNpCommerce2SessionInfo* session);
+		commerce2::product_manager& get_product_manager();
+
 		// For custom menu
 		struct custom_menu_action
 		{
@@ -526,6 +548,12 @@ namespace np
 
 		// UPNP
 		upnp_handler upnp;
+
+		// Commerce
+		void init_commerce();
+		void terminate_commerce();
+		commerce2::product_manager product_manager{};
+		bool is_commerce_inited = false;
 
 		// Presence
 		struct

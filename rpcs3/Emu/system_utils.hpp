@@ -91,6 +91,9 @@ namespace rpcs3::utils
 	std::string get_custom_config_dir();
 	std::string get_custom_config_path(const std::string& identifier);
 
+	std::string get_commerce_dir();
+	std::string get_commerce_dir_by_serial(const std::string& identifier);
+
 	std::string get_input_config_root();
 	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);

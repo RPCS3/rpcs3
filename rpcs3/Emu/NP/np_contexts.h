@@ -7,6 +7,7 @@
 
 #include "Utilities/mutex.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/NP/cmrc2_products.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpCommerce2.h"
@@ -123,6 +124,14 @@ struct tdata_tss
 	u32 maxSize = 0;
 	vm::ptr<SceNpTssDataStatus> dataStatus{};
 	vm::ptr<SceNpTssGetDataOptParam> option{};
+};
+
+// Commerce2 data
+enum cmrc2_lookup_type
+{
+	product_info,
+	product_list,
+	category_contents
 };
 
 // TUS related
@@ -257,6 +266,8 @@ struct commerce2_ctx
 {
 	commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
 
+	void queue_callback(s32 event, s32 error_code) const;
+
 	static const u32 id_base  = 0x5001;
 	static const u32 id_step  = 1;
 	static const u32 id_count = SCE_NP_COMMERCE2_CTX_MAX;
@@ -266,10 +277,37 @@ struct commerce2_ctx
 	SceNpId npid{};
 	vm::ptr<SceNpCommerce2Handler> context_callback{};
 	vm::ptr<void> context_callback_param{};
+
+	u32 ctx_id = 0;
+	shared_mutex mutex;
+
+	bool session_created{};
+	SceNpCommerce2SessionInfo session_info{};
 };
 s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg);
 shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id);
 bool destroy_commerce2_context(u32 ctx_id);
+
+struct commerce2_lookup_request_ctx
+{
+	commerce2_lookup_request_ctx(u32 cmrc2_ctx_id, cmrc2_lookup_type type);
+
+	static const u32 id_base = 0xf001;
+	static const u32 id_step = 1;
+	static const u32 id_count = SCE_NP_COMMERCE2_REQ_MAX;
+	SAVESTATE_INIT_POS(33);
+
+	u32 req_id = 0;
+	u32 cmrc2_ctx_id = 0;
+
+	bool aborted = false;
+	cmrc2_lookup_type type;
+	s32 result;
+	std::vector<u8> result_data{};
+};
+s32 create_commerce2_lookup_request_context(u32 cmrc2_ctx_id, cmrc2_lookup_type type);
+shared_ptr<commerce2_lookup_request_ctx> get_commerce2_lookup_request_context(u32 req_id);
+bool destroy_commerce2_lookup_request_context(u32 req_id);
 
 struct signaling_ctx
 {

@@ -4341,6 +4341,16 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
+	// Commerce2: Intercept ticket request to handle entitlement consumption locally.
+	// Actual ticket request must still be sent after if successful.
+	if (entitlementId && consumedCount != 0)
+	{
+		auto ret = nph.consume_entitlement(serviceId.get_ptr(), entitlementId.get_ptr(), consumedCount);
+
+		if (ret != CELL_OK)
+			return ret;
+	}
+
 	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), static_cast<const u8*>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
 
 	return CELL_OK;
@@ -4372,6 +4382,16 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_LOGGING_IN && nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
+	}
+
+	// Commerce2: Intercept ticket request to handle entitlement consumption locally.
+	// Actual ticket request must still be sent after if successful.
+	if (entitlementId && consumedCount != 0)
+	{
+		auto ret = nph.consume_entitlement(serviceId.get_ptr(), entitlementId.get_ptr(), consumedCount);
+
+		if (ret != CELL_OK)
+			return ret;
 	}
 
 	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), static_cast<const u8*>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
@@ -4443,7 +4463,7 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 
 error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdList, u32 entIdListNum)
 {
-	sceNp.todo("sceNpManagerGetEntitlementIdList(entIdList=*0x%x, entIdListNum=%d)", entIdList, entIdListNum);
+	sceNp.warning("sceNpManagerGetEntitlementIdList(entIdList=*0x%x, entIdListNum=%d)", entIdList, entIdListNum);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4452,12 +4472,24 @@ error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdLis
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	return not_an_error(0);
+	// TODO - Do we need to check expiry?
+	if (false)
+	{
+		return SCE_NP_ERROR_EXPIRED_TICKET;
+	}
+
+	if (!entIdList)
+	{
+		// When entIdList is NULL, return number of IDs
+		return not_an_error(nph.get_num_entitlement_ids());
+	}
+
+	return nph.get_entitlement_id_list(entIdList, entIdListNum);
 }
 
 error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEntitlement> ent)
 {
-	sceNp.todo("sceNpManagerGetEntitlementById(entId=%s, ent=*0x%x)", entId, ent);
+	sceNp.notice("sceNpManagerGetEntitlementById(entId=%s, ent=*0x%x)", entId, ent);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -4466,12 +4498,12 @@ error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEnt
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!entId)
+	if (!entId || !ent)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	return SCE_NP_ERROR_ID_NOT_FOUND;
+	return nph.get_entitlement(entId.get_ptr(), ent);
 }
 
 error_code sceNpManagerGetSigninId(vm::ptr<void> signInId)
