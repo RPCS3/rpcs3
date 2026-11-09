@@ -17,6 +17,7 @@
         <file>Icons/combo_config_bordered.png</file>
         <file>rpcs3.svg</file>
         <file>Icons/DualShock_3.svg</file>
+        <file>Icons/Skateboard.svg</file>
         <file>Icons/rpcn.png</file>
     </qresource>
 </RCC>

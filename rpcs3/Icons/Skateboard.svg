@@ -1,0 +1,50 @@
+<svg id="Skateboard_SVG" xmlns="http://www.w3.org/2000/svg" width="160" height="400" viewBox="0, 0, 160, 400"><!-- Skateboard (top view, nose pointing up) -->
+<defs>
+<linearGradient id="GripGradient" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#2a2c31" />
+<stop offset="0.5" stop-color="#3a3d44" />
+<stop offset="1" stop-color="#2a2c31" />
+</linearGradient>
+<linearGradient id="WoodGradient" x1="0" y1="0" x2="1" y2="0">
+<stop offset="0" stop-color="#b8763c" />
+<stop offset="0.5" stop-color="#e0a565" />
+<stop offset="1" stop-color="#b8763c" />
+</linearGradient>
+<radialGradient id="SensorGlow">
+<stop offset="0" stop-color="#ff4d4d" stop-opacity="0.7" />
+<stop offset="1" stop-color="#ff4d4d" stop-opacity="0" />
+</radialGradient>
+<radialGradient id="SensorLens" cx="0.35" cy="0.35" r="0.65">
+<stop offset="0" stop-color="#ffb3b3" />
+<stop offset="0.5" stop-color="#ff3b30" />
+<stop offset="1" stop-color="#9e0f12" />
+</radialGradient>
+</defs>
+<!-- Shadow -->
+<path id="Shadow" d="M 44 334 V 74 C 44 24, 62 9, 84 9 C 106 9, 124 24, 124 74 V 334 C 124 384, 106 399, 84 399 C 62 399, 44 384, 44 334 Z" fill="#000000" fill-opacity="0.18" />
+<!-- Deck -->
+<path id="Deck" d="M 40 330 V 70 C 40 20, 58 5, 80 5 C 102 5, 120 20, 120 70 V 330 C 120 380, 102 395, 80 395 C 58 395, 40 380, 40 330 Z" fill="url(#WoodGradient)" stroke="#7a4a1f" stroke-width="1.5" />
+<path id="GripTape" d="M 43.5 330 V 70 C 43.5 23, 60 8.5, 80 8.5 C 100 8.5, 116.5 23, 116.5 70 V 330 C 116.5 377, 100 391.5, 80 391.5 C 60 391.5, 43.5 377, 43.5 330 Z" fill="url(#GripGradient)" />
+<!-- Kicktails -->
+<path id="NoseKick" d="M 46 62 C 60 49, 100 49, 114 62" stroke="#5a5e66" stroke-width="2" fill="none" stroke-linecap="round" />
+<path id="TailKick" d="M 46 338 C 60 351, 100 351, 114 338" stroke="#5a5e66" stroke-width="2" fill="none" stroke-linecap="round" />
+<!-- Infrared sensors -->
+<g id="InfraredSensorGlow" fill="url(#SensorGlow)">
+<circle cx="80" cy="26" r="14" />
+<circle cx="80" cy="374" r="14" />
+<circle cx="54" cy="200" r="14" />
+<circle cx="106" cy="200" r="14" />
+</g>
+<g id="InfraredSensorHousings" fill="#18191c" stroke="#7d838c" stroke-width="1.2">
+<circle id="IRNose" cx="80" cy="26" r="7" />
+<circle id="IRTail" cx="80" cy="374" r="7" />
+<circle id="IRLeft" cx="54" cy="200" r="7" />
+<circle id="IRRight" cx="106" cy="200" r="7" />
+</g>
+<g id="InfraredSensorLenses" fill="url(#SensorLens)">
+<circle cx="80" cy="26" r="4.5" />
+<circle cx="80" cy="374" r="4.5" />
+<circle cx="54" cy="200" r="4.5" />
+<circle cx="106" cy="200" r="4.5" />
+</g>
+</svg>
