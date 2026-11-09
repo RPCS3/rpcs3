@@ -31,6 +31,16 @@ namespace rsx
 
 		u32 FIFO_control::translate_address(u32 address) const
 		{
+			if (m_thread->get_context()->fw.is_fifo_rsx_local)
+			{
+				if (address >= m_thread->local_mem_size)
+				{
+					return umax;
+				}
+
+				return rsx::constants::local_mem_base + address;
+			}
+
 			return m_iotable->get_addr(address);
 		}
 
@@ -118,7 +128,7 @@ namespace rsx
 
 				m_cache_addr = addr & -128;
 
-				const u32 addr1 = m_iotable->get_addr(m_cache_addr);
+				const u32 addr1 = translate_address(m_cache_addr);
 
 				if (addr1 == umax)
 				{
@@ -143,7 +153,7 @@ namespace rsx
 				if (0x100000 - (m_cache_addr & 0xfffff) < m_cache_size)
 				{
 					// Check if memory layout changes in the next 1MB page boundary
-					if ((addr1 >> 20) + 1 != (m_iotable->get_addr(m_cache_addr + 0x100000) >> 20))
+					if ((addr1 >> 20) + 1 != (translate_address(m_cache_addr + 0x100000) >> 20))
 					{
 						// Trim cache as needed if memory layout changes
 						m_cache_size = 0x100000 - (m_cache_addr & 0xfffff);
@@ -318,7 +328,7 @@ namespace rsx
 			// Return a raw pointer to contiguous memory
 			constexpr u32 _1M = 0x100000;
 			const u32 size = length_in_words * sizeof(u32);
-			const u32 from = m_iotable->get_addr(m_fifo_pos);
+			const u32 from = translate_address(m_fifo_pos);
 
 			for (u32 remaining = size, addr = m_fifo_pos, ptr = from; remaining > 0;)
 			{
@@ -330,7 +340,7 @@ namespace rsx
 				}
 
 				remaining -= available;
-				const u32 next_ptr = m_iotable->get_addr(next_block);
+				const u32 next_ptr = translate_address(next_block);
 				if (next_ptr != (ptr + available))
 				{
 					return { static_cast<const u32*>(vm::base(from)), (size - remaining) / sizeof(u32)};
@@ -436,7 +446,7 @@ namespace rsx
 			{
 				if (m_fifo_pos == m_memwatch_addr)
 				{
-					if (const u32 addr = m_iotable->get_addr(m_memwatch_addr); addr + 1)
+					if (const u32 addr = translate_address(m_memwatch_addr); addr + 1)
 					{
 						if (vm::read32(addr) == m_memwatch_cmp)
 						{
@@ -462,7 +472,7 @@ namespace rsx
 					return;
 				}
 
-				if (const u32 addr = m_iotable->get_addr(m_fifo_pos); addr + 1)
+				if (const u32 addr = translate_address(m_fifo_pos); addr + 1)
 				{
 					m_cmd = vm::read32(addr);
 				}
@@ -559,7 +569,7 @@ namespace rsx
 			inc_get(true); // Wait for data block to become available
 
 			// Validate the args ptr if the command attempts to read from it
-			m_args_ptr = m_iotable->get_addr(m_fifo_pos);
+			m_args_ptr = translate_address(m_fifo_pos);
 			if (m_args_ptr == umax) [[unlikely]]
 			{
 				// Optional recovery
@@ -837,7 +847,7 @@ namespace rsx
 				// Optimize returning to another CALL
 				if ((ctrl->put & ~3) != fifo_ret_addr)
 				{
-					if (u32 addr = iomap_table.get_addr(fifo_ret_addr); addr != umax)
+					if (u32 addr = fifo_ctrl->translate_address(fifo_ret_addr); addr != umax)
 					{
 						const u32 cmd0 = vm::read32(addr);
 
@@ -926,7 +936,7 @@ namespace rsx
 
 								for (u32 i = 1; i < remaining && fifo_ctrl->get_pos() + i * 4 != (ctrl->put & ~3); i++)
 								{
-									replay_cmd.rsx_command = std::make_pair(0, vm::read32(iomap_table.get_addr(fifo_ctrl->get_pos()) + (i * 4)));
+									replay_cmd.rsx_command = std::make_pair(0, vm::read32(fifo_ctrl->translate_address(fifo_ctrl->get_pos()) + (i * 4)));
 
 									commands.push_back(replay_cmd);
 								}
