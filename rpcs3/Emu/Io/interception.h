@@ -7,7 +7,9 @@ namespace input
 	enum class active_mouse_and_keyboard : u32
 	{
 		pad,
-		emulated
+		emulated,
+		emulated_mouse_only,
+		emulated_kb_only,
 	};
 	extern atomic_t<active_mouse_and_keyboard> g_active_mouse_and_keyboard;
 
