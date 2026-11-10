@@ -1742,7 +1742,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			// applied at runtime by PN532 firmware when the RF field is switched off.
 			for (usz i = 0; i < 11; ++i)
 			{
-				write_register_value(0xA010 + i, payload[2 + i]);
+				write_register_value(::narrow<u16>(0xA010 + i), payload[2 + i]);
 			}
 
 			build_response({res});
@@ -1772,7 +1772,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			// applied at runtime by PN532 firmware when the RF field is switched off.
 			for (usz i = 0; i < 8; ++i)
 			{
-				write_register_value(0xA01B + i, payload[2 + i]);
+				write_register_value(::narrow<u16>(0xA01B + i), payload[2 + i]);
 			}
 
 			// Synchronize shared 424 kbps driver conductance cache (0xA0CB..0xA0CE)

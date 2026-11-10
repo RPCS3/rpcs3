@@ -25,6 +25,10 @@ public:
 	// Processes a request received from the host (accepts arbitrary card size, e.g. 0x40 sector 0 or 0x400 full 1K)
 	void process_request(const std::vector<u8>& in, std::span<u8> card);
 
+	static constexpr usz mifare_1k_size   = 1024;
+	static constexpr usz mifare_1k_blocks = 64;
+	static constexpr usz mifare_4k_blocks = 256;
+
 private:
 	// Mifare Classic authentication key type
 	enum class auth_key : u8
@@ -213,10 +217,6 @@ private:
 		std::array<u8, 6> key{};
 		std::array<u8, mifare_uid_size> uid{};
 	};
-
-	static constexpr usz mifare_1k_size   = 1024;
-	static constexpr usz mifare_1k_blocks = 64;
-	static constexpr usz mifare_4k_blocks = 256;
 
 	// Card types and contactless protocols supported or referenced by NFC reader commands
 	enum class card_type : u8
