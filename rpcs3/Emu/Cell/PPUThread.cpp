@@ -1054,6 +1054,11 @@ struct ppu_far_jumps_t
 				Label jmp_address = c.newLabel();
 				Label this_op_address = c.newLabel();
 
+				if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+				{
+					c.mov(args[0], a64::x20);
+				}
+
 				c.ldr(args[2], arm::ptr(this_op_address));
 				c.ldr(args[1], arm::ptr(jmp_address));
 				c.br(args[1]);
