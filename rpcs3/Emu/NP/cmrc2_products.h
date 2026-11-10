@@ -85,7 +85,7 @@ namespace commerce2
 		void load_products(const std::string title_id);
 		void unload_products();
 
-		error_code get_product_info(u32 req_id, const std::string_view category_id, const std::string_view product_id);
+		error_code get_product_info(u32 req_id, const std::string_view product_id);
 		error_code get_product_info_list(u32 req_id, vm::cpptr<char> product_ids, u16 product_count);
 		error_code get_category_contents(u32 req_id, const std::string_view category_id, u16 list_start_pos, u16 max_product_count);
 

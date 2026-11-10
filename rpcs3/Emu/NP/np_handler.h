@@ -291,9 +291,8 @@ namespace np
 		bool has_entitlement(const std::string& entitlement_id) const;
 		void upsert_entitlement(const std::string& service_id, const commerce2::entitlement_info& entitlement);
 		error_code get_entitlement(const char* id_str, vm::ptr<SceNpEntitlement> entitlement);
-		error_code get_entitlement_id_list(vm::ptr<SceNpEntitlementId> ids, u32 num_ids_to_get);
+		error_code get_entitlement_id_list(vm::ptr<SceNpEntitlementId> ids, u32 ids_size);
 		error_code consume_entitlement(const char* service_id, const char* entitlement_id, u32 count);
-		u32 get_num_entitlement_ids() const;
 
 		void load_owned_entitlements(const std::string title_id);
 		bool save_owned_entitlements(const std::string title_id);

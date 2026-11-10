@@ -4478,12 +4478,6 @@ error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdLis
 		return SCE_NP_ERROR_EXPIRED_TICKET;
 	}
 
-	if (!entIdList)
-	{
-		// When entIdList is NULL, return number of IDs
-		return not_an_error(nph.get_num_entitlement_ids());
-	}
-
 	return nph.get_entitlement_id_list(entIdList, entIdListNum);
 }
 

@@ -357,7 +357,7 @@ s32 sceNpCommerce2CreateSessionFinish(u32 ctx_id, vm::ptr<SceNpCommerce2SessionI
 	if (!ctx)
 		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND;
 
-	if (!ctx->session_created)
+	if (ctx->session_created)
 	{
 		s32 sdk_ver{};
 		[[maybe_unused]] s32 ret = process_get_sdk_version(process_getpid(), sdk_ver);
@@ -557,7 +557,7 @@ error_code sceNpCommerce2GetContentInfo(vm::cptr<SceNpCommerce2GetCategoryConten
 
 error_code sceNpCommerce2GetCategoryInfoFromContentInfo(vm::cptr<SceNpCommerce2ContentInfo> contentInfo, vm::ptr<SceNpCommerce2CategoryInfo> categoryInfo)
 {
-	sceNpCommerce2.notice("sceNpCommerce2GetCategoryInfoFromContentInfo(contentInfo=*0x%x, categoryInfo=*0x%x)", contentInfo, categoryInfo);
+	sceNpCommerce2.todo("sceNpCommerce2GetCategoryInfoFromContentInfo(contentInfo=*0x%x, categoryInfo=*0x%x)", contentInfo, categoryInfo);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -657,7 +657,8 @@ error_code sceNpCommerce2GetProductInfoStart(u32 req_id, vm::cptr<char> category
 	if (!productId)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
-	return nph.get_product_manager().get_product_info(req_id, categoryId.get_ptr(), productId.get_ptr());
+	// categoryID not needed
+	return nph.get_product_manager().get_product_info(req_id, productId.get_ptr());
 }
 
 error_code sceNpCommerce2GetProductInfoGetResult(u32 req_id, vm::ptr<void> buf, u32 buf_size, vm::ptr<u32> fill_size)
@@ -853,6 +854,10 @@ error_code sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult(vm::cptr
 
 	// Get product_list from commonData->buf_head
 	const auto product_list = vm::static_ptr_cast<const commerce2::s_product_list>(result->commonData.buf_head);
+
+	if (product_list->product_count <= index)
+		return SCE_NP_COMMERCE2_ERROR_INVALID_INDEX;
+
 	const auto* product = &product_list->products[index];
 	const auto product_ptr = product_list.ptr(&commerce2::s_product_list::products, index);
 

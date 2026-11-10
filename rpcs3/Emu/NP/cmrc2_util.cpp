@@ -6,8 +6,8 @@ namespace commerce2
 	static s_sku_info serialise_sku(const sku_data& sku)
 	{
 		s_sku_info serialised_sku{};
-		std::memcpy(&serialised_sku.sku_id, sku.id.c_str(), sku.id.size());
-		std::memcpy(&serialised_sku.sku_name, sku.name.c_str(), sku.name.size());
+		strcpy_trunc(serialised_sku.sku_id, sku.id);
+		strcpy_trunc(serialised_sku.sku_name, sku.name);
 		return serialised_sku;
 	}
 
@@ -15,11 +15,11 @@ namespace commerce2
 	{
 		s_product_info_thin serialised_product{};
 
-		std::memcpy(&serialised_product.product_id, product.product_id.c_str(), product.product_id.size());
-		std::memcpy(&serialised_product.product_name, product.name.c_str(), product.name.size());
-		std::memcpy(&serialised_product.product_desc_short, product.description_short.c_str(), product.description_short.size());
-		std::memcpy(&serialised_product.image_url, product.image_uri.c_str(), product.image_uri.size());
-		std::memcpy(&serialised_product.sp_name, product.sp_name.c_str(), product.sp_name.size());
+		strcpy_trunc(serialised_product.product_id, product.product_id);
+		strcpy_trunc(serialised_product.product_name, product.name);
+		strcpy_trunc(serialised_product.product_desc_short, product.description_short);
+		strcpy_trunc(serialised_product.image_url, product.image_uri);
+		strcpy_trunc(serialised_product.sp_name, product.sp_name);
 
 		serialised_product.release_date = product.release_date;
 		serialised_product.sku_count = product.skus.size();
@@ -39,13 +39,13 @@ namespace commerce2
 		std::vector<u8> buffer(total_size);
 		s_product_info_normal* serialised_product = reinterpret_cast<s_product_info_normal*>(buffer.data());
 
-		std::memcpy(&serialised_product->product_id, product.product_id.c_str(), product.product_id.size());
-		std::memcpy(&serialised_product->product_name, product.name.c_str(), product.name.size());
-		std::memcpy(&serialised_product->product_desc_short, product.description_short.c_str(), product.description_short.size());
-		std::memcpy(&serialised_product->product_desc_long, product.description_long.c_str(), product.description_long.size());
-		std::memcpy(&serialised_product->image_url, product.image_uri.c_str(), product.image_uri.size());
-		std::memcpy(&serialised_product->sp_name, product.sp_name.c_str(), product.sp_name.size());
-		std::memcpy(&serialised_product->legal_desc, LEGAL_TEXT, SCE_NP_COMMERCE2_LEGAL_DESC_LEN);
+		strcpy_trunc(serialised_product->product_id, product.product_id);
+		strcpy_trunc(serialised_product->product_name, product.name);
+		strcpy_trunc(serialised_product->product_desc_short, product.description_short);
+		strcpy_trunc(serialised_product->product_desc_long, product.description_long);
+		strcpy_trunc(serialised_product->image_url, product.image_uri);
+		strcpy_trunc(serialised_product->sp_name, product.sp_name);
+		strcpy_trunc(serialised_product->legal_desc, LEGAL_TEXT);
 
 		serialised_product->rating_info = {};
 		serialised_product->release_date = product.release_date;
@@ -67,13 +67,13 @@ namespace commerce2
 			product_count = std::min({static_cast<u16>(products.size()), max_product_count, static_cast<u16>(SCE_NP_COMMERCE2_GETPRODLIST_MAX_COUNT)});
 		}
 
-		u32 products_size = product_count * sizeof(s_product_info_normal);
-		u32 total_size = sizeof(be_t<u32>) + products_size;
+		u32 products_size = product_count * sizeof(s_product_info_thin);
+		u32 total_size = sizeof(s_product_list) + products_size;
 
 		std::vector<u8> buffer(total_size);
 		s_product_list* serialised_products = reinterpret_cast<s_product_list*>(buffer.data());
 
-		std::memcpy(&serialised_products->legal_desc, LEGAL_TEXT, SCE_NP_COMMERCE2_LEGAL_DESC_LEN);
+		strcpy_trunc(serialised_products->legal_desc, LEGAL_TEXT);
 		serialised_products->rating_info = {};
 		serialised_products->product_count = product_count;
 
@@ -100,12 +100,12 @@ namespace commerce2
 		std::vector<u8> buffer(total_size);
 		s_category_contents* serialised_category = reinterpret_cast<s_category_contents*>(buffer.data());
 
-		std::memcpy(&serialised_category->category_id, category.category_id.c_str(), category.category_id.size());
-		std::memcpy(&serialised_category->category_name, category.name.c_str(), category.name.size());
-		std::memcpy(&serialised_category->category_desc, category.description.c_str(), category.description.size());
-		std::memcpy(&serialised_category->image_url, category.image_uri.c_str(), category.image_uri.size());
-		std::memcpy(&serialised_category->sp_name, category.sp_name.c_str(), category.sp_name.size());
-		std::memcpy(&serialised_category->legal_desc, LEGAL_TEXT, SCE_NP_COMMERCE2_LEGAL_DESC_LEN);
+		strcpy_trunc(serialised_category->category_id, category.category_id);
+		strcpy_trunc(serialised_category->category_name, category.name);
+		strcpy_trunc(serialised_category->category_desc, category.description);
+		strcpy_trunc(serialised_category->image_url, category.image_uri);
+		strcpy_trunc(serialised_category->sp_name, category.sp_name);
+		strcpy_trunc(serialised_category->legal_desc, LEGAL_TEXT);
 
 		serialised_category->rating_info = {};
 		serialised_category->release_date = category.release_date;

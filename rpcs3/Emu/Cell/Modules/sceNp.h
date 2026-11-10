@@ -1447,7 +1447,7 @@ struct SceNpDate
 // Entitlement ID (fixed-length)
 struct SceNpEntitlementId
 {
-	u8 data[SCE_NP_ENTITLEMENT_ID_SIZE];
+	char data[SCE_NP_ENTITLEMENT_ID_SIZE];
 };
 
 // Callback for getting the connection status

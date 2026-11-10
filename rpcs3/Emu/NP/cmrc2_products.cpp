@@ -366,7 +366,7 @@ namespace commerce2
 		cmrc_products.success("Loaded %u products from %u categories in file: %s", products.size(), categories.size(), path);
 	}
 
-	error_code product_manager::get_product_info(u32 req_id, const std::string_view category_id, const std::string_view product_id)
+	error_code product_manager::get_product_info(u32 req_id, const std::string_view product_id)
 	{
 		const auto& req_ctx = get_commerce2_lookup_request_context(req_id);
 
@@ -375,13 +375,6 @@ namespace commerce2
 
 		if (req_ctx->aborted)
 			return SCE_NP_COMMERCE2_ERROR_ABORTED;
-
-		const auto& category_data = get_category_data(category_id);
-		if (!category_data.has_value())
-		{
-			req_ctx->result = SCE_NP_COMMERCE2_SERVER_ERROR_NO_SUCH_CATEGORY;
-			return CELL_OK;
-		}
 
 		const auto& found_product_data = get_product_data(product_id);
 		if (!found_product_data.has_value())

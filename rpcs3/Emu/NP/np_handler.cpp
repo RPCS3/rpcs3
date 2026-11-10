@@ -1929,9 +1929,6 @@ namespace np
 		if (is_commerce_inited)
 			return;
 
-		if (!Emu.IsRunning())
-			return;
-
 		is_commerce_inited = true;
 
 		const std::string title_id = Emu.GetTitleID();
@@ -1943,9 +1940,6 @@ namespace np
 	void np_handler::terminate_commerce()
 	{
 		if (!is_commerce_inited)
-			return;
-
-		if (!Emu.IsRunning())
 			return;
 
 		const std::string title_id = Emu.GetTitleID();
@@ -2063,7 +2057,7 @@ namespace np
 		if (ent_info.has_value())
 		{
 			std::memset(entitlement.get_ptr(), 0, sizeof(SceNpEntitlement));
-			std::memcpy(&entitlement->id.data, ent_id.c_str(), ent_id.size());
+			strcpy_trunc(entitlement->id.data, ent_id);
 
 			entitlement->created_date = ent_info->created_date;
 			entitlement->expire_date = ent_info->expire_date;
@@ -2137,8 +2131,8 @@ namespace np
 		return {};
 	}
 
-	// Returns entitlements the user 'owns' for the current ticket's Service ID
-	error_code np_handler::get_entitlement_id_list(vm::ptr<SceNpEntitlementId> ids, u32 num_ids_to_get)
+	// Gets entitlements the user 'owns' for the current ticket's Service ID
+	error_code np_handler::get_entitlement_id_list(vm::ptr<SceNpEntitlementId> ids, u32 ids_size)
 	{
 		if (current_ticket.empty())
 		{
@@ -2158,30 +2152,20 @@ namespace np
 			return not_an_error(0);
 		}
 
-		for (u32 index = 0; index < num_ids_to_get; ++index)
+		if (ids)
 		{
-			std::memset(ids[index].data, 0, sizeof(SceNpEntitlementId));
-			std::memcpy(ids[index].data, svc_ents->second[index].id.c_str(), SCE_NP_ENTITLEMENT_ID_SIZE);
+			if (ids_size != svc_ents->second.size())
+				return SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY;
+
+			for (u32 index = 0; index < ids_size; ++index)
+			{
+				std::memset(ids[index].data, 0, sizeof(SceNpEntitlementId));
+				strcpy_trunc(ids[index].data, svc_ents->second[index].id);
+			}
 		}
 
-		return CELL_OK;
-	}
-
-	u32 np_handler::get_num_entitlement_ids() const
-	{
-		// Entitlements are stored against Service IDs, so only those
-		// which match the current ticket's Service ID are counted
-		const std::string service_id = current_ticket.get_service_id();
-
-		reader_lock lock(mutex_entitlements);
-
-		const auto svc_ents = entitlements.find(service_id);
-		if (svc_ents == entitlements.end())
-		{
-			return 0;
-		}
-
-		return std::min(svc_ents->second.size(), TICKET_MAX_ENTITLEMENT_IDS); // TODO - Ticket version check
+		// Returns number of entitlements in ticket
+		return not_an_error(svc_ents->second.size());
 	}
 
 	void np_handler::load_owned_entitlements(const std::string title_id)

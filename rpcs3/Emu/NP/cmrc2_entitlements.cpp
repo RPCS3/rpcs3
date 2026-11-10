@@ -146,7 +146,7 @@ namespace commerce2
 			}
 
 			// Default values for non-consumables
-			s32 expire_date = -1;
+			s64 expire_date = -1;
 			s32 remaining = -1;
 			u32 consumed = 0;
 
