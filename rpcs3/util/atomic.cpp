@@ -40,6 +40,9 @@ static bool has_waitv()
 	static const bool s_has_waitv = []
 	{
 #ifndef ANDROID
+		// Clear errno in order to inspect it later
+		errno = 0;
+
 		// FIXME: it produces SIGSYS signal
 		syscall(SYS_futex_waitv, 0, 0, 0, 0, 0);
 		return errno != ENOSYS && errno != EPERM;

@@ -447,7 +447,9 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 {
 	cpu.state += cpu_flag::wait;
 
-	sys_rsx.warning("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
+	const bool has_unknown_system_flags = (system_mode & ~0xA30) != 0;
+
+	(has_unknown_system_flags ? sys_rsx.error : sys_rsx.warning)("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
 
 	if (!vm::check_addr(rsx::constants::local_mem_base))
@@ -552,6 +554,8 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	ctx->display_buffers_count = 0;
 	ctx->current_display_buffer = 0;
 	ctx->fw.label_addr = vm::cast(*lpar_reports);
+
+	ctx->fw.is_fifo_rsx_local = !!(system_mode & 0x10);
 	render->init_context(ctx, dma_address);
 
 	if (first)
@@ -817,7 +821,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(ctx->fw.driver_info);
 	switch (package_id)
 	{
-	case 0x001: // FIFO
+	case SYS_RSX_CONTEXT_ATTR_CMD_FIFO_RESET: // FIFO
 	{
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
@@ -826,14 +830,14 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		set_rsx_dmactl(render, ctx, get_put);
 		break;
 	}
-	case 0x100: // Display mode set
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_MODE: // Display mode set
 		break;
-	case 0x101: // Display sync set, cellGcmSetFlipMode
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_VSYNC: // Display sync set, cellGcmSetFlipMode
 		// a4 == 2 is vsync, a4 == 1 is hsync
 		render->requested_vsync.store(a4 == 2);
 		break;
 
-	case 0x102: // Display flip
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_FLIP: // Display flip
 	{
 		u32 flip_idx = ~0u;
 
@@ -887,7 +891,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 		break;
 	}
-	case 0x103: // Display Queue
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_QUEUE: // Display Queue
 	{
 		// NOTE: There currently seem to only be 2 active heads on PS3
 		ensure(a3 < 2);
@@ -907,7 +911,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 		break;
 	}
-	case 0x104: // Display buffer
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_BUFFER: // Display buffer
 	{
 		const u8 id = a3 & 0xFF;
 		if (id > 7)
@@ -930,13 +934,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		ctx->display_buffers_count = std::max<u32>(id + 1, ctx->display_buffers_count);
 		break;
 	}
-	case 0x105: // destroy buffer?
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_BUFFER_RESET: // destroy buffer?
 		break;
 
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
 
-	case 0x108: // cellGcmSetVBlankFrequency, cellGcmSetSecondVFrequency
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_VBLANK: // cellGcmSetVBlankFrequency, cellGcmSetSecondVFrequency
 		// a4 == 3, CELL_GCM_DISPLAY_FREQUENCY_59_94HZ
 		// a4 == 2, CELL_GCM_DISPLAY_FREQUENCY_SCANOUT
 		// a4 == 4, CELL_GCM_DISPLAY_FREQUENCY_DISABLE
@@ -956,7 +960,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		break;
 
-	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
+	case SYS_RSX_CONTEXT_ATTR_CMD_FLIP_STATUS: // ? Involved in managing flip status through cellGcmResetFlipStatus
 	{
 		if (a3 > 7)
 		{
@@ -972,7 +976,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		});
 		break;
 	}
-	case 0x10b:
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_CURSOR_POS:
 		// when a4=3, cellGcmSetCursorPosition(a5=xpos, a6=ypos)
 		// when a4=2, cellGcmSetCursorImageOffset(a5=offset)
 		if (a4 == 3)
@@ -982,7 +986,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		else
 			sys_rsx.error("Unknown subfunction 0x%llx (package=0x10b)", a4);
 		break;
-	case 0x10c:
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_CURSOR:
 		// when a4=1, cellGcmSetCursorEnable()
 		// when a4=2, cellGcmSetCursorDisable()
 		if (a4 == 1)
@@ -992,13 +996,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		else
 			sys_rsx.error("Unknown subfunction 0x%llx (package=0x10c)", a4);
 		break;
-	case 0x10d:
+	case SYS_RSX_CONTEXT_ATTR_CMD_CURSOR_INIT:
 		// cellGcmInitCursor(a3=1, a4=1, a5=0, a6=0)
 		ensure(a4 == 1);
 		_sys_rsx_init_cursor_overlay();
 		break;
 
-	case 0x300: // Tiles
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_TILE: // Tiles
 	{
 		//a4 high bits = ret.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31);
 		//a4 low bits = ret.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31);
@@ -1078,7 +1082,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		tile.bound = bound;
 		break;
 	}
-	case 0x301: // Depth-buffer (Z-cull)
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_ZCULL: // Depth-buffer (Z-cull)
 	{
 		//a4 high = region = (1 << 0) | (zFormat << 4) | (aaFormat << 8);
 		//a4 low = size = ((width >> 6) << 22) | ((height >> 6) << 6);
