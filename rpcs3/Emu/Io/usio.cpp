@@ -186,7 +186,7 @@ void usb_device_usio::load_backup()
 		if (fs::file usio_card_file;
 			usio_card_file.open(fmt::format(usio_card_path, rpcs3::utils::get_hdd1_dir(), i + 1), fs::read))
 		{
-			usio_card_file.read(memory.card_data[i].data(), std::min(memory.card_data[i].size(), usio_card_file.size()));
+			usio_card_file.read(memory.card_data[i].data(), std::min(static_cast<u64>(memory.card_data[i].size()), usio_card_file.size()));
 		}
 	}
 }
