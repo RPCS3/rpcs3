@@ -239,7 +239,8 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 
-	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_output_8bit = !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && m_shader_props.ROP_output_8bit;
 	m_shader_props.ROP_sRGB_packing = !!(m_prog.ctrl & RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER);
 	m_shader_props.ROP_alpha_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST);
 	m_shader_props.ROP_alpha_to_coverage_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE);

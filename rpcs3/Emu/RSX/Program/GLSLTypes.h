@@ -45,6 +45,7 @@ namespace glsl
 		bool emulated_depth_storage : 1;      // Float depth surfaces hold encode_emulated_depth(z)
 
 		// ROP control flags
+		bool ROP_output_8bit : 1;
 		bool ROP_output_multisampled : 1;
 		bool ROP_output_rounding : 1;
 		bool ROP_sRGB_packing : 1;
