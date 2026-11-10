@@ -248,6 +248,11 @@ namespace glsl
 				enabled_options.push_back("_32_BIT_OUTPUT");
 			}
 
+			if (props.ROP_output_8bit)
+			{
+				enabled_options.push_back("_ENABLE_8BIT_FRAMEBUFFER");
+			}
+
 			if (props.ROP_sRGB_packing)
 			{
 				enabled_options.push_back("_ENABLE_FRAMEBUFFER_SRGB");
