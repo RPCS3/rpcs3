@@ -132,8 +132,11 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		{
 			code = ClampValue(code, RSX_FP_PRECISION_SATURATE);
 		}
-		else if (dst.prec)
+		else if (dst.prec || dst.fp16)
 		{
+			// Fall back to native precision
+			const auto out_prec = dst.prec ? dst.prec : (dst.fp16 ? RSX_FP_PRECISION_HALF : RSX_FP_PRECISION_REAL);
+
 			switch (dst.opcode)
 			{
 			case RSX_FP_OPCODE_NRM:
@@ -155,15 +158,15 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 			default:
 			{
 				// fp16 precsion flag on f32 register; ignore
-				if (dst.prec == 1 && !dst.fp16)
+				if (out_prec == RSX_FP_PRECISION_HALF && !dst.fp16)
 					break;
 
 				// Native type already has fp16 clamped (input must have been cast)
-				if (dst.prec == 1 && dst.fp16 && device_props.has_native_half_support)
+				if (out_prec == RSX_FP_PRECISION_HALF && dst.fp16 && device_props.has_native_half_support)
 					break;
 
 				// clamp value to allowed range
-				code = ClampValue(code, dst.prec);
+				code = ClampValue(code, out_prec);
 				break;
 			}
 			}
