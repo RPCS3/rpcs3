@@ -947,7 +947,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 			"{\n"
 			"	precise uint packed = packHalf2x16(val);\n"
 			"	precise vec2 unpacked = unpackHalf2x16(packed);\n"
-			"	return unpacked;\n"
+			"	bvec2 ovf = greaterThan(abs(val), vec2(65535.));\n"
+			"	vec2 inf2 = uintBitsToFloat((floatBitsToUint(val) & 0x80000000u) | 0x7f800000u);\n"
+			"	return _select(unpacked, inf2, ovf);\n"
 			"}\n"
 			"vec4 clamp16(vec4 val){ return vec4(clamp16(val.xy), clamp16(val.zw)); }\n\n";
 		}
