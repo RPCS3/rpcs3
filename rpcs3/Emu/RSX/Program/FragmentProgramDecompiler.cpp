@@ -943,15 +943,14 @@ std::string FragmentProgramDecompiler::BuildCode()
 		else if (glsl)
 		{
 			clamp_func +=
-			"vec2 clamp16(vec2 val)\n"
+			"vec4 clamp16(vec4 val)\n"
 			"{\n"
-			"	precise uint packed = packHalf2x16(val);\n"
-			"	precise vec2 unpacked = unpackHalf2x16(packed);\n"
-			"	bvec2 ovf = greaterThan(abs(val), vec2(65535.));\n"
-			"	vec2 inf2 = uintBitsToFloat((floatBitsToUint(val) & 0x80000000u) | 0x7f800000u);\n"
-			"	return _select(unpacked, inf2, ovf);\n"
-			"}\n"
-			"vec4 clamp16(vec4 val){ return vec4(clamp16(val.xy), clamp16(val.zw)); }\n\n";
+			"	const uvec4 raw = floatBitsToUint(val);\n"
+			"	const vec4 truncated = uintBitsToFloat(raw & 0xffffe000u);\n"
+			"	const bvec4 ovf = greaterThan(abs(val), vec4(65535.));\n"
+			"	const vec4 inf4 = uintBitsToFloat((raw & 0x80000000u) | 0x7f800000u);\n"
+			"	return _select(truncated, inf4, ovf);\n"
+			"}\n";
 		}
 		else
 		{
