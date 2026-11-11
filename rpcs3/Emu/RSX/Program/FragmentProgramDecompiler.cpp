@@ -157,13 +157,20 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 				[[fallthrough]];
 			default:
 			{
-				// fp16 precsion flag on f32 register; ignore
+				// fp16 precsion flag on f32 register; replace with precision clamp to match real hardware.
 				if (out_prec == RSX_FP_PRECISION_HALF && !dst.fp16)
+				{
+					code = "_builtin_f16_32_clamp(" + code + ")";
 					break;
+				}
 
 				// Native type already has fp16 clamped (input must have been cast)
-				if (out_prec == RSX_FP_PRECISION_HALF && dst.fp16 && device_props.has_native_half_support)
+				if (out_prec == RSX_FP_PRECISION_HALF &&
+					dst.fp16 &&
+					device_props.has_native_half_support)
+				{
 					break;
+				}
 
 				// clamp value to allowed range
 				code = ClampValue(code, out_prec);
@@ -938,27 +945,38 @@ std::string FragmentProgramDecompiler::BuildCode()
 		if (false) //device_props.supports_spirv_intrinsics)
 		{
 			clamp_func +=
-				"#define clamp16 _builtin_f16_quantize\n\n";
+				"#define clamp16 _builtin_f16_quantize\n"
+				"#define _builtin_f16_32_clamp clamp16\n\n";
 		}
 		else if (glsl)
 		{
 			clamp_func +=
 			"#define clamp16 _builtin_f16_sw_quantize\n"
-			"vec4 _builtin_f16_sw_quantize(vec4 val)\n"
+			"vec4 _builtin_f16_sw_quantize(const in vec4 val)\n"
 			"{\n"
 			"	const uvec4 raw = floatBitsToUint(val);\n"
 			"	const vec4 normal = uintBitsToFloat(raw & 0xffffe000u);\n"
-			"	const vec4 truncated = trunc(normal * 16777216.) * (1. / 16777216.);\n" // Reproduce denormals
-			"	const vec4 clean = _select(truncated, val, isnan(val));\n"
-			"	const bvec4 ovf = greaterThan(abs(val), vec4(65535.));\n"
-			"	const vec4 inf4 = uintBitsToFloat((raw & 0x80000000u) | 0x7f800000u);\n"
-			"	return _select(clean, inf4, ovf);\n"
+			"	const vec4 truncated = trunc(normal * 16777216.) * (1. / 16777216.);\n"        // Truncates mantissa to 10 bits
+			"	const vec4 inf4 = val * 1e35;\n"                                               // Signed inf+nan shorthand
+			"	const bvec4 ovf = greaterThanEqual(raw & 0x7fffffffu, uvec4(0x47800000u));\n"  // Combined INF+NaN check
+			"	return _select(truncated, inf4, ovf);\n"
+			"}\n\n"
+
+			"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
+			"{\n"
+			"	const uvec4 raw = floatBitsToUint(val);\n"
+			"	const vec4 flushed = _select(val, vec4(0.), equal(raw & 0x7f800000u, uvec4(0u)));\n" // Denormals are zero for F16_32 clamping
+			"	const bvec4 ovf = greaterThanEqual(abs(val), vec4(65536.));\n"
+			"	const vec4 inf4 = val * 1e35;\n"
+			"	return _select(flushed, inf4, ovf);\n"
 			"}\n\n";
 		}
 		else
 		{
 			// Unimplemented
-			clamp_func += "#define clamp16(x) (x)\n";
+			clamp_func +=
+				"#define clamp16(x) (x)\n"
+				"#define _builtin_f16_32_clamp(x) (x)\n";
 		}
 
 		OS << Format(clamp_func);
