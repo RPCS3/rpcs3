@@ -180,10 +180,6 @@ namespace glsl
 	void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props)
 	{
 		std::vector<std::string_view> enabled_options;
-		if (props.low_precision_tests)
-		{
-			enabled_options.push_back("_GPU_LOW_PRECISION_COMPARE");
-		}
 
 		if (props.require_lit_emulation)
 		{
