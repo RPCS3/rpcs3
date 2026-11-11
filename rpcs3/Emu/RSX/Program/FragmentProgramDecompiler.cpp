@@ -943,14 +943,17 @@ std::string FragmentProgramDecompiler::BuildCode()
 		else if (glsl)
 		{
 			clamp_func +=
-			"vec4 clamp16(vec4 val)\n"
+			"#define clamp16 _builtin_f16_sw_quantize\n"
+			"vec4 _builtin_f16_sw_quantize(vec4 val)\n"
 			"{\n"
 			"	const uvec4 raw = floatBitsToUint(val);\n"
-			"	const vec4 truncated = uintBitsToFloat(raw & 0xffffe000u);\n"
+			"	const vec4 normal = uintBitsToFloat(raw & 0xffffe000u);\n"
+			"	const vec4 truncated = trunc(normal * 16777216.) * (1. / 16777216.);\n" // Reproduce denormals
+			"	const vec4 clean = _select(truncated, val, isnan(val));\n"
 			"	const bvec4 ovf = greaterThan(abs(val), vec4(65535.));\n"
 			"	const vec4 inf4 = uintBitsToFloat((raw & 0x80000000u) | 0x7f800000u);\n"
-			"	return _select(truncated, inf4, ovf);\n"
-			"}\n";
+			"	return _select(clean, inf4, ovf);\n"
+			"}\n\n";
 		}
 		else
 		{
