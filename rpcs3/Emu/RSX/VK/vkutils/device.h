@@ -108,7 +108,7 @@ namespace vk
 			bool portability = false;
 			bool provoking_vertex_last = false;
 			bool shader_draw_parameters = false;
-			bool float_controls_daz = false;
+			bool shader_denorm_preserve_f32 = false;
 		} optional_features_support;
 
 		friend class render_device;
@@ -203,6 +203,7 @@ namespace vk
 		bool get_texture_compression_bc_support() const { return pgpu->optional_features_support.texture_compression_bc; }
 		bool get_provoking_vertex_last_support() const { return pgpu->optional_features_support.provoking_vertex_last; }
 		bool get_shader_draw_parameters_support() const { return pgpu->optional_features_support.shader_draw_parameters; }
+		bool get_shader_denorm_preserve_f32_support() const { return pgpu->optional_features_support.shader_denorm_preserve_f32; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }

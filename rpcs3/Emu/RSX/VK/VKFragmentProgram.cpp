@@ -121,7 +121,9 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	{
 		required_extensions.emplace_back("GL_EXT_shader_explicit_arithmetic_types_float16");
 	}
-	else if (device_props.supports_spirv_intrinsics)
+
+	if ((device_props.supports_spirv_intrinsics && !device_props.has_native_half_support) ||
+		device_props.supports_denorm_preserve_f32)
 	{
 		required_extensions.emplace_back("GL_EXT_spirv_intrinsics");
 	}
@@ -144,8 +146,12 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
 
-	// Capability DenormFlushToZero (4465), ExecutionMode DenormFlushToZero (4460), bit width 32
-	OS << "spirv_execution_mode(capabilities = [4465], 4460, 32);\n\n";
+	if (device_props.supports_denorm_preserve_f32)
+	{
+		// RSX compares and moves keep full f32 denormals. Some hardware does not support this (NVIDIA, ironically)
+		// Capability DenormPreserve (4464), ExecutionMode DenormPreserve (4459), bit width 32
+		OS << "spirv_execution_mode(capabilities = [4464], 4459, 32);\n\n";
+	}
 
 	glsl::insert_subheader_block(OS);
 }
@@ -638,6 +644,11 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	if (g_cfg.video.shader_precision == gpu_preset_level::low)
 	{
 		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
+	}
+	else
+	{
+		// Disable DAZ mode only needed when shader precision is high and above
+		decompiler.device_props.supports_denorm_preserve_f32 = pdev->get_shader_denorm_preserve_f32_support();
 	}
 
 	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;

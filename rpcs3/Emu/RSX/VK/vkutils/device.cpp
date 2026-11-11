@@ -218,7 +218,7 @@ namespace vk
 		vkGetPhysicalDeviceProperties2(dev, &properties2);
 		props = properties2.properties;
 
-		optional_features_support.float_controls_daz = !!props12.shaderDenormFlushToZeroFloat32;
+		optional_features_support.shader_denorm_preserve_f32 = !!props12.shaderDenormPreserveFloat32;
 
 		if (descriptor_indexing_support)
 		{
