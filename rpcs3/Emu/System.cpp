@@ -413,6 +413,7 @@ extern void dump_executable(std::span<const u8> data, const ppu_module<lv2_obj>*
 			{
 				out.trunc(0);
 				out.write(data.data(), data.size());
+				sys_log.success("Saved decrypted ELF at %s", file_path);
 			}
 		}
 		else
