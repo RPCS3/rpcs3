@@ -915,23 +915,21 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (properties.has_clamp)
 	{
 		std::string precision_func =
-		"$float4 precision_clamp($float4 x, float _min, float _max)\n"
+		"$float4 precision_clamp(const in $float4 x, const in float _min, const in float _max)\n"
 		"{\n"
-		"	// Treat NaNs as 0\n"
-		"	bvec4 nans = isnan(x);\n"
-		"	x = _select(x, $float4(0.), nans);\n"
-		"	return clamp(x, _min, _max);\n"
+		"	const uvec4 m = floatBitsToUint(x) & 0x7fffffffu;\n"                                         // Abs
+		"	const vec4 v = _select(x, $float4(0.), greaterThan(m - 0x00800000u, uvec4(0x7f000000u)));\n" // Flush NaNs, -0 and denorms to +0
+		"	return clamp(v, _min, _max);\n"
 		"}\n\n";
 
 		if (device_props.has_native_half_support)
 		{
 			precision_func +=
-			"$half4 precision_clamp($half4 x, float _min, float _max)\n"
+			"$half4 precision_clamp(const in $half4 x, const in float _min, const in float _max)\n"
 			"{\n"
-			"	// Treat NaNs as 0\n"
-			"	bvec4 nans = isnan(x);\n"
-			"	x = _select(x, $half4(0.), nans);\n"
-			"	return clamp(x, $half_t(_min), $half_t(_max));\n"
+			"	const bvec4 flush = not(greaterThan(abs(x), $half4(0.)));\n"  // Only ever true for NaNs and +-0. f16 denorms kept
+			"	const $half4 v = _select(x, $half4(0.), flush);\n"            // Flush NaNs and -0 to +0
+			"	return clamp(v, $half_t(_min), $half_t(_max));\n"
 			"}\n\n";
 		}
 
