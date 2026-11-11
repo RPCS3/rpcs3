@@ -5,6 +5,10 @@
 
 #include <vector>
 #include <any>
+#include <functional>
+#include <initializer_list>
+#include <optional>
+#include <type_traits>
 
 template <typename Derived, typename Base>
 concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
@@ -205,9 +209,8 @@ public:
 		bool cancel_if_not_suspended;
 		bool was_posted;
 
-		// Size of prefetch list workload
-		u32 prf_size;
-		void* const* prf_list;
+		// Owned prefetch hints (the input initializer_list may be temporary)
+		std::vector<void*> prf_list;
 
 		void* func_ptr;
 		void* res_buf;
@@ -230,25 +233,30 @@ public:
 
 		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
 		{
-			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			suspend_work work{prio, false, false, std::vector<void*>(hints), &op, nullptr, [](void* func, void*)
 			{
 				std::invoke(*static_cast<F*>(func));
 			}};
 
-			work.push(_this);
+			ensure(work.push(_this));
 			return;
 		}
 		else
 		{
-			std::invoke_result_t<F> result;
+			using result_type = std::invoke_result_t<F>;
+			static_assert(!std::is_reference_v<result_type>, "cpu_thread::suspend_all does not support reference return types");
+			static_assert(std::is_move_constructible_v<std::remove_cv_t<result_type>>, "cpu_thread::suspend_all requires a move-constructible return type");
 
-			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, &result, [](void* func, void* res_buf)
+			std::optional<std::remove_cv_t<result_type>> result;
+
+			suspend_work work{prio, false, false, std::vector<void*>(hints), &op, &result, [](void* func, void* res_buf)
 			{
-				*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
+				static_cast<std::optional<std::remove_cv_t<result_type>>*>(res_buf)->emplace(std::invoke(*static_cast<F*>(func)));
 			}};
 
-			work.push(_this);
-			return result;
+			ensure(work.push(_this));
+			ensure(result.has_value());
+			return std::move(*result);
 		}
 	}
 
@@ -259,7 +267,7 @@ public:
 
 		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::suspend_post only supports void as return type");
 
-		return suspend_work{prio, false, true, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+		return suspend_work{prio, false, true, std::vector<void*>(hints), &op, nullptr, [](void* func, void*)
 		{
 			std::invoke(*static_cast<F*>(func));
 		}};
@@ -274,7 +282,7 @@ public:
 		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::if_suspended only supports void as return type");
 
 		{
-			suspend_work work{prio, true, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			suspend_work work{prio, true, false, std::vector<void*>(hints), &op, nullptr, [](void* func, void*)
 			{
 				std::invoke(*static_cast<F*>(func));
 			}};
