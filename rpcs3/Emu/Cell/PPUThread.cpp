@@ -3555,6 +3555,8 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	{
 		// Reload "cached" reservation of previous succeeded conditional store
 		// This seems like a hardware feature according to cellSpursAddUrgentCommand function
+		// Every succeeded conditional store advances the reservation time by 128
+		ppu.rtime += 128;
 	}
 	else
 	{
