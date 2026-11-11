@@ -1338,13 +1338,15 @@ std::string FragmentProgramDecompiler::Decompile()
 			rop_block->insert_pred(tail_block);
 		}
 
+		// First, run the block annotation pass. ROP block does not require this, only native code does.
+		FP::RegisterAnnotationPass annotation_pass{ m_prog, { .skip_delay_slots = true } };
+		m_is_valid_ucode = m_is_valid_ucode && annotation_pass.run(graph);
+
+		// NOTE: Annotation pass will rebuild block inputs, so we need to add the ROP inputs after it has run.
 		const auto rop_inputs = get_fragment_program_output_set(m_prog.ctrl, m_prog.mrt_buffers_count);
 		rop_block->input_list.insert(rop_block->input_list.end(), rop_inputs.begin(), rop_inputs.end());
 
-		FP::RegisterAnnotationPass annotation_pass{ m_prog, { .skip_delay_slots = true } };
 		FP::RegisterDependencyPass dependency_pass{};
-
-		m_is_valid_ucode = m_is_valid_ucode && annotation_pass.run(graph);
 		m_is_valid_ucode = m_is_valid_ucode && dependency_pass.run(graph);
 	}
 
