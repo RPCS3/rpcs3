@@ -5,10 +5,12 @@
 
 #include <vector>
 #include <any>
+#include <exception>
 #include <functional>
 #include <initializer_list>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 template <typename Derived, typename Base>
 concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
@@ -209,8 +211,11 @@ public:
 		bool cancel_if_not_suspended;
 		bool was_posted;
 
-		// Owned prefetch hints (the input initializer_list may be temporary)
-		std::vector<void*> prf_list;
+		// Own the prefetch hints: initializer_list storage does not outlive
+		// the full expression in which the list was created.
+		std::vector<void*> prf_storage;
+		u32 prf_size = 0;
+		void* const* prf_list = nullptr;
 
 		void* func_ptr;
 		void* res_buf;
@@ -219,13 +224,49 @@ public:
 		void (*exec)(void* func, void* res);
 
 		// Next object in the linked list
-		suspend_work* next;
+		suspend_work* next = nullptr;
+
+		suspend_work(u8 priority, bool cancel, bool posted,
+			std::initializer_list<void*> hints, void* func, void* result,
+			void (*executor)(void*, void*))
+			: prio(priority)
+			, cancel_if_not_suspended(cancel)
+			, was_posted(posted)
+			, prf_storage(hints)
+			, prf_size(::size32(prf_storage))
+			, prf_list(prf_storage.empty() ? nullptr : prf_storage.data())
+			, func_ptr(func)
+			, res_buf(result)
+			, exec(executor)
+		{
+		}
+
+		suspend_work(const suspend_work&) = delete;
+		suspend_work& operator=(const suspend_work&) = delete;
+
+		suspend_work(suspend_work&& other) noexcept
+			: prio(other.prio)
+			, cancel_if_not_suspended(other.cancel_if_not_suspended)
+			, was_posted(other.was_posted)
+			, prf_storage(std::move(other.prf_storage))
+			, prf_size(other.prf_size)
+			, prf_list(prf_storage.empty() ? nullptr : prf_storage.data())
+			, func_ptr(other.func_ptr)
+			, res_buf(other.res_buf)
+			, exec(other.exec)
+			, next(other.next)
+		{
+			other.prf_size = 0;
+			other.prf_list = nullptr;
+			other.next = nullptr;
+		}
 
 		// Internal method
 		bool push(cpu_thread* _this) noexcept;
 	};
 
-	// Suspend all threads and execute op (may be executed by other thread than caller!)
+	// Suspend all threads and execute op (may be executed by other thread than caller!).
+	// push() completes execution before returning, so the local callable/result remain alive.
 	template <u8 Prio = 0, typename F>
 	static auto suspend_all(cpu_thread* _this, std::initializer_list<void*> hints, F op)
 	{
@@ -233,29 +274,33 @@ public:
 
 		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
 		{
-			suspend_work work{prio, false, false, std::vector<void*>(hints), &op, nullptr, [](void* func, void*)
+			suspend_work work{prio, false, false, hints, &op, nullptr, [](void* func, void*)
 			{
 				std::invoke(*static_cast<F*>(func));
 			}};
 
-			ensure(work.push(_this));
+			work.push(_this);
 			return;
 		}
 		else
 		{
 			using result_type = std::invoke_result_t<F>;
-			static_assert(!std::is_reference_v<result_type>, "cpu_thread::suspend_all does not support reference return types");
-			static_assert(std::is_move_constructible_v<std::remove_cv_t<result_type>>, "cpu_thread::suspend_all requires a move-constructible return type");
+			static_assert(!std::is_reference_v<result_type>,
+				"cpu_thread::suspend_all does not support reference return types");
 
-			std::optional<std::remove_cv_t<result_type>> result;
+			std::optional<result_type> result;
 
-			suspend_work work{prio, false, false, std::vector<void*>(hints), &op, &result, [](void* func, void* res_buf)
+			suspend_work work{prio, false, false, hints, &op, &result, [](void* func, void* res_buf)
 			{
-				static_cast<std::optional<std::remove_cv_t<result_type>>*>(res_buf)->emplace(std::invoke(*static_cast<F*>(func)));
+				auto& result = *static_cast<std::optional<result_type>*>(res_buf);
+				result.emplace(std::invoke(*static_cast<F*>(func)));
 			}};
 
-			ensure(work.push(_this));
-			ensure(result.has_value());
+			if (!work.push(_this) || !result)
+			{
+				std::terminate();
+			}
+
 			return std::move(*result);
 		}
 	}
@@ -267,7 +312,8 @@ public:
 
 		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::suspend_post only supports void as return type");
 
-		return suspend_work{prio, false, true, std::vector<void*>(hints), &op, nullptr, [](void* func, void*)
+		// `op` is intentionally referenced, not copied; it must outlive the returned work.
+		return suspend_work{prio, false, true, hints, &op, nullptr, [](void* func, void*)
 		{
 			std::invoke(*static_cast<F*>(func));
 		}};
@@ -282,7 +328,7 @@ public:
 		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::if_suspended only supports void as return type");
 
 		{
-			suspend_work work{prio, true, false, std::vector<void*>(hints), &op, nullptr, [](void* func, void*)
+			suspend_work work{prio, true, false, hints, &op, nullptr, [](void* func, void*)
 			{
 				std::invoke(*static_cast<F*>(func));
 			}};
