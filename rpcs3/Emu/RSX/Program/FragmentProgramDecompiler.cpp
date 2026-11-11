@@ -332,7 +332,7 @@ std::string FragmentProgramDecompiler::AddTex()
 
 std::string FragmentProgramDecompiler::AddX2d()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0.)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", "$float4(0.)");
 }
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
@@ -438,7 +438,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 std::string FragmentProgramDecompiler::GetRawCond()
 {
 	static constexpr std::string_view f = "xyzw";
-	const auto zero = getFloatTypeName(4) + "(0.)";
+	const auto zero = "$float4(0.)";
 
 	std::string swizzle, cond;
 	swizzle.reserve(5);
@@ -584,7 +584,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		if (opflags & OPFLAGS::src_cast_f32 && src.fp16 && device_props.has_native_half_support)
 		{
 			// Upconvert if there is a chance for ambiguity
-			ret = getFloatTypeName(4) + "(" + ret + ")";
+			ret = "$float4(" + ret + ")";
 		}
 
 		break;
@@ -663,15 +663,15 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				// Point sprite coord generation. Stacks with the 2D override mask.
 				if (!m_prog.texcoord_is_2d(texcoord))
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+					ret += "$float4(gl_PointCoord, 1., 0.)";
 				}
 				else if (!touches_w)
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., 0.)";
+					ret += "$float4(gl_PointCoord, 0., 0.)";
 				}
 				else
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
+					ret += "$float4(gl_PointCoord, 0., in_w)";
 					properties.has_w_access = true;
 				}
 			}
@@ -680,7 +680,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				// Perspective correct flag multiplies the result by 1/w
 				if (m_prog.texcoord_is_2d(texcoord))
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy * gl_FragCoord.w, 0., 1.)";
+					ret += "$float4(" + reg_var + ".xy * gl_FragCoord.w, 0., 1.)";
 				}
 				else
 				{
@@ -696,11 +696,11 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				}
 				else if (!touches_w)
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., 0.)";
+					ret += "$float4(" + reg_var + ".xy, 0., 0.)";
 				}
 				else
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
+					ret += "$float4(" + reg_var + ".xy, 0., in_w)";
 					properties.has_w_access = true;
 				}
 			}
@@ -1152,15 +1152,15 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	// PK4 = PK4B (4 signed 8-bit scalars)
 	// PKB = PK4UB (4 unsigned 8-bit scalars)
 	// PK16/UP16 behavior confirmed by Saints Row: Gat out of Hell, ARGB8 -> X16Y16 conversion relies on this to render the wings
-	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packHalf2x16($0.xy)))"); return true;
-	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm4x8($0)))"); return true;
-	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
+	case RSX_FP_OPCODE_PK2: SetDst("$float4(uintBitsToFloat(packHalf2x16(clamp16($0).xy)))"); return true;
+	case RSX_FP_OPCODE_PK4: SetDst("$float4(uintBitsToFloat(packSnorm4x8($0)))"); return true;
+	case RSX_FP_OPCODE_PK16: SetDst("$float4(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
 		// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
 		properties.has_pkg = true;
 		SetDst("_builtin_pkg($0)");
 		return true;
-	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
+	case RSX_FP_OPCODE_PKB: SetDst("$float4(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
 
 	// Custom ISA extensions for 16-bit OR
