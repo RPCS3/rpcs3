@@ -252,8 +252,26 @@ void pad_thread::Init()
 		}
 	}
 
-	// Initialize active mouse and keyboard. Activate pad handler if one exists.
-	input::set_mouse_and_keyboard(m_handlers.contains(pad_handler::keyboard) ? input::active_mouse_and_keyboard::pad : input::active_mouse_and_keyboard::emulated);
+	// Initialize active mouse and keyboard. Activate pad handler for the devices that are mapped in a keyboard pad handler.
+	const bool keyboard_used = keyptr && keyptr->is_keyboard_used();
+	const bool mouse_used = keyptr && keyptr->is_mouse_used();
+
+	input::active_mouse_and_keyboard kbm_mode = input::active_mouse_and_keyboard::emulated;
+
+	if (keyboard_used && mouse_used)
+	{
+		kbm_mode = input::active_mouse_and_keyboard::pad;
+	}
+	else if (keyboard_used)
+	{
+		kbm_mode = input::active_mouse_and_keyboard::emulated_mouse_only;
+	}
+	else if (mouse_used)
+	{
+		kbm_mode = input::active_mouse_and_keyboard::emulated_kb_only;
+	}
+
+	input::set_mouse_and_keyboard(kbm_mode);
 }
 
 void pad_thread::SetRumble(u32 pad, u8 large_motor, u8 small_motor)
