@@ -1282,10 +1282,10 @@ namespace vk
 		auto p_subresource_layout = &subresource_layout;
 		u32 heap_align = upload_heap_align_default;
 
-		// Detile blit sources and single-level 2D shader reads that live in a tiled main memory region
+		// Detile blit sources and shader reads that live in a tiled main memory region
 		const bool detile_context =
 			context == rsx::texture_upload_context::blit_engine_src ||
-			(context == rsx::texture_upload_context::shader_read && mipmaps == 1 && depth == 1 && type != rsx::texture_dimension_extended::texture_dimension_cubemap);
+			context == rsx::texture_upload_context::shader_read;
 
 		if (const auto tiled_region = detile_context ? rsx::get_current_renderer()->get_tiled_memory_region(rsx_range) : rsx::GCM_tile_reference{})
 		{
