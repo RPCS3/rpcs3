@@ -405,10 +405,18 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	std::string source;
 	GLFragmentDecompilerThread decompiler(source, parr, prog, size);
 
-	if (g_cfg.video.shader_precision == gpu_preset_level::low)
+	const auto& driver_caps = gl::get_driver_caps();
+	const auto precision = g_cfg.video.shader_precision.get();
+	decompiler.device_props.shader_precision = precision;
+
+	// Ultra keeps the emulated f16 path using f32 as it allows 1:1 accuracy with RSX
+	if (precision != gpu_preset_level::ultra)
 	{
-		const auto& driver_caps = gl::get_driver_caps();
 		decompiler.device_props.has_native_half_support = driver_caps.NV_gpu_shader5_supported || driver_caps.AMD_gpu_shader_half_float_supported;
+	}
+
+	if (precision == gpu_preset_level::low)
+	{
 		decompiler.device_props.has_low_precision_rounding = driver_caps.vendor_NVIDIA;
 	}
 

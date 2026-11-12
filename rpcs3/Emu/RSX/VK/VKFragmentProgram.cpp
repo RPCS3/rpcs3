@@ -642,11 +642,16 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
 
 	const auto pdev = vk::get_current_renderer();
-	if (g_cfg.video.shader_precision == gpu_preset_level::low)
+	const auto precision = g_cfg.video.shader_precision.get();
+	decompiler.device_props.shader_precision = precision;
+
+	// Ultra keeps the emulated f16 path using f32 as it allows 1:1 accuracy with RSX
+	if (precision != gpu_preset_level::ultra)
 	{
 		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
 	}
-	else
+
+	if (precision != gpu_preset_level::low)
 	{
 		// Disable DAZ mode only needed when shader precision is high and above
 		decompiler.device_props.supports_denorm_preserve_f32 = pdev->get_shader_denorm_preserve_f32_support();
