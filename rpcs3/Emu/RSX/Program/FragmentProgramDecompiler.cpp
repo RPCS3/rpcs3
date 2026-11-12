@@ -944,7 +944,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 		{
 			clamp_func +=
 				"#define clamp16 _builtin_f16_quantize\n"
-				"#define _builtin_f16_32_clamp clamp16\n\n";
+				"#define _builtin_f16_32_clamp clamp16\n";
 		}
 		else if (glsl)
 		{
@@ -983,7 +983,8 @@ std::string FragmentProgramDecompiler::BuildCode()
 	{
 		// Define raw casts from f32->f16
 		OS <<
-		"#define clamp16(x) " << getHalfTypeName(4) << "(x)\n";
+		"#define clamp16(x) $half4(x)\n"
+		"#define _builtin_f16_32_clamp clamp16\n";
 	}
 
 	OS <<
