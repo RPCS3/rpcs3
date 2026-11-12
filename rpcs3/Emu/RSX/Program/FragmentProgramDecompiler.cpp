@@ -345,7 +345,7 @@ std::string FragmentProgramDecompiler::AddTex()
 
 std::string FragmentProgramDecompiler::AddX2d()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", "$float4(0.)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", Format("$float4(0.)"));
 }
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
@@ -398,9 +398,10 @@ bool FragmentProgramDecompiler::DstExpectsSca() const
 
 std::string FragmentProgramDecompiler::Format(const std::string& code, bool ignore_redirects)
 {
-	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
+	// Operands and conditions expand first. Their text can carry type tokens, which the second pass resolves.
+	const std::pair<std::string_view, std::function<std::string()>> operand_list[] =
 	{
-		{ "$$", []() -> std::string { return "$"; } },
+		{ "$$", []() -> std::string { return "$$"; } }, // Keep escapes for the type pass
 		{ "$0", [this]() -> std::string {return GetSRC<SRC0>(src0);} },
 		{ "$1", [this]() -> std::string {return GetSRC<SRC1>(src1);} },
 		{ "$2", [this]() -> std::string {return GetSRC<SRC2>(src2);} },
@@ -415,7 +416,12 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
-		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
+		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
+	};
+
+	const std::pair<std::string_view, std::function<std::string()>> type_list[] =
+	{
+		{ "$$", []() -> std::string { return "$"; } },
 		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } },
 		{ "$float3", [this]() -> std::string { return getFloatTypeName(3); } },
 		{ "$float2", [this]() -> std::string { return getFloatTypeName(2); } },
@@ -440,12 +446,12 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 			std::pair<std::string_view, std::string> repl[] = { { "$0", "x2d" } };
 			std::string result = fmt::replace_all(code, repl);
 
-			return fmt::replace_all(result, repl_list);
+			return fmt::replace_all(fmt::replace_all(result, operand_list), type_list);
 		}
 		}
 	}
 
-	return fmt::replace_all(code, repl_list);
+	return fmt::replace_all(fmt::replace_all(code, operand_list), type_list);
 }
 
 std::string FragmentProgramDecompiler::GetRawCond()
