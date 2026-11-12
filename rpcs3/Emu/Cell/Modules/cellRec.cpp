@@ -941,10 +941,54 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 
 	const u32 mem_size = cellRecQueryMemSize(pParam);
 
-	if (container == SYS_MEMORY_CONTAINER_ID_INVALID && mem_size != 0)
+	if (container == SYS_MEMORY_CONTAINER_ID_INVALID)
 	{
-		return CELL_REC_ERROR_INVALID_VALUE;
+		if (mem_size != 0)
+		{
+			return CELL_REC_ERROR_INVALID_VALUE;
+		}
 	}
+	else
+	{
+		// NOTE: Most likely tries to allocate a complete container. But we use g_fxo instead.
+		// TODO: how much data do we actually need ?
+		ppu.state += cpu_flag::wait;
+
+		rec.video_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
+		rec.audio_input_buffer = vm::cast(rec.video_input_buffer ? vm::alloc(mem_size, vm::main) : 0);
+
+		if (!rec.audio_input_buffer && rec.video_input_buffer)
+		{
+			vm::dealloc(rec.video_input_buffer.addr(), vm::main);
+			rec.video_input_buffer = vm::null;
+		}
+
+		ppu.check_state();
+
+		if (!rec.audio_input_buffer)
+		{
+			return CELL_REC_ERROR_OUT_OF_MEMORY;
+		}
+	}
+
+	// Frees the input buffers allocated above when a parameter check fails
+	const auto invalid_value = [&]() -> error_code
+	{
+		if (rec.video_input_buffer)
+		{
+			ppu.state += cpu_flag::wait;
+
+			vm::dealloc(rec.video_input_buffer.addr(), vm::main);
+			vm::dealloc(rec.audio_input_buffer.addr(), vm::main);
+
+			ppu.check_state();
+
+			rec.video_input_buffer = vm::null;
+			rec.audio_input_buffer = vm::null;
+		}
+
+		return CELL_REC_ERROR_INVALID_VALUE;
+	};
 
 	switch (pParam->videoFmt)
 	{
@@ -989,7 +1033,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 	case CELL_REC_PARAM_VIDEO_FMT_YOUTUBE:
 		break;
 	default:
-		return CELL_REC_ERROR_INVALID_VALUE;
+		return invalid_value();
 	}
 
 	const s32 video_type = pParam->videoFmt & 0xf000;
@@ -1004,7 +1048,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 		// Do not allow MJPEG or AVC_MP video format
 		if (video_type == VIDEO_TYPE_AVC_MP || video_type == VIDEO_TYPE_MJPEG)
 		{
-			return CELL_REC_ERROR_INVALID_VALUE;
+			return invalid_value();
 		}
 		[[fallthrough]];
 	}
@@ -1014,7 +1058,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 		// Do not allow AVC_MP video format
 		if (video_type == VIDEO_TYPE_AVC_MP)
 		{
-			return CELL_REC_ERROR_INVALID_VALUE;
+			return invalid_value();
 		}
 		break;
 	}
@@ -1025,12 +1069,12 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 		// Only allow MJPEG video format
 		if (video_type != VIDEO_TYPE_MJPEG)
 		{
-			return CELL_REC_ERROR_INVALID_VALUE;
+			return invalid_value();
 		}
 		break;
 	}
 	default:
-		return CELL_REC_ERROR_INVALID_VALUE;
+		return invalid_value();
 	}
 
 	rec.param = {};
@@ -1048,7 +1092,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 		{
 			if (opt.value.ppu_thread_priority > 0xbff)
 			{
-				return CELL_REC_ERROR_INVALID_VALUE;
+				return invalid_value();
 			}
 			rec.param.ppu_thread_priority = opt.value.ppu_thread_priority;
 			break;
@@ -1057,7 +1101,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 		{
 			if (opt.value.spu_thread_priority - 0x10U > 0xef)
 			{
-				return CELL_REC_ERROR_INVALID_VALUE;
+				return invalid_value();
 			}
 			rec.param.spu_thread_priority = opt.value.spu_thread_priority;
 			break;
@@ -1101,7 +1145,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 			const u32 v_input = (opt.value.video_input & 0xffU);
 			if (v_input > CELL_REC_PARAM_VIDEO_INPUT_YUV420PLANAR_16_9)
 			{
-				return CELL_REC_ERROR_INVALID_VALUE;
+				return invalid_value();
 			}
 			rec.param.video_input = v_input;
 			break;
@@ -1142,7 +1186,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 				std::string path;
 				if (!create_path(path, pDirName.get_ptr(), opt.value.metadata_filename.get_ptr()))
 				{
-					return CELL_REC_ERROR_INVALID_VALUE;
+					return invalid_value();
 				}
 				rec.param.metadata_filename = path;
 			}
@@ -1158,12 +1202,12 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 
 			if (!opt.value.pSpursParam || !opt.value.pSpursParam->pSpurs) // TODO: check both or only pSpursParam ?
 			{
-				return CELL_REC_ERROR_INVALID_VALUE;
+				return invalid_value();
 			}
 
 			if (opt.value.pSpursParam->spu_usage_rate < 1 || opt.value.pSpursParam->spu_usage_rate > 100)
 			{
-				return CELL_REC_ERROR_INVALID_VALUE;
+				return invalid_value();
 			}
 
 			rec.param.spurs_param.spu_usage_rate = opt.value.pSpursParam->spu_usage_rate;
@@ -1199,23 +1243,23 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 			{
 				if (rec.param.video_input != CELL_REC_PARAM_VIDEO_INPUT_YUV420PLANAR_16_9)
 				{
-					return CELL_REC_ERROR_INVALID_VALUE;
+					return invalid_value();
 				}
 			}
 			else if (rec.param.video_input == CELL_REC_PARAM_VIDEO_INPUT_YUV420PLANAR_16_9)
 			{
-				return CELL_REC_ERROR_INVALID_VALUE;
+				return invalid_value();
 			}
 		}
 
 		if (!create_path(rec.param.filename, pDirName.get_ptr(), pFileName.get_ptr()))
 		{
-			return CELL_REC_ERROR_INVALID_VALUE;
+			return invalid_value();
 		}
 
 		if (!rec.param.filename.starts_with("/dev_hdd0") && !rec.param.filename.starts_with("/dev_hdd1"))
 		{
-			return CELL_REC_ERROR_INVALID_VALUE;
+			return invalid_value();
 		}
 
 		//if (spurs_param)
@@ -1229,30 +1273,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 
 	if (!cb)
 	{
-		return CELL_REC_ERROR_INVALID_VALUE;
-	}
-
-	if (container != SYS_MEMORY_CONTAINER_ID_INVALID)
-	{
-		// NOTE: Most likely tries to allocate a complete container. But we use g_fxo instead.
-		// TODO: how much data do we actually need ?
-		ppu.state += cpu_flag::wait;
-
-		rec.video_input_buffer = vm::cast(vm::alloc(mem_size, vm::main));
-		rec.audio_input_buffer = vm::cast(rec.video_input_buffer ? vm::alloc(mem_size, vm::main) : 0);
-
-		if (!rec.audio_input_buffer && rec.video_input_buffer)
-		{
-			vm::dealloc(rec.video_input_buffer.addr(), vm::main);
-			rec.video_input_buffer = vm::null;
-		}
-
-		ppu.check_state();
-
-		if (!rec.audio_input_buffer)
-		{
-			return CELL_REC_ERROR_OUT_OF_MEMORY;
-		}
+		return invalid_value();
 	}
 
 	cellRec.notice("cellRecOpen: Using parameters: %s", rec.param.to_string());
