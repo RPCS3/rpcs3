@@ -1195,6 +1195,13 @@ namespace rsx
 		switch (REGS(m_ctx)->surface_color())
 		{
 		case rsx::surface_color_format::w16z16y16x16:
+			if ((m_ctx->program.fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) &&
+				g_cfg.video.shader_precision != gpu_preset_level::low)
+			{
+				// F32 values need to be narrowed into RSX-compliant F16 storage (ROP stage)
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_F16_FRAMEBUFFER;
+			}
+			break; // Technically fall through is also correct here
 		case rsx::surface_color_format::w32z32y32x32:
 		case rsx::surface_color_format::x32:
 			// These behave very differently from "normal" formats.

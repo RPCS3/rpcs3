@@ -22,6 +22,14 @@ R"(
 	MRT3_DO(col3 = round_to_8bit(col3);)
 #endif
 
+// 32-bit exports to an fp16 surface. Clamp values to F16 to match RSX narrowing behavior.
+#if defined(_ENABLE_FP16_EXPORT_QUANTIZATION)
+	MRT0_DO(col0 = clamp16(col0);)
+	MRT1_DO(col1 = clamp16(col1);)
+	MRT2_DO(col2 = clamp16(col2);)
+	MRT3_DO(col3 = clamp16(col3);)
+#endif
+
 // Alpha Testing. This stage always runs even without a color output.
 #ifdef _ENABLE_ALPHA_TEST
 	// TODO: Verify that alpha test actually runs on quantized output!

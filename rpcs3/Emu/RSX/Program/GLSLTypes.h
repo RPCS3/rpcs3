@@ -47,6 +47,7 @@ namespace glsl
 		bool ROP_output_8bit : 1;
 		bool ROP_output_multisampled : 1;
 		bool ROP_output_rounding : 1;
+		bool ROP_output_fp16_quantize : 1;
 		bool ROP_sRGB_packing : 1;
 		bool ROP_alpha_test : 1;
 		bool ROP_alpha_to_coverage_test : 1;
