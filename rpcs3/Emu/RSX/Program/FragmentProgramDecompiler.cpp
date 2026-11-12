@@ -157,6 +157,12 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 				[[fallthrough]];
 			default:
 			{
+				// UP2 produces exact halves, there is nothing to quantize.
+				if (out_prec == RSX_FP_PRECISION_HALF && dst.opcode == RSX_FP_OPCODE_UP2)
+				{
+					break;
+				}
+
 				// fp16 precsion flag on f32 register; replace with precision clamp to match real hardware.
 				if (out_prec == RSX_FP_PRECISION_HALF && !dst.fp16)
 				{
@@ -940,11 +946,12 @@ std::string FragmentProgramDecompiler::BuildCode()
 	{
 		// Accurate float to half clamping (preserves IEEE-754 NaN)
 		std::string clamp_func;
-		if (false) //device_props.supports_spirv_intrinsics)
+		if (glsl && device_props.supports_spirv_intrinsics)
 		{
+			// OpQuantizeToF16 rounds to nearest and may flush f16 denormals.
+			// Truncating to 10 mantissa bits first makes it slightly more accurate.
 			clamp_func +=
-				"#define clamp16 _builtin_f16_quantize\n"
-				"#define _builtin_f16_32_clamp clamp16\n";
+			"#define clamp16(x) _builtin_f16_quantize(uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u))\n";
 		}
 		else if (glsl)
 		{
@@ -958,15 +965,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 			"	const vec4 inf4 = val * 1e35;\n"                                               // Signed inf+nan shorthand
 			"	const bvec4 ovf = greaterThanEqual(raw & 0x7fffffffu, uvec4(0x47800000u));\n"  // Combined INF+NaN check
 			"	return _select(truncated, inf4, ovf);\n"
-			"}\n\n"
-
-			"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
-			"{\n"
-			"	const uvec4 raw = floatBitsToUint(val);\n"
-			"	const vec4 flushed = _select(val, vec4(0.), equal(raw & 0x7f800000u, uvec4(0u)));\n" // Denormals are zero for F16_32 clamping
-			"	const bvec4 ovf = greaterThanEqual(abs(val), vec4(65536.));\n"
-			"	const vec4 inf4 = val * 1e35;\n"
-			"	return _select(flushed, inf4, ovf);\n"
 			"}\n\n";
 		}
 		else
@@ -975,6 +973,20 @@ std::string FragmentProgramDecompiler::BuildCode()
 			clamp_func +=
 				"#define clamp16(x) (x)\n"
 				"#define _builtin_f16_32_clamp(x) (x)\n";
+		}
+
+		if (glsl)
+		{
+			// P16R does not round, so it never uses the quantizer
+			clamp_func +=
+			"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
+			"{\n"
+			"	const uvec4 raw = floatBitsToUint(val);\n"
+			"	const vec4 flushed = _select(val, vec4(0.), equal(raw & 0x7f800000u, uvec4(0u)));\n" // Denormals are zero for F16_32 clamping
+			"	const bvec4 ovf = greaterThanEqual(abs(val), vec4(65536.));\n"
+			"	const vec4 inf4 = val * 1e35;\n"
+			"	return _select(flushed, inf4, ovf);\n"
+			"}\n\n";
 		}
 
 		OS << Format(clamp_func);
@@ -1169,7 +1181,12 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	// PK4 = PK4B (4 signed 8-bit scalars)
 	// PKB = PK4UB (4 unsigned 8-bit scalars)
 	// PK16/UP16 behavior confirmed by Saints Row: Gat out of Hell, ARGB8 -> X16Y16 conversion relies on this to render the wings
-	case RSX_FP_OPCODE_PK2: SetDst("$float4(uintBitsToFloat(packHalf2x16(clamp16($0).xy)))"); return true;
+	case RSX_FP_OPCODE_PK2:
+		// H sources already hold exact halves, only f32 inputs need the RSX conversion
+		SetDst((src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP)
+			? "$float4(uintBitsToFloat(packHalf2x16($0.xy)))"
+			: "$float4(uintBitsToFloat(packHalf2x16(clamp16($0).xy)))");
+		return true;
 	case RSX_FP_OPCODE_PK4: SetDst("$float4(uintBitsToFloat(packSnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_PK16: SetDst("$float4(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
