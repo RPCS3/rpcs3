@@ -264,6 +264,11 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_ROP_OUTPUT_ROUNDING");
 			}
 
+			if (props.ROP_output_fp16_quantize)
+			{
+				enabled_options.push_back("_ENABLE_FP16_EXPORT_QUANTIZATION");
+			}
+
 			if (props.ROP_alpha_test)
 			{
 				enabled_options.push_back("_ENABLE_ALPHA_TEST");
