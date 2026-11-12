@@ -942,62 +942,74 @@ std::string FragmentProgramDecompiler::BuildCode()
 		OS << Format(precision_func);
 	}
 
-	if (!device_props.has_native_half_support)
+	// F16 conversion is determined by the precision level and host caps
+	const bool low_precision = device_props.shader_precision == gpu_preset_level::low;
+	std::string clamp_func;
+
+	if (device_props.has_native_half_support)
 	{
-		// Accurate float to half clamping (preserves IEEE-754 NaN)
-		std::string clamp_func;
-		if (glsl && device_props.supports_spirv_intrinsics)
+		if (low_precision)
 		{
-			// OpQuantizeToF16 rounds to nearest and may flush f16 denormals.
-			// Truncating to 10 mantissa bits first makes it slightly more accurate.
+			// Raw host casts. Rounds to nearest and overflows from 65520, P16R rounds as well.
 			clamp_func +=
-			"#define clamp16(x) _builtin_f16_quantize(uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u))\n";
-		}
-		else if (glsl)
-		{
-			clamp_func +=
-			"#define clamp16 _builtin_f16_sw_quantize\n"
-			"vec4 _builtin_f16_sw_quantize(const in vec4 val)\n"
-			"{\n"
-			"	const uvec4 raw = floatBitsToUint(val);\n"
-			"	const vec4 normal = uintBitsToFloat(raw & 0xffffe000u);\n"
-			"	const vec4 truncated = trunc(normal * 16777216.) * (1. / 16777216.);\n"        // Truncates mantissa to 10 bits
-			"	const vec4 inf4 = val * 1e35;\n"                                               // Signed inf+nan shorthand
-			"	const bvec4 ovf = greaterThanEqual(raw & 0x7fffffffu, uvec4(0x47800000u));\n"  // Combined INF+NaN check
-			"	return _select(truncated, inf4, ovf);\n"
-			"}\n\n";
+			"#define clamp16(x) $half4(x)\n"
+			"#define _builtin_f16_32_clamp clamp16\n";
 		}
 		else
 		{
-			// Unimplemented
+			// Truncating to 10 mantissa bits makes the host conversion match RSX a bit better.
 			clamp_func +=
-				"#define clamp16(x) (x)\n"
-				"#define _builtin_f16_32_clamp(x) (x)\n";
-		}
+			"$half4 clamp16(const in $float4 x) { return $half4(_builtin_f16_trunc(x)); }\n"
+			"$half4 clamp16(const in $half4 x) { return x; }\n\n"
 
-		if (glsl)
-		{
-			// P16R does not round, so it never uses the quantizer
-			clamp_func +=
-			"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
-			"{\n"
-			"	const uvec4 raw = floatBitsToUint(val);\n"
-			"	const vec4 flushed = _select(val, vec4(0.), equal(raw & 0x7f800000u, uvec4(0u)));\n" // Denormals are zero for F16_32 clamping
-			"	const bvec4 ovf = greaterThanEqual(abs(val), vec4(65536.));\n"
-			"	const vec4 inf4 = val * 1e35;\n"
-			"	return _select(flushed, inf4, ovf);\n"
-			"}\n\n";
+			"#define _builtin_f16_trunc(x) uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u)\n";
 		}
-
-		OS << Format(clamp_func);
+	}
+	else if (glsl && device_props.supports_spirv_intrinsics && low_precision)
+	{
+		// OpQuantizeToF16 rounds to nearest and may flush f16 denormals.
+		// Truncating to 10 mantissa bits first makes it slightly more accurate.
+		clamp_func +=
+		"#define clamp16(x) _builtin_f16_quantize(uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u))\n";
+	}
+	else if (glsl)
+	{
+		// Accurate float to half clamping (preserves IEEE-754 NaN)
+		clamp_func +=
+		"#define clamp16 _builtin_f16_sw_quantize\n"
+		"vec4 _builtin_f16_sw_quantize(const in vec4 val)\n"
+		"{\n"
+		"	const uvec4 raw = floatBitsToUint(val);\n"
+		"	const vec4 normal = uintBitsToFloat(raw & 0xffffe000u);\n"
+		"	const vec4 truncated = trunc(normal * 16777216.) * (1. / 16777216.);\n"        // Truncates mantissa to 10 bits
+		"	const vec4 inf4 = val * 1e35;\n"                                               // Signed inf+nan shorthand
+		"	const bvec4 ovf = greaterThanEqual(raw & 0x7fffffffu, uvec4(0x47800000u));\n"  // Combined INF+NaN check
+		"	return _select(truncated, inf4, ovf);\n"
+		"}\n\n";
 	}
 	else
 	{
-		// Define raw casts from f32->f16
-		OS <<
-		"#define clamp16(x) $half4(x)\n"
-		"#define _builtin_f16_32_clamp clamp16\n";
+		// Unimplemented
+		clamp_func +=
+			"#define clamp16(x) (x)\n"
+			"#define _builtin_f16_32_clamp(x) (x)\n";
 	}
+
+	if (glsl && !(device_props.has_native_half_support && low_precision))
+	{
+		// P16R does not round, so it should not quantize, only clamp + flush denorms
+		clamp_func +=
+		"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
+		"{\n"
+		"	const uvec4 raw = floatBitsToUint(val);\n"
+		"	const vec4 flushed = _select(val, vec4(0.), equal(raw & 0x7f800000u, uvec4(0u)));\n" // Denormals are zero for F16_32 clamping
+		"	const bvec4 ovf = greaterThanEqual(abs(val), vec4(65536.));\n"
+		"	const vec4 inf4 = val * 1e35;\n"
+		"	return _select(flushed, inf4, ovf);\n"
+		"}\n\n";
+	}
+
+	OS << Format(clamp_func);
 
 	OS <<
 	"#define _builtin_log2 log2\n"
@@ -1097,7 +1109,8 @@ std::string FragmentProgramDecompiler::BuildCode()
 	}
 
 	if (device_props.supports_spirv_intrinsics &&
-		!device_props.has_native_half_support)
+		!device_props.has_native_half_support &&
+		device_props.shader_precision == gpu_preset_level::low)
 	{
 		OS <<
 		"spirv_instruction(id = 116) float _builtin_f16_quantize(float x);\n"
@@ -1138,7 +1151,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::DP2), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP3:
-		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && g_cfg.video.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_PRECISE : FUNCTION::DP3), OPFLAGS::op_extern);
+		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && device_props.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_PRECISE : FUNCTION::DP3), OPFLAGS::op_extern);
 		return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::DP2A), OPFLAGS::op_extern); return true;
