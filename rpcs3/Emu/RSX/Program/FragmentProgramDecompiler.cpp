@@ -952,6 +952,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 	const bool low_precision = device_props.shader_precision == gpu_preset_level::low;
 	std::string clamp_func;
 
+	clamp_func +=
+		"#define _builtin_f16_trunc(x) uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u)\n";
+
 	if (device_props.has_native_half_support)
 	{
 		if (low_precision)
@@ -965,10 +968,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 		{
 			// Truncating to 10 mantissa bits makes the host conversion match RSX a bit better.
 			clamp_func +=
+			"\n"
 			"$half4 clamp16(const in $float4 x) { return $half4(_builtin_f16_trunc(x)); }\n"
-			"$half4 clamp16(const in $half4 x) { return x; }\n\n"
-
-			"#define _builtin_f16_trunc(x) uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u)\n";
+			"$half4 clamp16(const in $half4 x) { return x; }\n\n";
 		}
 	}
 	else if (glsl && device_props.supports_spirv_intrinsics && low_precision)
@@ -976,13 +978,14 @@ std::string FragmentProgramDecompiler::BuildCode()
 		// OpQuantizeToF16 rounds to nearest and may flush f16 denormals.
 		// Truncating to 10 mantissa bits first makes it slightly more accurate.
 		clamp_func +=
-		"#define clamp16(x) _builtin_f16_quantize(uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u))\n";
+		"#define clamp16(x) _builtin_f16_quantize(_builtin_f16_trunc(x))\n";
 	}
 	else if (glsl)
 	{
 		// Accurate float to half clamping (preserves IEEE-754 NaN)
 		clamp_func +=
-		"#define clamp16 _builtin_f16_sw_quantize\n"
+		"#define clamp16 _builtin_f16_sw_quantize\n\n"
+
 		"vec4 _builtin_f16_sw_quantize(const in vec4 val)\n"
 		"{\n"
 		"	const uvec4 raw = floatBitsToUint(val);\n"
@@ -1005,6 +1008,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 	{
 		// P16R does not round, so it should not quantize, only clamp + flush denorms
 		clamp_func +=
+		"\n"
 		"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
 		"{\n"
 		"	const uvec4 raw = floatBitsToUint(val);\n"
