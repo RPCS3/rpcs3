@@ -1507,6 +1507,9 @@
     <ClCompile Include="Emu\Io\nfc_reader.cpp">
       <Filter>Emu\Io\USIO</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\pcsc_driver.cpp">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\SkylanderPortalIPC.cpp">
       <Filter>Emu\Io\Skylanders</Filter>
     </ClCompile>
@@ -3101,6 +3104,9 @@
       <Filter>Emu\Io\USIO</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\nfc_reader.h">
+      <Filter>Emu\Io\USIO</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\pcsc_driver.h">
       <Filter>Emu\Io\USIO</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\mifare_types.h">

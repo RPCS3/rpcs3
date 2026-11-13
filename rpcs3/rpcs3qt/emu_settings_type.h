@@ -184,6 +184,8 @@ enum class emu_settings_type
 	Turntable,
 	GHLtar,
 	USIO,
+	USIONFCReader1,
+	USIONFCReader2,
 	MidiDevices,
 	SDLMappings,
 	MouseBasedGyro,
