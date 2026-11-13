@@ -116,6 +116,27 @@ namespace glsl
 		fmt::throw_exception("Unknown compare function");
 	}
 
+	std::string compareFunctionAlias(COMPARE f, std::string_view Op0, std::string_view Op1)
+	{
+		switch (f)
+		{
+		case COMPARE::SEQ:
+			return fmt::format("_builtin_seq(%s, %s)", Op0, Op1);
+		case COMPARE::SGE:
+			return fmt::format("_builtin_sge(%s, %s)", Op0, Op1);
+		case COMPARE::SGT:
+			return fmt::format("_builtin_sgt(%s, %s)", Op0, Op1);
+		case COMPARE::SLE:
+			return fmt::format("_builtin_sle(%s, %s)", Op0, Op1);
+		case COMPARE::SLT:
+			return fmt::format("_builtin_slt(%s, %s)", Op0, Op1);
+		case COMPARE::SNE:
+			return fmt::format("_builtin_sne(%s, %s)", Op0, Op1);
+		}
+
+		fmt::throw_exception("Unknown compare function");
+	}
+
 	void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant)
 	{
 		std::string vertex_id_name = (rules != glsl_rules_vulkan) ? "gl_VertexID" : "gl_VertexIndex";

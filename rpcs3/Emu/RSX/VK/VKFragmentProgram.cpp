@@ -23,7 +23,7 @@ std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 
 std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1)
 {
-	return glsl::compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionAlias(f, Op0, Op1);
 }
 
 void VKFragmentDecompilerThread::prepareBindingTable()
