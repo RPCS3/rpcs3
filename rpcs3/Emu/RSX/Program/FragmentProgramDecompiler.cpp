@@ -924,6 +924,38 @@ std::string FragmentProgramDecompiler::BuildCode()
 	std::string float4 = getFloatTypeName(4);
 	const bool glsl = float4 == "vec4";
 
+	// RSX compares f32 denormals by value. If the host flushes the denormals (FTZ) then we have to emulate them.
+	if (device_props.supports_denorm_preserve_f32 || device_props.shader_precision != gpu_preset_level::ultra)
+	{
+		OS <<
+		"#define _builtin_seq equal\n"
+		"#define _builtin_sne notEqual\n"
+		"#define _builtin_sgt greaterThan\n"
+		"#define _builtin_sge greaterThanEqual\n"
+		"#define _builtin_slt lessThan\n"
+		"#define _builtin_sle lessThanEqual\n\n";
+	}
+	else
+	{
+		// The host compare is only wrong when both operands are zero or denormal, where it sees 0 vs 0.
+		// We can append a special condition via an integer sort key on the raw bits as a workaround.
+		// Specials are already handled by the floating point comparison (i.e NaNs, INFs) so the key only differentiates denorms.
+		OS <<
+		"ivec4 _builtin_f32_key(const in vec4 x)\n"
+		"{\n"
+		"	const ivec4 s = floatBitsToInt(x);\n"
+		"	const ivec4 sign = s >> 31;\n"
+		"	return ((s & 0x7fffffff) ^ sign) - sign;\n" // Sign-magnitude to two's complement, -0 == +0
+		"}\n\n"
+
+		"bvec4 _builtin_seq(const in vec4 a, const in vec4 b) { return bvec4(uvec4(equal(a, b)) & uvec4(equal(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sne(const in vec4 a, const in vec4 b) { return bvec4(uvec4(notEqual(a, b)) | uvec4(notEqual(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sgt(const in vec4 a, const in vec4 b) { return bvec4(uvec4(greaterThanEqual(a, b)) & uvec4(greaterThan(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sge(const in vec4 a, const in vec4 b) { return bvec4(uvec4(greaterThanEqual(a, b)) & uvec4(greaterThanEqual(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_slt(const in vec4 a, const in vec4 b) { return bvec4(uvec4(lessThanEqual(a, b)) & uvec4(lessThan(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sle(const in vec4 a, const in vec4 b) { return bvec4(uvec4(lessThanEqual(a, b)) & uvec4(lessThanEqual(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n\n";
+	}
+
 	if (properties.has_clamp)
 	{
 		std::string precision_func =
