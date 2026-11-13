@@ -125,6 +125,9 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 			.bInterval        = 16}));
 
 	load_backup();
+
+	m_io_status[0].card_reader.set_device_name(g_cfg.io.usio_nfc_reader_1.get());
+	m_io_status[1].card_reader.set_device_name(g_cfg.io.usio_nfc_reader_2.get());
 }
 
 usb_device_usio::~usb_device_usio()
@@ -462,7 +465,7 @@ void usb_device_usio::translate_input_tekken()
 				write_gun_data(static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 0 : 2].m_value * USHRT_MAX / 0xff), static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 1 : 3].m_value * USHRT_MAX / 0xff));
 			}
 		}
-		
+
 		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : player;
 		if (mouse_index < mouse_handler.GetMice().size())
 		{
@@ -518,15 +521,34 @@ void usb_device_usio::translate_input_tekken()
 void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 {
 	usz reader_index = 0;
+	switch (static_cast<usio_reg>(reg))
+	{
+	case usio_reg::card_reader_0_status:
+	case usio_reg::card_reader_0_read:
+	case usio_reg::card_reader_0_write:
+		reader_index = 0;
+		break;
+	case usio_reg::card_reader_1_status:
+	case usio_reg::card_reader_1_read:
+	case usio_reg::card_reader_1_write:
+		reader_index = 1;
+		break;
+	default:
+		return;
+	}
+
+	auto& status = ::at32(m_io_status, reader_index);
+	const std::string target_reader = (reader_index == 0) ? g_cfg.io.usio_nfc_reader_1.get() : g_cfg.io.usio_nfc_reader_2.get();
+	if (status.card_reader.get_device_name() != target_reader)
+	{
+		status.card_reader.set_device_name(target_reader);
+	}
 
 	switch (static_cast<usio_reg>(reg))
 	{
 	case usio_reg::card_reader_0_status:
 	case usio_reg::card_reader_1_status:
 	{
-		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_status ? 0 : 1;
-		const auto& status = ::at32(m_io_status, reader_index);
-
 		buf = {0x02, 0x03, 0x00, 0x00, 0xFF, 0x0F, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x10, 0x00};
 		write_to_ptr<le_t<u16>>(buf, 2, ::narrow<u16>(status.card_reader.get_buffer_size()));
 		break;
@@ -534,17 +556,12 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case usio_reg::card_reader_0_read:
 	case usio_reg::card_reader_1_read:
 	{
-		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_read ? 0 : 1;
-		auto& status = ::at32(m_io_status, reader_index);
-
 		status.card_reader.write_buffer(buf);
 		break;
 	}
 	case usio_reg::card_reader_0_write:
 	case usio_reg::card_reader_1_write:
 	{
-		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
-		auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
 		std::span<u8> card = {};
 

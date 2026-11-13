@@ -1745,6 +1745,30 @@
                </layout>
               </widget>
              </item>
+             <item row="4" column="1">
+              <widget class="QGroupBox" name="gb_usio_reader_1">
+               <property name="title">
+                <string>USIO NFC Reader 1</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_usio_reader_1_layout">
+                <item>
+                 <widget class="QComboBox" name="usioNfcReader1Box"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item row="5" column="1">
+              <widget class="QGroupBox" name="gb_usio_reader_2">
+               <property name="title">
+                <string>USIO NFC Reader 2</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_usio_reader_2_layout">
+                <item>
+                 <widget class="QComboBox" name="usioNfcReader2Box"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
              <item row="2" column="1">
               <widget class="QGroupBox" name="gb_camera_id">
                <property name="title">
