@@ -1,11 +1,51 @@
 #include "stdafx.h"
 #include "nfc_reader.h"
+#include "buzzer_player.h"
 
-LOG_CHANNEL(usio_log, "USIO");
+LOG_CHANNEL(nfc_log, "NFC");
 
 nfc_reader::nfc_reader()
+	: m_buzzer(std::make_unique<buzzer_player>())
 {
 	init_registers();
+}
+
+nfc_reader::~nfc_reader()
+{
+	stop_worker();
+	if (m_buzzer)
+	{
+		m_buzzer->stop();
+	}
+}
+
+void nfc_reader::set_device_name(const std::string& name)
+{
+	if (m_device_name == name)
+	{
+		return;
+	}
+
+	stop_worker();
+
+	m_device_name = name;
+	if (m_device_name.empty() || m_device_name == "Fake")
+	{
+		m_pcsc.reset();
+	}
+	else
+	{
+		if (!m_pcsc)
+		{
+			m_pcsc = std::make_unique<pcsc_driver>();
+		}
+		m_pcsc->open(m_device_name);
+	}
+}
+
+const std::string& nfc_reader::get_device_name() const
+{
+	return m_device_name;
 }
 
 namespace
@@ -590,6 +630,7 @@ void nfc_reader::write_register_value(u16 address, u8 value)
 
 usz nfc_reader::get_buffer_size() const
 {
+	std::lock_guard lock(m_buffer_mutex);
 	usz size = 0;
 
 	if (m_send_ack)
@@ -603,6 +644,7 @@ usz nfc_reader::get_buffer_size() const
 
 void nfc_reader::write_buffer(std::vector<u8>& out)
 {
+	std::lock_guard lock(m_buffer_mutex);
 	if (m_send_ack)
 	{
 		write_ack(out);
@@ -670,7 +712,7 @@ bool nfc_reader::verify_request(std::span<const u8> in)
 
 void nfc_reader::build_response(const std::vector<u8>& in)
 {
-	auto& out = m_response;
+	auto& out = m_exec_response;
 
 	if (!m_remove_pre_and_postamble)
 		out.push_back(preamble);
@@ -725,8 +767,11 @@ void nfc_reader::build_response(const std::vector<u8>& in)
 
 nfc_reader::card_type nfc_reader::get_card_type(std::span<const u8> card)
 {
-	// Currently we only emulate Mifare Classic cards; maybe more card types can be supported in the future.
-	return card_type::mifare_classic;
+	// Currently we only emulate Mifare Classic cards, so the check can be simple here; maybe more card types can be supported in the future.
+	if (card.size() >= mifare_uid_size)
+		return card_type::mifare_classic;
+
+	return card_type::unknown;
 }
 
 std::array<u8, mifare_uid_size> nfc_reader::get_card_uid(std::span<const u8> card) const
@@ -921,6 +966,10 @@ void nfc_reader::reset_target_state()
 	reset_card_session();
 	m_target_state = 0x00;
 	m_initiator_state = initiator_target_state::released;
+	if (m_pcsc)
+	{
+		m_pcsc->invalidate_card_cache();
+	}
 }
 
 nfc_reader::mifare_check_result nfc_reader::check_mifare_block_access(std::span<const u8> card, u8 block, bool allow_trailer, bool allow_block_0) const
@@ -977,8 +1026,112 @@ nfc_reader::mifare_check_result nfc_reader::check_mifare_block_access(std::span<
 	return {info, bits, c, offset, status::success};
 }
 
+void nfc_reader::start_worker()
+{
+	if (m_worker_running.load(std::memory_order_acquire))
+	{
+		return;
+	}
+
+	std::lock_guard lock(m_task_mutex);
+	if (m_worker_running.load(std::memory_order_relaxed))
+	{
+		return;
+	}
+
+	m_worker_stop.store(false, std::memory_order_release);
+	m_worker_running.store(true, std::memory_order_release);
+	m_worker_thread = std::thread([this]()
+	{
+		worker_loop();
+	});
+}
+
+void nfc_reader::stop_worker()
+{
+	if (!m_worker_running.load(std::memory_order_acquire))
+	{
+		return;
+	}
+
+	{
+		std::lock_guard lock(m_task_mutex);
+		m_worker_stop.store(true, std::memory_order_release);
+		m_task_queue.clear();
+		m_task_seq = 0;
+		m_task_cv.notify_all();
+	}
+
+	if (m_worker_thread.joinable())
+	{
+		m_worker_thread.join();
+	}
+	m_worker_running.store(false, std::memory_order_release);
+}
+
+void nfc_reader::worker_loop()
+{
+	while (true)
+	{
+		worker_task task;
+		{
+			std::unique_lock lock(m_task_mutex);
+			m_task_cv.wait(lock, [this]()
+			{
+				return m_worker_stop.load(std::memory_order_acquire) || !m_task_queue.empty();
+			});
+			if (m_worker_stop.load(std::memory_order_acquire) && m_task_queue.empty())
+			{
+				break;
+			}
+
+			// Skip obsolete tasks if newer requests arrived while waiting
+			while (m_task_queue.size() > 1 && m_task_queue.front().id < m_task_seq)
+			{
+				m_task_queue.pop_front();
+			}
+
+			task = std::move(m_task_queue.front());
+			m_task_queue.pop_front();
+		}
+
+		execute_command(task.frame, task.card);
+
+		{
+			std::lock_guard lock(m_buffer_mutex);
+			// Only apply response if this task has not been superseded by a newer request
+			if (task.id == m_task_seq)
+			{
+				m_response = std::move(m_exec_response);
+				m_send_response = !m_response.empty();
+			}
+			m_exec_response.clear();
+		}
+	}
+}
+
+void nfc_reader::dispatch_async_command(std::span<const u8> frame, std::span<u8> card)
+{
+	start_worker();
+	{
+		std::lock_guard lock(m_task_mutex);
+		const u64 task_id = ++m_task_seq;
+		m_task_queue.push_back({
+			task_id,
+			std::vector<u8>(frame.begin(), frame.end()),
+			card
+		});
+		m_task_cv.notify_one();
+	}
+}
+
 void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 {
+	if (m_buzzer)
+	{
+		m_buzzer->check_device();
+	}
+
 	const std::span<const u8> frame = find_frame(in);
 
 	if (!verify_request(frame))
@@ -990,24 +1143,56 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 	// So only clear the pending response buffer when a new legitimate request or ACK is received.
 	if (std::equal(nack_frame.begin(), nack_frame.end(), frame.begin()))
 	{
+		std::lock_guard lock(m_buffer_mutex);
 		m_send_response = true; // Only retransmit the actual response; do not retransmit ACK
 		return;
 	}
 
-	m_response.clear();
-	m_send_ack = false;
-	m_send_response = false;
+	// Do not respond to ACK
+	if (std::equal(ack_frame.begin(), ack_frame.end(), frame.begin()))
+	{
+		return;
+	}
+
+	const bool is_pcsc = m_pcsc && m_pcsc->is_open();
+
+	if (!is_pcsc)
+	{
+		// Pure software emulation (Fake mode) is instantaneous (< 1 microsecond)
+		execute_command(frame, card);
+		std::lock_guard lock(m_buffer_mutex);
+		m_response = std::move(m_exec_response);
+		m_exec_response.clear();
+		m_send_ack = true;
+		m_send_response = !m_response.empty();
+		return;
+	}
+
+	// Real hardware PC/SC reader mode:
+	// 1. Immediately acknowledge the verified frame to the host (host will read ACK first without delay)
+	{
+		std::lock_guard lock(m_buffer_mutex);
+		m_response.clear();
+		m_send_ack = true;
+		m_send_response = false;
+	}
+
+	// 2. Asynchronously execute the PC/SC command on worker thread without blocking the thread polling USIO
+	dispatch_async_command(frame, card);
+}
+
+void nfc_reader::execute_command(std::span<const u8> frame, std::span<u8> card)
+{
+	std::lock_guard lock(m_exec_mutex);
+	m_exec_response.clear();
 
 	const bool card_tapped = !card.empty();
+	const bool is_pcsc = m_pcsc && m_pcsc->is_open();
 
-	if (!card_tapped)
+	if (!card_tapped && !is_pcsc)
 	{
 		reset_target_state();
 	}
-
-	// Do not respond to ACK
-	if (std::equal(ack_frame.begin(), ack_frame.end(), frame.begin()))
-		return;
 
 	const bool is_extended = is_extended_frame(frame);
 	const usz data_offset = is_extended ? sizeof(extended_frame_header) : sizeof(frame_header);
@@ -1123,7 +1308,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			// For DEP targets: sends ATN (Attention Request) and expects the same response.
 			// For ISO/IEC 14443-4 cards: sends R(NACK) and checks for a valid reply.
 			// Returns 0x00 if the target is present; otherwise, returns an error code.
-			const bool target_active = card_tapped && (m_initiator_state != initiator_target_state::released);
+			const bool target_active = (card_tapped || (is_pcsc && m_pcsc->is_card_present())) && (m_initiator_state != initiator_target_state::released);
 			build_response({res, static_cast<u8>(target_active ? status::success : status::timeout)});
 			break;
 		}
@@ -1206,6 +1391,38 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 
 		const u8 last_err = m_last_error;
 		m_last_error = 0x00; // Cleared after reading per UM0701-02 §7.2.3
+
+		if (is_pcsc)
+		{
+			const auto info = m_pcsc->get_card_info();
+			if (info.present && m_initiator_state != initiator_target_state::released)
+			{
+				const u8 br = info.is_felica ? 0x01 : 0x00;
+				const u8 type = info.is_felica ? 0x10 : 0x00;
+				build_response({
+					res,
+					last_err,
+					0x00,
+					0x01,
+					0x01,
+					br,
+					br,
+					type,
+					0x00
+				});
+			}
+			else
+			{
+				build_response({
+					res,
+					last_err,
+					0x00,
+					0x00,
+					0x00
+				});
+			}
+			break;
+		}
 
 		if (card_tapped && m_initiator_state != initiator_target_state::released)
 		{
@@ -1413,14 +1630,48 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		const u8 p3_in = payload[1];
 		const u8 p7_in = payload[2];
 
-		if (p3_in & 0x80) // Bit 7: Val validates P30..P35
+		// Vendor buzzer control command multiplexed onto WriteGPIO (P3 = 0x08, P7 = mode)
+		if (p3_in == 0x08 && m_buzzer)
 		{
-			write_register_value(0xFFB0, p3_in & 0x3F);
+			switch (p7_in)
+			{
+			case 0x80:
+			{
+				m_buzzer->stop();
+				break;
+			}
+			case 0x81:
+			{
+				m_buzzer->play_beep_1();
+				break;
+			}
+			case 0x82:
+			{
+				m_buzzer->play_beep_3();
+				break;
+			}
+			case 0x93:
+			{
+				m_buzzer->play_scale();
+				break;
+			}
+			default:
+			{
+				break;
+			}
+			}
 		}
-
-		if (p7_in & 0x80) // Bit 7: Val validates P71, P72
+		else
 		{
-			write_register_value(0xFFF7, p7_in & 0x06);
+			if (p3_in & 0x80) // Bit 7: Val validates P30..P35
+			{
+				write_register_value(0xFFB0, p3_in & 0x3F);
+			}
+
+			if (p7_in & 0x80) // Bit 7: Val validates P71, P72
+			{
+				write_register_value(0xFFF7, p7_in & 0x06);
+			}
 		}
 
 		build_response({res});
@@ -1573,6 +1824,11 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			break;
 		}
 
+		if (is_pcsc)
+		{
+			m_pcsc->disconnect_card(true);
+		}
+
 		reset_target_state();
 		build_response({res, static_cast<u8>(status::success)});
 		break;
@@ -1596,6 +1852,11 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		{
 			build_response(); // RC-S620/S §8.2.5: Function must be 0x01 and length 2
 			break;
+		}
+
+		if (is_pcsc)
+		{
+			m_pcsc->disconnect_card(true);
 		}
 
 		reset_target_state();
@@ -1908,6 +2169,130 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		{
 			build_response({res, static_cast<u8>(status::context_error)});
 			break;
+		}
+
+		if (is_pcsc)
+		{
+			const auto card_info = m_pcsc->get_card_info();
+			if (!card_info.present || m_initiator_state == initiator_target_state::released)
+			{
+				reset_target_state();
+				m_last_error = static_cast<u8>(status::context_error);
+				build_response({res, static_cast<u8>(status::context_error)});
+				break;
+			}
+
+			if (m_initiator_state == initiator_target_state::deselected)
+			{
+				m_pcsc->connect_card();
+				m_initiator_state = initiator_target_state::selected;
+			}
+
+			const std::span<const u8> data_out = payload.subspan(2);
+			if (data_out.empty())
+			{
+				build_response({res, static_cast<u8>(status::success)});
+				break;
+			}
+
+			const u8 cmd = data_out[0];
+
+			if (cmd == static_cast<u8>(mifare_cmd::auth_key_a) || cmd == static_cast<u8>(mifare_cmd::auth_key_b))
+			{
+				if (data_out.size() < 8)
+				{
+					build_response();
+					break;
+				}
+
+				const u8 block = data_out[1];
+				const bool is_key_a = (cmd == static_cast<u8>(mifare_cmd::auth_key_a));
+				std::span<const u8, 6> key(data_out.subspan(2, 6).data(), 6);
+				if (m_pcsc->mifare_authenticate(block, is_key_a, key))
+				{
+					m_authenticated_sector = block / 4;
+					m_authenticated_key = is_key_a ? auth_key::key_a : auth_key::key_b;
+					build_response({res, static_cast<u8>(status::success)});
+				}
+				else
+				{
+					reset_card_session();
+					build_response({res, static_cast<u8>(status::mifare_auth_error)});
+				}
+				break;
+			}
+			else if (cmd == static_cast<u8>(mifare_cmd::read_16_bytes))
+			{
+				if (data_out.size() < 2)
+				{
+					build_response();
+					break;
+				}
+
+				const u8 block = data_out[1];
+				std::vector<u8> block_data;
+				if (m_pcsc->mifare_read(block, block_data))
+				{
+					std::vector<u8> resp = {res, static_cast<u8>(status::success)};
+					resp.insert(resp.end(), block_data.begin(), block_data.end());
+					build_response(resp);
+				}
+				else
+				{
+					build_response({res, static_cast<u8>(status::timeout)});
+				}
+				break;
+			}
+			else if (cmd == static_cast<u8>(mifare_cmd::write_16_bytes) || cmd == static_cast<u8>(mifare_cmd::write_4_bytes))
+			{
+				if (data_out.size() < 6)
+				{
+					build_response();
+					break;
+				}
+
+				const u8 block = data_out[1];
+				const std::span<const u8> write_bytes = data_out.subspan(2);
+				if (m_pcsc->mifare_write(block, write_bytes))
+				{
+					build_response({res, static_cast<u8>(status::success)});
+				}
+				else
+				{
+					build_response({res, static_cast<u8>(status::timeout)});
+				}
+				break;
+			}
+			else if (card_info.is_felica || (data_out.size() >= 2 && data_out[0] == data_out.size()))
+			{
+				std::vector<u8> felica_resp;
+				if (m_pcsc->felica_pass_thru(data_out, felica_resp))
+				{
+					std::vector<u8> resp = {res, static_cast<u8>(status::success)};
+					resp.insert(resp.end(), felica_resp.begin(), felica_resp.end());
+					build_response(resp);
+				}
+				else
+				{
+					build_response({res, static_cast<u8>(status::timeout)});
+				}
+				break;
+			}
+			else
+			{
+				std::vector<u8> rapdu;
+				if (m_pcsc->transmit_apdu(data_out, rapdu))
+				{
+					std::vector<u8> resp = {res, static_cast<u8>(status::success)};
+					resp.insert(resp.end(), rapdu.begin(), rapdu.end());
+					build_response(resp);
+				}
+				else
+				{
+					build_response({res, static_cast<u8>(status::timeout)});
+				}
+				break;
+			}
 		}
 
 		if (!card_tapped || m_initiator_state == initiator_target_state::released)
@@ -2507,6 +2892,23 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			break;
 		}
 
+		if (is_pcsc)
+		{
+			const std::span<const u8> data_out = payload.subspan(1);
+			std::vector<u8> card_resp;
+			if (m_pcsc->part3_pass_thru(data_out, card_resp))
+			{
+				std::vector<u8> resp = {res, static_cast<u8>(status::success)};
+				resp.insert(resp.end(), card_resp.begin(), card_resp.end());
+				build_response(resp);
+			}
+			else
+			{
+				build_response({res, static_cast<u8>(status::timeout)});
+			}
+			break;
+		}
+
 		if (!card_tapped)
 		{
 			build_response({res, static_cast<u8>(status::timeout)});
@@ -2537,6 +2939,15 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		if (payload.size() != 2 || payload[1] > 0x02)
 		{
 			build_response(); // Syntax error: incorrect length or invalid Tg
+			break;
+		}
+
+		if (is_pcsc)
+		{
+			m_pcsc->disconnect_card(false);
+			reset_card_session();
+			m_initiator_state = initiator_target_state::deselected;
+			build_response({res, static_cast<u8>(status::success)});
 			break;
 		}
 
@@ -2712,6 +3123,122 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 				build_response(); // Syntax error: unexpected InitiatorData
 				break;
 			}
+		}
+
+		if (is_pcsc)
+		{
+			const auto card_info = m_pcsc->get_card_info();
+			if (!card_info.present)
+			{
+				reset_target_state();
+				build_response({res, 0x00});
+				break;
+			}
+
+			m_initiator_state = initiator_target_state::selected;
+
+			if (in_list_br_ty == 0x00) // 106 kbps Type A
+			{
+				if (card_info.is_felica)
+				{
+					build_response({res, 0x00});
+					break;
+				}
+
+				std::vector<u8> resp = {
+					res,
+					0x01, // NbTg
+					0x01, // Tg
+					static_cast<u8>(card_info.atqa & 0xFF),
+					static_cast<u8>((card_info.atqa >> 8) & 0xFF),
+					card_info.sak,
+					static_cast<u8>(card_info.uid.empty() ? mifare_uid_size : card_info.uid.size())
+				};
+
+				if (card_info.uid.empty())
+				{
+					const std::array<u8, mifare_uid_size> default_uid = {0x01, 0x02, 0x03, 0x04};
+					resp.insert(resp.end(), default_uid.begin(), default_uid.end());
+				}
+				else
+				{
+					resp.insert(resp.end(), card_info.uid.begin(), card_info.uid.end());
+				}
+
+				if ((m_parameters_flags & (1 << 4)) && card_info.is_iso14443_4)
+				{
+					if (!card_info.historical_bytes.empty())
+					{
+						if (card_info.historical_bytes[0] == card_info.historical_bytes.size())
+						{
+							resp.insert(resp.end(), card_info.historical_bytes.begin(), card_info.historical_bytes.end());
+						}
+						else
+						{
+							const u8 tl = static_cast<u8>(2 + card_info.historical_bytes.size());
+							const u8 t0 = static_cast<u8>(card_info.historical_bytes.size() & 0x0F);
+							resp.push_back(tl);
+							resp.push_back(t0);
+							resp.insert(resp.end(), card_info.historical_bytes.begin(), card_info.historical_bytes.end());
+						}
+					}
+					else
+					{
+						const std::array<u8, 6> ats = {0x06, 0x75, 0x77, 0x81, 0x02, 0x80};
+						resp.insert(resp.end(), ats.begin(), ats.end());
+					}
+				}
+
+				build_response(resp);
+			}
+			else if (in_list_br_ty == 0x01 || in_list_br_ty == 0x02) // FeliCa 212 / 424 kbps
+			{
+				if (!card_info.is_felica && !card_info.atr.empty() && card_info.is_mifare)
+				{
+					build_response({res, 0x00});
+					break;
+				}
+
+				reset_card_session();
+
+				std::vector<u8> resp = {
+					res,
+					0x01, // NbTg: 1
+					0x01, // Tg: 1
+					0x14, // POL_RES len: 20 bytes
+					0x01  // Response code
+				};
+
+				if (card_info.uid.size() >= 8)
+				{
+					resp.insert(resp.end(), card_info.uid.begin(), card_info.uid.begin() + 8);
+				}
+				else
+				{
+					const std::array<u8, 8> default_idm = {0x01, 0x01, 0x06, 0x01, 0x67, 0x02, 0xA5, 0x15};
+					resp.insert(resp.end(), default_idm.begin(), default_idm.end());
+				}
+
+				if (card_info.pmm.size() >= 8)
+				{
+					resp.insert(resp.end(), card_info.pmm.begin(), card_info.pmm.begin() + 8);
+				}
+				else
+				{
+					const std::array<u8, 8> default_pmm = {0x03, 0x00, 0x4B, 0x02, 0x4F, 0x49, 0x8A, 0x8A};
+					resp.insert(resp.end(), default_pmm.begin(), default_pmm.end());
+				}
+
+				resp.push_back(static_cast<u8>((card_info.system_code >> 8) & 0xFF));
+				resp.push_back(static_cast<u8>(card_info.system_code & 0xFF));
+
+				build_response(resp);
+			}
+			else
+			{
+				build_response({res, 0x00});
+			}
+			break;
 		}
 
 		if (card_tapped)
@@ -2992,6 +3519,27 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			break;
 		}
 
+		if (is_pcsc)
+		{
+			const auto info = m_pcsc->get_card_info();
+			if (info.present && payload[1] == 0x01)
+			{
+				m_initiator_state = initiator_target_state::selected;
+				std::vector<u8> resp = {res, static_cast<u8>(status::success)};
+				if (info.atr.size() >= 10)
+				{
+					resp.insert(resp.end(), info.atr.begin(), info.atr.begin() + 10);
+				}
+				else
+				{
+					resp.insert(resp.end(), {0x01, 0xFE, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+				}
+				resp.insert(resp.end(), {0x00, 0x00, 0x00, 0x0E, 0x00});
+				build_response(resp);
+				break;
+			}
+		}
+
 		if (card_tapped && m_initiator_state != initiator_target_state::released && payload[1] == 0x01)
 		{
 			m_initiator_state = initiator_target_state::selected;
@@ -3035,6 +3583,14 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			break;
 		}
 
+		if (is_pcsc)
+		{
+			m_pcsc->disconnect_card(true);
+			reset_target_state();
+			build_response({res, static_cast<u8>(status::success)});
+			break;
+		}
+
 		reset_target_state();
 		build_response({res, static_cast<u8>(status::success)});
 		break;
@@ -3059,6 +3615,20 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		if (payload.size() != 2 || payload[1] < 0x01 || payload[1] > 0x02)
 		{
 			build_response(); // Syntax error: incorrect length or invalid Tg (must be 1 or 2)
+			break;
+		}
+
+		if (is_pcsc)
+		{
+			if (payload[1] == 0x01 && m_pcsc->connect_card())
+			{
+				m_initiator_state = initiator_target_state::selected;
+				build_response({res, static_cast<u8>(status::success)});
+			}
+			else
+			{
+				build_response({res, static_cast<u8>(status::context_error)});
+			}
 			break;
 		}
 
@@ -3270,22 +3840,112 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 			return t == 0x00 || t == 0x10 || t == 0x20;
 		});
 
-		auto it_felica = std::find_if(payload.begin() + 3, payload.end(), [](u8 t) {
+		auto it_felica = std::find_if(payload.begin() + 3, payload.end(), [](u8 t)
+		{
 			return t == 0x01 || t == 0x11 || t == 0x02 || t == 0x12;
 		});
 		const bool polls_felica = (it_felica != payload.end());
 
-		auto it_type_b = std::find_if(payload.begin() + 3, payload.end(), [](u8 t) {
+		auto it_type_b = std::find_if(payload.begin() + 3, payload.end(), [](u8 t)
+		{
 			return t == 0x03 || t == 0x23;
 		});
 		const bool polls_type_b = (it_type_b != payload.end());
 
-		auto it_dep = std::find_if(payload.begin() + 3, payload.end(), [](u8 t) {
+		auto it_dep = std::find_if(payload.begin() + 3, payload.end(), [](u8 t)
+		{
 			return t == 0x00 || t == 0x01 || t == 0x02 ||
 				t == 0x40 || t == 0x41 || t == 0x42 ||
 				t == 0x80 || t == 0x81 || t == 0x82;
 		});
 		const bool polls_dep = (it_dep != payload.end());
+
+		if (is_pcsc)
+		{
+			const auto card_info = m_pcsc->get_card_info();
+			if (!card_info.present)
+			{
+				reset_target_state();
+				build_response({res, 0x00});
+				break;
+			}
+
+			m_initiator_state = initiator_target_state::selected;
+
+			if (card_info.is_felica && polls_felica)
+			{
+				const u8 felica_type = (*it_felica == 0x02 || *it_felica == 0x12) ? 0x12 : 0x11;
+				// UM0701-02 §7.3.13 Page 145 & 149: AutoPollTargetData for FeliCa
+				// [Tg(1B)] [POL_RES length(1B)] [0x01] [NFCID2t(8B)] [Pad(8B)] (19 bytes, or +2 bytes system code = 21 bytes total)
+				const u8 pol_res_len = 0x14; // 20 bytes: 0x01 + 8B IDm + 8B PMm + 2B SystemCode
+				const u8 ln = static_cast<u8>(1 + pol_res_len); // Tg(1B) + POL_RES(20B) = 21 (0x15)
+
+				std::vector<u8> resp = {
+					res,
+					0x01,        // NbTg: 1
+					felica_type, // Target type: FeliCa 212 kbps (0x11) or 424 kbps (0x12)
+					ln,          // Ln 1: Length of AutoPollTargetData (21 bytes)
+					0x01,        // Logical Number Tg = 1
+					pol_res_len, // POL_RES length: 20 bytes
+					0x01         // Response code: 0x01
+				};
+				if (card_info.uid.size() >= 8)
+				{
+					resp.insert(resp.end(), card_info.uid.begin(), card_info.uid.begin() + 8);
+				}
+				else
+				{
+					resp.insert(resp.end(), {0x01, 0x01, 0x06, 0x01, 0x67, 0x02, 0xA5, 0x15});
+				}
+
+				if (card_info.pmm.size() >= 8)
+				{
+					resp.insert(resp.end(), card_info.pmm.begin(), card_info.pmm.begin() + 8);
+				}
+				else
+				{
+					resp.insert(resp.end(), {0x03, 0x00, 0x4B, 0x02, 0x4F, 0x49, 0x8A, 0x8A});
+				}
+
+				resp.push_back(static_cast<u8>((card_info.system_code >> 8) & 0xFF));
+				resp.push_back(static_cast<u8>(card_info.system_code & 0xFF));
+				build_response(resp);
+				break;
+			}
+			else if (!card_info.is_felica && polls_type_a)
+			{
+				const u8 uid_len = static_cast<u8>(card_info.uid.empty() ? mifare_uid_size : card_info.uid.size());
+				const u8 ln = static_cast<u8>(1 + 2 + 1 + 1 + uid_len); // Tg(1B) + SENS_RES(2B) + SEL_RES(1B) + NFCIDLength(1B) + UID
+
+				std::vector<u8> resp = {
+					res,
+					0x01,    // NbTg: 1
+					0x10,    // Target type: Mifare
+					ln,      // Ln 1: Length of AutoPollTargetData
+					0x01,    // Logical Number Tg = 1
+					static_cast<u8>(card_info.atqa & 0xFF),
+					static_cast<u8>((card_info.atqa >> 8) & 0xFF),
+					card_info.sak,
+					uid_len  // NFCID1 length
+				};
+				if (card_info.uid.empty())
+				{
+					resp.insert(resp.end(), {0x01, 0x02, 0x03, 0x04});
+				}
+				else
+				{
+					resp.insert(resp.end(), card_info.uid.begin(), card_info.uid.end());
+				}
+
+				build_response(resp);
+				break;
+			}
+			else
+			{
+				build_response({res, 0x00});
+				break;
+			}
+		}
 
 		if (card_tapped && polls_type_a && (card_t == card_type::mifare_classic || card_t == card_type::mifare_ultralight || card_t == card_type::iso14443_4))
 		{
@@ -3772,12 +4432,57 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		}
 
 		const u16 timeout = read_from_ptr<le_t<u16>>(payload, 1);
-		[[maybe_unused]] const std::span<const u8> data_out = payload.subspan(3);
+		const std::span<const u8> data_out = payload.subspan(3);
 
+		// RC-S620/S §8.2.11 Page 61-62: When DataOut is empty, RF command transmission is skipped
+		// and RC-S620/S waits for an RF response from the Target.
+		// Since passive FeliCa targets never transmit without first receiving an RF command,
+		// reception inevitably times out (Status 0x01). No PC/SC call is needed.
+		if (data_out.empty())
+		{
+			build_response({res, static_cast<u8>(status::timeout)});
+			break;
+		}
+
+		// RC-S620/S §8.2.11 Page 62: When Timeout is 0000h, the DataOut RF frame is transmitted
+		// to the Target, but RF reception is skipped and Status 0x01 (Timeout) is returned immediately.
+		//
+		// In PC/SC mode, we implement this "fire-and-forget" semantic by calling felica_pass_thru()
+		// synchronously and discarding whatever response the reader returns.
+		//
+		// Design rationale for the synchronous approach:
+		//   - PC/SC (SCardTransmit / SCardControl) is inherently synchronous request-response;
+		//     there is no standard mechanism for "transmit-only" without waiting for a reader reply.
+		//   - The uTrust 370xF CNTLESS_FELICA_PASS_THRU escape (0xF3) does not accept an inline
+		//     timeout parameter; the reader always uses its internal FeliCa RF timeout.
+		//   - FeliCa RF turnaround time (JIS X 6319-4 TR0 = 512*64/fc) is inherently short (~2.4 ms),
+		//     so the synchronous blocking time (~5-20 ms including reader firmware overhead) is
+		//     negligible for emulation and far simpler than an async approach that would risk
+		//     SCardHandle thread-safety issues with concurrent PC/SC transactions.
 		if (timeout == 0x0000)
 		{
-			// RC-S620/S §8.2.11 Page 62: When Timeout is 0000h, RF reception is skipped and Status 0x01 (Timeout) is returned immediately.
+			if (is_pcsc)
+			{
+				std::vector<u8> discard;
+				m_pcsc->felica_pass_thru(data_out, discard);
+			}
 			build_response({res, static_cast<u8>(status::timeout)});
+			break;
+		}
+
+		if (is_pcsc)
+		{
+			std::vector<u8> felica_resp;
+			if (m_pcsc->felica_pass_thru(data_out, felica_resp))
+			{
+				std::vector<u8> resp = {res, static_cast<u8>(status::success)};
+				resp.insert(resp.end(), felica_resp.begin(), felica_resp.end());
+				build_response(resp);
+			}
+			else
+			{
+				build_response({res, static_cast<u8>(status::timeout)});
+			}
 			break;
 		}
 
@@ -3796,12 +4501,9 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 	}
 	default:
 	{
-		usio_log.error("Unhandled NFC reader command: 0x%02X", static_cast<u8>(command));
+		nfc_log.error("NFC: Unhandled reader command: 0x%02X", static_cast<u8>(command));
 		build_response(); // Respond with an error frame
 		break;
 	}
 	}
-
-	m_send_ack = true;
-	m_send_response = !m_response.empty();
 }

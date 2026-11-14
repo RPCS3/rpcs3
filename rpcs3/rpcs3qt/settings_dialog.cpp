@@ -34,6 +34,7 @@
 #include "Emu/system_config.h"
 #include "Emu/title.h"
 #include "Emu/Audio/audio_device_enumerator.h"
+#include "Emu/Io/pcsc_driver.h"
 
 #include "Loader/PSF.h"
 
@@ -1190,6 +1191,59 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceComboBox(emu_settings_type::GHLtar, ui->ghltarBox, tooltips.settings.ghltar, ui->gb_ghltar_emulated);
 	EnhanceComboBox(emu_settings_type::USIO, ui->usioBox, tooltips.settings.usio, ui->gb_usio_emulated);
 
+	{
+		const std::vector<std::string> pcsc_readers = pcsc_driver::list_readers();
+
+		const auto setup_nfc_combo = [&](QComboBox* combo, QGroupBox* gb, emu_settings_type setting_type, const QString& tooltip)
+		{
+			const std::string default_val = m_emu_settings->GetSettingDefault(setting_type);
+			const std::string selected_val = m_emu_settings->GetSetting(setting_type);
+
+			combo->addItem(tr("Fake"), "Fake");
+			for (const auto& reader : pcsc_readers)
+			{
+				combo->addItem(QString::fromStdString(reader), QString::fromStdString(reader));
+			}
+
+			if (const int index = combo->findData(QString::fromStdString(selected_val)); index >= 0)
+			{
+				combo->setCurrentIndex(index);
+			}
+			else
+			{
+				if (selected_val != "Fake" && !selected_val.empty())
+				{
+					combo->addItem(QString::fromStdString(selected_val), QString::fromStdString(selected_val));
+					combo->setCurrentIndex(combo->count() - 1);
+				}
+				else
+				{
+					combo->setCurrentIndex(combo->findData(QString::fromStdString(default_val)));
+				}
+			}
+
+			connect(combo, &QComboBox::currentIndexChanged, this, [this, combo, setting_type](int index)
+			{
+				if (index >= 0)
+				{
+					m_emu_settings->SetSetting(setting_type, combo->itemData(index).toString().toStdString());
+				}
+			});
+			connect(this, &settings_dialog::signal_restore_dependant_defaults, this, [this, combo, setting_type, default_val]()
+			{
+				m_emu_settings->SetSetting(setting_type, default_val);
+				if (const int index = combo->findData(QString::fromStdString(default_val)); index >= 0)
+				{
+					combo->setCurrentIndex(index);
+				}
+			});
+			SubscribeTooltip(gb, tooltip);
+		};
+
+		setup_nfc_combo(ui->usioNfcReader1Box, ui->gb_usio_reader_1, emu_settings_type::USIONFCReader1, tooltips.settings.usio_nfc_reader);
+		setup_nfc_combo(ui->usioNfcReader2Box, ui->gb_usio_reader_2, emu_settings_type::USIONFCReader2, tooltips.settings.usio_nfc_reader);
+	}
+
 	EnhanceCheckBox(emu_settings_type::BackgroundInput, ui->backgroundInputBox, tooltips.settings.background_input);
 	EnhanceCheckBox(emu_settings_type::PadConnection, ui->padConnectionBox, tooltips.settings.pad_connection);
 	EnhanceCheckBox(emu_settings_type::ShowMoveCursor, ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
@@ -1842,7 +1896,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gs_showMouseInFullscreen, tooltips.settings.show_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_lockMouseInFullscreen, tooltips.settings.lock_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_hideMouseOnIdle_widget, tooltips.settings.hide_mouse_on_idle);
-		
+
 		EnhanceCheckBox(emu_settings_type::StartBigPictureModeOnBoot, ui->startBigPictureModeOnBoot, tooltips.settings.start_big_picture_mode_on_boot);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());

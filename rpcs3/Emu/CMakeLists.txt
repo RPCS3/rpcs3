@@ -177,7 +177,7 @@ if(WIN32)
         Audio/XAudio2/xaudio2_enumerator.cpp
     )
     target_compile_definitions(rpcs3_emu PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
-    target_link_libraries(rpcs3_emu PRIVATE pdh bcrypt dbghelp)
+    target_link_libraries(rpcs3_emu PRIVATE pdh bcrypt dbghelp winscard)
 endif()
 
 # Cell
@@ -421,6 +421,7 @@ endif()
 # Io
 target_sources(rpcs3_emu PRIVATE
     Io/Buzz.cpp
+    Io/buzzer_player.cpp
     Io/camera_config.cpp
     Io/Dimensions.cpp
     Io/evdev_gun_handler.cpp
@@ -441,6 +442,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/pad_config_types.cpp
     Io/pad_types.cpp
     Io/PadHandler.cpp
+    Io/pcsc_driver.cpp
     Io/ps_move_data.cpp
     Io/rb3drums_config.cpp
     Io/RB3MidiDrums.cpp
@@ -735,6 +737,7 @@ if(APPLE)
     if (HAVE_CLOCK_GETTIME)
         target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
     endif()
+    target_link_libraries(rpcs3_emu PRIVATE "-framework PCSC")
 endif()
 
 
