@@ -180,7 +180,19 @@ endif()
 
 # Unit tests
 if(BUILD_RPCS3_TESTS)
-    find_package(GTest REQUIRED)
+    find_package(GTest QUIET)
+
+    if(NOT GTest_FOUND)
+        # Fallback: fetch googletest when it's not installed on the system
+        message(STATUS "GTest not found, fetching googletest...")
+        include(FetchContent)
+        set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+        set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+        FetchContent_Declare(googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.15.2)
+        FetchContent_MakeAvailable(googletest)
+    endif()
 
     message(STATUS "Building unit tests...")
 
