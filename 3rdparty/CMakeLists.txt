@@ -22,6 +22,9 @@ add_subdirectory(zlib EXCLUDE_FROM_ALL)
 # ZSTD
 add_subdirectory(zstd EXCLUDE_FROM_ALL)
 
+# ZArchive (random-access zstd archive)
+add_subdirectory(zarchive EXCLUDE_FROM_ALL)
+
 # 7zip sdk
 add_subdirectory(7zip EXCLUDE_FROM_ALL)
 
