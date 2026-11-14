@@ -70,6 +70,14 @@ enum class rec_state : u32
 	started = 0xBEEF, // I don't know the value of this
 };
 
+// A successful cellRecOpen/cellRecClose whose callback has not run yet
+enum class rec_transition : u32
+{
+	none,
+	opening,
+	closing,
+};
+
 struct rec_param
 {
 	s32 ppu_thread_priority = CELL_REC_PARAM_PPU_THREAD_PRIORITY_DEFAULT;
@@ -236,7 +244,7 @@ struct rec_info
 	vm::ptr<CellRecCallback> cb{};
 	vm::ptr<void> cbUserData{};
 	atomic_t<rec_state> state = rec_state::closed;
-	atomic_t<bool> cb_pending = false; // The callback of a successful cellRecOpen/cellRecClose has not run yet
+	atomic_t<rec_transition> transition = rec_transition::none;
 	rec_param param{};
 
 	// These buffers are used by the game to inject one frame into the recording.
@@ -919,7 +927,7 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::closed || rec.cb_pending)
+	if (rec.state != rec_state::closed || rec.transition != rec_transition::none)
 	{
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
@@ -1306,12 +1314,12 @@ error_code cellRecOpen(ppu_thread& ppu, vm::cptr<char> pDirName, vm::cptr<char> 
 	rec.encoder->set_audio_codec(rec.audio_codec_id, "");
 	rec.encoder->set_output_format(rec.output_format);
 
-	rec.cb_pending = true;
+	rec.transition = rec_transition::opening;
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
 		rec.state = rec_state::stopped;
-		rec.cb_pending = false;
+		rec.transition = rec_transition::none;
 		rec.cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
@@ -1325,12 +1333,17 @@ error_code cellRecClose(s32 isDiscard)
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state == rec_state::closed || rec.cb_pending)
+	if (!rec.transition.compare_and_swap_test(rec_transition::none, rec_transition::closing))
 	{
-		return CELL_REC_ERROR_INVALID_STATE;
+		// Accepted without a callback: during an open the recorder stays open, during a close it closes only once
+		return CELL_OK;
 	}
 
-	rec.cb_pending = true;
+	if (rec.state == rec_state::closed)
+	{
+		rec.transition = rec_transition::none;
+		return CELL_REC_ERROR_INVALID_STATE;
+	}
 
 	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
 	{
@@ -1410,7 +1423,7 @@ error_code cellRecClose(s32 isDiscard)
 		rec.audio_ringbuffer.clear();
 		rec.video_ringbuffer.clear();
 		rec.state = rec_state::closed;
-		rec.cb_pending = false;
+		rec.transition = rec_transition::none;
 
 		if (is_valid_range)
 		{
@@ -1432,13 +1445,26 @@ error_code cellRecStop()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::started)
+	if (rec.state == rec_state::closed)
 	{
+		if (rec.transition == rec_transition::opening)
+		{
+			// Accepted without a callback, like cellRecStart and cellRecClose
+			return CELL_OK;
+		}
+
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
+		if (rec.state != rec_state::started)
+		{
+			// Not recording (never started, already stopped or closed): nothing to pause
+			rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
+			return CELL_OK;
+		}
+
 		// cellRecStop actually just pauses the recording
 		rec.pause_video_provider();
 
@@ -1466,13 +1492,26 @@ error_code cellRecStart()
 
 	auto& rec = g_fxo->get<rec_info>();
 
-	if (rec.state != rec_state::stopped)
+	if (rec.state == rec_state::closed)
 	{
+		if (rec.transition == rec_transition::opening)
+		{
+			// Accepted without a callback: the recorder does not start
+			return CELL_OK;
+		}
+
 		return CELL_REC_ERROR_INVALID_STATE;
 	}
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
 	{
+		if (rec.state != rec_state::stopped)
+		{
+			// Already recording, or closed by a cellRecClose called before this cellRecStart
+			rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
+			return CELL_OK;
+		}
+
 		// Start/resume the recording
 		ensure(!!rec.encoder);
 
