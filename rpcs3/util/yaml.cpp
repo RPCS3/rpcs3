@@ -93,3 +93,4 @@ template f32 get_yaml_node_value<f32>(const YAML::Node&, std::string&);
 template f64 get_yaml_node_value<f64>(const YAML::Node&, std::string&);
 template std::string get_yaml_node_value<std::string>(const YAML::Node&, std::string&);
 template cheat_info get_yaml_node_value<cheat_info>(const YAML::Node&, std::string&);
+template bool get_yaml_node_value<bool>(const YAML::Node&, std::string&);

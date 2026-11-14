@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/NP/np_handler.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/Modules/sceNp.h"
@@ -13,6 +14,9 @@
 #include "Emu/NP/np_contexts.h"
 #include "Emu/NP/np_helpers.h"
 #include "Emu/NP/signaling_handler.h"
+#include "Emu/NP/cmrc2_entitlements.h"
+#include "Emu/NP/cmrc2_util.h"
+#include "Emu/NP/rpcn_countries.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Cell/lv2/sys_net/network_context.h"
 #include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"
@@ -923,6 +927,8 @@ namespace np
 			string_to_npid(s_npid, npid);
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 			sigh.set_self_sig_info(npid);
+
+			init_commerce();
 		}
 
 		switch (g_cfg.net.psn_status)
@@ -996,6 +1002,8 @@ namespace np
 
 	void np_handler::terminate_NP()
 	{
+		terminate_commerce();
+
 		np_memory.release();
 
 		manager_cb = {};
@@ -1913,6 +1921,288 @@ namespace np
 		}
 
 		return {include_onlinename, include_avatarurl};
+	}
+
+	// Commerce
+	void np_handler::init_commerce()
+	{
+		if (is_commerce_inited)
+			return;
+
+		is_commerce_inited = true;
+
+		const std::string title_id = Emu.GetTitleID();
+
+		load_owned_entitlements(title_id);
+		product_manager.load_products(title_id);
+	}
+
+	void np_handler::terminate_commerce()
+	{
+		if (!is_commerce_inited)
+			return;
+
+		const std::string title_id = Emu.GetTitleID();
+
+		save_owned_entitlements(title_id);
+		product_manager.unload_products();
+
+		is_commerce_inited = false;
+	}
+
+	commerce2::product_manager& np_handler::get_product_manager()
+	{
+		return product_manager;
+	}
+
+	bool np_handler::add_entitlements(vm::cpptr<char> entitlement_ids, u32 num_ids)
+	{
+		bool savedata_dirty = false;
+		s64 timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
+		for (u32 i = 0; i < num_ids; ++i)
+		{
+			auto ent_id = std::string(entitlement_ids[i].get_ptr());
+
+			const std::string service_id = commerce2::get_service_id_from_entitlement_id(ent_id);
+			if (service_id.empty())
+			{
+				nph_log.error("Failed to add entitlement: could not resolve Service ID from Entitlement ID %s", ent_id);
+				continue;
+			}
+
+			auto product_data = get_product_manager().get_product_from_sku_id(ent_id);
+			if (!product_data.has_value())
+			{
+				nph_log.error("Failed to get product data from Entitlement ID: %s", ent_id);
+				continue;
+			}
+
+			commerce2::entitlement_info entitlement;
+
+			auto existing_ent = get_entitlement_info(service_id, ent_id);
+			if (existing_ent.has_value())
+			{
+				// Non-consumable already purchased
+				if (!product_data->c_info.is_consumable)
+					continue;
+
+				entitlement = std::move(existing_ent.value());
+				entitlement.remaining += product_data->c_info.consumable_count;
+			}
+			else
+			{
+				u32 ent_type = product_data->c_info.is_consumable ? SCE_NP_ENTITLEMENT_TYPE_CONSUMABLE : SCE_NP_ENTITLEMENT_TYPE_NON_CONSUMABLE;
+
+				entitlement = {
+					.id = ent_id,
+					.type = ent_type,
+					.remaining = product_data->c_info.consumable_count,
+					.consumed = 0,
+					.created_date = timestamp_ms,
+					.expire_date = -1, // Never expires for now
+				};
+			}
+
+			upsert_entitlement(service_id, entitlement);
+			savedata_dirty = true;
+		}
+
+		return savedata_dirty ? save_owned_entitlements(Emu.GetTitleID()) : true;
+	}
+
+	bool np_handler::has_entitlement(const std::string& entitlement_id) const
+	{
+		const std::string service_id = commerce2::get_service_id_from_entitlement_id(entitlement_id);
+		if (service_id.empty())
+		{
+			nph_log.error("Failed to check entitlement: could not resolve Service ID from Entitlement ID %s", entitlement_id);
+			return false;
+		}
+
+		reader_lock lock(mutex_entitlements);
+
+		const auto svc_ents = entitlements.find(service_id);
+		if (svc_ents == entitlements.end())
+		{
+			return false;
+		}
+
+		return std::any_of(svc_ents->second.begin(), svc_ents->second.end(),
+			[&entitlement_id](const commerce2::entitlement_info& ent)
+			{
+				return ent.id.compare(entitlement_id) == 0;
+			});
+	}
+
+	error_code np_handler::get_entitlement(const char* id_str, vm::ptr<SceNpEntitlement> entitlement)
+	{
+		if (current_ticket.empty())
+		{
+			nph_log.warning("No ticket found for entitlement ID list");
+			return SCE_NP_ERROR_INVALID_STATE;
+		}
+
+		auto ent_id = std::string(id_str);
+
+		const std::string service_id = commerce2::get_service_id_from_entitlement_id(ent_id);
+		if (service_id.empty())
+		{
+			nph_log.error("Failed to get entitlement: could not resolve Service ID from Entitlement ID %s", ent_id);
+			return SCE_NP_ERROR_INVALID_ARGUMENT;
+		}
+
+		auto ent_info = get_entitlement_info(service_id, ent_id);
+
+		if (ent_info.has_value())
+		{
+			std::memset(entitlement.get_ptr(), 0, sizeof(SceNpEntitlement));
+			strcpy_trunc(entitlement->id.data, ent_id);
+
+			entitlement->created_date = ent_info->created_date;
+			entitlement->expire_date = ent_info->expire_date;
+			entitlement->type = ent_info->type;
+			entitlement->remaining_count = ent_info->remaining;
+			entitlement->consumed_count = ent_info->consumed;
+
+			return CELL_OK;
+		}
+
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
+	error_code np_handler::consume_entitlement(const char* service_id, const char* entitlement_id, u32 count)
+	{
+		auto ent_info = get_entitlement_info(service_id, entitlement_id);
+		if (!ent_info.has_value())
+			return SCE_NP_AUTH_ERROR_INVALID_ENTITLEMENT_ID;
+
+		if (ent_info->remaining < static_cast<s32>(count))
+			return SCE_NP_AUTH_ERROR_INVALID_CONSUMED_COUNT;
+
+		ent_info->remaining -= count;
+		ent_info->consumed += count;
+
+		upsert_entitlement(service_id, ent_info.value());
+
+		if (!save_owned_entitlements(Emu.GetTitleID()))
+			return SCE_NP_AUTH_ERROR_UNKNOWN;
+
+		return CELL_OK;
+	}
+
+	void np_handler::upsert_entitlement(const std::string& service_id, const commerce2::entitlement_info& entitlement)
+	{
+		std::lock_guard lock(mutex_entitlements);
+
+		auto& list = entitlements[service_id];
+		const auto ent_it = std::find_if(list.begin(), list.end(),
+			[&entitlement](const commerce2::entitlement_info& ent)
+			{
+				return ent.id.compare(entitlement.id) == 0;
+			});
+
+		if (ent_it == list.end())
+			list.push_back(entitlement); // Insert
+		else
+			*ent_it = entitlement;		 // Update
+	}
+
+	std::optional<commerce2::entitlement_info> np_handler::get_entitlement_info(const std::string& service_id, const std::string& entitlement_id)
+	{
+		reader_lock lock(mutex_entitlements);
+
+		const auto svc_ents = entitlements.find(service_id);
+		if (svc_ents != entitlements.end())
+		{
+			const auto ent_it = std::find_if(svc_ents->second.begin(), svc_ents->second.end(),
+				[&entitlement_id](const commerce2::entitlement_info& ent)
+				{
+					return ent.id.compare(entitlement_id) == 0;
+				});
+
+			if (ent_it != svc_ents->second.end())
+			{
+				return *ent_it;
+			}
+		}
+
+		nph_log.notice("No entitlement_info data found for Service ID: %s, Entitlement ID: %s", service_id, entitlement_id);
+		return {};
+	}
+
+	// Gets entitlements the user 'owns' for the current ticket's Service ID
+	error_code np_handler::get_entitlement_id_list(vm::ptr<SceNpEntitlementId> ids, u32 ids_size)
+	{
+		if (current_ticket.empty())
+		{
+			nph_log.warning("No ticket found for entitlement ID list");
+			return SCE_NP_ERROR_INVALID_STATE;
+		}
+
+		// Entitlements are stored against Service IDs, so only those
+		// which match the current ticket's Service ID are returned
+		const std::string service_id = current_ticket.get_service_id();
+
+		reader_lock lock(mutex_entitlements);
+
+		const auto svc_ents = entitlements.find(service_id);
+		if (svc_ents == entitlements.end())
+		{
+			return not_an_error(0);
+		}
+
+		if (ids)
+		{
+			if (ids_size != svc_ents->second.size())
+				return SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY;
+
+			for (u32 index = 0; index < ids_size; ++index)
+			{
+				std::memset(ids[index].data, 0, sizeof(SceNpEntitlementId));
+				strcpy_trunc(ids[index].data, svc_ents->second[index].id);
+			}
+		}
+
+		// Returns number of entitlements in ticket
+		return not_an_error(svc_ents->second.size());
+	}
+
+	void np_handler::load_owned_entitlements(const std::string title_id)
+	{
+		auto parsed = commerce2::read_entitlements(title_id);
+
+		std::lock_guard lock(mutex_entitlements);
+		entitlements = std::move(parsed);
+	}
+
+	bool np_handler::save_owned_entitlements(const std::string title_id)
+	{
+		std::lock_guard save_lock(mutex_entitlements_save);
+
+		std::unordered_map<std::string, std::vector<commerce2::entitlement_info>> snapshot;
+		{
+			reader_lock lock(mutex_entitlements);
+			snapshot = entitlements;
+		}
+
+		return commerce2::write_entitlements(title_id, snapshot);
+	}
+
+	// Sets currency info
+	void np_handler::set_commerce_session_info(SceNpCommerce2SessionInfo* session)
+	{
+		const std::string country = g_cfg.net.country;
+		auto currency_info = countries::get_currency_info(country);
+
+		session->decimals = currency_info.num_decimals;
+		session->symbolPosition = currency_info.symbol_before ? SCE_NP_COMMERCE2_SYM_POS_PRE : SCE_NP_COMMERCE2_SYM_POS_POST;
+		session->symbolWithSpace = false;
+
+		std::memcpy(session->currencyCode, &currency_info.cur_code, strlen(currency_info.cur_code));
+		std::memcpy(session->decimalLetter, &currency_info.decimals, 1);
+		std::memcpy(session->currencySymbol, &currency_info.symbol, strlen(currency_info.symbol));
+		std::memcpy(session->thousandSeparator, &currency_info.thousands, 1);
 	}
 
 	void np_handler::add_gui_request(u32 req_id, u32 ctx_id)
