@@ -47,6 +47,7 @@ namespace gui
 			gw_mute_unmute,
 			gw_volume_up,
 			gw_volume_down,
+			gw_voice_chat_mute,
 			gw_toggle_mouse_gyro,
 
 			count
