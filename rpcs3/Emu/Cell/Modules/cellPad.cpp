@@ -9,7 +9,7 @@
 #include "Input/product_info.h"
 #include "cellPad.h"
 
-error_code sys_config_start(ppu_thread& ppu);
+error_code sys_config_start_with_events(ppu_thread& ppu, const std::vector<usz>& indices, u32 state);
 error_code sys_config_stop(ppu_thread& ppu);
 
 extern bool is_input_allowed();
@@ -258,7 +258,7 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 {
 	cellPad.warning("cellPadInit(max_connect=%d)", max_connect);
 
-	std::lock_guard lock(pad::g_pad_mutex);
+	std::unique_lock lock(pad::g_pad_mutex);
 
 	auto& config = g_fxo->get<pad_info>();
 
@@ -268,8 +268,6 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 	if (max_connect == 0 || max_connect > CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	sys_config_start(ppu);
-
 	config.max_connect = max_connect;
 	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
 	config.reported_info = {};
@@ -277,13 +275,20 @@ error_code cellPadInit(ppu_thread& ppu, u32 max_connect)
 	const auto handler = pad::get_pad_thread();
 	const auto& pads = handler->GetPads();
 
+	std::vector<usz> connected;
+
 	for (usz i = 0; i < config.get_max_connect(); ++i)
 	{
 		if (!pads[i]->is_fake_pad && pads[i]->is_connected())
 		{
-			send_sys_io_connect_event(i, CELL_PAD_STATUS_CONNECTED);
+			connected.push_back(i);
 		}
 	}
+
+	// A higher priority event handler needs the lock while the start below waits for that thread
+	lock.unlock();
+
+	sys_config_start_with_events(ppu, connected, CELL_PAD_STATUS_CONNECTED);
 
 	return CELL_OK;
 }
