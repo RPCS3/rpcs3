@@ -200,7 +200,7 @@ static void set_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
 	}
 }
 
-bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3)
+bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3, std::unique_lock<shared_mutex>* sys_rsx_lock, u32 context_id)
 {
 	if (!ctx->fw.driver_info)
 	{
@@ -218,7 +218,19 @@ bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 
 		return true;
 	}
 
-	auto error = sys_event_port_send(ctx->fw.rsx_event_port, data1, event_flags, data3);
+	const u32 event_port = ctx->fw.rsx_event_port;
+
+	s32 error = sys_event_port_send(event_port, data1, event_flags, data3);
+
+	// The lv2 event queue is drained by a guest thread that may need sys_rsx_mtx (e.g. for a flip).
+	// Do not hold the caller's lock while waiting for room in the queue, only ids are used from here on.
+	const bool unlocked = error + 0u == CELL_EBUSY && sys_rsx_lock && sys_rsx_lock->owns_lock();
+
+	if (unlocked)
+	{
+		sys_rsx_lock->unlock();
+		ctx = nullptr;
+	}
 
 	while (error + 0u == CELL_EBUSY)
 	{
@@ -242,15 +254,37 @@ bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 
 			break;
 		}
 
-		error = sys_event_port_send(ctx->fw.rsx_event_port, data1, event_flags, data3);
+		error = sys_event_port_send(event_port, data1, event_flags, data3);
 	}
 
 	if (error + 0u == CELL_EAGAIN)
 	{
+		if (unlocked)
+		{
+			// The context may have been freed while unlocked
+			if (!_sys_rsx_lock_context_calls(this, *sys_rsx_lock))
+			{
+				return false;
+			}
+
+			ctx = _sys_rsx_get_lv2_context(this, context_id);
+
+			if (!ctx)
+			{
+				return false;
+			}
+		}
+
 		// Thread has aborted when sending event (VBLANK duplicates are allowed)
 		constexpr u64 vblank_event_flags = (SYS_RSX_EVENT_VBLANK | SYS_RSX_EVENT_SECOND_VBLANK_BASE | SYS_RSX_EVENT_SECOND_VBLANK_BASE * 2);
 		ensure((ctx->fw.unsent_gcm_events.fetch_or(event_flags) & event_flags & ~vblank_event_flags) == 0);
 		return false;
+	}
+
+	if (unlocked && error + 0u == CELL_ESRCH)
+	{
+		// The event port was destroyed by a concurrent sys_rsx_context_free
+		return true;
 	}
 
 	if (error && error + 0u != CELL_ENOTCONN)
@@ -1207,7 +1241,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (render->enable_second_vhandler)
 			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
 
-		render->send_event(ctx, 0, event_flags, 0);
+		render->send_event(ctx, 0, event_flags, 0, &lock, context_id);
 		break;
 	}
 

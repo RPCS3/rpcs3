@@ -241,7 +241,8 @@ namespace rsx
 		atomic_t<bool> enable_second_vhandler{false};
 
 		// Sends to the context's lv2 event port
-		bool send_event(context* ctx, u64, u64, u64);
+		// If sys_rsx_lock is owned, it is released while the event queue is full (context_id is used to find ctx again)
+		bool send_event(context* ctx, u64, u64, u64, std::unique_lock<shared_mutex>* sys_rsx_lock = nullptr, u32 context_id = 0);
 
 		// Events an lv2 event queue could not take yet, on any context
 		bool has_unsent_gcm_events();
