@@ -421,6 +421,7 @@ endif()
 # Io
 target_sources(rpcs3_emu PRIVATE
     Io/Buzz.cpp
+    Io/buzzer_player.cpp
     Io/camera_config.cpp
     Io/Dimensions.cpp
     Io/evdev_gun_handler.cpp

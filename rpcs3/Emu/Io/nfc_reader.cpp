@@ -1,9 +1,11 @@
 #include "stdafx.h"
 #include "nfc_reader.h"
+#include "buzzer_player.h"
 
 LOG_CHANNEL(nfc_log, "NFC");
 
 nfc_reader::nfc_reader()
+	: m_buzzer(std::make_unique<buzzer_player>())
 {
 	init_registers();
 }
@@ -11,6 +13,10 @@ nfc_reader::nfc_reader()
 nfc_reader::~nfc_reader()
 {
 	stop_worker();
+	if (m_buzzer)
+	{
+		m_buzzer->stop();
+	}
 }
 
 void nfc_reader::set_device_name(const std::string& name)
@@ -1121,6 +1127,11 @@ void nfc_reader::dispatch_async_command(std::span<const u8> frame, std::span<u8>
 
 void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 {
+	if (m_buzzer)
+	{
+		m_buzzer->check_device();
+	}
+
 	const std::span<const u8> frame = find_frame(in);
 
 	if (!verify_request(frame))
@@ -1619,14 +1630,48 @@ void nfc_reader::execute_command(std::span<const u8> frame, std::span<u8> card)
 		const u8 p3_in = payload[1];
 		const u8 p7_in = payload[2];
 
-		if (p3_in & 0x80) // Bit 7: Val validates P30..P35
+		// Vendor buzzer control command multiplexed onto WriteGPIO (P3 = 0x08, P7 = mode)
+		if (p3_in == 0x08 && m_buzzer)
 		{
-			write_register_value(0xFFB0, p3_in & 0x3F);
+			switch (p7_in)
+			{
+			case 0x80:
+			{
+				m_buzzer->stop();
+				break;
+			}
+			case 0x81:
+			{
+				m_buzzer->play_beep_1();
+				break;
+			}
+			case 0x82:
+			{
+				m_buzzer->play_beep_3();
+				break;
+			}
+			case 0x93:
+			{
+				m_buzzer->play_scale();
+				break;
+			}
+			default:
+			{
+				break;
+			}
+			}
 		}
-
-		if (p7_in & 0x80) // Bit 7: Val validates P71, P72
+		else
 		{
-			write_register_value(0xFFF7, p7_in & 0x06);
+			if (p3_in & 0x80) // Bit 7: Val validates P30..P35
+			{
+				write_register_value(0xFFB0, p3_in & 0x3F);
+			}
+
+			if (p7_in & 0x80) // Bit 7: Val validates P71, P72
+			{
+				write_register_value(0xFFF7, p7_in & 0x06);
+			}
 		}
 
 		build_response({res});

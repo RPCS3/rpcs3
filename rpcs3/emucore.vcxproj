@@ -92,6 +92,7 @@
     <ClCompile Include="Emu\Io\gem_config.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
+    <ClCompile Include="Emu\Io\buzzer_player.cpp" />
     <ClCompile Include="Emu\Io\nfc_reader.cpp" />
     <ClCompile Include="Emu\Io\pcsc_driver.cpp" />
     <ClCompile Include="Emu\Io\wiimote_config.cpp" />
@@ -677,6 +678,7 @@
     <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\turntable_config.h" />
     <ClInclude Include="Emu\Io\mifare_types.h" />
+    <ClInclude Include="Emu\Io\buzzer_player.h" />
     <ClInclude Include="Emu\Io\nfc_reader.h" />
     <ClInclude Include="Emu\Io\pcsc_driver.h" />
     <ClInclude Include="Emu\Io\usio.h" />
