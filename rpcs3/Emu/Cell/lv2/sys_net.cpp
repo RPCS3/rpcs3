@@ -31,6 +31,7 @@
 
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
+#include "Emu/Cell/Modules/cellNetCtl.h"
 #include "Emu/Cell/timers.hpp"
 #include <shared_mutex>
 
@@ -56,6 +57,7 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 	case -x: return "-" #x;   \
 	case x:                   \
 		return #x
+				SYS_NET_ERROR_CASE(SYS_NET_EPERM);
 				SYS_NET_ERROR_CASE(SYS_NET_ENOENT);
 				SYS_NET_ERROR_CASE(SYS_NET_EINTR);
 				SYS_NET_ERROR_CASE(SYS_NET_EBADF);
@@ -129,6 +131,8 @@ void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
 			case SYS_NET_AF_UNSPEC: return "UNSPEC";
 			case SYS_NET_AF_LOCAL: return "LOCAL";
 			case SYS_NET_AF_INET: return "INET";
+			case SYS_NET_AF_ROUTE: return "ROUTE";
+			case SYS_NET_AF_LINK: return "LINK";
 			case SYS_NET_AF_INET6: return "INET6";
 			}
 
@@ -1196,7 +1200,8 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, lv2_socket_family family, lv2_so
 
 	sys_net.warning("sys_net_bnet_socket(family=%s, type=%s, protocol=%s)", family, type, protocol);
 
-	if (family != SYS_NET_AF_INET)
+	// AF_ROUTE sockets are opened by libnet to manage the routing table
+	if (family != SYS_NET_AF_INET && family != SYS_NET_AF_ROUTE)
 	{
 		sys_net.error("sys_net_bnet_socket(): unknown family (%d)", family);
 	}
@@ -2016,11 +2021,259 @@ error_code sys_net_bnet_ioctl(ppu_thread& ppu, s32 arg1, u32 arg2, u32 arg3)
 	return CELL_OK;
 }
 
-error_code sys_net_bnet_sysctl(ppu_thread& ppu, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6)
+namespace
+{
+	// Constants and layouts below follow NetBSD 2.0 (sys/socket.h, net/route.h, net/if.h, net/if_dl.h, net/if_types.h),
+	// which is what the getifaddrs() implementation of the PS3's libnet parses
+	constexpr s32 sys_net_ctl_net = 4;
+	constexpr s32 sys_net_net_rt_iflist = 4;
+
+	constexpr u8 sys_net_rtm_version = 3;
+	constexpr u8 sys_net_rtm_newaddr = 0xc;
+	constexpr u8 sys_net_rtm_ifinfo = 0xf;
+
+	constexpr s32 sys_net_rta_netmask = 0x4;
+	constexpr s32 sys_net_rta_ifp = 0x10;
+	constexpr s32 sys_net_rta_ifa = 0x20;
+	constexpr s32 sys_net_rta_brd = 0x80;
+
+	constexpr s32 sys_net_iff_up = 0x1;
+	constexpr s32 sys_net_iff_broadcast = 0x2;
+	constexpr s32 sys_net_iff_loopback = 0x8;
+	constexpr s32 sys_net_iff_running = 0x40;
+	constexpr s32 sys_net_iff_simplex = 0x800;
+	constexpr s32 sys_net_iff_multicast = 0x8000;
+
+	constexpr s32 sys_net_link_state_down = 1;
+	constexpr s32 sys_net_link_state_up = 2;
+
+	constexpr u8 sys_net_ift_ether = 0x6;
+	constexpr u8 sys_net_ift_loop = 0x18;
+
+	struct sys_net_if_data
+	{
+		u8 ifi_type;
+		u8 ifi_addrlen;
+		u8 ifi_hdrlen;
+		be_t<s32> ifi_link_state;
+		be_t<u64> ifi_mtu;
+		be_t<u64> ifi_metric;
+		be_t<u64> ifi_baudrate;
+		be_t<u64> ifi_stats[11]; // ipackets, ierrors, opackets, oerrors, collisions, ibytes, obytes, imcasts, omcasts, iqdrops, noproto
+		be_t<u64> ifi_lastchange_sec;
+		be_t<u64> ifi_lastchange_usec;
+	};
+
+	struct sys_net_if_msghdr
+	{
+		be_t<u16> ifm_msglen;
+		u8 ifm_version;
+		u8 ifm_type;
+		be_t<s32> ifm_addrs;
+		be_t<s32> ifm_flags;
+		be_t<u16> ifm_index;
+		sys_net_if_data ifm_data;
+	};
+
+	struct sys_net_ifa_msghdr
+	{
+		be_t<u16> ifam_msglen;
+		u8 ifam_version;
+		u8 ifam_type;
+		be_t<s32> ifam_addrs;
+		be_t<s32> ifam_flags;
+		be_t<u16> ifam_index;
+		be_t<s32> ifam_metric;
+	};
+
+	CHECK_SIZE(sys_net_if_data, 0x88);
+	CHECK_SIZE(sys_net_if_msghdr, 0x98);
+	CHECK_SIZE(sys_net_ifa_msghdr, 0x14);
+	CHECK_SIZE(sys_net_sockaddr_dl, 0x14);
+	CHECK_SIZE(sys_net_sockaddr_in, 0x10);
+
+	struct sys_net_iface_desc
+	{
+		std::string_view name;
+		u8 type;
+		u8 hdrlen;
+		s32 flags;
+		s32 link_state;
+		u64 mtu;
+		std::array<u8, 6> mac;
+		u8 mac_len;
+		u32 ip;      // Network byte order, 0 if the interface has no address
+		u32 netmask; // Network byte order
+		bool has_broadcast;
+	};
+
+	template <typename T>
+	void sys_net_append(std::vector<u8>& buf, const T& value)
+	{
+		const u8* ptr = reinterpret_cast<const u8*>(&value);
+		buf.insert(buf.end(), ptr, ptr + sizeof(T));
+	}
+
+	sys_net_sockaddr_in sys_net_make_sockaddr_in(u32 addr)
+	{
+		sys_net_sockaddr_in sin{};
+		sin.sin_len = static_cast<u8>(sizeof(sys_net_sockaddr_in));
+		sin.sin_family = static_cast<u8>(SYS_NET_AF_INET);
+		sin.sin_addr = std::bit_cast<be_t<u32>>(addr);
+		return sin;
+	}
+
+	// Builds the reply of sysctl({CTL_NET, PF_ROUTE, 0, 0, NET_RT_IFLIST, 0}): for every interface an RTM_IFINFO message
+	// (followed by the link level address) and, if the interface has an address, an RTM_NEWADDR message
+	// (followed by the netmask, address and broadcast address)
+	std::vector<u8> sys_net_build_iflist()
+	{
+		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+		const bool connected = nph.get_net_status() == CELL_NET_CTL_STATE_IPObtained;
+
+		std::vector<sys_net_iface_desc> ifaces;
+
+		sys_net_iface_desc& lo = ifaces.emplace_back();
+		lo.name = "lo0";
+		lo.type = sys_net_ift_loop;
+		lo.flags = sys_net_iff_up | sys_net_iff_loopback | sys_net_iff_running | sys_net_iff_multicast;
+		lo.link_state = sys_net_link_state_up;
+		lo.mtu = 16384;
+		lo.ip = std::bit_cast<u32, be_t<u32>>(0x7f000001);
+		lo.netmask = std::bit_cast<u32, be_t<u32>>(0xff000000);
+
+		sys_net_iface_desc& eth = ifaces.emplace_back();
+		eth.name = "eth0";
+		eth.type = sys_net_ift_ether;
+		eth.hdrlen = 14;
+		eth.flags = sys_net_iff_up | sys_net_iff_broadcast | sys_net_iff_simplex | sys_net_iff_multicast;
+		eth.link_state = connected ? sys_net_link_state_up : sys_net_link_state_down;
+		eth.mtu = 1500;
+		eth.mac = nph.get_ether_addr();
+		eth.mac_len = 6;
+
+		if (connected)
+		{
+			eth.flags |= sys_net_iff_running;
+			eth.ip = nph.get_local_ip_addr();
+			eth.netmask = nph.get_netmask();
+			eth.has_broadcast = true;
+		}
+
+		std::vector<u8> buf;
+
+		u16 index = 0;
+
+		for (const sys_net_iface_desc& iface : ifaces)
+		{
+			index++;
+
+			sys_net_sockaddr_dl sdl{};
+			sdl.sdl_len = static_cast<u8>(sizeof(sys_net_sockaddr_dl));
+			sdl.sdl_family = static_cast<u8>(SYS_NET_AF_LINK);
+			sdl.sdl_index = index;
+			sdl.sdl_type = iface.type;
+			sdl.sdl_nlen = static_cast<u8>(iface.name.size());
+			sdl.sdl_alen = iface.mac_len;
+			std::memcpy(sdl.sdl_data, iface.name.data(), iface.name.size());
+			std::memcpy(sdl.sdl_data + iface.name.size(), iface.mac.data(), iface.mac_len);
+
+			sys_net_if_msghdr ifm{};
+			ifm.ifm_msglen = static_cast<u16>(sizeof(sys_net_if_msghdr) + sizeof(sys_net_sockaddr_dl));
+			ifm.ifm_version = sys_net_rtm_version;
+			ifm.ifm_type = sys_net_rtm_ifinfo;
+			ifm.ifm_addrs = sys_net_rta_ifp;
+			ifm.ifm_flags = iface.flags;
+			ifm.ifm_index = index;
+			ifm.ifm_data.ifi_type = iface.type;
+			ifm.ifm_data.ifi_addrlen = iface.mac_len;
+			ifm.ifm_data.ifi_hdrlen = iface.hdrlen;
+			ifm.ifm_data.ifi_link_state = iface.link_state;
+			ifm.ifm_data.ifi_mtu = iface.mtu;
+
+			sys_net_append(buf, ifm);
+			sys_net_append(buf, sdl);
+
+			if (!iface.ip)
+			{
+				continue;
+			}
+
+			sys_net_ifa_msghdr ifam{};
+			ifam.ifam_version = sys_net_rtm_version;
+			ifam.ifam_type = sys_net_rtm_newaddr;
+			ifam.ifam_addrs = sys_net_rta_netmask | sys_net_rta_ifa | (iface.has_broadcast ? sys_net_rta_brd : 0);
+			ifam.ifam_index = index;
+			ifam.ifam_msglen = static_cast<u16>(sizeof(sys_net_ifa_msghdr) + sizeof(sys_net_sockaddr_in) * (iface.has_broadcast ? 3 : 2));
+
+			sys_net_append(buf, ifam);
+			sys_net_append(buf, sys_net_make_sockaddr_in(iface.netmask));
+			sys_net_append(buf, sys_net_make_sockaddr_in(iface.ip));
+
+			if (iface.has_broadcast)
+			{
+				sys_net_append(buf, sys_net_make_sockaddr_in(iface.ip | ~iface.netmask));
+			}
+		}
+
+		return buf;
+	}
+} // namespace
+
+error_code sys_net_bnet_sysctl(ppu_thread& ppu, vm::cptr<s32> name, u32 namelen, vm::ptr<void> oldp, vm::ptr<u64> oldlenp, vm::cptr<void> newp, u32 newlen)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.todo("sys_net_bnet_sysctl(0x%x, 0x%x, 0x%x, *0x%x, 0x%x, 0x%x)", arg1, arg2, arg3, arg4, arg5, arg6);
+	std::array<s32, 6> mib{};
+
+	if (name && namelen == mib.size())
+	{
+		for (usz i = 0; i < mib.size(); i++)
+		{
+			mib[i] = name[i];
+		}
+
+		// libnet's getifaddrs() calls this twice: first with oldp = null to get the required size, then with a buffer of that size
+		if (mib[0] == sys_net_ctl_net && mib[1] == SYS_NET_AF_ROUTE && mib[4] == sys_net_net_rt_iflist)
+		{
+			sys_net.trace("sys_net_bnet_sysctl(): NET_RT_IFLIST (oldp=*0x%x, oldlenp=*0x%x, newp=*0x%x, newlen=0x%x)", oldp, oldlenp, newp, newlen);
+
+			if (newp)
+			{
+				return -SYS_NET_EPERM;
+			}
+
+			if (!oldlenp)
+			{
+				return -SYS_NET_EFAULT;
+			}
+
+			const std::vector<u8> iflist = sys_net_build_iflist();
+
+			if (!oldp)
+			{
+				*oldlenp = static_cast<u64>(iflist.size());
+				return CELL_OK;
+			}
+
+			const u64 copy_size = std::min<u64>(*oldlenp, iflist.size());
+			std::memcpy(oldp.get_ptr(), iflist.data(), copy_size);
+			*oldlenp = copy_size;
+
+			if (copy_size < iflist.size())
+			{
+				return -SYS_NET_ENOMEM;
+			}
+
+			return CELL_OK;
+		}
+
+		sys_net.todo("sys_net_bnet_sysctl(): unimplemented mib {%d, %d, %d, %d, %d, %d} (oldp=*0x%x, oldlenp=*0x%x, newp=*0x%x, newlen=0x%x)", mib[0], mib[1], mib[2], mib[3], mib[4], mib[5], oldp, oldlenp, newp, newlen);
+		return CELL_OK;
+	}
+
+	sys_net.todo("sys_net_bnet_sysctl(name=*0x%x, namelen=%d, oldp=*0x%x, oldlenp=*0x%x, newp=*0x%x, newlen=0x%x)", name, namelen, oldp, oldlenp, newp, newlen);
 	return CELL_OK;
 }
 
