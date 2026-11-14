@@ -555,7 +555,7 @@ void game_list_actions::StartHashProgressDialog()
 				0;
 
 			pdlg->setValue(progress);
-			pdlg->setLabelText(tr("Calculating hash: %0").arg(m_game_validator->get_name()));
+			pdlg->setLabelText(tr("Calculating hash: %0").arg(QString::fromStdString(m_game_validator->get_name())));
 		}
 		else
 		{
