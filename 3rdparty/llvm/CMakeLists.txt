@@ -84,7 +84,9 @@ if(WITH_LLVM)
 
 		# For Windows x86 (not Windows AArch64) only when BUILD_LLVM is enabled and
 		# for Linux x86 (not Linux AArch64) even if BUILD_LLVM is disabled (precompiled llvm used)
-		if(LLVM_USE_INTEL_JITEVENTS OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND COMPILER_X86))
+		# Windows with MSVC always needs it: prebuilt LLVM libraries reference the Intel JIT
+		# event listener regardless of whether they were built from the submodule
+		if(LLVM_USE_INTEL_JITEVENTS OR (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND COMPILER_X86) OR (WIN32 AND MSVC))
 			list (APPEND LLVM_ADDITIONAL_LIBS IntelJITEvents)
 		endif()
 
