@@ -77,23 +77,22 @@ void initialize_common_data(SceNpCommerce2CommonData* common_data, u32 data_addr
 	* HACK: (kinda)
 	* On the PS3, this struct stores pointers to areas within the opaque buffer holding the response.
 	* A real response is a TLV, and each member points to a nested tag within that TLV.
+	* commonData is then carried over functions, where its pointers are used for narrower TLV processing.
 	* 
-	* This impl stores pointers to binarised structs (or its field members) in the opaque buffer.
+	* This impl stores pointers to binarised structs in the opaque buffer holding the response.
+	* Each member points to a narrower struct for tailored processing - emulating TLV tags.
 	* These are then statically-cast back for type-safety and clearer usage.
-	* 
-	* Because function calls of different 'lookup types' need the same struct (e.g. SKU data),
-	* each member stores a unique struct-type that's carried across call-boundaries.
-	* reserved[0] is the most hacky aspect of this.
+	*
+	* Rating Info is hacked to only ever be 1 descriptor. It's stored once to save memory,
+	* rather than being unique per-SKU like on real hardware.
 	*
 	* - Subsequent function calls lack a req/ctx ID, so an np_context cannot be used.
-	* - Indicator/Type-flag bytes before each serialised struct may be more verbose/raw.
+	* - Indicator-flag bytes before each serialised struct is more verbose/raw.
 	* - TLVs lack type-safety and clarity
-	* - Protobuf (??)
 	* 
 	* buf_head		= s_category_info		| s_product_info_normal | s_product_list
 	* data			= s_product_info_normal | s_product_info_thin
-	* data2			= s_sku_info
-	* reserved[0]	= s_rating_info
+	* data2			= s_rating_info
 	*/
 	std::memset(common_data, 0, sizeof(SceNpCommerce2CommonData));
 	common_data->version = SCE_NP_COMMERCE2_VERSION;
@@ -101,7 +100,6 @@ void initialize_common_data(SceNpCommerce2CommonData* common_data, u32 data_addr
 	common_data->buf_size = data_size;
 	common_data->data = vm::null;
 	common_data->data2 = vm::null;
-	common_data->reserved[0] = 0;
 }
 
 error_code check_data(cmrc2_lookup_type type, vm::ptr<void> data, u32 data_size)
@@ -483,8 +481,8 @@ error_code sceNpCommerce2InitGetCategoryContentsResult(vm::ptr<SceNpCommerce2Get
 
 	const auto category_data = vm::static_ptr_cast<const commerce2::s_category_contents>(data);
 
-	// Set rating_info ptr in reserved[0]
-	result->commonData.reserved[0] = category_data.ptr(&commerce2::s_category_contents::rating_info).addr();
+	// Set rating_info ptr in commonData->data2
+	result->commonData.data2.set(category_data.ptr(&commerce2::s_category_contents::rating_info).addr());
 
 	result->rangeOfContents = SceNpCommerce2Range{
 		.startPosition = category_data->list_start_pos,
@@ -545,6 +543,9 @@ error_code sceNpCommerce2GetContentInfo(vm::cptr<SceNpCommerce2GetCategoryConten
 	// Get category_contents from commonData->buf_head
 	const auto category_data = vm::static_ptr_cast<const commerce2::s_category_contents>(contentInfo->commonData.buf_head);
 
+	if (category_data->product_count <= index)
+		return SCE_NP_COMMERCE2_ERROR_INVALID_INDEX;
+
 	contentInfo->contentType = SCE_NP_COMMERCE2_CONTENT_TYPE_PRODUCT; // TODO - subcategories
 
 	// Set product_info ptr in commonData->data
@@ -604,10 +605,6 @@ error_code sceNpCommerce2GetGameProductInfoFromContentInfo(vm::cptr<SceNpCommerc
 	// Set legal desc from category_contents
 	auto category_ptr = vm::static_ptr_cast<const commerce2::s_category_contents>(contentInfo->commonData.buf_head); 
 	gameProductInfo->legalDescription.set(category_ptr.ptr(&commerce2::s_category_contents::legal_desc).addr());
-
-	// Set SKUs ptr into commonData->data2
-	auto skus_ptr = product_data.ptr(&commerce2::s_product_info_thin::skus);
-	gameProductInfo->commonData.data2 = vm::static_ptr_cast<void>(skus_ptr);
 
 	return CELL_OK;
 }
@@ -697,8 +694,8 @@ error_code sceNpCommerce2InitGetProductInfoResult(vm::ptr<SceNpCommerce2GetProdu
 
 	const auto product_data = vm::static_ptr_cast<const commerce2::s_product_info_normal>(data);
 
-	// Store rating_info ptr in reserved[0]
-	result->commonData.reserved[0] = product_data.ptr(&commerce2::s_product_info_normal::rating_info).addr();
+	// Store rating_info ptr in commonData->data2
+	result->commonData.data2.set(product_data.ptr(&commerce2::s_product_info_normal::rating_info).addr());
 
 	return CELL_OK;
 }
@@ -734,13 +731,9 @@ error_code sceNpCommerce2GetGameProductInfo(vm::cptr<SceNpCommerce2GetProductInf
 	gameProductInfo->imageUrl.set(product_data.ptr(&commerce2::s_product_info_normal::image_url).addr());
 	gameProductInfo->legalDescription.set(product_data.ptr(&commerce2::s_product_info_normal::legal_desc).addr());
 
-	// Set product_info ptr into commonData->data
+	// Set product_info ptr into commonData->data (points to top-level buf_head for product_info_normal)
 	gameProductInfo->commonData.data = gameProductInfo->commonData.buf_head;
 	gameProductInfo->commonData.data_size = gameProductInfo->commonData.buf_size;
-
-	// Set SKUs ptr into commonData->data2
-	auto skus_ptr = product_data.ptr(&commerce2::s_product_info_normal::skus);
-	gameProductInfo->commonData.data2 = vm::static_ptr_cast<void>(skus_ptr);
 
 	return CELL_OK;
 }
@@ -829,8 +822,8 @@ error_code sceNpCommerce2InitGetProductInfoListResult(vm::ptr<SceNpCommerce2GetP
 	std::memset(result.get_ptr(), 0, sizeof(SceNpCommerce2GetProductInfoListResult));
 	initialize_common_data(&result->commonData, data.addr(), data_size);
 
-	// Store rating_info ptr in reserved[0]
-	result->commonData.reserved[0] = product_list.ptr(&commerce2::s_product_list::rating_info).addr();
+	// Store rating_info ptr in commonData->data2
+	result->commonData.data2.set(product_list.ptr(&commerce2::s_product_list::rating_info).addr());
 
 	result->countOfProductInfo = product_list->product_count;
 
@@ -875,9 +868,9 @@ error_code sceNpCommerce2GetGameProductInfoFromGetProductInfoListResult(vm::cptr
 	// Set legal desc from product_list
 	gameProductInfo->legalDescription.set(product_list.ptr(&commerce2::s_product_list::legal_desc).addr());
 
-	// Set SKUs ptr into commonData->data2
-	auto skus_ptr = product_ptr.ptr(&commerce2::s_product_info_thin::skus);
-	gameProductInfo->commonData.data2 = vm::static_ptr_cast<void>(skus_ptr);
+	// Set product_info ptr in commonData->data
+	gameProductInfo->commonData.data = vm::static_ptr_cast<void>(product_ptr);
+	gameProductInfo->commonData.data_size = sizeof(commerce2::s_product_info_thin);
 
 	return CELL_OK;
 }
@@ -903,8 +896,8 @@ error_code sceNpCommerce2GetContentRatingInfoFromGameProductInfo(vm::cptr<SceNpC
 	std::memset(contentRatingInfo.get_ptr(), 0, sizeof(SceNpCommerce2ContentRatingInfo));
 	std::memcpy(&contentRatingInfo->commonData, &gameProductInfo->commonData, sizeof(SceNpCommerce2CommonData));
 
-	// Get rating_info ptr from commonData->reserved[0]
-	const auto rating_info = vm::cptr<commerce2::s_rating_info>::make(gameProductInfo->commonData.reserved[0]);
+	// Get rating_info ptr from commonData->data2
+	const auto rating_info = vm::static_ptr_cast<const commerce2::s_rating_info>(gameProductInfo->commonData.data2);
 
 	contentRatingInfo->countOfContentRatingDescriptor = 2;
 	contentRatingInfo->ratingSystemId.set(rating_info.ptr(&commerce2::s_rating_info::rating_sys_id).addr());
@@ -928,8 +921,8 @@ error_code sceNpCommerce2GetContentRatingInfoFromCategoryInfo(vm::cptr<SceNpComm
 	std::memset(contentRatingInfo.get_ptr(), 0, sizeof(SceNpCommerce2ContentRatingInfo));
 	std::memcpy(&contentRatingInfo->commonData, &categoryInfo->commonData, sizeof(SceNpCommerce2CommonData));
 
-	// Get rating_info ptr from commonData->reserved[0]
-	const auto rating_info = vm::cptr<commerce2::s_rating_info>::make(categoryInfo->commonData.reserved[0]);
+	// Get rating_info ptr from commonData->data2
+	const auto rating_info = vm::static_ptr_cast<const commerce2::s_rating_info>(categoryInfo->commonData.data2);
 
 	contentRatingInfo->countOfContentRatingDescriptor = 2;
 	contentRatingInfo->ratingSystemId.set(rating_info.ptr(&commerce2::s_rating_info::rating_sys_id).addr());
@@ -953,8 +946,8 @@ error_code sceNpCommerce2GetContentRatingDescriptor(vm::cptr<SceNpCommerce2Conte
 	std::memset(contentRatingDescriptor.get_ptr(), 0, sizeof(SceNpCommerce2ContentRatingDescriptor));
 	std::memcpy(&contentRatingDescriptor->commonData, &contentRatingInfo->commonData, sizeof(SceNpCommerce2CommonData));
 
-	// Get rating_info ptr from commonData->reserved[0]
-	const auto rating_info = vm::cptr<commerce2::s_rating_info>::make(contentRatingInfo->commonData.reserved[0]);
+	// Get rating_info ptr from commonData->data2
+	const auto rating_info = vm::static_ptr_cast<const commerce2::s_rating_info>(contentRatingInfo->commonData.data2);
 
 	// HACK - Handle indices manually (only ever 2: one icon, one description)
 	if (index == 0)
@@ -986,13 +979,28 @@ error_code sceNpCommerce2GetGameSkuInfoFromGameProductInfo(vm::cptr<SceNpCommerc
 	std::memset(gameSkuInfo.get_ptr(), 0, sizeof(SceNpCommerce2GameSkuInfo));
 	std::memcpy(&gameSkuInfo->commonData, &gameProductInfo->commonData, sizeof(SceNpCommerce2CommonData));
 
-	// Get sku_info from commonData->data2
-	const auto sku_info = vm::static_ptr_cast<const commerce2::s_sku_info>(gameProductInfo->commonData.data2);
+	// Get sku_info from product_info in commonData->data
+	vm::bcptr<const commerce2::s_sku_info> sku_info{};
+	SceNpCommerce2GameSkuDataType dataType{};
 
-	SceNpCommerce2GameSkuDataType dataType = SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_THIN;
-	if (gameProductInfo->dataType == SCE_NP_COMMERCE2_GAME_PRODUCT_DATA_TYPE_NORMAL)
+	if (gameProductInfo->commonData.buf_head == gameProductInfo->commonData.data)
 	{
+		// .buf_head is product_info_normal, and so is .data
+		const auto product_data_normal = vm::static_ptr_cast<const commerce2::s_product_info_normal>(gameProductInfo->commonData.data);
+		if (product_data_normal->sku_count <= index)
+			return SCE_NP_COMMERCE2_ERROR_INVALID_INDEX;
+
+		sku_info.set(product_data_normal.ptr(&commerce2::s_product_info_normal::skus, index).addr());
 		dataType = SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_NORMAL;
+	}
+	else
+	{	// .buf_head is either product_list or category_contents, so .data is product_info_thin
+		const auto product_data_thin = vm::static_ptr_cast<const commerce2::s_product_info_thin>(gameProductInfo->commonData.data);
+		if (product_data_thin->sku_count <= index)
+			return SCE_NP_COMMERCE2_ERROR_INVALID_INDEX;
+
+		sku_info.set(product_data_thin.ptr(&commerce2::s_product_info_thin::skus, index).addr());
+		dataType = SCE_NP_COMMERCE2_GAME_SKU_DATA_TYPE_THIN;
 	}
 
 	// Consumption information
@@ -1015,7 +1023,7 @@ error_code sceNpCommerce2GetGameSkuInfoFromGameProductInfo(vm::cptr<SceNpCommerc
 
 	gameSkuInfo->dataType = dataType;
 	gameSkuInfo->countUntilExpiration = consumable_info.consumable_count;
-	gameSkuInfo->timeUntilExpiration = 999999999;
+	gameSkuInfo->timeUntilExpiration = UINT32_MAX;
 	gameSkuInfo->purchasabilityFlag = purchasability_flag;
 	gameSkuInfo->annotation = annotation;
 	gameSkuInfo->downloadable = false;
@@ -1033,6 +1041,9 @@ error_code sceNpCommerce2GetGameSkuInfoFromGameProductInfo(vm::cptr<SceNpCommerc
 error_code sceNpCommerce2GetPrice(u32 ctx_id, vm::ptr<char> buf, u32 buflen, u32 price)
 {
 	sceNpCommerce2.notice("sceNpCommerce2GetPrice(ctx_id=%d, buf=*0x%x, buflen=%d, price=%d)", ctx_id, buf, buflen, price);
+
+	if (!buf)
+		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

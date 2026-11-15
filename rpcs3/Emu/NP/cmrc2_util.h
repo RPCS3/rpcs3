@@ -43,7 +43,7 @@ namespace commerce2
 		char product_desc_long[SCE_NP_COMMERCE2_PRODUCT_LONG_DESCRIPTION_LEN + 1];
 		char image_url[SCE_NP_COMMERCE_PRODUCT_IMAGEURL_LEN + 1];
 		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1];
-		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN + 1];
+		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN];
 		s_rating_info rating_info;
 		be_t<u64> release_date;
 		be_t<u32> sku_count;
@@ -64,7 +64,7 @@ namespace commerce2
 
 	struct s_product_list
 	{
-		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN + 1];
+		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN];
 		s_rating_info rating_info;
 		be_t<u32> product_count;
 		s_product_info_thin products[];
@@ -77,7 +77,7 @@ namespace commerce2
 		char category_desc[SCE_NP_COMMERCE2_CATEGORY_DESCRIPTION_LEN + 1];
 		char image_url[SCE_NP_COMMERCE_CATEGORY_IMAGEURL_LEN + 1];
 		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1];
-		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN + 1];
+		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN];
 		s_rating_info rating_info;
 		be_t<u64> release_date;
 		be_t<u32> total_products;	// Total count of all products in category

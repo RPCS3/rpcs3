@@ -37,12 +37,23 @@ namespace commerce2
 			return {};
 		}
 
-		const std::string path = rpcs3::utils::get_commerce_dir_by_serial(title_id) + "/entitlements.yml";
-
-		fs::file entitlement_file{path, fs::read + fs::create};
-		if (!entitlement_file)
+		const std::string commerce_dir = rpcs3::utils::get_commerce_dir_by_serial(title_id);
+		if (!fs::create_path(commerce_dir) && fs::g_tls_error != fs::error::exist)
 		{
-			cmrc_entitlements.error("Error opening entitlements file: %s", path);
+			cmrc_entitlements.error("Error creating directory %s whilst loading: %s", commerce_dir, fs::g_tls_error);
+			return {};
+		}
+
+		const std::string path = commerce_dir + "/entitlements.yml";
+		fs::file entitlement_file{path, fs::read};
+		if (!entitlement_file && fs::g_tls_error != fs::error::noent)
+		{
+			cmrc_entitlements.error("Error opening entitlements.yml file %s: %s", path, fs::g_tls_error);
+			return {};
+		}
+		else if (!entitlement_file || entitlement_file.size() == 0)
+		{
+			cmrc_entitlements.notice("Missing or empty entitlements.yml file %s: skipping...", path);
 			return {};
 		}
 
@@ -72,7 +83,7 @@ namespace commerce2
 		}
 		else
 		{
-			cmrc_entitlements.error("No '%s' entry found. Entitlements engine version = %s (file: %s)", entitlement_key::version, entitlements_engine_version, path);
+			cmrc_entitlements.error("No 'Version' entry found. Entitlements engine version = %s (file: %s)", entitlement_key::version, entitlements_engine_version, path);
 			return {};
 		}
 
@@ -204,7 +215,7 @@ namespace commerce2
 				}
 			}
 
-			if (ent_id.size() > SCE_NP_ENTITLEMENT_ID_SIZE)
+			if (ent_id.size() >= SCE_NP_ENTITLEMENT_ID_SIZE)
 			{
 				cmrc_entitlements.error("Skipping entitlement %s: Length %d exceeds SCE_NP_ENTITLEMENT_ID_SIZE(32) (location: %s, file: %s)",
 					ent_id, ent_id.size(), get_yaml_node_location(pair.first), path);
@@ -246,14 +257,26 @@ namespace commerce2
 
 	bool write_entitlements(const std::string title_id, const std::unordered_map<std::string /* service ID */, std::vector<entitlement_info>>& entitlements_map)
 	{
+		if (entitlements_map.empty())
+		{
+			cmrc_entitlements.notice("No entitlements found to save, skipping...");
+			return true;
+		}
+
 		if (title_id.empty())
 		{
 			cmrc_entitlements.error("Cannot save entitlements; no title ID provided");
 			return false;
 		}
 
-		std::string path = rpcs3::utils::get_commerce_dir_by_serial(title_id) + "/entitlements.yml";
+		const std::string commerce_dir = rpcs3::utils::get_commerce_dir_by_serial(title_id);
+		if (!fs::create_path(commerce_dir) && fs::g_tls_error != fs::error::exist)
+		{
+			cmrc_entitlements.error("Error creating directory %s whilst saving: %s", commerce_dir, fs::g_tls_error);
+			return {};
+		}
 
+		std::string path = commerce_dir + "/entitlements.yml";
 		fs::file entitlement_file{path, fs::rewrite};
 		if (!entitlement_file)
 		{

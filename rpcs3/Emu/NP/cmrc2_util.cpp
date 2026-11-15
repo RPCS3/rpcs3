@@ -22,9 +22,9 @@ namespace commerce2
 		strcpy_trunc(serialised_product.sp_name, product.sp_name);
 
 		serialised_product.release_date = product.release_date;
-		serialised_product.sku_count = product.skus.size();
+		serialised_product.sku_count = static_cast<u32>(std::min(product.skus.size(), MAX_SERIALISED_SKUS));
 
-		for (usz i = 0; i < std::min(product.skus.size(), MAX_SERIALISED_SKUS); ++i)
+		for (usz i = 0; i < serialised_product.sku_count; ++i)
 		{
 			serialised_product.skus[i] = serialise_sku(product.skus[i]);
 		}
@@ -49,7 +49,7 @@ namespace commerce2
 
 		serialised_product->rating_info = {};
 		serialised_product->release_date = product.release_date;
-		serialised_product->sku_count = std::min(static_cast<u32>(product.skus.size()), static_cast<u32>(MAX_SERIALISED_SKUS));
+		serialised_product->sku_count = static_cast<u32>(std::min(product.skus.size(), MAX_SERIALISED_SKUS));
 
 		for (size_t i = 0; i < serialised_product->sku_count; ++i)
 		{

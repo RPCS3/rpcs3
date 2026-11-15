@@ -33,12 +33,23 @@ namespace commerce2
 			return;
 		}
 
-		std::string path = rpcs3::utils::get_commerce_dir_by_serial(title_id) + "/product_db.yml";
-
-		fs::file products_file{path, fs::read + fs::create};
-		if (!products_file)
+		const std::string commerce_dir = rpcs3::utils::get_commerce_dir_by_serial(title_id);
+		if (!fs::create_path(commerce_dir) && fs::g_tls_error != fs::error::exist)
 		{
-			cmrc_products.error("Failed to acquire file %s", path);
+			cmrc_products.error("Error creating directory %s whilst saving: %s", commerce_dir, fs::g_tls_error);
+			return;
+		}
+
+		std::string path = commerce_dir + "/product_db.yml";
+		fs::file products_file{path, fs::read};
+		if (!products_file && fs::g_tls_error != fs::error::noent)
+		{
+			cmrc_products.error("Error opening product_db.yml file %s: %s", path, fs::g_tls_error);
+			return;
+		}
+		else if (!products_file || products_file.size() == 0)
+		{
+			cmrc_products.notice("Missing or empty product_db.yml file %s: skipping...", path);
 			return;
 		}
 
@@ -402,10 +413,10 @@ namespace commerce2
 		std::vector<product_data> products;
 		for (u32 i = 0; i < product_count; ++i)
 		{
-			const char* product_id = product_ids[i].get_ptr();
-			if (!product_id)
+			if (!product_ids[i])
 				continue;
 
+			const char* product_id = product_ids[i].get_ptr();
 			const auto& product_data = get_product_data(product_id);
 			if (product_data.has_value())
 			{
