@@ -302,7 +302,8 @@ namespace utils
 		{
 			ensure(::madvise(ptr, orig_size, c_madv_no_dump) != -1);
 		}
-		else
+
+		if constexpr (c_madv_free != 0)
 		{
 			ensure(::madvise(ptr, orig_size, c_madv_free) != -1);
 		}
@@ -322,18 +323,41 @@ namespace utils
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), +prot) != -1);
+		const auto ptr_aligned = reinterpret_cast<void*>(ptr64 & -get_page_size());
+		const u64 size_aligned = utils::align<u64>(size + (ptr64 & (get_page_size() - 1)), get_page_size());
+
+		ensure(::mprotect(ptr_aligned, size_aligned, +prot) != -1);
+
+		ensure(::madvise(ptr_aligned, size_aligned, MADV_WILLNEED) != -1);
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), c_madv_dump) != -1);
-		}
-		else
-		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), MADV_WILLNEED) != -1);
+			ensure(::madvise(ptr_aligned, size_aligned, c_madv_dump) != -1);
 		}
 #endif
 	}
+
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+	void handle_jit_memory_reset(void* ptr_aligned, u64 size_aligned)
+	{
+		// On macOS, Apple explicitly fails mmap if you combine MAP_FIXED and MAP_JIT.
+		// So try to hint the kernel that the old memory is unused in different ways
+#ifdef MADV_ZERO
+		if (::madvise(ptr_aligned, size_aligned, MADV_ZERO) == 0)
+		{
+			return;
+		}
+#endif
+
+		pthread_jit_write_protect_np(false);
+
+		ensure(::mprotect(ptr_aligned, size_aligned, PROT_READ | PROT_WRITE) != -1);
+		std::memset(ptr_aligned, 0, size_aligned);
+		ensure(::mprotect(ptr_aligned, size_aligned, PROT_NONE) != -1);
+
+		pthread_jit_write_protect_np(true);
+	}
+#endif
 
 	void memory_decommit(void* pointer, usz size, [[maybe_unused]] bool can_be_jit)
 	{
@@ -346,62 +370,30 @@ namespace utils
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
+		const auto ptr_aligned = reinterpret_cast<void*>(ptr64 & -get_page_size());
+		const u64 size_aligned = utils::align<u64>(size + (ptr64 & (get_page_size() - 1)), get_page_size());
 #if defined(__APPLE__) && defined(ARCH_ARM64)
-		// Hack: on macOS, Apple explicitly fails mmap if you combine MAP_FIXED and MAP_JIT.
-		// So we unmap the space and just hope it maps to the same address we got before instead.
-		// The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
-		// so this isn't completely undefined behavior.
-		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | (can_be_jit ? MAP_JIT : 0), -1, 0) == pointer);
+		if (can_be_jit)
+		{
+			// On macOS, Apple explicitly fails mmap if you combine MAP_FIXED and MAP_JIT.
+			handle_jit_memory_reset(ptr_aligned, size_aligned);
+		}
+		else
+		{
+			ensure(::mmap(ptr_aligned, size_aligned, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+		}
 #else
-		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+		ensure(::mmap(ptr_aligned, size_aligned, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 #endif
 
 		if constexpr (c_madv_no_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), c_madv_no_dump) != -1);
-		}
-		else
-		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), c_madv_free) != -1);
-		}
-#endif
-	}
-
-	void memory_reset(void* pointer, usz size, protection prot, [[maybe_unused]] bool can_be_jit)
-	{
-		if (!size)
-		{
-			return;
+			ensure(::madvise(ptr_aligned, size_aligned, c_madv_no_dump) != -1);
 		}
 
-#ifdef _WIN32
-		memory_decommit(pointer, size);
-		memory_commit(pointer, size, prot);
-#else
-		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-#if defined(__APPLE__) && defined(ARCH_ARM64)
-		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, +prot,  MAP_ANON | MAP_PRIVATE | (can_be_jit ? MAP_JIT : 0), -1, 0) == pointer);
-#else
-		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
-#endif
-
-		if constexpr (c_madv_hugepage != 0)
+		if constexpr (c_madv_free != 0)
 		{
-			if (size % 0x200000 == 0)
-			{
-				::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), c_madv_hugepage);
-			}
-		}
-
-		if constexpr (c_madv_dump != 0)
-		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), c_madv_dump) != -1);
-		}
-		else
-		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -get_page_size()), size + (ptr64 & (get_page_size() - 1)), MADV_WILLNEED) != -1);
+			ensure(::madvise(ptr_aligned, size_aligned, c_madv_free) != -1);
 		}
 #endif
 	}
