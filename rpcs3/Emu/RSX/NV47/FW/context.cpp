@@ -35,6 +35,13 @@ namespace rsx
 			// Instead, check for the first tile in the sequence.
 			if (range.overlaps(tile_range) && tile_range.overlaps(range.start))
 			{
+				// Tiling applies to the IO offset used by the RSX, so a linear IO alias of a tiled EA range stays linear
+				if (const u32 access_io_page = iomap_table.access_io[range.start >> 20];
+					access_io_page != umax && ((access_io_page << 20) | (range.start & 0xFFFFF)) - tile.offset >= tile.size)
+				{
+					continue;
+				}
+
 				ensure(tile_base_address + 1);
 				return { .base_address = tile_base_address, .tile = &tile };
 			}

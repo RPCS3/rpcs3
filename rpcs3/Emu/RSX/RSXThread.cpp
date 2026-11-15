@@ -57,6 +57,7 @@ namespace rsx
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
 		, io(fill_array(-1))
+		, access_io(fill_array(-1))
 	{
 	}
 
@@ -1969,6 +1970,8 @@ namespace rsx
 					iomap_table.io[ea].release(-1);
 					iomap_table.ea[io].release(-1);
 				}
+
+				iomap_table.access_io[ea].release(-1);
 			}
 
 			auto& cfg = g_fxo->get<gcm_config>();
