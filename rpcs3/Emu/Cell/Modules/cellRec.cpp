@@ -1573,7 +1573,6 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 	}
 
 	u32 video_size = 0x600000; // 6 MB
-	u32 audio_size = 0x100000; // 1 MB
 	u32 external_input_size = 0;
 	u32 reduce_memsize = 0;
 
@@ -1600,8 +1599,6 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 			video_size = 0x900000; // 9 MB
 			break;
 		}
-
-		audio_size = 0x100000; // 1 MB
 		break;
 	}
 	case VIDEO_TYPE_AVC_BL:
@@ -1617,8 +1614,6 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 			video_size = 0x900000; // 9 MB
 			break;
 		}
-
-		audio_size = 0x100000; // 1 MB
 		break;
 	}
 	case VIDEO_TYPE_M4HD:
@@ -1636,8 +1631,6 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 			video_size = 0x1000000; // 16 MB
 			break;
 		}
-
-		audio_size = 0x100000; // 1 MB
 		break;
 	}
 	default:
@@ -1658,8 +1651,6 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 			video_size = 0xd00000; // 14 MB
 			break;
 		}
-
-		audio_size = 0; // 0 MB
 		break;
 	}
 	}
@@ -1715,7 +1706,7 @@ u32 cellRecQueryMemSize(vm::cptr<CellRecParam> pParam)
 		}
 	}
 
-	u32 size = video_size + audio_size + external_input_size;
+	u32 size = video_size + external_input_size;
 
 	if (size > reduce_memsize)
 	{
