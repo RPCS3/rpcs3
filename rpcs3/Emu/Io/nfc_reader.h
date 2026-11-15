@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <vector>
 
+class buzzer_player;
+
 // NFC controller host protocol
 class nfc_reader
 {
@@ -43,6 +45,9 @@ public:
 	static constexpr usz mifare_4k_blocks = 256;
 
 private:
+	// Buzzer audio player
+	std::unique_ptr<buzzer_player> m_buzzer;
+
 	// PC/SC Reader integration
 	std::string m_device_name = "Fake";
 	std::unique_ptr<pcsc_driver> m_pcsc;
