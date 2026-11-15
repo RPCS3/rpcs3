@@ -462,6 +462,7 @@ namespace gcm
 
 		RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER         = 0x00080000, // Quantize outputs to 8-bit FBO
 		RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER         = 0x00100000, // Outputs are SRGB. We could reuse UNKNOWN1 but we just keep the namespaces separate.
+		RSX_SHADER_CONTROL_F16_FRAMEBUFFER          = 0x00001000, // Quantize 32-bit outputs to the fp16 FBO using RSX conversion rules
 
 		RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL       = 0x00200000, // Uses alpha kill on texture input
 		RSX_SHADER_CONTROL_ALPHA_TEST               = 0x00400000, // Uses alpha test on the outputs

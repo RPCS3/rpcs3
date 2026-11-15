@@ -35,7 +35,7 @@ R"(
 #define BLEND_FUNC_ADD_SIGNED 0x0000F006
 #define BLEND_FUNC_REVERSE_ADD_SIGNED 0x0000F007
 
-#ifdef INT_FRAMEBUFFER_BIT
+#ifdef _ENABLE_INT8_FRAMEBUFFER
 #define _blend_saturate _saturate
 #define _blend_saturate_signed_imp(U8Type, S8Type, FloatType, v) \
 	const U8Type u8 = U8Type(clamp(v, 0.f, 1.f) * 255.f + 0.5f); \
