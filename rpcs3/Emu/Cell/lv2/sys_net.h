@@ -14,6 +14,7 @@
 // Error codes
 enum sys_net_error : s32
 {
+	SYS_NET_EPERM = 1,
 	SYS_NET_ENOENT          = 2,
 	SYS_NET_EINTR           = 4,
 	SYS_NET_EBADF           = 9,
@@ -119,6 +120,8 @@ enum lv2_socket_family : s32
 	SYS_NET_AF_LOCAL        = 1,
 	SYS_NET_AF_UNIX         = SYS_NET_AF_LOCAL,
 	SYS_NET_AF_INET         = 2,
+	SYS_NET_AF_ROUTE = 17,
+	SYS_NET_AF_LINK = 18,
 	SYS_NET_AF_INET6        = 24,
 };
 
@@ -395,5 +398,5 @@ error_code sys_net_abort(ppu_thread&, s32 type, u64 arg, s32 flags);
 error_code sys_net_infoctl(ppu_thread&, s32 cmd, vm::ptr<void> arg);
 error_code sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ptr<void> arg3, s32 arg4);
 error_code sys_net_bnet_ioctl(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
-error_code sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6);
+error_code sys_net_bnet_sysctl(ppu_thread&, vm::cptr<s32> name, u32 namelen, vm::ptr<void> oldp, vm::ptr<u64> oldlenp, vm::cptr<void> newp, u32 newlen);
 error_code sys_net_eurus_post_command(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
