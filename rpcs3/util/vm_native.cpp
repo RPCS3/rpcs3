@@ -257,7 +257,7 @@ namespace utils
 #ifdef __APPLE__
 		const int jit_flag = is_memory_mapping || !can_be_jit ? 0 : MAP_JIT;
 #ifdef ARCH_ARM64
-		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #endif
@@ -352,7 +352,7 @@ namespace utils
 		// The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
 		// so this isn't completely undefined behavior.
 		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, PROT_NONE,  MAP_ANON | MAP_PRIVATE | (can_be_jit ? MAP_JIT : 0), -1, 0) == pointer);
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | (can_be_jit ? MAP_JIT : 0), -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 #endif
