@@ -693,7 +693,10 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 			break;
 		}
 		default:
-			fmt::throw_exception("Invalid command");
+			// The command queue is in guest memory, the guest may have corrupted the command
+			cellAdec.error("LpcmDecContext::exec(): Invalid command type: 0x%x", static_cast<u32>(cmd.type.get()));
+			error_occurred |= static_cast<u32>(lv2_syscall<sys_mutex_unlock>(ppu, output_mutex) != CELL_OK);
+			break;
 		}
 	}
 }
