@@ -75,6 +75,36 @@ enum class iso_type_status
 };
 
 class iso_archive;
+struct iso_fs_node;
+
+// A disc stored in something else than a plain image or a drive, e.g. a compressed archive. It holds either an image,
+// read back through "iso_file" like any other image, or the files of a disc folder layout, which it serves directly
+class iso_container
+{
+public:
+	virtual ~iso_container() = default;
+
+	// Whether an image is held, instead of the files of a disc folder layout
+	virtual bool is_image() const = 0;
+
+	// The held image
+	virtual fs::file open_image() const = 0;
+
+	// The decryption key stored along with the held image, if any
+	virtual fs::file open_key() const = 0;
+
+	// Builds the hierarchy of the held disc folder layout
+	virtual bool form_hierarchy(iso_fs_node& root) const = 0;
+
+	// Opens a file of the held disc folder layout, out of one of the nodes built by "form_hierarchy()"
+	virtual fs::file open_file(const iso_fs_node& node) const = 0;
+};
+
+// Tells whether the path points to a container, out of its name and a quick look at its header only
+bool is_iso_container(const std::string& path);
+
+// Opens the container the path points to, or returns nothing when it is not one
+std::shared_ptr<iso_container> open_iso_container(const std::string& path);
 
 // ISO file decryption class
 class iso_file_decryption
@@ -89,6 +119,7 @@ private:
 	std::optional<iso_key_status> m_key_status;
 
 	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
+	static iso_type_status get_key(const fs::file& key_file, std::string_view key_name, aes_context* aes_ctx = nullptr);
 
 	// "content_encrypted" comes back set when the content turned out to still be encrypted, which the blocks read to
 	// test the keys tell on their own: it spares the caller reading them a second time
@@ -99,6 +130,8 @@ private:
 	void verify_key_file(iso_archive& archive);
 
 public:
+	// Searches for a key file carrying the name of the image, next to it and in the redump keys folder
+	static iso_type_status find_key(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 	static iso_type_status check_type(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 
 	bool init(const std::string& path, iso_archive* archive = nullptr);
@@ -130,6 +163,7 @@ struct iso_fs_metadata
 	s64 time = 0;
 	bool is_directory = false;
 	bool has_multiple_extents = false;
+	u32 container_node = umax; // Identifies the node to the container serving it (disc folder layout only)
 	std::vector<iso_extent_info> extents;
 
 	u64 size() const;
@@ -157,6 +191,8 @@ protected:
 public:
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode = fs::read);
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+	iso_file(fs::file&& file, const std::string& name);
+	iso_file(fs::file&& file, const std::string& name, const iso_fs_node& node);
 
 	// Points the object at another node of the same image, keeping the handle it already holds open: a caller
 	// walking many files of an image pays for a single open instead of one per file, which on a disc held by a
@@ -185,6 +221,7 @@ private:
 
 public:
 	iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
+	iso_file_encrypted(fs::file&& file, const std::string& name, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
 
 	u64 read_at(u64 offset, void* buffer, u64 size) override;
 };
@@ -211,6 +248,7 @@ private:
 	void invalidate();
 
 	std::string m_path;
+	std::shared_ptr<iso_container> m_container;
 	iso_fs_node m_root {};
 	std::shared_ptr<iso_file_decryption> m_dec;
 
@@ -229,12 +267,17 @@ public:
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }
+	const std::shared_ptr<iso_container>& container() const { return m_container; }
+	iso_encryption_type get_enc_type() const { return m_dec ? m_dec->get_enc_type() : iso_encryption_type::NONE; }
 	iso_key_status get_key_status() { return m_dec ? m_dec->get_key_status(*this) : iso_key_status::OK; }
 
 	iso_fs_node* retrieve(const std::string& path);
 	bool is_valid() const;
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);
+
+	// Opens the image the archive is read from: the file or drive itself, or the image held by its container
+	iso_file open_image() const;
 
 	std::unique_ptr<fs::file_base> get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
 	std::unique_ptr<fs::file_base> open(const std::string& path);
