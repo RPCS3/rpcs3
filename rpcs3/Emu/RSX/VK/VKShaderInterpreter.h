@@ -76,6 +76,9 @@ namespace vk
 		pipeline_key m_current_key{};
 		pipeline_info_ex_t m_current_pipeline_info_ex{};
 		std::shared_ptr<glsl::program> m_current_interpreter;
+		std::pair<u32, u32> m_current_fragment_textures_location{ umax, umax };
+
+		void set_current_interpreter(const std::shared_ptr<glsl::program>& program);
 
 		std::shared_ptr<VKVertexProgram> build_vs(u64 compiler_opt);
 		std::shared_ptr<VKFragmentProgram> build_fs(u64 compiler_opt);
@@ -110,6 +113,7 @@ namespace vk
 		u32 get_vertex_instruction_location() const;
 		u32 get_fragment_instruction_location() const;
 
+		bool has_fragment_textures() const;
 		void update_fragment_textures(const std::array<VkDescriptorImageInfoEx, 68>& sampled_images);
 	};
 }

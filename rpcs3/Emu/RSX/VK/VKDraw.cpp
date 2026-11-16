@@ -827,11 +827,14 @@ bool VKGSRender::bind_texture_env()
 
 bool VKGSRender::bind_interpreter_texture_env()
 {
-	if (m_ctx->program.fp_metadata.referenced_textures_mask == 0)
+	if (!m_shader_interpreter.has_fragment_textures())
 	{
 		// Nothing to do
 		return false;
 	}
+
+	// NOTE: The interpreter program can be shared by draws that do not reference any texture.
+	// All sampler slots must still hold valid views, so the fallback views are always bound.
 
 	std::array<VkDescriptorImageInfoEx, 68> texture_env;
 	VkDescriptorImageInfoEx fallback =

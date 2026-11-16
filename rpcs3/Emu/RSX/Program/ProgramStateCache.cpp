@@ -478,7 +478,9 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	{
 		const auto inst = v128::loadu(instBuffer, index);
 		const auto d0 = OPDEST::from_be32(inst._u32[0]);
-		const auto opcode = static_cast<rsx::assembler::FP_opcode>(d0.opcode);
+		const u32 opcode_hi = (inst._u32[2] >> 23) & 0x1; // SRC1.opcode_hi
+		const auto opcode = static_cast<rsx::assembler::FP_opcode>(d0.opcode | (opcode_hi << 6));
+		bool is_flow_control = false;
 
 		switch (opcode)
 		{
@@ -513,14 +515,16 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			// NOTE: Jump instructions are not yet proved to work outside of loops and if/else blocks
 			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
+			is_flow_control = true;
 			break;
 		default:
 			break;
 		}
 
-		if (is_any_src_constant(inst))
+		if (!is_flow_control && is_any_src_constant(inst))
 		{
 			// Instruction references constant, skip one slot occupied by data
+			// Same as the CFG builder: no data slot is skipped after flow control instructions
 			index++;
 			result.program_constants_buffer_length += 16;
 		}

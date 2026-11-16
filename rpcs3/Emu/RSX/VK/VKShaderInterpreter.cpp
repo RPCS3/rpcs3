@@ -466,7 +466,7 @@ namespace vk
 
 	void shader_interpreter::destroy()
 	{
-		m_current_interpreter.reset();
+		set_current_interpreter({});
 		m_program_cache.clear();
 		m_vs_shader_cache.clear();
 		m_fs_shader_cache.clear();
@@ -524,10 +524,24 @@ namespace vk
 		return program;
 	}
 
+	void shader_interpreter::set_current_interpreter(const std::shared_ptr<glsl::program>& program)
+	{
+		m_current_interpreter = program;
+
+		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
+		m_current_fragment_textures_location = program
+			? program->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "sampler1D_array[16]")
+			: std::pair<u32, u32>{ umax, umax };
+	}
+
+	bool shader_interpreter::has_fragment_textures() const
+	{
+		return m_current_fragment_textures_location.second != umax;
+	}
+
 	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfoEx, 68>& sampled_images)
 	{
-		// FIXME: Cannot use m_fragment_textures.start now since each interpreter has its own binding layout
-		auto [set, binding] = m_current_interpreter->get_uniform_location(::glsl::glsl_fragment_program, glsl::input_type_texture, "sampler1D_array[16]");
+		auto [set, binding] = m_current_fragment_textures_location;
 		if (binding == umax)
 		{
 			return;
@@ -607,7 +621,7 @@ namespace vk
 			auto found = m_program_cache.find(key);
 			if (found != m_program_cache.end()) [[likely]]
 			{
-				m_current_interpreter = found->second.program;
+				set_current_interpreter(found->second.program);
 
 				if ((found->second.flags & (CACHED_PIPE_UNOPTIMIZED | CACHED_PIPE_RECOMPILING)) == CACHED_PIPE_UNOPTIMIZED)
 				{
@@ -621,7 +635,7 @@ namespace vk
 
 		const auto start = std::chrono::steady_clock::now();
 
-		m_current_interpreter = link(properties, key.compiler_opt);
+		set_current_interpreter(link(properties, key.compiler_opt));
 
 		const auto end = std::chrono::steady_clock::now();
 

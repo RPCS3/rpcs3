@@ -63,6 +63,7 @@ layout(location=0) out vec4 dest[16];
 #define reg_mov(d, s, m) d = mix(d, s, m)
 
 #define MAX_STACK_DEPTH 8
+#define MAX_TEMP_REGISTERS 32u
 
 struct D0
 {
@@ -246,7 +247,11 @@ void write_sca(in vec4 value)
 	if (write_gpr_reg)
 	{
 		// Write to GPR. Most likely scenario.
-		reg_mov(temp[d3.sca_dst_tmp], value, d3.sca_mask);
+		if (d3.sca_dst_tmp < MAX_TEMP_REGISTERS)
+		{
+			reg_mov(temp[d3.sca_dst_tmp], value, d3.sca_mask);
+		}
+
 		return;
 	}
 
@@ -281,7 +286,10 @@ void write_vec(in vec4 value)
 	if (d0.dst_tmp != 0x3f)
 	{
 		// GPR write
-		reg_mov(temp[d0.dst_tmp], value, write_mask);
+		if (d0.dst_tmp < MAX_TEMP_REGISTERS)
+		{
+			reg_mov(temp[d0.dst_tmp], value, write_mask);
+		}
 
 		if (!d0.vec_result)
 		{
@@ -381,7 +389,7 @@ vec4 read_src(const in int index)
 	switch (reg_type)
 	{
 	case RSX_VP_REGISTER_TYPE_TEMP:
-		value = temp[tmp_src];
+		value = (tmp_src < MAX_TEMP_REGISTERS) ? temp[tmp_src] : vec4(0.);
 		break;
 
 	case RSX_VP_REGISTER_TYPE_INPUT:
@@ -435,6 +443,12 @@ void main()
 	for (int i = 0; i < 16; ++i)
 	{
 		dest[i] = vec4(0., 0., 0., 1.);
+	}
+
+	// Initialize temp registers
+	for (int i = 0; i < 32; ++i)
+	{
+		temp[i] = vec4(0.);
 	}
 
 	int callstack[MAX_STACK_DEPTH];
