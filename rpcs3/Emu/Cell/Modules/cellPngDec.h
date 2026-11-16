@@ -273,14 +273,46 @@ struct PngHandle
 // For reading from a buffer using libpng
 struct PngBuffer
 {
-	// The cursor location and data pointer for reading from a buffer
-	usz cursor;
-	usz length;
+	// The cursor location and data pointer for reading from a buffer in guest memory (32-bit)[]
+	u32 cursor;
+	u32 length;
 	vm::bptr<void> data;
+};
+
+class ppu_thread;
+
+// HLE exclusive, the host state of a PngStream
+struct PngStreamHost
+{
+	static constexpr u32 id_base = 1;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 1023;
+	SAVESTATE_INIT_POS(34); // Not saved, the state of libpng can't be saved
+
+	PngStreamHost(u32 stream_addr, bool file, u32 fd)
+		: stream_addr(stream_addr), file(file), fd(fd)
+	{
+	}
+
+	PngStreamHost(const PngStreamHost&) = delete;
+	PngStreamHost& operator=(const PngStreamHost&) = delete;
+
+	~PngStreamHost()
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
+	}
+
+	const u32 stream_addr; // Address of the PngStream this object belongs to
 
 	// The file descriptor, and whether we need to read from a file descriptor
-	bool file;
-	u32 fd;
+	const bool file;
+	const u32 fd;
+
+	ppu_thread* ppu = nullptr; // Only set during partial decoding
+
+	// libpng structures for reading and decoding the PNG file
+	png_structp png_ptr = nullptr;
+	png_infop info_ptr = nullptr;
 };
 
 struct PngStream
@@ -295,7 +327,6 @@ struct PngStream
 	CellPngDecCbCtrlDisp cbCtrlDisp;
 	vm::ptr<CellPngDecDispInfo> cbDispInfo;
 	vm::ptr<CellPngDecDispParam> cbDispParam;
-	ppu_thread* ppuContext;
 
 	u32 outputCounts = 0;
 	u32 nextRow = 0;
@@ -308,9 +339,7 @@ struct PngStream
 	// PNG custom read function structure, for decoding from a buffer
 	vm::ptr<PngBuffer> buffer;
 
-	// libpng structures for reading and decoding the PNG file
-	png_structp png_ptr;
-	png_infop info_ptr;
+	u32 host_id; // ID of the PngStreamHost
 };
 
 // Converts libpng colour type to cellPngDec colour type
