@@ -103,51 +103,51 @@ constexpr u32 atracXdecGetSpursMemSize(u32 nch_in)
 	}
 }
 
-void AtracXdecDecoder::alloc_avcodec()
+void AtracXdecDecoder::alloc_avcodec(AtracXdecAvcodec& av)
 {
-	codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
-	if (!codec)
+	av.codec = avcodec_find_decoder(AV_CODEC_ID_ATRAC3P);
+	if (!av.codec)
 	{
 		fmt::throw_exception("avcodec_find_decoder() failed");
 	}
 
-	packet = av_packet_alloc();
-	if (!packet)
+	av.packet = av_packet_alloc();
+	if (!av.packet)
 	{
 		fmt::throw_exception("av_packet_alloc() failed");
 	}
 
-	frame = av_frame_alloc();
-	if (!frame)
+	av.frame = av_frame_alloc();
+	if (!av.frame)
 	{
 		fmt::throw_exception("av_frame_alloc() failed");
 	}
 }
 
-void AtracXdecDecoder::free_avcodec()
+void AtracXdecDecoder::free_avcodec(AtracXdecAvcodec& av)
 {
-	if (packet)
+	if (av.packet)
 	{
-		av_packet_free(&packet);
+		av_packet_free(&av.packet);
 	}
-	if (frame)
+	if (av.frame)
 	{
-		av_frame_free(&frame);
+		av_frame_free(&av.frame);
 	}
-	if (ctx)
+	if (av.ctx)
 	{
-		avcodec_free_context(&ctx);
+		avcodec_free_context(&av.ctx);
 	}
 }
 
-void AtracXdecDecoder::init_avcodec()
+void AtracXdecDecoder::init_avcodec(AtracXdecAvcodec& av)
 {
-	if (ctx)
+	if (av.ctx)
 	{
-		avcodec_free_context(&ctx);
+		avcodec_free_context(&av.ctx);
 	}
 
-	ctx = avcodec_alloc_context3(codec);
+	AVCodecContext* const ctx = av.ctx = avcodec_alloc_context3(av.codec);
 	if (!ctx)
 	{
 		fmt::throw_exception("avcodec_alloc_context3() failed");
@@ -171,14 +171,14 @@ void AtracXdecDecoder::init_avcodec()
 	ctx->ch_layout.nb_channels = nch_in;
 	ctx->sample_rate = sampling_freq;
 
-	if (int err = avcodec_open2(ctx, codec, nullptr); err)
+	if (int err = avcodec_open2(ctx, av.codec, nullptr); err)
 	{
 		fmt::throw_exception("avcodec_open2() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 	}
 
-	packet->data = work_mem.get_ptr();
-	packet->size = nbytes;
-	packet->buf = av_buffer_create(work_mem.get_ptr(), nbytes, [](void*, uint8_t*){}, nullptr, 0);
+	av.packet->data = work_mem.get_ptr();
+	av.packet->size = nbytes;
+	av.packet->buf = av_buffer_create(work_mem.get_ptr(), nbytes, [](void*, uint8_t*){}, nullptr, 0);
 }
 
 error_code AtracXdecDecoder::set_config_info(u32 sampling_freq, u32 ch_config_idx, u32 nbytes)
@@ -222,7 +222,7 @@ error_code AtracXdecDecoder::set_config_info(u32 sampling_freq, u32 ch_config_id
 	return CELL_OK;
 }
 
-error_code AtracXdecDecoder::init_decode(u32 bw_pcm, u32 nch_out)
+error_code AtracXdecDecoder::init_decode(AtracXdecAvcodec& av, u32 bw_pcm, u32 nch_out)
 {
 	if (bw_pcm < CELL_ADEC_ATRACX_WORD_SZ_16BIT || (bw_pcm > CELL_ADEC_ATRACX_WORD_SZ_32BIT && bw_pcm != CELL_ADEC_ATRACX_WORD_SZ_FLOAT))
 	{
@@ -233,7 +233,7 @@ error_code AtracXdecDecoder::init_decode(u32 bw_pcm, u32 nch_out)
 	this->nch_out = nch_out; // Not checked for invalid values on LLE
 	this->pcm_output_size = (bw_pcm == CELL_ADEC_ATRACX_WORD_SZ_16BIT ? sizeof(s16) : sizeof(f32)) * nch_in * ATXDEC_SAMPLES_PER_FRAME;
 
-	init_avcodec();
+	init_avcodec(av);
 	return CELL_OK;
 }
 
@@ -266,14 +266,14 @@ error_code AtracXdecDecoder::parse_ats_header(vm::cptr<u8> au_start_addr)
 	return set_config_info(sampling_freq, ch_config_idx, nbytes); // Cannot return error here, values were already checked
 }
 
-void AtracXdecContext::exec(ppu_thread& ppu)
+void AtracXdecContext::exec(ppu_thread& ppu, AtracXdecAvcodec& av)
 {
 	perf_meter<"ATXDEC"_u64> perf0;
 
 	// Savestates
 	if (decoder.config_is_set)
 	{
-		decoder.init_avcodec();
+		decoder.init_avcodec(av);
 	}
 
 	switch (savestate)
@@ -362,7 +362,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 					break;
 				}
 
-				if (decoder.init_decode(cmd.atracx_param.bw_pcm, cmd.atracx_param.nch_out) == static_cast<s32>(0x80004005))
+				if (decoder.init_decode(av, cmd.atracx_param.bw_pcm, cmd.atracx_param.nch_out) == static_cast<s32>(0x80004005))
 				{
 					break;
 				}
@@ -454,7 +454,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				{
 					notify_error.cbFunc(ppu, error, notify_error.cbArg);
 				}
-				else if (decoder.init_decode(atracx_param.bw_pcm, atracx_param.nch_out) != CELL_OK)
+				else if (decoder.init_decode(av, atracx_param.bw_pcm, atracx_param.nch_out) != CELL_OK)
 				{
 					notify_error.cbFunc(ppu, CELL_ADEC_ERROR_ATX_FATAL, notify_error.cbArg);
 				}
@@ -474,7 +474,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				const auto au_start_addr = atracx_param.au_includes_ats_hdr_flg == CELL_ADEC_ATRACX_ATS_HDR_INC ? cmd.au_start_addr.get_ptr() + sizeof(AtracXdecAtsHeader) : cmd.au_start_addr.get_ptr();
 				std::memcpy(work_mem.get_ptr(), au_start_addr, decoder.nbytes);
 
-				if (int err = avcodec_send_packet(decoder.ctx, decoder.packet); err)
+				if (int err = avcodec_send_packet(av.ctx, av.packet); err)
 				{
 					// These errors should never occur
 					if (err == AVERROR(EAGAIN) || err == averror_eof || err == AVERROR(EINVAL) || err == AVERROR(ENOMEM))
@@ -486,14 +486,14 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 					cellAtracXdec.error("avcodec_send_packet() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 					error = CELL_ADEC_ERROR_ATX_NON_FATAL; // Not accurate, FFmpeg doesn't provide detailed errors like LLE
 
-					av_frame_unref(decoder.frame);
+					av_frame_unref(av.frame);
 				}
-				else if ((err = avcodec_receive_frame(decoder.ctx, decoder.frame)))
+				else if ((err = avcodec_receive_frame(av.ctx, av.frame)))
 				{
 					fmt::throw_exception("avcodec_receive_frame() failed (err=0x%x='%s')", err, utils::av_error_to_string(err));
 				}
 
-				decoded_samples_num = decoder.frame->nb_samples;
+				decoded_samples_num = av.frame->nb_samples;
 				ensure(decoded_samples_num == 0u || decoded_samples_num == ATXDEC_SAMPLES_PER_FRAME);
 
 				// The first frame after starting a new sequence or after an error is replaced with silence
@@ -516,7 +516,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_ATRACX_WORD_SZ_FLOAT:
 					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+						const f32* samples = reinterpret_cast<f32*>(av.frame->data[channel_idx]);
 
 						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
@@ -541,7 +541,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_ATRACX_WORD_SZ_16BIT:
 					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+						const f32* samples = reinterpret_cast<f32*>(av.frame->data[channel_idx]);
 
 						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
@@ -566,7 +566,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_ATRACX_WORD_SZ_24BIT:
 					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+						const f32* samples = reinterpret_cast<f32*>(av.frame->data[channel_idx]);
 
 						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
@@ -591,7 +591,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_ATRACX_WORD_SZ_32BIT:
 					for (u32 channel_idx = 0; channel_idx < nch_in; channel_idx++)
 					{
-						const f32* samples = reinterpret_cast<f32*>(decoder.frame->data[channel_idx]);
+						const f32* samples = reinterpret_cast<f32*>(av.frame->data[channel_idx]);
 
 						for (u32 in_sample_idx = 0, out_sample_idx = ch_map[channel_idx]; in_sample_idx < decoded_samples_num; in_sample_idx++, out_sample_idx += nch_in)
 						{
@@ -720,11 +720,13 @@ error_code AtracXdecContext::send_command(ppu_thread& ppu, auto&&... args)
 
 void atracXdecEntry(ppu_thread& ppu, vm::ptr<AtracXdecContext> atxdec)
 {
-	atxdec->decoder.alloc_avcodec();
+	AtracXdecAvcodec av{};
 
-	atxdec->exec(ppu);
+	AtracXdecDecoder::alloc_avcodec(av);
 
-	atxdec->decoder.free_avcodec();
+	atxdec->exec(ppu, av);
+
+	AtracXdecDecoder::free_avcodec(av);
 
 	if (ppu.state & cpu_flag::again)
 	{
