@@ -2089,7 +2089,10 @@ error_code DmuxPamfContext::close(ppu_thread& ppu)
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
 
-	ensure(idm::remove<dmux_pamf_spu_thread>(hle_spu_thread_id));
+	// The ID is in guest memory, make sure that it still refers to the SPU thread of this demuxer
+	const auto spu_thread = idm::get_unlocked<dmux_pamf_spu_thread>(hle_spu_thread_id);
+	ensure(spu_thread && spu_thread->get_cmd_queue_addr() == vm::get_addr(&cmd_queue), "Invalid HLE SPU thread ID");
+	ensure(idm::remove_verify<dmux_pamf_spu_thread>(hle_spu_thread_id, spu_thread));
 
 	if (!use_existing_spurs)
 	{
