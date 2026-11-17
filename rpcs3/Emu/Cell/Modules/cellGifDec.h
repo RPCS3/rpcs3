@@ -240,9 +240,29 @@ struct GifDecoder
 
 struct GifStream
 {
-	u32 fd{};
-	u64 fileSize{};
+	u32 host_id{};
 	CellGifDecInfo info{};
 	CellGifDecOutParam outParam{};
 	CellGifDecSrc src{};
+};
+
+// HLE exclusive, the host state of a GifStream.
+struct GifStreamHost
+{
+	static constexpr u32 id_base = 1;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 1023;
+	SAVESTATE_INIT_POS(54);
+
+	GifStreamHost(u32 stream_addr, u32 fd, u64 fileSize)
+		: stream_addr(stream_addr), fd(fd), fileSize(fileSize)
+	{
+	}
+
+	GifStreamHost(utils::serial& ar);
+	void save(utils::serial& ar);
+
+	const u32 stream_addr; // Address of the GifStream this object belongs to
+	const u32 fd;
+	const u64 fileSize;
 };
