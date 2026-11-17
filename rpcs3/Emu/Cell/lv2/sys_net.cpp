@@ -2035,14 +2035,6 @@ error_code sys_net_control(ppu_thread& ppu, u32 arg1, s32 arg2, vm::ptr<void> ar
 	return CELL_OK;
 }
 
-error_code sys_net_bnet_ioctl(ppu_thread& ppu, s32 arg1, u32 arg2, u32 arg3)
-{
-	ppu.state += cpu_flag::wait;
-
-	sys_net.todo("sys_net_bnet_ioctl(%d, 0x%x, 0x%x)", arg1, arg2, arg3);
-	return CELL_OK;
-}
-
 namespace
 {
 	// Constants and layouts below follow NetBSD 2.0 (sys/socket.h, net/route.h, net/if.h, net/if_dl.h, net/if_types.h),
@@ -2114,6 +2106,36 @@ namespace
 	CHECK_SIZE(sys_net_sockaddr_dl, 0x14);
 	CHECK_SIZE(sys_net_sockaddr_in, 0x10);
 
+	// ioctl requests on interfaces (the first argument is a struct ifreq: char ifr_name[16] followed by a 16 bytes union)
+	constexpr u32 sys_net_siocsifflags = 0x80206910;
+	constexpr u32 sys_net_siocgifflags = 0xc0206911;
+	constexpr u32 sys_net_siocsifmtu = 0x8020697f;
+	constexpr u32 sys_net_siocgiflladdr = 0xc020698c; // Returns the MAC address at offset 2 of the union (the sa_data of its sockaddr)
+
+	struct sys_net_ifreq
+	{
+		char ifr_name[16];
+		u8 ifr_data[16]; // ifr_flags (be_t<u16>) / ifr_mtu (be_t<s32>) / ifr_addr (sockaddr)
+	};
+
+	CHECK_SIZE(sys_net_ifreq, 0x20);
+
+	s32 sys_net_iface_flags(std::string_view name)
+	{
+		if (name == "lo0")
+		{
+			return sys_net_iff_up | sys_net_iff_loopback | sys_net_iff_running | sys_net_iff_multicast;
+		}
+
+		if (name == "eth0")
+		{
+			const s32 flags = sys_net_iff_up | sys_net_iff_broadcast | sys_net_iff_simplex | sys_net_iff_multicast;
+			return sys_net_is_connected() ? flags | sys_net_iff_running : flags;
+		}
+
+		return 0;
+	}
+
 	struct sys_net_iface_desc
 	{
 		std::string_view name;
@@ -2159,7 +2181,7 @@ namespace
 		sys_net_iface_desc& lo = ifaces.emplace_back();
 		lo.name = "lo0";
 		lo.type = sys_net_ift_loop;
-		lo.flags = sys_net_iff_up | sys_net_iff_loopback | sys_net_iff_running | sys_net_iff_multicast;
+		lo.flags = sys_net_iface_flags(lo.name);
 		lo.link_state = sys_net_link_state_up;
 		lo.mtu = 16384;
 		lo.ip = std::bit_cast<u32, be_t<u32>>(0x7f000001);
@@ -2169,7 +2191,7 @@ namespace
 		eth.name = "eth0";
 		eth.type = sys_net_ift_ether;
 		eth.hdrlen = 14;
-		eth.flags = sys_net_iff_up | sys_net_iff_broadcast | sys_net_iff_simplex | sys_net_iff_multicast;
+		eth.flags = sys_net_iface_flags(eth.name);
 		eth.link_state = connected ? sys_net_link_state_up : sys_net_link_state_down;
 		eth.mtu = 1500;
 		eth.mac = nph.get_ether_addr();
@@ -2177,7 +2199,6 @@ namespace
 
 		if (connected)
 		{
-			eth.flags |= sys_net_iff_running;
 			eth.ip = nph.get_local_ip_addr();
 			eth.netmask = nph.get_netmask();
 			eth.has_broadcast = true;
@@ -2242,6 +2263,49 @@ namespace
 		return buf;
 	}
 } // namespace
+
+error_code sys_net_bnet_ioctl(ppu_thread& ppu, s32 arg1, u32 arg2, u32 arg3)
+{
+	ppu.state += cpu_flag::wait;
+
+	switch (arg2)
+	{
+	case sys_net_siocsifflags:
+	case sys_net_siocgifflags:
+	case sys_net_siocsifmtu:
+	case sys_net_siocgiflladdr:
+	{
+		sys_net.trace("sys_net_bnet_ioctl(%d, 0x%x, 0x%x)", arg1, arg2, arg3);
+
+		if (!vm::check_addr(arg3, vm::page_writable, sizeof(sys_net_ifreq)))
+		{
+			return -SYS_NET_EFAULT;
+		}
+
+		sys_net_ifreq* ifr = vm::get_super_ptr<sys_net_ifreq>(arg3);
+
+		const std::string_view name(ifr->ifr_name, strnlen(ifr->ifr_name, sizeof(ifr->ifr_name)));
+
+		if (arg2 == sys_net_siocgifflags && (name == "lo0" || name == "eth0"))
+		{
+			const be_t<u16> flags = static_cast<u16>(sys_net_iface_flags(name));
+			std::memcpy(ifr->ifr_data, &flags, sizeof(flags));
+		}
+		else if (arg2 == sys_net_siocgiflladdr && name == "eth0")
+		{
+			const std::array<u8, 6> mac = g_fxo->get<named_thread<np::np_handler>>().get_ether_addr();
+			std::memcpy(ifr->ifr_data + 2, mac.data(), mac.size());
+		}
+
+		// Setting the flags or the MTU is accepted without changing anything
+		return CELL_OK;
+	}
+	default: break;
+	}
+
+	sys_net.todo("sys_net_bnet_ioctl(%d, 0x%x, 0x%x)", arg1, arg2, arg3);
+	return CELL_OK;
+}
 
 error_code sys_net_bnet_sysctl(ppu_thread& ppu, vm::cptr<s32> name, u32 namelen, vm::ptr<void> oldp, vm::ptr<u64> oldlenp, vm::cptr<void> newp, u32 newlen)
 {
