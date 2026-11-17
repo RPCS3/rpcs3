@@ -58,6 +58,9 @@ namespace font_internal
 		stbtt_fontinfo info{};
 	};
 
+	// stb_truetype uses character codes as signed integers to index the font data, so larger codes would make it read before the font
+	constexpr u32 MAX_CHAR_CODE = 0x10ffff;
+
 	// The CellFont structure is in guest memory, so the ID of the host state can't be trusted
 	stx::shared_ptr<font_instance> get_font(vm::ptr<CellFont> font)
 	{
@@ -835,6 +838,11 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 	}
 
+	if (code > font_internal::MAX_CHAR_CODE)
+	{
+		return { CELL_FONT_ERROR_NO_SUPPORT_CODE, "code=0x%x", code };
+	}
+
 	const auto instance = font_internal::get_font(font);
 	if (!instance)
 	{
@@ -1047,9 +1055,9 @@ error_code cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
-	if (false) // TODO
+	if (code > font_internal::MAX_CHAR_CODE) // TODO: check if the font contains the character
 	{
-		return CELL_FONT_ERROR_NO_SUPPORT_CODE;
+		return { CELL_FONT_ERROR_NO_SUPPORT_CODE, "code=0x%x", code };
 	}
 
 	const auto instance = font_internal::get_font(font);
