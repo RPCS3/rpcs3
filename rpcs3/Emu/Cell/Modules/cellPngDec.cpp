@@ -106,6 +106,14 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 		// Get the file
 		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(host.fd);
 
+		// The file descriptor is visible to the guest, which can close it
+		if (!file)
+		{
+			cellPngDec.error("The PNG file was closed (fd=0x%x)", host.fd);
+			std::memset(out, 0, length);
+			return;
+		}
+
 		// Read the data
 		file->file.read(out, length);
 	}
