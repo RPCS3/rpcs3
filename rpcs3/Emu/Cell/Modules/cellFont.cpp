@@ -45,6 +45,11 @@ namespace font_internal
 				return false;
 			}
 
+			// stb_truetype stores the table offsets read from the font as signed integers.
+			// A negative offset would make it read out of bounds.
+			ensure(info.loca >= 0 && info.head >= 0 && info.glyf >= 0 && info.hhea >= 0 && info.hmtx >= 0 &&
+				info.kern >= 0 && info.gpos >= 0 && info.svg >= 0 && info.index_map >= 0, "Invalid table offset in the font data");
+
 			return true;
 		}
 
@@ -62,6 +67,9 @@ namespace font_internal
 			cellFont.error("Invalid font (font=*0x%x, host_id=0x%x)", font, font->host_id);
 			return null_ptr;
 		}
+
+		// The font data is parsed in guest memory. It is freed when the font it belongs to is closed, even if an instance of the font is still open.
+		ensure(vm::check_addr(instance->fontdata_addr), "The font data is not in guest memory");
 
 		return instance;
 	}
@@ -836,6 +844,19 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 	// Render the character
 	s32 width, height, xoff, yoff;
 	const f32 scale = stbtt_ScaleForPixelHeight(&instance->info, font->scale_y);
+
+	// stb_truetype doesn't check the size of the glyph bitmap it allocates and renders to, which depends on the font data and the scale.
+	// A scale up to 32768 keeps the glyph box of any 16-bit glyph coordinates within the range of s32.
+	ensure(std::isfinite(scale) && scale >= 0.f && scale <= 32768.f, "Invalid font scale");
+	{
+		s32 x0, y0, x1, y1;
+		stbtt_GetCodepointBitmapBox(&instance->info, code, scale, scale, &x0, &y0, &x1, &y1);
+
+		const s64 glyph_w = s64{x1} - x0;
+		const s64 glyph_h = s64{y1} - y0;
+		ensure(glyph_w >= 0 && glyph_h >= 0 && glyph_w * glyph_h <= 4096 * 4096, "Invalid glyph size");
+	}
+
 	unsigned char* box = stbtt_GetCodepointBitmap(&instance->info, scale, scale, code, &width, &height, &xoff, &yoff);
 
 	if (!box)
