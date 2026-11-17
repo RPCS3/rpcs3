@@ -237,7 +237,15 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
-	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
+	const u64 outputBytesPerLine = dataCtrlParam->outputBytesPerLine;
+
+	// The line size is used as a host copy size, so a negative value as int would overflow the host buffers
+	if (outputBytesPerLine > static_cast<u64>(INT32_MAX))
+	{
+		return { CELL_JPGDEC_ERROR_ARG, "outputBytesPerLine=0x%llx", outputBytesPerLine };
+	}
+
+	const int bytesPerLine = static_cast<int>(outputBytesPerLine);
 	usz image_size = width * height;
 
 	switch(current_outParam.outputColorSpace)
