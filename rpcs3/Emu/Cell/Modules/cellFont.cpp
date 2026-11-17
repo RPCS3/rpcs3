@@ -5,6 +5,7 @@
 #include "Emu/savestate_utils.hpp"
 
 #include <stb_truetype.h>
+#include <cmath>
 
 #include "cellFont.h"
 
