@@ -469,12 +469,28 @@ void AtracXdecContext::exec(ppu_thread& ppu, AtracXdecAvcodec& av)
 				// The LLE SPU thread would crash if you attempt to decode without a valid configuration
 				ensure(decoder.config_is_set, "Attempted to decode with invalid configuration");
 
+				// The decoder is in guest memory, but accessing data in host memory. Re-validate on access.
+				const u32 ch_config_idx = decoder.ch_config_idx;
+				const u32 nch_avcodec = av.ctx ? static_cast<u32>(av.ctx->ch_layout.nb_channels) : 0;
+				const bool config_valid = ch_config_idx - 1 < std::size(ATXDEC_AVCODEC_CH_MAP) && nch_avcodec - 1 < std::size(ATXDEC_AVCODEC_CH_MAP[0]);
+				const u32 nch_in = config_valid ? nch_avcodec : 0;
+
+				if (!config_valid)
+				{
+					cellAtracXdec.error("Invalid decoder configuration (ch_config_idx=%d, nch_avcodec=%d)", ch_config_idx, nch_avcodec);
+					error = CELL_ADEC_ERROR_ATX_FATAL;
+				}
+
 				output.set(work_mem.addr() + atracXdecGetSpursMemSize(decoder.nch_in));
 
 				const auto au_start_addr = atracx_param.au_includes_ats_hdr_flg == CELL_ADEC_ATRACX_ATS_HDR_INC ? cmd.au_start_addr.get_ptr() + sizeof(AtracXdecAtsHeader) : cmd.au_start_addr.get_ptr();
-				std::memcpy(work_mem.get_ptr(), au_start_addr, decoder.nbytes);
+				std::memcpy(work_mem.get_ptr(), au_start_addr, std::min<u32>(decoder.nbytes, ATXDEC_MAX_FRAME_LENGTH));
 
-				if (int err = avcodec_send_packet(av.ctx, av.packet); err)
+				if (!config_valid)
+				{
+					av_frame_unref(av.frame);
+				}
+				else if (int err = avcodec_send_packet(av.ctx, av.packet); err)
 				{
 					// These errors should never occur
 					if (err == AVERROR(EAGAIN) || err == averror_eof || err == AVERROR(EINVAL) || err == AVERROR(ENOMEM))
@@ -501,15 +517,14 @@ void AtracXdecContext::exec(ppu_thread& ppu, AtracXdecAvcodec& av)
 				{
 					skip_next_frame = false;
 					decoded_samples_num = 0;
-					std::memset(output.get_ptr(), 0, ATXDEC_SAMPLES_PER_FRAME * (decoder.bw_pcm & 0x7full) * decoder.nch_out);
+					std::memset(output.get_ptr(), 0, ATXDEC_SAMPLES_PER_FRAME * (decoder.bw_pcm & 0x7full) * std::min<u32>(decoder.nch_out, 8)); // nch_out isn't checked on LLE
 				}
 
 				// Convert FFmpeg output to LLE output
 				const auto output_f32 = vm::static_ptr_cast<f32>(output).get_ptr();
 				const auto output_s16 = vm::static_ptr_cast<s16>(output).get_ptr();
 				const auto output_s32 = vm::static_ptr_cast<s32>(output).get_ptr();
-				const u8* const ch_map = ATXDEC_AVCODEC_CH_MAP[decoder.ch_config_idx - 1];
-				const u32 nch_in = decoder.nch_in;
+				const u8* const ch_map = ATXDEC_AVCODEC_CH_MAP[config_valid ? ch_config_idx - 1 : 0];
 
 				switch (decoder.bw_pcm)
 				{
