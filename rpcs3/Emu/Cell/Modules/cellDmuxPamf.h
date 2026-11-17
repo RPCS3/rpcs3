@@ -626,6 +626,8 @@ public:
 	void operator()(); // cellSpursMain()
 	static constexpr auto thread_name = "HLE PAMF demuxer SPU thread"sv;
 
+	u32 get_cmd_queue_addr() const { return cmd_queue.addr(); }
+
 private:
 	// These are globals in the SPU thread
 	const vm::ptr<dmux_pamf_hle_spurs_queue<DmuxPamfCommand, 1>> cmd_queue;
