@@ -796,29 +796,68 @@ bool VKGSRender::bind_texture_env()
 
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
-		auto ds = ensure(res()->surface_cache.m_bound_depth_stencil.second);
-		auto view = ds->get_view(rsx::default_remap_vector, VK_IMAGE_ASPECT_DEPTH_BIT);
-		m_program->bind_uniform({ *view, vk::null_sampler() }, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_depth_input_location);
+		// Some titles (e.g. PES) can request depth-compare emulation while no DS surface is bound.
+		// Match the missing-texture path: bind a null view instead of fataling. (#19787)
+		if (auto ds = res()->surface_cache.m_bound_depth_stencil.second)
+		{
+			auto view = ds->get_view(rsx::default_remap_vector, VK_IMAGE_ASPECT_DEPTH_BIT);
+			m_program->bind_uniform({ *view, vk::null_sampler() }, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_depth_input_location);
+		}
+		else
+		{
+			rsx_log.warning("Emulated depth compare requested without a bound depth-stencil surface. Binding null view.");
+			m_program->bind_uniform(
+				{ *vk::null_image_view(*m_current_command_buffer, VK_IMAGE_VIEW_TYPE_2D), vk::null_sampler() },
+				vk::glsl::binding_set_index_fragment,
+				m_fs_binding_table->frag_depth_input_location);
+		}
 	}
 
 	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
-		ensure(m_ctx->program.fragment_program.mrt_buffers_count == m_draw_buffers.size());
-		const auto remap = rsx::default_remap_vector.with_encoding(vk::VK_REMAP_IDENTITY);
-
-		for (u32 i = 0; i < m_ctx->program.fragment_program.mrt_buffers_count; ++i)
+		// Programmable blending was introduced in #19410. PES can hit this path with mismatched MRT
+		// counts or non-RTT / unbound color targets; do not fatal the RSX thread. (#19787)
+		if (m_ctx->program.fragment_program.mrt_buffers_count != m_draw_buffers.size())
 		{
-			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
-			if (viewable->current_layout != VK_IMAGE_LAYOUT_GENERAL &&
-				viewable->current_layout != VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
-			{
-				// Renderpass key is derived from the current layout, regenerate it after the transition
-				vk::as_rtt(viewable)->texture_barrier(*m_current_command_buffer);
-				invalidate_render_pass();
-			}
+			rsx_log.warning("Programmable blending MRT count mismatch (shader=%u, draw_buffers=%llu). Skipping PB binds.",
+				m_ctx->program.fragment_program.mrt_buffers_count,
+				static_cast<u64>(m_draw_buffers.size()));
+		}
+		else
+		{
+			const auto remap = rsx::default_remap_vector.with_encoding(vk::VK_REMAP_IDENTITY);
 
-			const auto view = viewable->get_view(remap);
-			m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
+			for (u32 i = 0; i < m_ctx->program.fragment_program.mrt_buffers_count; ++i)
+			{
+				auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
+				if (!viewable)
+				{
+					rsx_log.warning("Programmable blending source %u has no bound color image. Binding null view.", i);
+					m_program->bind_uniform(
+						{ *vk::null_image_view(*m_current_command_buffer, VK_IMAGE_VIEW_TYPE_2D) },
+						vk::glsl::binding_set_index_fragment,
+						m_fs_binding_table->frag_src_location[i]);
+					continue;
+				}
+
+				if (viewable->current_layout != VK_IMAGE_LAYOUT_GENERAL &&
+					viewable->current_layout != VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
+				{
+					// Renderpass key is derived from the current layout, regenerate it after the transition
+					if (auto rtt = vk::try_as_rtt(viewable))
+					{
+						rtt->texture_barrier(*m_current_command_buffer);
+						invalidate_render_pass();
+					}
+					else
+					{
+						rsx_log.warning("Programmable blending source %u is not an RTT; skipping texture barrier.", i);
+					}
+				}
+
+				const auto view = viewable->get_view(remap);
+				m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
+			}
 		}
 	}
 
