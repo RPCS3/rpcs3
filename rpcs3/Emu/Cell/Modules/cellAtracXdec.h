@@ -201,9 +201,8 @@ struct AtracXdecDecoder
 
 	// HLE exclusive
 	b8 config_is_set = false; // For savestates
-	u8 reserved[35]{};        // The FFmpeg state is in AtracXdecAvcodec
 
-	u8 spurs_stuff[84]; // 120 bytes on LLE, pointers to CellSpurs, CellSpursTaskset, etc.
+	u8 spurs_stuff[119]; // 120 bytes on LLE, pointers to CellSpurs, CellSpursTaskset, etc.
 
 	be_t<u32> spurs_task_id;  // CellSpursTaskId
 
