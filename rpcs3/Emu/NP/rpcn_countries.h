@@ -22,12 +22,12 @@ namespace countries
 
 	struct currency_info
 	{
-		char cur_code[4];
-		char symbol[5];
-		char thousands;
-		char decimals;
-		u32 num_decimals;
-		bool symbol_before;
+		char cur_code[4] = "USD";
+		char symbol[5] = "$";
+		char thousands = COMMA;
+		char decimals = POINT;
+		u32 num_decimals = 2;
+		bool symbol_before = true;
 	};
 	currency_info get_currency_info(std::string_view ccode);
 } // namespace countries

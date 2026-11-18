@@ -301,8 +301,8 @@ struct commerce2_lookup_request_ctx
 	u32 cmrc2_ctx_id = 0;
 
 	bool aborted = false;
-	cmrc2_lookup_type type;
-	s32 result;
+	cmrc2_lookup_type type = cmrc2_lookup_type::product_info;
+	s32 result = 0;
 	std::vector<u8> result_data{};
 };
 s32 create_commerce2_lookup_request_context(u32 cmrc2_ctx_id, cmrc2_lookup_type type);

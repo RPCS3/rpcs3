@@ -30,59 +30,59 @@ namespace commerce2
 
 	struct s_sku_info
 	{
-		char sku_id[SCE_NP_COMMERCE2_SKU_ID_LEN + 1];
-		char sku_name[SCE_NP_COMMERCE2_SKU_NAME_LEN + 1];
-		char content_link = '\0';	// Necessary to prevent crashing in some cases
+		char sku_id[SCE_NP_COMMERCE2_SKU_ID_LEN + 1]{};
+		char sku_name[SCE_NP_COMMERCE2_SKU_NAME_LEN + 1]{};
+		char content_link = '\0';	// Empty DL link: necessary to prevent crashing in some cases
 	};
 
 	struct s_product_info_normal
 	{
-		char product_id[SCE_NP_COMMERCE2_PRODUCT_ID_LEN + 1];
-		char product_name[SCE_NP_COMMERCE2_PRODUCT_NAME_LEN + 1];
-		char product_desc_short[SCE_NP_COMMERCE2_PRODUCT_SHORT_DESCRIPTION_LEN + 1];
-		char product_desc_long[SCE_NP_COMMERCE2_PRODUCT_LONG_DESCRIPTION_LEN + 1];
-		char image_url[SCE_NP_COMMERCE_PRODUCT_IMAGEURL_LEN + 1];
-		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1];
-		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN];
-		s_rating_info rating_info;
-		be_t<u64> release_date;
-		be_t<u32> sku_count;
-		s_sku_info skus[MAX_SERIALISED_SKUS];
+		char product_id[SCE_NP_COMMERCE2_PRODUCT_ID_LEN + 1]{};
+		char product_name[SCE_NP_COMMERCE2_PRODUCT_NAME_LEN + 1]{};
+		char product_desc_short[SCE_NP_COMMERCE2_PRODUCT_SHORT_DESCRIPTION_LEN + 1]{};
+		char product_desc_long[SCE_NP_COMMERCE2_PRODUCT_LONG_DESCRIPTION_LEN + 1]{};
+		char image_url[SCE_NP_COMMERCE_PRODUCT_IMAGEURL_LEN + 1]{};
+		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1]{};
+		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN]{};
+		s_rating_info rating_info{};
+		be_t<u64> release_date{};
+		be_t<u32> sku_count{};
+		s_sku_info skus[MAX_SERIALISED_SKUS]{};
 	};
 
 	struct s_product_info_thin
 	{
-		char product_id[SCE_NP_COMMERCE2_PRODUCT_ID_LEN + 1];
-		char product_name[SCE_NP_COMMERCE2_PRODUCT_NAME_LEN + 1];
-		char product_desc_short[SCE_NP_COMMERCE2_PRODUCT_SHORT_DESCRIPTION_LEN + 1];
-		char image_url[SCE_NP_COMMERCE_PRODUCT_IMAGEURL_LEN + 1];
-		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1];
-		be_t<u64> release_date;
-		be_t<u32> sku_count;
-		s_sku_info skus[MAX_SERIALISED_SKUS];
+		char product_id[SCE_NP_COMMERCE2_PRODUCT_ID_LEN + 1]{};
+		char product_name[SCE_NP_COMMERCE2_PRODUCT_NAME_LEN + 1]{};
+		char product_desc_short[SCE_NP_COMMERCE2_PRODUCT_SHORT_DESCRIPTION_LEN + 1]{};
+		char image_url[SCE_NP_COMMERCE_PRODUCT_IMAGEURL_LEN + 1]{};
+		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1]{};
+		be_t<u64> release_date{};
+		be_t<u32> sku_count{};
+		s_sku_info skus[MAX_SERIALISED_SKUS]{};
 	};
 
 	struct s_product_list
 	{
-		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN];
-		s_rating_info rating_info;
-		be_t<u32> product_count;
+		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN]{};
+		s_rating_info rating_info{};
+		be_t<u32> product_count{};
 		s_product_info_thin products[];
 	};
 
 	struct s_category_contents
 	{
-		char category_id[SCE_NP_COMMERCE2_CATEGORY_ID_LEN + 1];
-		char category_name[SCE_NP_COMMERCE2_CATEGORY_NAME_LEN + 1];
-		char category_desc[SCE_NP_COMMERCE2_CATEGORY_DESCRIPTION_LEN + 1];
-		char image_url[SCE_NP_COMMERCE_CATEGORY_IMAGEURL_LEN + 1];
-		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1];
-		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN];
-		s_rating_info rating_info;
-		be_t<u64> release_date;
-		be_t<u32> total_products;	// Total count of all products in category
-		be_t<u32> list_start_pos;
-		be_t<u32> product_count;	// Size of products[]
+		char category_id[SCE_NP_COMMERCE2_CATEGORY_ID_LEN + 1]{};
+		char category_name[SCE_NP_COMMERCE2_CATEGORY_NAME_LEN + 1]{};
+		char category_desc[SCE_NP_COMMERCE2_CATEGORY_DESCRIPTION_LEN + 1]{};
+		char image_url[SCE_NP_COMMERCE_CATEGORY_IMAGEURL_LEN + 1]{};
+		char sp_name[SCE_NP_COMMERCE2_SP_NAME_LEN + 1]{};
+		char legal_desc[SCE_NP_COMMERCE2_LEGAL_DESC_LEN]{};
+		s_rating_info rating_info{};
+		be_t<u64> release_date{};
+		be_t<u32> total_products{};	// Total count of all products in category
+		be_t<u32> list_start_pos{};
+		be_t<u32> product_count{};	// Size of products[]
 		s_product_info_thin products[];
 	};
 }

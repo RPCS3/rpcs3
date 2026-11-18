@@ -42,8 +42,8 @@ namespace commerce2
 {
 	struct consumable_info
 	{
-		bool is_consumable;
-		s32 consumable_count;
+		bool is_consumable = false;
+		s32 consumable_count = -1;
 	};
 
 	struct sku_data
@@ -60,8 +60,8 @@ namespace commerce2
 		const std::string description_long;
 		const std::string image_uri;
 		const std::string sp_name; // Licensee (Author)
-		consumable_info c_info;
-		u64 release_date;
+		consumable_info c_info{};
+		u64 release_date = 0;
 		std::vector<sku_data> skus;
 	};
 
@@ -72,7 +72,7 @@ namespace commerce2
 		std::string description;
 		std::string image_uri;
 		std::string sp_name; // Licensee (Author)
-		u64 release_date;
+		u64 release_date = 0;
 		std::vector<std::string> product_ids;
 	};
 

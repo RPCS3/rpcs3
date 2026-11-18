@@ -79,7 +79,8 @@ namespace countries
 			country_code{"Vietnam", "vn"}
 		};
 
-	inline static const std::unordered_map<std::string_view, currency_info> currency_table{
+	inline static const std::unordered_map<std::string_view, currency_info> currency_table
+	{
 		{"us", currency_info{"USD", "$",   COMMA, POINT, 2, true}},		// US Dollar
 		{"eu", currency_info{"EUR", "€",   POINT, COMMA, 2, false}},	// Euros
 		{"gb", currency_info{"GBP", "£",   COMMA, POINT, 2, true}},		// UK

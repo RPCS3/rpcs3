@@ -29,11 +29,11 @@ namespace commerce2
 	struct entitlement_info
 	{
 		std::string id;
-		u32 type;
-		s32 remaining;
-		u32 consumed;
-		s64 created_date;
-		s64 expire_date;
+		u32 type = SCE_NP_ENTITLEMENT_TYPE_NON_CONSUMABLE;
+		s32 remaining = -1;
+		u32 consumed = 0;
+		s64 created_date = 0;
+		s64 expire_date = -1;
 	};
 
 	std::unordered_map<std::string /* service ID */, std::vector<entitlement_info>> read_entitlements(const std::string title_id);
