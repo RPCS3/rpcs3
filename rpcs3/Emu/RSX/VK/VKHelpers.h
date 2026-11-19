@@ -10,7 +10,13 @@
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
 
+#ifdef __APPLE__
+// Metal-based drivers (MoltenVK, KosmicKrisp) back occlusion queries with size-limited visibility result buffers.
+// Creating a second pool of DESCRIPTOR_MAX_DRAW_CALLS queries fails with VK_ERROR_OUT_OF_DEVICE_MEMORY.
+#define OCCLUSION_MAX_POOL_SIZE   4096
+#else
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
+#endif
 
 namespace rsx
 {
