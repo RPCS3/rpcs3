@@ -21,15 +21,24 @@ nfc_reader::~nfc_reader()
 
 void nfc_reader::set_device_name(const std::string& name)
 {
+	{
+		std::lock_guard lock(m_exec_mutex);
+		if (m_device_name == name)
+		{
+			return;
+		}
+	}
+
+	stop_worker();
+
+	std::lock_guard lock(m_exec_mutex);
 	if (m_device_name == name)
 	{
 		return;
 	}
 
-	stop_worker();
-
 	m_device_name = name;
-	if (m_device_name.empty() || m_device_name == "Fake")
+	if (m_device_name.empty() || m_device_name == pcsc_driver::fake_reader_name)
 	{
 		m_pcsc.reset();
 	}
@@ -39,12 +48,44 @@ void nfc_reader::set_device_name(const std::string& name)
 		{
 			m_pcsc = std::make_unique<pcsc_driver>();
 		}
-		m_pcsc->open(m_device_name);
+		if (!m_pcsc->open(m_device_name))
+		{
+			m_device_name = pcsc_driver::fake_reader_name;
+			m_pcsc.reset();
+		}
 	}
 }
 
-const std::string& nfc_reader::get_device_name() const
+bool nfc_reader::fallback_to_fake_if_disconnected()
 {
+	bool disconnected = false;
+	{
+		std::lock_guard lock(m_exec_mutex);
+		if (!m_pcsc)
+		{
+			return false;
+		}
+		if (m_pcsc->is_open())
+		{
+			return true;
+		}
+		disconnected = true;
+	}
+
+	if (disconnected)
+	{
+		stop_worker();
+		std::lock_guard lock(m_exec_mutex);
+		m_device_name = pcsc_driver::fake_reader_name;
+		m_pcsc.reset();
+	}
+
+	return false;
+}
+
+std::string nfc_reader::get_device_name() const
+{
+	std::lock_guard lock(m_exec_mutex);
 	return m_device_name;
 }
 
@@ -1039,6 +1080,11 @@ void nfc_reader::start_worker()
 		return;
 	}
 
+	if (m_worker_thread.joinable())
+	{
+		m_worker_thread.join();
+	}
+
 	m_worker_stop.store(false, std::memory_order_release);
 	m_worker_running.store(true, std::memory_order_release);
 	m_worker_thread = std::thread([this]()
@@ -1058,7 +1104,7 @@ void nfc_reader::stop_worker()
 		std::lock_guard lock(m_task_mutex);
 		m_worker_stop.store(true, std::memory_order_release);
 		m_task_queue.clear();
-		m_task_seq = 0;
+		m_task_seq.store(0, std::memory_order_release);
 		m_task_cv.notify_all();
 	}
 
@@ -1086,7 +1132,7 @@ void nfc_reader::worker_loop()
 			}
 
 			// Skip obsolete tasks if newer requests arrived while waiting
-			while (m_task_queue.size() > 1 && m_task_queue.front().id < m_task_seq)
+			while (m_task_queue.size() > 1 && m_task_queue.front().id < m_task_seq.load(std::memory_order_relaxed))
 			{
 				m_task_queue.pop_front();
 			}
@@ -1095,12 +1141,13 @@ void nfc_reader::worker_loop()
 			m_task_queue.pop_front();
 		}
 
-		execute_command(task.frame, task.card);
-
 		{
-			std::lock_guard lock(m_buffer_mutex);
+			std::lock_guard exec_lock(m_exec_mutex);
+			execute_command(task.frame, task.card);
+
+			std::lock_guard buffer_lock(m_buffer_mutex);
 			// Only apply response if this task has not been superseded by a newer request
-			if (task.id == m_task_seq)
+			if (task.id == m_task_seq.load(std::memory_order_acquire))
 			{
 				m_response = std::move(m_exec_response);
 				m_send_response = !m_response.empty();
@@ -1154,11 +1201,12 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		return;
 	}
 
-	const bool is_pcsc = m_pcsc && m_pcsc->is_open();
+	const bool is_pcsc = fallback_to_fake_if_disconnected();
 
 	if (!is_pcsc)
 	{
 		// Pure software emulation (Fake mode) is instantaneous (< 1 microsecond)
+		std::lock_guard exec_lock(m_exec_mutex);
 		execute_command(frame, card);
 		std::lock_guard lock(m_buffer_mutex);
 		m_response = std::move(m_exec_response);
@@ -1177,7 +1225,7 @@ void nfc_reader::process_request(const std::vector<u8>& in, std::span<u8> card)
 		m_send_response = false;
 	}
 
-	// 2. Asynchronously execute the PC/SC command on worker thread without blocking the thread polling USIO
+	// 2. Asynchronously execute the PC/SC command on worker thread without blocking the thread calling this function
 	dispatch_async_command(frame, card);
 }
 

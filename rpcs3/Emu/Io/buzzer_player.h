@@ -21,8 +21,10 @@ public:
 	bool is_playing() const;
 	void check_device();
 
+	static void notify_settings_changed();
+
 private:
 	void play(std::span<const f32> wave);
 
-	u64 m_instance_id = 0;
+	const u64 m_instance_id = 0;
 };

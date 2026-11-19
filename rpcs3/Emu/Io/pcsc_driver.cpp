@@ -744,6 +744,12 @@ struct pcsc_driver::impl
 	}
 };
 
+namespace
+{
+	static std::mutex s_claimed_readers_mutex;
+	static std::unordered_map<std::string, const void*> s_claimed_readers;
+}
+
 pcsc_driver::pcsc_driver()
 	: m_impl(std::make_unique<impl>())
 {
@@ -802,7 +808,7 @@ bool pcsc_driver::open(std::string_view reader_name)
 {
 	std::lock_guard lock(m_impl->m_mutex);
 
-	if (reader_name.empty() || reader_name == "Fake")
+	if (reader_name.empty() || reader_name == fake_reader_name)
 	{
 		close();
 		return false;
@@ -811,6 +817,20 @@ bool pcsc_driver::open(std::string_view reader_name)
 	if (m_impl->m_reader_name == reader_name && m_impl->context_valid())
 	{
 		return true;
+	}
+
+	// Enforce exclusive physical reader access:
+	// A physical PC/SC reader can only be owned by one pcsc_driver instance.
+	{
+		std::lock_guard claim_lock(s_claimed_readers_mutex);
+		const auto it = s_claimed_readers.find(std::string(reader_name));
+		if (it != s_claimed_readers.end() && it->second != m_impl.get())
+		{
+			nfc_log.error("PC/SC: Physical PC/SC reader '%s' is already claimed by another NFC reader instance! Access denied, falling back to '%s'.",
+				reader_name, fake_reader_name);
+			close();
+			return false;
+		}
 	}
 
 	close();
@@ -822,6 +842,12 @@ bool pcsc_driver::open(std::string_view reader_name)
 	}
 
 	m_impl->m_reader_name = reader_name;
+
+	// Claim this reader
+	{
+		std::lock_guard claim_lock(s_claimed_readers_mutex);
+		s_claimed_readers[m_impl->m_reader_name] = m_impl.get();
+	}
 
 	// Try connecting to card if present, or open direct connection
 	if (!connect_card())
@@ -843,6 +869,13 @@ bool pcsc_driver::open(std::string_view reader_name)
 		else
 		{
 			m_impl->m_card = 0;
+			if (ret == static_cast<pcsc_long_t>(0x80100009) /* SCARD_E_UNKNOWN_READER */ ||
+				ret == static_cast<pcsc_long_t>(0x80100017) /* SCARD_E_READER_UNAVAILABLE */)
+			{
+				nfc_log.error("PC/SC: Reader '%s' is unavailable or not found", reader_name);
+				close();
+				return false;
+			}
 		}
 	}
 
@@ -880,12 +913,11 @@ void pcsc_driver::configure_reader_if_needed()
 		// Try standard 3-byte command first {0x95, 0xFF, 0xFF} (All technologies per uTrust Manual Section 6.3.4.4),
 		// then fall back to standard NFC Forum bitmask 0xE3 (Type A + B + FeliCa 212/424 + Topaz)
 		// or 0x63 (Type A + B + FeliCa 212/424), and finally 2-byte simple mode 0x02 (Type A + Type B).
-		static const std::vector<u8> try_set_type_cmds[] = {
-			{0x95, 0xFF, 0xFF}, // 3-byte All technologies (uTrust Manual Section 6.3.4.4)
-			{0x95, 0xFF, 0xE3}, // 3-byte NFC Forum (Type A, Type B, FeliCa 212/424, Topaz)
-			{0x95, 0xFF, 0x63}, // 3-byte Mainstream (Type A, Type B, FeliCa 212/424)
-			{0x95, 0x02},       // 2-byte Simple mode: Type A + Type B (uTrust Manual Section 6.3.4.4)
-		};
+		static constexpr std::array<u8, 3> cmd_all{0x95, 0xFF, 0xFF};
+		static constexpr std::array<u8, 3> cmd_nfc_forum{0x95, 0xFF, 0xE3};
+		static constexpr std::array<u8, 3> cmd_mainstream{0x95, 0xFF, 0x63};
+		static constexpr std::array<u8, 2> cmd_simple{0x95, 0x02};
+		const std::span<const u8> try_set_type_cmds[] = {cmd_all, cmd_nfc_forum, cmd_mainstream, cmd_simple};
 
 		std::vector<u8> resp;
 		for (const auto& cmd : try_set_type_cmds)
@@ -908,9 +940,33 @@ void pcsc_driver::configure_reader_if_needed()
 	}
 }
 
+bool pcsc_driver::handle_reader_disconnected(s64 ret)
+{
+	if (ret == static_cast<pcsc_long_t>(0x80100009) /* SCARD_E_UNKNOWN_READER */ ||
+		ret == static_cast<pcsc_long_t>(0x80100017) /* SCARD_E_READER_UNAVAILABLE */ ||
+		ret == static_cast<pcsc_long_t>(0x8010001D) /* SCARD_E_NO_SERVICE */ ||
+		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */)
+	{
+		nfc_log.error("PC/SC: PC/SC reader '%s' was disconnected/unplugged. Falling back to '%s'.", m_impl->m_reader_name, fake_reader_name);
+		close();
+		return true;
+	}
+
+	return false;
+}
+
 void pcsc_driver::close()
 {
 	std::lock_guard lock(m_impl->m_mutex);
+	if (!m_impl->m_reader_name.empty())
+	{
+		std::lock_guard claim_lock(s_claimed_readers_mutex);
+		const auto it = s_claimed_readers.find(m_impl->m_reader_name);
+		if (it != s_claimed_readers.end() && it->second == m_impl.get())
+		{
+			s_claimed_readers.erase(it);
+		}
+	}
 	disconnect_card(false);
 	m_impl->m_card_info_cached = false;
 	m_impl->m_cached_card_info = {};
@@ -932,7 +988,7 @@ bool pcsc_driver::is_open() const
 	}
 
 	std::lock_guard lock(m_impl->m_mutex);
-	return !m_impl->m_reader_name.empty() && m_impl->m_reader_name != "Fake";
+	return !m_impl->m_reader_name.empty() && m_impl->m_reader_name != fake_reader_name;
 }
 
 std::string pcsc_driver::get_reader_name() const
@@ -1005,6 +1061,11 @@ bool pcsc_driver::is_card_present()
 		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
 		ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */)
 	{
+		if (handle_reader_disconnected(ret))
+		{
+			return false;
+		}
+
 		m_impl->release_context();
 		m_impl->m_reader_configured = false;
 	}
@@ -1632,6 +1693,11 @@ bool pcsc_driver::transmit_apdu(std::span<const u8> apdu, std::vector<u8>& respo
 		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
 		ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */)
 	{
+		if (handle_reader_disconnected(ret))
+		{
+			return false;
+		}
+
 		disconnect_card(false);
 		if (ret != static_cast<pcsc_long_t>(0x80100069) && ret != static_cast<pcsc_long_t>(0x80100068))
 		{
@@ -1706,6 +1772,11 @@ bool pcsc_driver::control(u32 control_code, std::span<const u8> in_data, std::ve
 		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
 		ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */)
 	{
+		if (handle_reader_disconnected(ret))
+		{
+			return false;
+		}
+
 		disconnect_card(false);
 		if (ret != static_cast<pcsc_long_t>(0x80100069) && ret != static_cast<pcsc_long_t>(0x80100068))
 		{

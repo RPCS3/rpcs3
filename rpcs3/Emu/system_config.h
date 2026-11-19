@@ -1,6 +1,7 @@
 #pragma once
 
 #include "system_config_types.h"
+#include "Io/pcsc_driver.h"
 #include "Utilities/Config.h"
 
 enum CellNetCtlState : s32;
@@ -314,8 +315,8 @@ struct cfg_root : cfg::node
 		cfg::uint<1, 180> fake_move_rotation_cone_h{ this, "Fake Move Rotation Cone", 10, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_v{ this, "Fake Move Rotation Cone (Vertical)", 10, true };
 		cfg::_enum<usio_handler_mode> usio_mode{ this, "USIO handler mode", usio_handler_mode::fighting_games };
-		cfg::string usio_nfc_reader_1{ this, "USIO NFC Reader 1", "Fake", true };
-		cfg::string usio_nfc_reader_2{ this, "USIO NFC Reader 2", "Fake", true };
+		cfg::string usio_nfc_reader_1{ this, "USIO NFC Reader 1", std::string(pcsc_driver::fake_reader_name), true };
+		cfg::string usio_nfc_reader_2{ this, "USIO NFC Reader 2", std::string(pcsc_driver::fake_reader_name), true };
 
 	} io{ this };
 

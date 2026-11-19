@@ -29,7 +29,7 @@ public:
 
 	// Sets the reader mode / PC/SC device name ("Fake" or empty for internal emulation, or PC/SC device name)
 	void set_device_name(const std::string& name);
-	const std::string& get_device_name() const;
+	std::string get_device_name() const;
 
 	// Get the buffer size required by write_buffer
 	usz get_buffer_size() const;
@@ -49,8 +49,11 @@ private:
 	std::unique_ptr<buzzer_player> m_buzzer;
 
 	// PC/SC Reader integration
-	std::string m_device_name = "Fake";
+	std::string m_device_name = std::string(pcsc_driver::fake_reader_name);
 	std::unique_ptr<pcsc_driver> m_pcsc;
+
+	// Fallback to Fake if PC/SC driver was disconnected/unplugged, returns true if active PC/SC mode
+	bool fallback_to_fake_if_disconnected();
 
 	// Mifare Classic authentication key type
 	enum class auth_key : u8
@@ -61,13 +64,13 @@ private:
 	};
 
 	// Variables for retaining internal status
-	bool m_remove_pre_and_postamble = false;
+	std::atomic<bool> m_remove_pre_and_postamble{false};
 	bool m_send_ack = false;
 	bool m_send_response = false;
 	std::vector<u8> m_response = {};
 
 	// Mifare Classic internal authentication state
-	int m_authenticated_sector = -1;
+	s32 m_authenticated_sector = -1;
 	auth_key m_authenticated_key = auth_key::none;
 	std::array<u8, mifare_block_size> m_transfer_buffer = {};
 	bool m_transfer_buffer_valid = false;
@@ -392,7 +395,7 @@ private:
 	// Builds a valid response frame with the given data from the in buffer; if no data is given, builds an error frame
 	void build_response(const std::vector<u8>& in = {});
 
-	// Asynchronous worker for time-consuming PC/SC operations (avoids blocking USIO thread)
+	// Asynchronous worker for time-consuming PC/SC operations (avoids blocking caller threads)
 	void start_worker();
 	void stop_worker();
 	void worker_loop();
@@ -406,14 +409,14 @@ private:
 		std::span<u8> card;
 	};
 
-	mutable std::mutex m_exec_mutex;
+	mutable std::recursive_mutex m_exec_mutex;
 	mutable std::mutex m_buffer_mutex;
 	std::mutex m_task_mutex;
 	std::condition_variable m_task_cv;
 	std::thread m_worker_thread;
 	std::atomic<bool> m_worker_running{false};
 	std::atomic<bool> m_worker_stop{false};
-	u64 m_task_seq = 0;
+	std::atomic<u64> m_task_seq{0};
 	std::deque<worker_task> m_task_queue;
 	std::vector<u8> m_exec_response;
 

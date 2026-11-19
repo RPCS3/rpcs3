@@ -29,6 +29,8 @@ struct pcsc_card_info
 class pcsc_driver
 {
 public:
+	static constexpr std::string_view fake_reader_name = "Fake";
+
 	pcsc_driver();
 	~pcsc_driver();
 
@@ -108,4 +110,7 @@ private:
 
 	// Configures reader hardware parameters (e.g. FeliCa polling on Identiv uTrust 370xF)
 	void configure_reader_if_needed();
+
+	// Checks if the error code indicates reader disconnection, logs error, closes driver, and returns true
+	bool handle_reader_disconnected(s64 ret);
 };
