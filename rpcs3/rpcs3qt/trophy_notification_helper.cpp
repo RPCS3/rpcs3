@@ -19,17 +19,21 @@ s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails&
 		return manager->add(popup, false)->show(trophy, trophy_icon_buffer);
 	}
 
-	if (!Emu.HasGui())
+	if (!Emu.HasGui() || !m_game_window)
 	{
 		return 0;
 	}
 
-	Emu.CallFromMainThread([=, this]
+	// The lifetime of this object is very short.
+	// So we do not use "this" in the async CallFromMainThread and copy the pointer instead.
+	Emu.CallFromMainThread([trophy, trophy_icon_buffer, game_window = m_game_window]
 	{
-		trophy_notification_frame* trophy_notification = new trophy_notification_frame(trophy_icon_buffer, trophy, m_game_window->frameGeometry().height() / 10);
+		if (!game_window) return;
+
+		trophy_notification_frame* trophy_notification = new trophy_notification_frame(trophy_icon_buffer, trophy, game_window->frameGeometry().height() / 10);
 
 		// Move notification to upper lefthand corner
-		trophy_notification->move(m_game_window->mapToGlobal(QPoint(0, 0)));
+		trophy_notification->move(game_window->mapToGlobal(QPoint(0, 0)));
 		trophy_notification->show();
 
 		g_emu_callbacks.play_sound(fs::get_config_dir() + "sounds/snd_trophy.wav", std::nullopt);
