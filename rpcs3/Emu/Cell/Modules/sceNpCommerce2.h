@@ -185,11 +185,11 @@ enum
 struct SceNpCommerce2CommonData
 {
 	be_t<u32> version;
-	be_t<u32> buf_head;
+	vm::bcptr<void> buf_head;
 	be_t<u32> buf_size;
-	be_t<u32> data;
+	vm::bcptr<void> data;
 	be_t<u32> data_size;
-	be_t<u32> data2;
+	vm::bcptr<void> data2;
 	be_t<u32> reserved[4];
 };
 
@@ -221,12 +221,12 @@ struct SceNpCommerce2CategoryInfo
 {
 	SceNpCommerce2CommonData commonData;
 	SceNpCommerce2CategoryDataType dataType;
-	s8 categoryId;
+	vm::bcptr<char> categoryId;
 	CellRtcTick releaseDate;
-	s8 categoryName;
-	s8 categoryDescription;
-	s8 imageUrl;
-	s8 spName;
+	vm::bcptr<char> categoryName;
+	vm::bcptr<char> categoryDescription;
+	vm::bcptr<char> imageUrl;
+	vm::bcptr<char> spName;
 	be_t<u32> countOfSubCategory;
 	be_t<u32> countOfProduct;
 };
@@ -249,16 +249,16 @@ struct SceNpCommerce2GameProductInfo
 {
 	SceNpCommerce2CommonData commonData;
 	SceNpCommerce2GameProductDataType dataType;
-	s8 productId;
+	vm::bcptr<char> productId;
 	be_t<u32> countOfSku;
 	u8 padding[4];
 	CellRtcTick releaseDate;
-	s8 productName;
-	s8 productShortDescription;
-	s8 imageUrl;
-	s8 spName;
-	s8 productLongDescription;
-	s8 legalDescription;
+	vm::bcptr<char> productName;
+	vm::bcptr<char> productShortDescription;
+	vm::bcptr<char> imageUrl;
+	vm::bcptr<char> spName;
+	vm::bcptr<char> productLongDescription;
+	vm::bcptr<char> legalDescription;
 };
 
 // Structure for initialized product info list
@@ -272,8 +272,8 @@ struct SceNpCommerce2GetProductInfoListResult
 struct SceNpCommerce2ContentRatingInfo
 {
 	SceNpCommerce2CommonData commonData;
-	s8 ratingSystemId;
-	s8 imageUrl;
+	vm::bcptr<char> ratingSystemId;
+	vm::bcptr<char> imageUrl;
 	be_t<u32> countOfContentRatingDescriptor;
 };
 
@@ -282,8 +282,8 @@ struct SceNpCommerce2ContentRatingDescriptor
 {
 	SceNpCommerce2CommonData commonData;
 	be_t<u32> descriptorType;
-	s8 imageUrl;
-	s8 contentRatingDescription;
+	vm::bcptr<char> imageUrl;
+	vm::bcptr<char> contentRatingDescription;
 };
 
 // Structure for SKU information
@@ -291,7 +291,7 @@ struct SceNpCommerce2GameSkuInfo
 {
 	SceNpCommerce2CommonData commonData;
 	SceNpCommerce2GameSkuDataType dataType;
-	s8 skuId;
+	vm::bcptr<char> skuId;
 	be_t<u32> skuType;
 	be_t<u32> countUntilExpiration;
 	be_t<u32> timeUntilExpiration;
@@ -300,9 +300,9 @@ struct SceNpCommerce2GameSkuInfo
 	b8 downloadable;
 	u8 padding[3];
 	be_t<u32> price;
-	s8 skuName;
-	s8 productId;
-	s8 contentLinkUrl;
+	vm::bcptr<char> skuName;
+	vm::bcptr<char> productId;
+	vm::bcptr<char> contentLinkUrl;
 	be_t<u32> countOfRewardInfo;
 	be_t<u32> reserved[8];
 };

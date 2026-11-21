@@ -224,9 +224,28 @@ commerce2_ctx::commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpC
 	this->context_callback = handler;
 	this->context_callback_param = arg;
 }
+void commerce2_ctx::queue_callback(s32 event, s32 error_code) const
+{
+	if (context_callback)
+	{
+		sysutil_register_cb([=, handler = this->context_callback, ctx_id = this->ctx_id, arg = this->context_callback_param](ppu_thread& cb_ppu) -> s32
+			{
+				handler(cb_ppu, ctx_id, 0, event, error_code, arg);
+				return 0;
+			});
+	}
+}
 s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
 {
-	return static_cast<s32>(idm::make<commerce2_ctx>(version, npid, handler, arg));
+	const s32 ctx_id = idm::make<commerce2_ctx>(version, npid, handler, arg);
+	if (ctx_id == id_manager::id_traits<commerce2_ctx>::invalid)
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_MAX;
+	}
+
+	auto ctx = get_commerce2_context(ctx_id);
+	ctx->ctx_id = ctx_id;
+	return static_cast<s32>(ctx_id);
 }
 bool destroy_commerce2_context(u32 ctx_id)
 {
@@ -235,6 +254,33 @@ bool destroy_commerce2_context(u32 ctx_id)
 shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id)
 {
 	return idm::get_unlocked<commerce2_ctx>(ctx_id);
+}
+
+commerce2_lookup_request_ctx::commerce2_lookup_request_ctx(u32 cmrc2_ctx_id, cmrc2_lookup_type type)
+{
+	this->cmrc2_ctx_id = cmrc2_ctx_id;
+	this->type = type;
+	this->result = SCE_NP_COMMERCE2_SERVER_ERROR_UNKNOWN_ERROR;
+}
+s32 create_commerce2_lookup_request_context(u32 cmrc2_ctx_id, cmrc2_lookup_type type)
+{
+	const s32 req_id = idm::make<commerce2_lookup_request_ctx>(cmrc2_ctx_id, type);
+	if (req_id == id_manager::id_traits<commerce2_lookup_request_ctx>::invalid)
+	{
+		return SCE_NP_COMMERCE2_ERROR_REQ_MAX;
+	}
+
+	auto ctx = get_commerce2_lookup_request_context(req_id);
+	ctx->req_id = req_id;
+	return static_cast<s32>(req_id);
+}
+bool destroy_commerce2_lookup_request_context(u32 req_id)
+{
+	return idm::remove<commerce2_lookup_request_ctx>(static_cast<u32>(req_id));
+}
+shared_ptr<commerce2_lookup_request_ctx> get_commerce2_lookup_request_context(u32 req_id)
+{
+	return idm::get_unlocked<commerce2_lookup_request_ctx>(req_id);
 }
 
 signaling_ctx::signaling_ctx(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandler> handler, vm::ptr<void> arg)
