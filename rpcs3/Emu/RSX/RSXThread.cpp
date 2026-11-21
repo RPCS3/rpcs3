@@ -49,6 +49,7 @@ rsx::frame_capture_data frame_capture;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
+extern bool _sys_rsx_send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3, std::unique_lock<shared_mutex>* lock);
 
 namespace rsx
 {
@@ -426,6 +427,8 @@ namespace rsx
 
 	void thread::save_context(utils::serial& ar, context& ctx)
 	{
+		[[maybe_unused]] const s32 version = GET_OR_USE_SERIALIZATION_VERSION(ar.is_writing(), rsx);
+
 		ar(*ctx.register_state);
 		for (auto& v : ctx.draw_processor.m_vertex_push_buffers)
 		{
@@ -436,6 +439,11 @@ namespace rsx
 		ar(ctx.display_buffers, ctx.display_buffers_count, ctx.current_display_buffer);
 		ar(ctx.in_begin_end, ctx.register_state->current_draw_clause);
 		ar(ctx.fw.label_addr, ctx.fw.main_mem_size, ctx.fw.rsx_event_port, ctx.fw.driver_info, ctx.fw.unsent_gcm_events);
+
+		if (ar.is_writing() || version >= 9)
+		{
+			ar(ctx.fw.is_fifo_rsx_local);
+		}
 
 		auto& channel = ctx.fifo;
 		ar(channel.dma_address, channel.get, channel.ret_addr, channel.saved_ret_addr, channel.restore_point);
@@ -837,7 +845,7 @@ namespace rsx
 
 		for (context* ctx : contexts)
 		{
-			if (!send_event(ctx, 0, ctx->fw.unsent_gcm_events.exchange(0), 0))
+			if (!_sys_rsx_send_event(ctx, 0, ctx->fw.unsent_gcm_events.exchange(0), 0, nullptr))
 			{
 				return;
 			}
@@ -2053,7 +2061,7 @@ namespace rsx
 			// Every lv2 context sees IO unmaps
 			for_each_context([&](context* ctx)
 			{
-				send_event(ctx, 0, event_data1, event_data2);
+				_sys_rsx_send_event(ctx, 0, event_data1, event_data2, nullptr);
 			});
 		}
 	}

@@ -100,17 +100,26 @@ public:
 	static int native_scan_code_from_string(const std::string& key);
 	static std::string native_scan_code_to_string(int native_scan_code);
 
+	// Whether any bound pad maps keyboard keys or mouse inputs
+	bool is_keyboard_used() const { return m_keyboard_used; }
+	bool is_mouse_used() const { return m_mouse_used; }
+
 protected:
 	void Key(const u32 code, bool pressed, u16 value = 255);
 
 private:
 	QWindow* m_target = nullptr;
 	mouse_movement_mode m_mouse_movement_mode = mouse_movement_mode::relative;
-	bool m_keys_released = false;
+	bool m_kb_keys_released = false;
+	bool m_mouse_keys_released = false;
 	bool m_mouse_move_used = false;
 	bool m_mouse_wheel_used = false;
+	bool m_keyboard_used = false;
+	bool m_mouse_used = false;
 	bool get_mouse_lock_state() const;
 	void release_all_keys();
+	void release_keys(bool release_kb, bool release_mouse);
+	static bool is_mouse_code(u32 code);
 
 	std::vector<Pad> m_pads_internal; // Accumulates input until the next poll. Only used for user input!
 

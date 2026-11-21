@@ -570,6 +570,7 @@ struct Pad
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
 	{
+		clear_buffer();
 	}
 
 	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type, u32 class_profile, u16 vendor_id, u16 product_id, u8 pressure_intensity_percent)
@@ -604,4 +605,6 @@ struct Pad
 	{
 		return !!(m_port_status & CELL_PAD_STATUS_CONNECTED);
 	}
+
+	void clear_buffer();
 };

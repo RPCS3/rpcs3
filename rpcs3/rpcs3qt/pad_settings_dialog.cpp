@@ -10,6 +10,7 @@
 #include "pad_settings_dialog.h"
 #include "pad_led_settings_dialog.h"
 #include "pad_motion_settings_dialog.h"
+#include "pad_skateboard_settings_dialog.h"
 #include "ui_pad_settings_dialog.h"
 #include "tooltips.h"
 #include "gui_settings.h"
@@ -23,6 +24,7 @@
 #include "Input/gui_pad_thread.h"
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
+#include "Emu/Io/openxr/openxr_thread.h"
 
 #include <algorithm>
 #include <thread>
@@ -269,6 +271,11 @@ pad_settings_dialog::~pad_settings_dialog()
 
 	gui_pad_thread::reset();
 
+#ifdef HAVE_OPENXR
+	// If a game uses the OpenXR handler, its pad thread keeps the session alive
+	openxr::set_consumer(openxr::consumer::pad_settings, false);
+#endif
+
 	if (!Emu.IsStopped())
 	{
 		pad::reset(Emu.GetTitleID());
@@ -365,6 +372,15 @@ void pad_settings_dialog::InitButtons()
 	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
 	insert_button(button_ids::id_analog_limiter, ui->b_analog_limiter);
 	insert_button(button_ids::id_orientation_reset, ui->b_orientation_reset);
+
+	InitSkateboardDialog();
+
+	insert_button(button_ids::id_skateboard_ir_nose, m_skateboard_dialog->ir_nose_button());
+	insert_button(button_ids::id_skateboard_ir_tail, m_skateboard_dialog->ir_tail_button());
+	insert_button(button_ids::id_skateboard_ir_left, m_skateboard_dialog->ir_left_button());
+	insert_button(button_ids::id_skateboard_ir_right, m_skateboard_dialog->ir_right_button());
+	insert_button(button_ids::id_skateboard_tilt_left, m_skateboard_dialog->tilt_left_button());
+	insert_button(button_ids::id_skateboard_tilt_right, m_skateboard_dialog->tilt_right_button());
 
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addConfig, button_ids::id_add_config_file);
@@ -858,6 +874,25 @@ void pad_settings_dialog::SwitchPadInfo(std::string_view pad_name, bool is_conne
 	}
 }
 
+void pad_settings_dialog::InitSkateboardDialog()
+{
+	m_skateboard_dialog = new pad_skateboard_settings_dialog(this);
+
+	// Forward the input of this window to the pad settings dialog while remapping a button
+	m_skateboard_dialog->installEventFilter(this);
+
+	connect(m_skateboard_dialog, &QDialog::finished, this, [this]()
+	{
+		// Stop any ongoing remapping if the window was closed
+		if (m_button_id != button_ids::id_pad_begin)
+		{
+			ReactivateButtons();
+		}
+	});
+
+	connect(ui->b_skateboard_settings, &QAbstractButton::clicked, m_skateboard_dialog, &QDialog::open);
+}
+
 void pad_settings_dialog::ReloadButtons()
 {
 	m_cfg_entries.clear();
@@ -906,6 +941,13 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
 	updateButton(button_ids::id_analog_limiter, ui->b_analog_limiter, &cfg.analog_limiter_button);
 	updateButton(button_ids::id_orientation_reset, ui->b_orientation_reset, &cfg.orientation_reset_button);
+
+	updateButton(button_ids::id_skateboard_ir_nose, m_skateboard_dialog->ir_nose_button(), &cfg.ir_nose);
+	updateButton(button_ids::id_skateboard_ir_tail, m_skateboard_dialog->ir_tail_button(), &cfg.ir_tail);
+	updateButton(button_ids::id_skateboard_ir_left, m_skateboard_dialog->ir_left_button(), &cfg.ir_left);
+	updateButton(button_ids::id_skateboard_ir_right, m_skateboard_dialog->ir_right_button(), &cfg.ir_right);
+	updateButton(button_ids::id_skateboard_tilt_left, m_skateboard_dialog->tilt_left_button(), &cfg.tilt_left);
+	updateButton(button_ids::id_skateboard_tilt_right, m_skateboard_dialog->tilt_right_button(), &cfg.tilt_right);
 
 	UpdateLabels(true);
 }
@@ -1217,6 +1259,25 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 
 bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 {
+	// Input events of the skateboard window don't propagate to this dialog, so we have to forward them while remapping a button
+	if (object == m_skateboard_dialog && m_button_id != button_ids::id_pad_begin)
+	{
+		switch (event->type())
+		{
+		case QEvent::KeyPress:
+			keyPressEvent(static_cast<QKeyEvent*>(event));
+			return true;
+		case QEvent::MouseButtonRelease:
+			mouseReleaseEvent(static_cast<QMouseEvent*>(event));
+			return true;
+		case QEvent::Wheel:
+			wheelEvent(static_cast<QWheelEvent*>(event));
+			return true;
+		default:
+			break;
+		}
+	}
+
 	switch (event->type())
 	{
 	case QEvent::MouseButtonPress:
@@ -1618,6 +1679,11 @@ void pad_settings_dialog::ChangeHandler()
 
 	ensure(m_handler);
 
+#ifdef HAVE_OPENXR
+	// The OpenXR handler needs a running OpenXR session, even without a game
+	openxr::set_consumer(openxr::consumer::pad_settings, m_handler->m_type == pad_handler::openxr);
+#endif
+
 	if (!is_ldd_pad)
 	{
 		// This may be a restored device if the handler changed
@@ -1644,6 +1710,9 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::keyboard: m_description = tooltips.gamepad_settings.keyboard; break;
 	case pad_handler::skateboard: m_description = tooltips.gamepad_settings.skateboard; break;
 	case pad_handler::move: m_description = tooltips.gamepad_settings.move; break;
+#ifdef HAVE_OPENXR
+	case pad_handler::openxr: m_description = tooltips.gamepad_settings.openxr; break;
+#endif
 #ifdef _WIN32
 	case pad_handler::xinput: m_description = tooltips.gamepad_settings.xinput; break;
 	case pad_handler::mm: m_description = tooltips.gamepad_settings.mmjoy; break;
@@ -1708,6 +1777,9 @@ void pad_settings_dialog::ChangeHandler()
 	case pad_handler::dualsense:
 	case pad_handler::skateboard:
 	case pad_handler::move:
+#ifdef HAVE_OPENXR
+	case pad_handler::openxr:
+#endif
 	{
 		const QString name_string = QString::fromStdString(m_handler->name_string());
 		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
@@ -1880,6 +1952,9 @@ void pad_settings_dialog::ChangeDevice(int index)
 
 void pad_settings_dialog::HandleDeviceClassChange(u32 class_id) const
 {
+	// Only show the skateboard specific buttons if the skateboard class is selected
+	ui->gb_skateboard->setVisible(class_id == CELL_PAD_PCLASS_TYPE_SKATEBOARD);
+
 	ui->chooseProduct->clear();
 
 	for (const input::product_info& product : input::get_products_by_class(class_id))
@@ -2185,12 +2260,20 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Check for duplicate button choices
 	if (m_handler->m_type != pad_handler::null)
 	{
+		const bool is_skateboard = ui->chooseClass->currentData().toUInt() == CELL_PAD_PCLASS_TYPE_SKATEBOARD;
+
 		std::set<std::string> unique_combo_strings;
 		for (const auto& [id, button] : m_cfg_entries)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
 			if (m_handler->m_type != pad_handler::keyboard &&
 				(id == button_ids::id_pressure_intensity || id == button_ids::id_analog_limiter || id == button_ids::id_orientation_reset))
+			{
+				continue;
+			}
+
+			// Let's ignore skateboard keys, unless we're using the skateboard class
+			if (!is_skateboard && id >= button_ids::id_skateboard_ir_nose && id <= button_ids::id_skateboard_tilt_right)
 			{
 				continue;
 			}
@@ -2347,6 +2430,9 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::dualsense: return tr("DualSense");
 		case pad_handler::skateboard: return tr("Skateboard");
 		case pad_handler::move: return tr("PS Move");
+#ifdef HAVE_OPENXR
+		case pad_handler::openxr: return tr("OpenXR");
+#endif
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");
@@ -2372,6 +2458,19 @@ QString pad_settings_dialog::GetLocalizedPadName(pad_handler handler, const QStr
 		case pad_handler::dualsense: return tr("DualSense Pad #%0").arg(index);
 		case pad_handler::skateboard: return tr("Skateboard #%0").arg(index);
 		case pad_handler::move: return tr("PS Move #%0").arg(index);
+#ifdef HAVE_OPENXR
+		case pad_handler::openxr:
+		{
+			// See openxr_handler
+			switch (index)
+			{
+			case 1: return tr("OpenXR Controllers (both hands)");
+			case 2: return tr("OpenXR Left Controller");
+			case 3: return tr("OpenXR Right Controller");
+			default: return tr("OpenXR #%0").arg(index);
+			}
+		}
+#endif
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput Pad #%0").arg(index);
 		case pad_handler::mm: return tr("Joystick #%0").arg(index);
@@ -2465,6 +2564,7 @@ void pad_settings_dialog::SubscribeTooltips()
 
 	SubscribeTooltip(ui->gb_orientation_reset, tooltips.gamepad_settings.orientation_reset);
 	SubscribeTooltip(ui->gb_analog_limiter, tooltips.gamepad_settings.analog_limiter);
+	SubscribeTooltip(ui->gb_skateboard, tooltips.gamepad_settings.skateboard_buttons);
 	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_pressure_intensity_deadzone, tooltips.gamepad_settings.pressure_deadzone);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);

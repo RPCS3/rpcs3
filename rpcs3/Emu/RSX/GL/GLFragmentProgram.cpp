@@ -23,7 +23,7 @@ std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 
 std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1)
 {
-	return glsl::compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionAlias(f, Op0, Op1);
 }
 
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
@@ -235,11 +235,12 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare || device_props.emulated_depth_storage;
 
-	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 
-	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_output_8bit = !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && m_shader_props.ROP_output_8bit;
+	m_shader_props.ROP_output_fp16_quantize = !!(m_prog.ctrl & RSX_SHADER_CONTROL_F16_FRAMEBUFFER);
 	m_shader_props.ROP_sRGB_packing = !!(m_prog.ctrl & RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER);
 	m_shader_props.ROP_alpha_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST);
 	m_shader_props.ROP_alpha_to_coverage_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE);
@@ -404,10 +405,18 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	std::string source;
 	GLFragmentDecompilerThread decompiler(source, parr, prog, size);
 
-	if (g_cfg.video.shader_precision == gpu_preset_level::low)
+	const auto& driver_caps = gl::get_driver_caps();
+	const auto precision = g_cfg.video.shader_precision.get();
+	decompiler.device_props.shader_precision = precision;
+
+	// Ultra keeps the emulated f16 path using f32 as it allows 1:1 accuracy with RSX
+	if (precision != gpu_preset_level::ultra)
 	{
-		const auto& driver_caps = gl::get_driver_caps();
 		decompiler.device_props.has_native_half_support = driver_caps.NV_gpu_shader5_supported || driver_caps.AMD_gpu_shader_half_float_supported;
+	}
+
+	if (precision == gpu_preset_level::low)
+	{
 		decompiler.device_props.has_low_precision_rounding = driver_caps.vendor_NVIDIA;
 	}
 

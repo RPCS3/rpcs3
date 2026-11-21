@@ -598,6 +598,18 @@
                 </widget>
                </item>
                <item>
+                <widget class="QGroupBox" name="gb_openxr_render_mode">
+                 <property name="title">
+                  <string>VR Headset (OpenXR)</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="gb_openxr_render_mode_layout">
+                  <item>
+                   <widget class="QComboBox" name="openxrRenderMode"/>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
                 <spacer name="gpu_tab_layout_right_spacer">
                  <property name="orientation">
                   <enum>Qt::Orientation::Vertical</enum>

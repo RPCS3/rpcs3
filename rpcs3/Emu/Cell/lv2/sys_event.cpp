@@ -128,7 +128,7 @@ CellError lv2_event_queue::send(lv2_event event, bool* notified_thread, lv2_even
 		*notified_thread = false;
 	}
 
-	struct notify_spus_t 
+	struct notify_spus_t
 	{
 		std::array<shared_ptr<named_thread<spu_thread>>, 8> spus;
 

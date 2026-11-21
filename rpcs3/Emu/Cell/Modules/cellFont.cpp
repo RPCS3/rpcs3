@@ -1,12 +1,108 @@
 #include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/savestate_utils.hpp"
 
 #include <stb_truetype.h>
+#include <cmath>
 
 #include "cellFont.h"
 
 LOG_CHANNEL(cellFont);
+
+namespace font_internal
+{
+	// HLE exclusive, the stb_truetype state of a CellFont. Never pass this in guest memory
+	struct font_instance
+	{
+		static constexpr u32 id_base = 1;
+		static constexpr u32 id_step = 1;
+		static constexpr u32 id_count = 1023;
+		SAVESTATE_INIT_POS(48);
+
+		font_instance(u32 font_addr, u32 fontdata_addr)
+			: font_addr(font_addr), fontdata_addr(fontdata_addr)
+		{
+		}
+
+		font_instance(utils::serial& ar)
+			: font_addr(ar.pop<u32>()), fontdata_addr(ar.pop<u32>())
+		{
+			// The font data is in guest memory, which is restored with the savestate
+			init();
+		}
+
+		void save(utils::serial& ar)
+		{
+			ar(font_addr, fontdata_addr);
+		}
+
+		bool init()
+		{
+			if (!stbtt_InitFont(&info, vm::_ptr<unsigned char>(fontdata_addr), 0))
+			{
+				info = {};
+				return false;
+			}
+
+			// stb_truetype stores the table offsets read from the font as signed integers.
+			// A negative offset would make it read out of bounds.
+			ensure(info.loca >= 0 && info.head >= 0 && info.glyf >= 0 && info.hhea >= 0 && info.hmtx >= 0 &&
+				info.kern >= 0 && info.gpos >= 0 && info.svg >= 0 && info.index_map >= 0, "Invalid table offset in the font data");
+
+			return true;
+		}
+
+		const u32 font_addr;     // Address of the CellFont this state belongs to
+		const u32 fontdata_addr; // Address of the font file in guest memory
+		stbtt_fontinfo info{};
+	};
+
+	// stb_truetype uses character codes as signed integers to index the font data, so larger codes would make it read before the font
+	constexpr u32 MAX_CHAR_CODE = 0x10ffff;
+
+	// The CellFont structure is in guest memory, so the ID of the host state can't be trusted
+	stx::shared_ptr<font_instance> get_font(vm::ptr<CellFont> font)
+	{
+		auto instance = idm::get_unlocked<font_instance>(font->host_id);
+		if (!instance || instance->font_addr != font.addr() || !instance->info.data)
+		{
+			cellFont.error("Invalid font (font=*0x%x, host_id=0x%x)", font, font->host_id);
+			return null_ptr;
+		}
+
+		// The font data is parsed in guest memory. It is freed when the font it belongs to is closed, even if an instance of the font is still open.
+		ensure(vm::check_addr(instance->fontdata_addr), "The font data is not in guest memory");
+
+		return instance;
+	}
+
+	// Creates the host state of a font, replacing the previous one if the font was opened again without being closed
+	bool open_font(vm::ptr<CellFont> font, u32 fontdata_addr)
+	{
+		if (const auto old = idm::get_unlocked<font_instance>(font->host_id); old && old->font_addr == font.addr())
+		{
+			idm::remove_verify<font_instance>(font->host_id, old);
+		}
+
+		const auto instance = idm::make_ptr<font_instance>(font.addr(), fontdata_addr);
+		if (!instance)
+		{
+			return false;
+		}
+
+		const u32 host_id = idm::last_id();
+		if (!instance->init())
+		{
+			idm::remove<font_instance>(host_id);
+			return false;
+		}
+
+		font->host_id = host_id;
+		return true;
+	}
+}
 
 template <>
 void fmt_class_string<CellFontError>::format(std::string& out, u64 arg)
@@ -135,9 +231,7 @@ error_code cellFontOpenFontMemory(vm::ptr<CellFontLibrary> library, u32 fontAddr
 
 	// TODO
 
-	font->stbfont = vm::_ptr<stbtt_fontinfo>(font.addr() + font.size()); // hack: use next bytes of the struct
-
-	if (!stbtt_InitFont(font->stbfont, vm::_ptr<unsigned char>(fontAddr), 0))
+	if (!font_internal::open_font(font, fontAddr))
 	{
 		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
 	}
@@ -189,10 +283,22 @@ error_code cellFontOpenFontFile(ppu_thread& ppu, vm::ptr<CellFontLibrary> librar
 
 	u32 bufferAddr = vm::alloc(fileSize, vm::main); // Freed in cellFontCloseFont
 
-	ppu.check_state();
+	if (!bufferAddr)
+	{
+		return CELL_FONT_ERROR_ALLOCATION_FAILED;
+	}
 
 	f.read(vm::base(bufferAddr), fileSize);
 	s32 ret = cellFontOpenFontMemory(library, bufferAddr, fileSize, subNum, uniqueId, font);
+
+	if (ret != CELL_OK)
+	{
+		vm::dealloc(bufferAddr, vm::main);
+		return ret;
+	}
+
+	ppu.check_state();
+
 	font->origin = CELL_FONT_OPEN_FONT_FILE;
 
 	return ret;
@@ -292,7 +398,11 @@ error_code cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library
 	}
 
 	error_code ret = cellFontOpenFontFile(ppu, library, vm::make_str(file), 0, 0, font); //TODO: Find the correct values of subNum, uniqueId
-	font->origin = CELL_FONT_OPEN_FONTSET;
+
+	if (ret == CELL_OK)
+	{
+		font->origin = CELL_FONT_OPEN_FONTSET;
+	}
 
 	return ret;
 }
@@ -325,11 +435,21 @@ error_code cellFontOpenFontInstance(vm::ptr<CellFont> openedFont, vm::ptr<CellFo
 
 	// TODO
 
+	const auto src = font_internal::get_font(openedFont);
+	if (!src)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!font_internal::open_font(font, src->fontdata_addr))
+	{
+		return CELL_FONT_ERROR_FONT_OPEN_FAILED;
+	}
+
 	font->renderer_addr = openedFont->renderer_addr;
 	font->scale_x = openedFont->scale_x;
 	font->scale_y = openedFont->scale_y;
 	font->slant = openedFont->slant;
-	font->stbfont = openedFont->stbfont;
 	font->origin = CELL_FONT_OPEN_FONT_INSTANCE;
 
 	return CELL_OK;
@@ -555,9 +675,15 @@ error_code cellFontGetHorizontalLayout(vm::ptr<CellFont> font, vm::ptr<CellFontH
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
+	const auto instance = font_internal::get_font(font);
+	if (!instance)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
 	s32 ascent, descent, lineGap;
-	const f32 scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
-	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
+	const f32 scale = stbtt_ScaleForPixelHeight(&instance->info, font->scale_y);
+	stbtt_GetFontVMetrics(&instance->info, &ascent, &descent, &lineGap);
 
 	layout->baseLineY = ascent * scale;
 	layout->lineHeight = (ascent-descent+lineGap) * scale;
@@ -713,10 +839,34 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 		return CELL_FONT_ERROR_RENDERER_UNBIND;
 	}
 
+	if (code > font_internal::MAX_CHAR_CODE)
+	{
+		return { CELL_FONT_ERROR_NO_SUPPORT_CODE, "code=0x%x", code };
+	}
+
+	const auto instance = font_internal::get_font(font);
+	if (!instance)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
+	}
+
 	// Render the character
 	s32 width, height, xoff, yoff;
-	const f32 scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
-	unsigned char* box = stbtt_GetCodepointBitmap(font->stbfont, scale, scale, code, &width, &height, &xoff, &yoff);
+	const f32 scale = stbtt_ScaleForPixelHeight(&instance->info, font->scale_y);
+
+	// stb_truetype doesn't check the size of the glyph bitmap it allocates and renders to, which depends on the font data and the scale.
+	// A scale up to 32768 keeps the glyph box of any 16-bit glyph coordinates within the range of s32.
+	ensure(std::isfinite(scale) && scale >= 0.f && scale <= 32768.f, "Invalid font scale");
+	{
+		s32 x0, y0, x1, y1;
+		stbtt_GetCodepointBitmapBox(&instance->info, code, scale, scale, &x0, &y0, &x1, &y1);
+
+		const s64 glyph_w = s64{x1} - x0;
+		const s64 glyph_h = s64{y1} - y0;
+		ensure(glyph_w >= 0 && glyph_h >= 0 && glyph_w * glyph_h <= 4096 * 4096, "Invalid glyph size");
+	}
+
+	unsigned char* box = stbtt_GetCodepointBitmap(&instance->info, scale, scale, code, &width, &height, &xoff, &yoff);
 
 	if (!box)
 	{
@@ -725,7 +875,7 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 
 	// Get the baseLineY value
 	s32 ascent, descent, lineGap;
-	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
+	stbtt_GetFontVMetrics(&instance->info, &ascent, &descent, &lineGap);
 	const s32 baseLineY = static_cast<int>(ascent * scale); // ???
 
 	// Move the rendered character to the surface
@@ -748,13 +898,23 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 	return CELL_OK;
 }
 
-error_code cellFontEndLibrary(vm::cptr<CellFontLibrary> library)
+error_code cellFontEndLibrary(ppu_thread& ppu, vm::cptr<CellFontLibrary> library)
 {
 	cellFont.todo("cellFontEndLibrary(library=*0x%x)", library);
 
 	if (false) // TODO
 	{
 		return CELL_FONT_ERROR_UNINITIALIZED;
+	}
+
+	if (library)
+	{
+		// Allocated in cellFontInitLibraryFreeTypeWithRevision
+		ppu.state += cpu_flag::wait;
+
+		vm::dealloc(library.addr(), vm::main);
+
+		ppu.check_state();
 	}
 
 	return CELL_OK;
@@ -861,15 +1021,22 @@ error_code cellFontCloseFont(ppu_thread& ppu, vm::ptr<CellFont> font)
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
+	if (const auto instance = font_internal::get_font(font))
+	{
+		idm::remove_verify<font_internal::font_instance>(font->host_id, instance);
+	}
+
+	// The memory of CELL_FONT_OPEN_MEMORY fonts belongs to the game
 	if (font->origin == CELL_FONT_OPEN_FONTSET ||
-		font->origin == CELL_FONT_OPEN_FONT_FILE ||
-		font->origin == CELL_FONT_OPEN_MEMORY)
+		font->origin == CELL_FONT_OPEN_FONT_FILE)
 	{
 		ppu.state += cpu_flag::wait;
 
 		vm::dealloc(font->fontdata_addr, vm::main);
 
 		ppu.check_state();
+
+		font->fontdata_addr = 0;
 	}
 
 	return CELL_OK;
@@ -889,16 +1056,22 @@ error_code cellFontGetCharGlyphMetrics(vm::ptr<CellFont> font, u32 code, vm::ptr
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
-	if (false) // TODO
+	if (code > font_internal::MAX_CHAR_CODE) // TODO: check if the font contains the character
 	{
-		return CELL_FONT_ERROR_NO_SUPPORT_CODE;
+		return { CELL_FONT_ERROR_NO_SUPPORT_CODE, "code=0x%x", code };
+	}
+
+	const auto instance = font_internal::get_font(font);
+	if (!instance)
+	{
+		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
 
 	s32 x0, y0, x1, y1;
 	s32 advanceWidth, leftSideBearing;
-	const f32 scale = stbtt_ScaleForPixelHeight(font->stbfont, font->scale_y);
-	stbtt_GetCodepointBox(font->stbfont, code, &x0, &y0, &x1, &y1);
-	stbtt_GetCodepointHMetrics(font->stbfont, code, &advanceWidth, &leftSideBearing);
+	const f32 scale = stbtt_ScaleForPixelHeight(&instance->info, font->scale_y);
+	stbtt_GetCodepointBox(&instance->info, code, &x0, &y0, &x1, &y1);
+	stbtt_GetCodepointHMetrics(&instance->info, code, &advanceWidth, &leftSideBearing);
 
 	// TODO: Add the rest of the information
 	metrics->width = (x1-x0) * scale;

@@ -2,6 +2,7 @@
 #include "../Overlays/overlay_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
+#include "Emu/Io/openxr/openxr_thread.h"
 #include "GLCompute.h"
 #include "GLDMA.h"
 #include "GLResolveHelper.h"
@@ -570,6 +571,14 @@ void GLGSRender::on_shutdown()
 
 	m_upscaler.reset();
 
+#ifdef HAVE_OPENXR
+	// No more frames for the headset
+	openxr::set_consumer(openxr::consumer::headset_rendering, false);
+
+	// Images imported from the OpenXR handler
+	m_openxr_share.destroy();
+#endif
+
 	for (auto& flip_tex_image : m_flip_tex_color)
 	{
 		flip_tex_image.reset();
@@ -1023,7 +1032,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-			*ensure(m_fragment_prog), m_ctx->program.fragment_program, true);
+			*ensure(m_fragment_prog), m_ctx->program.fragment_program, false);
 
 		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}

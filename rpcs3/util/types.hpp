@@ -54,6 +54,7 @@ using namespace std::literals;
 #define CHECK_ALIGN(type, align) static_assert(alignof(type) == align, "Invalid " #type " type alignment")
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
+#define CHECK_MEMBER_OFFSET(type, member, offset) static_assert(offsetof(type, member) == offset, "Invalid offset of " #member " in " #type)
 
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
@@ -1423,7 +1424,7 @@ extern bool serialize(utils::serial& ar, T& obj);
 {\
 	extern void using_##name##_serialization();\
 	extern s32 get_##name##_serialization_version();\
-	return (static_cast<bool>(cond) ? (using_##name##_serialization(), 0) : get_##name##_serialization_version());\
+	return (static_cast<bool>(cond) ? (using_##name##_serialization(), s32{smax}) : get_##name##_serialization_version());\
 }()
 
 #define GET_SERIALIZATION_VERSION(name) []()\

@@ -303,26 +303,6 @@ error_code cellPadEnd(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-void clear_pad_buffer(const std::shared_ptr<Pad>& pad)
-{
-	if (!pad)
-		return;
-
-	// Set 'm_buffer_cleared' to force a resend of everything
-	// might as well also reset everything in our pad 'buffer' to nothing as well
-
-	pad->m_buffer_cleared = true;
-	pad->data = {};
-	pad->data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X] = 128;
-	pad->data.button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y] = 128;
-	pad->data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X] = 128;
-	pad->data.button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = 128;
-	pad->data.button[CELL_PAD_BTN_OFFSET_SENSOR_X] = DEFAULT_MOTION_X;
-	pad->data.button[CELL_PAD_BTN_OFFSET_SENSOR_Y] = DEFAULT_MOTION_Y;
-	pad->data.button[CELL_PAD_BTN_OFFSET_SENSOR_Z] = DEFAULT_MOTION_Z;
-	pad->data.button[CELL_PAD_BTN_OFFSET_SENSOR_G] = DEFAULT_MOTION_G;
-}
-
 error_code cellPadClearBuf(u32 port_no)
 {
 	cellPad.trace("cellPadClearBuf(port_no=%d)", port_no);
@@ -347,7 +327,7 @@ error_code cellPadClearBuf(u32 port_no)
 	if (pad->is_fake_pad || !config.is_reportedly_connected(port_no) || !pad->is_connected())
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
-	clear_pad_buffer(pad);
+	pad->clear_buffer();
 
 	return CELL_OK;
 }
@@ -374,7 +354,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	{
 		// Needed for Hotline Miami and Ninja Gaiden Sigma after dialogs were closed and buttons are still pressed.
 		// Gran Turismo 6 would keep registering the Start button during OSK Dialogs if this wasn't cleared and if we'd return with len as CELL_PAD_LEN_NO_CHANGE.
-		clear_pad_buffer(pad);
+		pad->clear_buffer();
 	}
 	else if (pad->ldd)
 	{

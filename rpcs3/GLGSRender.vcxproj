@@ -53,6 +53,7 @@
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
     <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
+    <ClInclude Include="Emu\RSX\GL\GLOpenXRShare.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
@@ -96,6 +97,7 @@
     <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLOpenXRShare.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLResolveHelper.cpp" />

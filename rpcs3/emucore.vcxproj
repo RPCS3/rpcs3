@@ -40,7 +40,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\hidapi\hidapi\hidapi;..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\glslang\glslang;$(SolutionDir)3rdparty\curl\curl\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\hidapi\hidapi\hidapi;..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\glslang\glslang;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\OpenXR\OpenXR-SDK\include</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -125,6 +125,9 @@
     <ClCompile Include="Emu\NP\upnp_config.cpp" />
     <ClCompile Include="Emu\NP\upnp_handler.cpp" />
     <ClCompile Include="Emu\perf_monitor.cpp" />
+    <ClCompile Include="Emu\Io\openxr\openxr_session.cpp" />
+    <ClCompile Include="Emu\Io\openxr\openxr_input.cpp" />
+    <ClCompile Include="Emu\Io\openxr\openxr_renderer.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache_types.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
@@ -710,6 +713,13 @@
     <ClInclude Include="Emu\NP\rpcn_config.h" />
     <ClInclude Include="Emu\NP\ip_address.h" />
     <ClInclude Include="Emu\perf_monitor.hpp" />
+    <ClInclude Include="Emu\Io\openxr\openxr_common.h" />
+    <ClInclude Include="Emu\Io\openxr\openxr_frame_share.h" />
+    <ClInclude Include="Emu\Io\openxr\openxr_frame_share_vk.h" />
+    <ClInclude Include="Emu\Io\openxr\openxr_input.h" />
+    <ClInclude Include="Emu\Io\openxr\openxr_renderer.h" />
+    <ClInclude Include="Emu\Io\openxr\openxr_session.h" />
+    <ClInclude Include="Emu\Io\openxr\openxr_thread.h" />
     <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />

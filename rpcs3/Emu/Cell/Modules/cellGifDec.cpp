@@ -2,6 +2,7 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/savestate_utils.hpp"
 
 // STB_IMAGE_IMPLEMENTATION is already defined in stb_image.cpp
 #include <stb_image.h>
@@ -10,6 +11,33 @@
 #include "cellGifDec.h"
 
 LOG_CHANNEL(cellGifDec);
+
+GifStreamHost::GifStreamHost(utils::serial& ar)
+	: stream_addr(ar.pop<u32>()), fd(ar.pop<u32>()), fileSize(ar.pop<u64>())
+{
+}
+
+void GifStreamHost::save(utils::serial& ar)
+{
+	ar(stream_addr, fd, fileSize);
+}
+
+namespace gifdec_internal
+{
+	// The GifStream is in guest memory, so the ID of the host state can't be trusted
+	stx::shared_ptr<GifStreamHost> get_stream_host(vm::cptr<GifStream> stream)
+	{
+		auto host = idm::get_unlocked<GifStreamHost>(stream->host_id);
+
+		if (!host || host->stream_addr != stream.addr())
+		{
+			cellGifDec.error("Invalid GIF stream (stream=*0x%x, host_id=0x%x)", stream, stream->host_id);
+			return null_ptr;
+		}
+
+		return host;
+	}
+}
 
 template <>
 void fmt_class_string<CellGifDecError>::format(std::string& out, u64 arg)
@@ -117,7 +145,8 @@ error_code cellGifDecOpen(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::p
 	}
 
 	GifStream current_subHandle{};
-	current_subHandle.fd = 0;
+	u32 fd = 0;
+	u64 fileSize = 0;
 	current_subHandle.src = *src;
 
 	switch (src->srcSelect)
@@ -129,7 +158,7 @@ error_code cellGifDecOpen(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::p
 			return CELL_GIFDEC_ERROR_ARG;
 		}
 
-		current_subHandle.fileSize = src->streamSize;
+		fileSize = src->streamSize;
 		break;
 	}
 	case CELL_GIFDEC_FILE:
@@ -152,8 +181,8 @@ error_code cellGifDecOpen(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::p
 			return CELL_GIFDEC_ERROR_ARG;
 		}
 
-		current_subHandle.fileSize = file_s.size();
-		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
+		fileSize = file_s.size();
+		fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
 	default:
@@ -167,6 +196,25 @@ error_code cellGifDecOpen(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::p
 	subHandle->set(vm::alloc(sizeof(GifStream), vm::main));
 
 	ppu.check_state();
+
+	if (!*subHandle)
+	{
+		idm::remove<lv2_fs_object, lv2_file>(fd);
+		return CELL_GIFDEC_ERROR_FATAL;
+	}
+
+	// The stream is in guest memory, so it only gets the ID of the host state
+	current_subHandle.host_id = idm::make<GifStreamHost>(subHandle->addr(), fd, fileSize);
+	if (!current_subHandle.host_id)
+	{
+		idm::remove<lv2_fs_object, lv2_file>(fd);
+
+		ppu.state += cpu_flag::wait;
+		vm::dealloc(subHandle->addr());
+		ppu.check_state();
+
+		return CELL_GIFDEC_ERROR_FATAL;
+	}
 
 	**subHandle = current_subHandle;
 
@@ -193,7 +241,6 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 	}
 
 	GifStream current_subHandle{};
-	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
 
 	switch (src->srcSelect)
@@ -205,7 +252,6 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 			return CELL_GIFDEC_ERROR_ARG;
 		}
 
-		current_subHandle.fileSize = src->streamSize;
 		break;
 	}
 	case CELL_GIFDEC_FILE:
@@ -228,8 +274,7 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 			return CELL_GIFDEC_ERROR_ARG;
 		}
 
-		current_subHandle.fileSize = file_s.size();
-		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
+		idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
 	default:
@@ -270,7 +315,13 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 
-	const u32 fd = subHandle->fd;
+	const auto host = gifdec_internal::get_stream_host(subHandle);
+	if (!host)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	const u32 fd = host->fd;
 	CellGifDecInfo& current_info = subHandle->info;
 
 	// Write the header to buffer
@@ -286,6 +337,13 @@ error_code cellGifDecReadHeader(vm::ptr<GifDecoder> mainHandle, vm::ptr<GifStrea
 	case CELL_GIFDEC_FILE:
 	{
 		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
+
+		// The file descriptor is visible to the guest, which can close it
+		if (!file)
+		{
+			return { CELL_GIFDEC_ERROR_FATAL, "The GIF file was closed (fd=0x%x)", fd };
+		}
+
 		file->file.seek(0);
 		file->file.read(buffer, sizeof(buffer));
 		break;
@@ -482,8 +540,14 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
-	const u32 fd = subHandle->fd;
-	const u64 fileSize = subHandle->fileSize;
+	const auto host = gifdec_internal::get_stream_host(subHandle);
+	if (!host)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	const u32 fd = host->fd;
+	const u64 fileSize = host->fileSize;
 	const CellGifDecOutParam& current_outParam = subHandle->outParam;
 
 	//Copy the GIF file to a buffer
@@ -498,6 +562,13 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	case CELL_GIFDEC_FILE:
 	{
 		auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
+
+		// The file descriptor is visible to the guest, which can close it
+		if (!file)
+		{
+			return { CELL_GIFDEC_ERROR_FATAL, "The GIF file was closed (fd=0x%x)", fd };
+		}
+
 		file->file.seek(0);
 		file->file.read(gif.get(), fileSize);
 		break;
@@ -639,7 +710,14 @@ error_code cellGifDecClose(ppu_thread& ppu, vm::ptr<GifDecoder> mainHandle, vm::
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 
-	idm::remove<lv2_fs_object, lv2_file>(subHandle->fd);
+	const auto host = gifdec_internal::get_stream_host(subHandle);
+	if (!host)
+	{
+		return CELL_GIFDEC_ERROR_ARG;
+	}
+
+	idm::remove<lv2_fs_object, lv2_file>(host->fd);
+	idm::remove_verify<GifStreamHost>(subHandle->host_id, host);
 
 	ppu.state += cpu_flag::wait;
 

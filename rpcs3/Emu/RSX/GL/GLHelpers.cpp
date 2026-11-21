@@ -2,6 +2,7 @@
 #include "Emu/system_config.h"
 #include "GLHelpers.h"
 #include "GLCompute.h"
+#include "glutils/blitter.h"
 #include "util/logs.hpp"
 #include <unordered_map>
 
@@ -191,5 +192,35 @@ namespace gl
 	bool emulate_extended_depth_range()
 	{
 		return !get_driver_caps().NV_depth_buffer_float_supported && g_cfg.video.emulate_extended_depth_range;
+	}
+
+	gl::texture* copy_texture_with_overlays(gl::command_context& cmd, std::unique_ptr<gl::texture>& dst, gl::texture* src, const std::function<void(gl::texture* dst)>& draw_overlays)
+	{
+		if (!dst ||
+			dst->get_target() != src->get_target() ||
+			dst->width() != src->width() ||
+			dst->height() != src->height() ||
+			dst->depth() != src->depth() ||
+			dst->levels() != src->levels() ||
+			dst->samples() != src->samples() ||
+			dst->get_internal_format() != src->get_internal_format() ||
+			dst->format_class() != src->format_class())
+		{
+			dst = std::make_unique<gl::texture>(
+				GLenum(src->get_target()),
+				src->width(),
+				src->height(),
+				src->depth(),
+				src->levels(),
+				src->samples(),
+				GLenum(src->get_internal_format()),
+				src->format_class());
+		}
+
+		static const position3u offset{};
+		gl::g_hw_blitter->copy_image(cmd, src, dst.get(), offset, offset, { dst->width(), dst->height(), 1 });
+
+		draw_overlays(dst.get());
+		return dst.get();
 	}
 }
