@@ -159,6 +159,7 @@ enum class emu_settings_type
 	AudioDevice,
 	AudioChannelLayout,
 	MasterVolume,
+	VoiceChatMicVolume,
 	EnableBuffering,
 	AudioBufferDuration,
 	EnableTimeStretching,
@@ -224,6 +225,7 @@ enum class emu_settings_type
 	DeriveMacFromPsid,
 	PSNCountry,
 	EnableClans,
+	EnableVoiceChat,
 
 	// System
 	LicenseArea,

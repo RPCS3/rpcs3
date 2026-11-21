@@ -118,6 +118,24 @@ std::vector<signaling_message> get_sign_msgs()
 	return msgs;
 }
 
+std::vector<signaling_message> get_avc2_msgs()
+{
+	std::vector<signaling_message> msgs;
+	auto& nc = g_fxo->get<p2p_context>();
+	{
+		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+		if (nc.list_p2p_ports.contains(SCE_NP_PORT))
+		{
+			auto& def_port = ::at32(nc.list_p2p_ports, SCE_NP_PORT);
+			std::lock_guard lock(def_port.s_avc2_mutex);
+			msgs = std::move(def_port.avc2_msgs);
+			def_port.avc2_msgs.clear();
+		}
+	}
+
+	return msgs;
+}
+
 namespace np
 {
 	void init_np_handler_dependencies();
