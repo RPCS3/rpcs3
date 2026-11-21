@@ -83,6 +83,12 @@ namespace aarch64
         { 0x61, 0x25, "armv8.5-a", "M1 Pro", "Icestorm" },
         { 0x61, 0x32, "armv8.5-a", "M2", "Avalanche" },
         { 0x61, 0x33, "armv8.5-a", "M2", "Blizzard" },
+        { 0x61, 0x34, "armv8.5-a+fp16+bf16+i8mm", "M2 Pro", "Blizzard" },
+        { 0x61, 0x35, "armv8.5-a+fp16+bf16+i8mm", "M2 Pro", "Avalanche" },
+        { 0x61, 0x38, "armv8.5-a+fp16+bf16+i8mm", "M2 Max", "Blizzard" },
+        { 0x61, 0x39, "armv8.5-a+fp16+bf16+i8mm", "M2 Max", "Avalanche" },
+        { 0x61, 0x48, "armv8.5-a+fp16+bf16+i8mm", "M3", "Sawtooth" },
+        { 0x61, 0x49, "armv8.5-a+fp16+bf16+i8mm", "M3", "Everest" },
 
         // QUALCOMM
         { 0x51, 0x01, "armv8.5-a", "Snapdragon", "X-Elite" },
