@@ -60,6 +60,8 @@ void jit_announce(auto* func, usz size, std::string_view name)
 	jit_announce(uptr(func), size, name);
 }
 
+inline constexpr u32 g_gateway_scratch_size = 64 * 1024;
+
 enum class jit_class
 {
 	ppu_code,

@@ -377,7 +377,7 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 
 	// GHC scratchpad mem. If managed correctly (i.e no returns ever), GHC functions should never require a stack frame.
 	// We allocate a slab to use for all functions as they tail-call into each other.
-	c.sub(a64::sp, a64::sp, Imm(8192));
+	c.sub(a64::sp, a64::sp, Imm(g_gateway_scratch_size));
 
 	// Execute LLE call
 	c.blr(call_target);
@@ -386,7 +386,7 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.bind(hv_ctx_pc);
 
 	// Clear scratchpad allocation
-	c.add(a64::sp, a64::sp, Imm(8192));
+	c.add(a64::sp, a64::sp, Imm(g_gateway_scratch_size));
 
 	c.ldr(a64::x20, arm::Mem(a64::sp));
 	c.add(a64::sp, a64::sp, Imm(16));
