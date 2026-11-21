@@ -175,6 +175,13 @@ namespace rsx
 			{
 				// Check if this is a blit to the output buffer
 				// TODO: This can be used to implement reference tracking to possibly avoid downscaling
+				const auto& avconfig = g_fxo->get<rsx::avconf>();
+				const u32 bpp = avconfig.get_bpp();
+
+				// The flip reads the configured video mode at the configured pitch from the display buffer offset.
+				// Cover that region as well as the registered one so that blits filling either still match.
+				const size2u video_frame_size = avconfig.state ? avconfig.video_frame_size() : size2u{};
+
 				for (u32 i = 0; i < ctx->display_buffers_count; ++i)
 				{
 					const auto& buffer = ctx->display_buffers[i];
@@ -184,19 +191,20 @@ namespace rsx
 						continue;
 					}
 
-					const u32 bpp = g_fxo->get<rsx::avconf>().get_bpp();
+					const u32 width = std::max<u32>(buffer.width, video_frame_size.width);
+					const u32 height = std::max<u32>(buffer.height, video_frame_size.height);
+					const u32 pitch = avconfig.state ? avconfig.scanline_pitch : (buffer.pitch ? +buffer.pitch : bpp * buffer.width);
 
-					const u32 pitch = buffer.pitch ? +buffer.pitch : bpp * buffer.width;
 					if (pitch != dst_pitch)
 					{
 						continue;
 					}
 
-					const auto buffer_range = address_range32::start_length(rsx::get_address(ctx, buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
+					const auto buffer_range = address_range32::start_length(rsx::get_address(ctx, buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (height - 1) + (width * bpp));
 					if (dst_range.inside(buffer_range))
 					{
 						// Match found
-						return { false, buffer_range.start, buffer.width, buffer.height };
+						return { false, buffer_range.start, width, height };
 					}
 
 					if (dst_range.overlaps(buffer_range)) [[unlikely]]
