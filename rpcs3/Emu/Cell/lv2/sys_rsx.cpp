@@ -148,7 +148,7 @@ static u64 _sys_rsx_get_timestamp()
 	return get_timebased_time();
 }
 
-static void set_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
+static void _sys_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
 {
 	{
 		rsx::eng_lock rlock(render);
@@ -200,7 +200,7 @@ static void set_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
 	}
 }
 
-bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3)
+bool _sys_rsx_send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3, std::unique_lock<shared_mutex>* lock)
 {
 	if (!ctx->fw.driver_info)
 	{
@@ -211,30 +211,56 @@ bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 
 	// Filter event bits, send them only if they are masked by gcm
 	// Except the upper 32-bits, they are reserved for unmapped io events and execute unconditionally
 	event_flags &= vm::_ref<RsxDriverInfo>(ctx->fw.driver_info).handlers | 0xffff'ffffull << 32;
-
 	if (!event_flags)
 	{
 		// Nothing to do
 		return true;
 	}
 
-	auto error = sys_event_port_send(ctx->fw.rsx_event_port, data1, event_flags, data3);
+	// Must be externally locked before we reach here.
+	const bool owns_lock = lock && lock->owns_lock();
+	const auto context_id = ctx->id();
+	auto rsxthr = ctx->rsxthr;
+	auto cpu = get_current_cpu_thread();
 
+	auto error = sys_event_port_send(ctx->fw.rsx_event_port, data1, event_flags, data3);
 	while (error + 0u == CELL_EBUSY)
 	{
-		auto cpu = get_current_cpu_thread();
-
 		if (cpu && cpu->get_class() == thread_class::ppu)
 		{
 			// Deschedule
 			lv2_obj::sleep(*cpu, 100);
 		}
 
+		// Release the lock, dump the context
+		if (owns_lock)
+		{
+			lock->unlock();
+			ctx = nullptr;
+		}
+
 		// Wait a bit before resending event
 		thread_ctrl::wait_for(100);
 
+		if (owns_lock)
+		{
+			// Re-acquire the lock and grab the context
+			if (!_sys_rsx_lock_context_calls(rsxthr, *lock))
+			{
+				return false;
+			}
+
+			if (!(ctx = rsxthr->find_context(context_id)))
+			{
+				// Context lost
+				return false;
+			}
+		}
+
 		if (cpu && cpu->get_class() == thread_class::rsx)
+		{
 			cpu->cpu_wait({});
+		}
 
 		if (Emu.IsStopped() || (cpu && cpu->check_state()))
 		{
@@ -827,7 +853,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 put = static_cast<u32>(a4);
 		const u64 get_put = put << 32 | get;
 
-		set_rsx_dmactl(render, ctx, get_put);
+		_sys_rsx_dmactl(render, ctx, get_put);
 		break;
 	}
 	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_MODE: // Display mode set
@@ -900,7 +926,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
 		render->on_frame_end(ctx, static_cast<u32>(a4));
-		if (!render->send_event(ctx, 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
+		if (!_sys_rsx_send_event(ctx, 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0, &lock))
 		{
 			break;
 		}
@@ -1171,7 +1197,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// NOTE: Realhw resets 16 bytes of this semaphore for some reason
 		vm::_ptr<atomic_t<u128>>(ctx->fw.label_addr + 0x10)->store(u128{});
 
-		render->send_event(ctx, 0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
+		_sys_rsx_send_event(ctx, 0, SYS_RSX_EVENT_FLIP_BASE << 1, 0, &lock);
 		break;
 	}
 	case 0xFED: // hack: vblank command
@@ -1207,7 +1233,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (render->enable_second_vhandler)
 			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
 
-		render->send_event(ctx, 0, event_flags, 0);
+		_sys_rsx_send_event(ctx, 0, event_flags, 0, &lock);
 		break;
 	}
 
@@ -1230,7 +1256,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			driverInfo.userCmdParam = intr_cause;
 		}
 
-		render->send_event(ctx, 0, SYS_RSX_EVENT_USER_CMD, 0);
+		_sys_rsx_send_event(ctx, 0, SYS_RSX_EVENT_USER_CMD, 0, &lock);
 		break;
 	}
 
