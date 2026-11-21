@@ -68,11 +68,11 @@ std::string SaveDataEntry::date() const
 std::string SaveDataEntry::data_size() const
 {
 	std::string metric = "KB";
-	u64 sz = utils::aligned_div(size, 1000);
-	if (sz > 1000)
+	u64 sz = utils::aligned_div(size, 1024);
+	if (sz >= 10000)
 	{
 		metric = "MB";
-		sz = utils::aligned_div(sz, 1000);
+		sz = utils::aligned_div(sz, 1024);
 	}
 	return fmt::format("%lu %s", sz, metric);
 }
@@ -215,6 +215,22 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 	return 0;
 }
 
+// Size of a save as funcStat reports it for the functions with userdata when every file fits in fileList: game files rounded up to 1 KB each, plus 35 KB for the system files
+static u64 get_save_data_size(const fs::dir& dir)
+{
+	u64 size = 0;
+
+	for (const auto& entry : dir)
+	{
+		if (!entry.is_directory && !check_filename(vfs::unescape(entry.name), false, false))
+		{
+			size += utils::align(entry.size, 1024);
+		}
+	}
+
+	return size + 35 * 1024;
+}
+
 static bool is_valid_dir_name(const std::string& dir_name)
 {
 	if (dir_name.empty() || dir_name.find_first_of('\0') != umax)
@@ -225,24 +241,19 @@ static bool is_valid_dir_name(const std::string& dir_name)
 	return sysutil_check_name_string(dir_name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) == 0;
 }
 
-static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
+// Every save of the user, newest first
+static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir)
 {
 	std::vector<SaveDataEntry> save_entries;
 
-	if (base_dir.empty() || prefix.empty())
+	if (base_dir.empty())
 	{
 		return save_entries;
 	}
 
-	// get the saves matching the supplied prefix
 	for (auto&& entry : fs::dir(base_dir))
 	{
 		if (!entry.is_directory || sysutil_check_name_string(entry.name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) != 0)
-		{
-			continue;
-		}
-
-		if (!entry.name.starts_with(prefix))
 		{
 			continue;
 		}
@@ -268,16 +279,7 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 			continue;
 		}
 
-		for (const auto& entry2 : fs::dir(base_dir + entry.name))
-		{
-			if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
-			{
-				continue;
-			}
-
-			save_entry.size += entry2.size;
-		}
-
+		save_entry.size  = get_save_data_size(fs::dir(base_dir + entry.name));
 		save_entry.atime = entry.atime;
 		save_entry.mtime = entry.mtime;
 		save_entry.ctime = entry.ctime;
@@ -288,6 +290,8 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		save_entry.escaped = std::move(entry.name);
 		save_entries.emplace_back(save_entry);
 	}
+
+	std::stable_sort(save_entries.begin(), save_entries.end(), [](const SaveDataEntry& entry1, const SaveDataEntry& entry2) { return entry1.mtime > entry2.mtime; });
 
 	return save_entries;
 }
@@ -311,7 +315,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 
 	const std::string base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", Emu.GetUsrId()));
 
-	auto save_entries = get_save_entries(base_dir, Emu.GetTitleID());
+	auto save_entries = get_save_entries(base_dir);
 
 	s32 selected = -1;
 	s32 focused  = -1;
@@ -347,14 +351,14 @@ static error_code select_and_delete(ppu_thread& ppu)
 		const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
 
 		// Reusable display message string
-		std::string msg = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION, info.c_str());
+		std::string msg = get_localized_string(localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION, fmt::format("%s\n%s\n%s\n%s\n\n%s", entry.title, entry.subtitle, entry.date(), entry.data_size(), entry.details).c_str());
 
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);
 
 		// Get user confirmation by opening a blocking dialog
 		s32 return_code = CELL_MSGDIALOG_BUTTON_NONE;
-		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
+		error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO | CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO, vm::make_str(msg), msg_dialog_source::_cellSaveData, vm::null, vm::null, vm::null, &return_code);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -822,7 +826,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		std::vector<std::string> prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
 
 		// if prefix_list is empty game wants to check all savedata
-		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD))
+		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD || operation == SAVEDATA_OP_FIXED_DELETE))
 		{
 			cellSaveData.notice("savedata_op(): dirNamePrefix is empty. Listing all entries. operation=%d", operation);
 			prefix_list = {""};
@@ -849,59 +853,41 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (entry.name.starts_with(prefix))
 				{
-					// Count the amount of matches and the amount of listed directories
+					// Count the amount of matches
 					if (!listGet->dirNum++) // total number of directories
 					{
 						// Clear buf exactly to bufSize only if dirNum becomes non-zero (regardless of dirListNum)
 						std::memset(setBuf->buf.get_ptr(), 0, setBuf->bufSize);
 					}
 
-					if (listGet->dirListNum < setBuf->dirListMax)
+					// PSF parameters
+					const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
+
+					if (psf.empty())
 					{
-						listGet->dirListNum++; // number of directories in list
-
-						// PSF parameters
-						const psf::registry psf = psf::load_object(base_dir + entry.name + "/PARAM.SFO");
-
-						if (psf.empty())
-						{
-							break;
-						}
-
-						SaveDataEntry save_entry2 {};
-						save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
-						save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
-						save_entry2.title     = psf::get_string(psf, "TITLE");
-						save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
-						save_entry2.details   = psf::get_string(psf, "DETAIL");
-
-						if (!is_valid_dir_name(save_entry2.dirName))
-						{
-							cellSaveData.error("Savedata '%s' has an invalid SAVEDATA_DIRECTORY entry ('%s')", entry.name, save_entry2.dirName);
-							break;
-						}
-
-						for (const auto& entry2 : fs::dir(base_dir + entry.name))
-						{
-							if (entry2.is_directory || check_filename(vfs::unescape(entry2.name), false, true))
-							{
-								continue;
-							}
-
-							save_entry2.size += entry2.size;
-						}
-
-						save_entry2.atime = entry.atime;
-						save_entry2.mtime = entry.mtime;
-						save_entry2.ctime = entry.ctime;
-						if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
-							save_entry2.iconBuf = icon.to_vector<uchar>();
-						save_entry2.isNew = false;
-
-						save_entry2.escaped = std::move(entry.name);
-						save_entries.emplace_back(save_entry2);
+						break;
 					}
 
+					SaveDataEntry save_entry2 {};
+					save_entry2.dirName   = psf::get_string(psf, "SAVEDATA_DIRECTORY");
+					save_entry2.listParam = psf::get_string(psf, "SAVEDATA_LIST_PARAM");
+					save_entry2.title     = psf::get_string(psf, "TITLE");
+					save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
+					save_entry2.details   = psf::get_string(psf, "DETAIL");
+
+					if (!is_valid_dir_name(save_entry2.dirName))
+					{
+						cellSaveData.error("Savedata '%s' has an invalid SAVEDATA_DIRECTORY entry ('%s')", entry.name, save_entry2.dirName);
+						break;
+					}
+
+					save_entry2.atime = entry.atime;
+					save_entry2.mtime = entry.mtime;
+					save_entry2.ctime = entry.ctime;
+					save_entry2.isNew = false;
+
+					save_entry2.escaped = std::move(entry.name);
+					save_entries.emplace_back(std::move(save_entry2));
 					break;
 				}
 			}
@@ -941,10 +927,27 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return true;
 			};
 
+			// The list holds the first dirListMax entries in sort order
+			const auto list_end = save_entries.begin() + std::min<usz>(save_entries.size(), setBuf->dirListMax);
+
 			if (setList->sortOrder == CELL_SAVEDATA_SORTORDER_ASCENT)
-				std::sort(save_entries.begin(), save_entries.end(), comp);
+				std::partial_sort(save_entries.begin(), list_end, save_entries.end(), comp);
 			else
-				std::sort(save_entries.rbegin(), save_entries.rend(), comp);
+				std::partial_sort(save_entries.begin(), list_end, save_entries.end(), [&comp](const SaveDataEntry& entry1, const SaveDataEntry& entry2) { return comp(entry2, entry1); });
+
+			save_entries.erase(list_end, save_entries.end());
+		}
+
+		listGet->dirListNum = std::min<u32>(listGet->dirNum, setBuf->dirListMax); // number of directories in list
+
+		for (auto& entry : save_entries)
+		{
+			const std::string dir_path = base_dir + entry.escaped;
+
+			entry.size = get_save_data_size(fs::dir(dir_path));
+
+			if (fs::file icon{dir_path + "/ICON0.PNG"})
+				entry.iconBuf = icon.to_vector<uchar>();
 		}
 
 		// Fill the listGet->dirList array
@@ -1203,9 +1206,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 		}
 
-		const auto delete_save = [&]()
+		const auto delete_save = [&](const SaveDataEntry& entry)
 		{
-			const SaveDataEntry& entry = ::at32(save_entries, selected);
 			strcpy_trunc(doneGet->dirName, entry.dirName);
 			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 256; // Read explanation in cellHddGameCheck
 			doneGet->excResult     = CELL_OK;
@@ -1215,17 +1217,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			const std::string del_path = base_dir + entry.escaped + "/";
 
 			const fs::dir _dir(del_path);
-			u64 size_bytes = 0;
 
-			for (auto&& file : _dir)
-			{
-				if (!file.is_directory)
-				{
-					size_bytes += utils::align(file.size, 1024);
-				}
-			}
-
-			doneGet->sizeKB = ::narrow<s32>(size_bytes / 1024);
+			doneGet->sizeKB = _dir ? ::narrow<s32>(get_save_data_size(_dir) / 1024) : 0;
 
 			if (_dir)
 			{
@@ -1332,7 +1325,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (operation == SAVEDATA_OP_LIST_DELETE)
 			{
-				delete_save();
+				delete_save(::at32(save_entries, selected));
 
 				if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 				{
@@ -1411,6 +1404,19 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				}
 			}
 
+			if (selected == -1)
+			{
+				save_entry.dirName = dirStr;
+				save_entry.escaped = vfs::escape(save_entry.dirName);
+
+				// The save to delete does not have to be in the list, but it has to exist
+				if (operation == SAVEDATA_OP_FIXED_DELETE && !fs::is_dir(base_dir + save_entry.escaped))
+				{
+					cellSaveData.warning("savedata_op(): fixedSet->dirName '%s' does not exist", dirStr);
+					return CELL_SAVEDATA_ERROR_NODATA;
+				}
+			}
+
 			switch (fixedSet->option)
 			{
 			case CELL_SAVEDATA_OPTION_NONE:
@@ -1423,7 +1429,25 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				std::string message;
 
-				if (selected == -1)
+				if (selected == -1 && operation == SAVEDATA_OP_FIXED_DELETE)
+				{
+					// Read the information of the save to delete as for a listed entry
+					const std::string dir_path = base_dir + save_entry.escaped;
+					const psf::registry psf = psf::load_object(dir_path + "/PARAM.SFO");
+					save_entry.title    = psf::get_string(psf, "TITLE");
+					save_entry.subtitle = psf::get_string(psf, "SUB_TITLE");
+					save_entry.details  = psf::get_string(psf, "DETAIL");
+
+					if (fs::stat_t dir_info{}; fs::get_stat(dir_path, dir_info))
+					{
+						save_entry.mtime = dir_info.mtime;
+					}
+
+					save_entry.size = get_save_data_size(fs::dir(dir_path));
+
+					message = get_confirmation_message(operation, save_entry);
+				}
+				else if (selected == -1)
 				{
 					message = get_localized_string(localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION);
 				}
@@ -1468,15 +1492,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "81 (option=0x%x)", fixedSet->option};
 			}
 
-			if (selected == -1)
-			{
-				save_entry.dirName = dirStr;
-				save_entry.escaped = vfs::escape(save_entry.dirName);
-			}
-
 			if (operation == SAVEDATA_OP_FIXED_DELETE)
 			{
-				delete_save();
+				delete_save(selected == -1 ? save_entry : ::at32(save_entries, selected));
 
 				if (const s32 res = result->result; res != CELL_SAVEDATA_CBRESULT_OK_NEXT)
 				{
