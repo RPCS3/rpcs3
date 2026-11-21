@@ -384,6 +384,13 @@ namespace rpcn
 		bool get_room_info_gui(u32 req_id, const SceNpRoomId& room_id, vm::ptr<SceNpMatchingAttr> attrs);
 		bool quickmatch_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num);
 		bool searchjoin_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr);
+		bool get_lobby_info_list(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetLobbyInfoListRequest* req);
+		bool join_lobby(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2JoinLobbyRequest* req);
+		bool leave_lobby(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveLobbyRequest* req);
+		bool set_lobby_member_data_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetLobbyMemberDataInternalRequest* req);
+		bool get_lobby_member_data_internal_list(u32 req_id, const SceNpCommunicationId& communication_id, u64 lobby_id, const std::vector<u16>& member_ids, const std::vector<u16>& attr_ids, bool extended_data);
+		bool send_lobby_chat_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendLobbyChatMessageRequest* req);
+		bool send_lobby_invitation(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendLobbyInvitationRequest* req);
 
 		const std::string& get_online_name() const;
 		const std::string& get_avatar_url() const;

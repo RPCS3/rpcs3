@@ -857,37 +857,370 @@ namespace np
 		sigh.start_sig(conn_id, addr, resp->port().value());
 	}
 
+	static s32 lobby_error_to_sce_error(rpcn::ErrorType error)
+	{
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: return CELL_OK;
+		case rpcn::ErrorType::RoomMissing: return SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_LOBBY;
+		case rpcn::ErrorType::RoomAlreadyJoined: return SCE_NP_MATCHING2_SERVER_ERROR_ALREADY_JOINED;
+		case rpcn::ErrorType::RoomFull: return SCE_NP_MATCHING2_SERVER_ERROR_LOBBY_FULL;
+		case rpcn::ErrorType::NotFound: return SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER;
+		case rpcn::ErrorType::Unauthorized: return SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN;
+		default:
+			rpcn_log.error("Unexpected error in reply to a lobby command: %s", error);
+			return SCE_NP_MATCHING2_SERVER_ERROR_INTERNAL_SERVER_ERROR;
+		}
+	}
+
 	u32 np_handler::get_lobby_info_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyInfoListRequest* req)
 	{
-		// Hack
-		// Note that this is fake and needs to be properly implemented both on server and on rpcs3
-
 		extra_nps::print_SceNpMatching2GetLobbyInfoListRequest(req);
 
-		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList, false);
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyInfoList, true);
+
+		if (!get_rpcn()->get_lobby_info_list(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_get_lobby_info_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
 		auto cb_info_opt = take_pending_request(req_id);
-		ensure (cb_info_opt);
+
+		if (!cb_info_opt)
+			return;
+
+		if (error != rpcn::ErrorType::NoError)
+		{
+			cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+			return;
+		}
+
+		const auto resp = reply.get_protobuf<np2_structs::GetLobbyInfoListResponse>();
+		ensure(!reply.is_error(), "Malformed reply to GetLobbyInfoList command");
 
 		const u32 event_key = get_event_key();
 
 		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetLobbyInfoList, sizeof(SceNpMatching2GetLobbyInfoListResponse));
-		auto* resp = reinterpret_cast<SceNpMatching2GetLobbyInfoListResponse*>(edata.data());
-
-		resp->range.size = 1;
-		resp->range.startIndex = 1;
-		resp->range.total = 1;
-		auto lobby_data = edata.allocate<SceNpMatching2LobbyDataExternal>(sizeof(SceNpMatching2LobbyDataExternal), resp->lobbyDataExternal);
-		lobby_data->serverId = 1;
-		lobby_data->worldId = req->worldId;
-		lobby_data->lobbyId = 1;
-		lobby_data->maxSlot = 64;
-		lobby_data->curMemberNum = 0;
-		lobby_data->flagAttr = SCE_NP_MATCHING2_LOBBY_FLAG_ATTR_PERMANENT;
-
+		auto* lobby_resp = reinterpret_cast<SceNpMatching2GetLobbyInfoListResponse*>(edata.data());
+		GetLobbyInfoListResponse_to_SceNpMatching2GetLobbyInfoListResponse(edata, *resp, lobby_resp);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("GetLobbyInfoList: %d lobbies from index %d out of %d", resp->lobbies_size(), resp->startindex(), resp->total());
+
 		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+	}
+
+	u32 np_handler::join_lobby(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinLobbyRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_JoinLobby, false);
+
+		if (!get_rpcn()->join_lobby(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
 
 		return req_id;
+	}
+
+	void np_handler::reply_join_lobby(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		if (error != rpcn::ErrorType::NoError)
+		{
+			cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+			return;
+		}
+
+		const auto resp = reply.get_protobuf<np2_structs::JoinLobbyResponse>();
+		ensure(!reply.is_error(), "Malformed reply to JoinLobby command");
+		ensure(resp->has_lobbydata());
+
+		const auto& lobby = resp->lobbydata();
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			auto& joined = joined_lobbies[lobby.lobbyid()];
+			joined.ctx_id = cb_info_opt->ctx_id;
+			joined.me = ::narrow<u16>(lobby.me());
+			joined.members.clear();
+			for (const auto member_id : lobby.memberids())
+			{
+				joined.members.insert(::narrow<u16>(member_id));
+			}
+		}
+
+		const u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_JoinLobby, sizeof(SceNpMatching2JoinLobbyResponse));
+		auto* lobby_resp = reinterpret_cast<SceNpMatching2JoinLobbyResponse*>(edata.data());
+		auto* lobby_info = edata.allocate<SceNpMatching2LobbyDataInternal>(sizeof(SceNpMatching2LobbyDataInternal), lobby_resp->lobbyDataInternal);
+		LobbyDataInternal_to_SceNpMatching2LobbyDataInternal(edata, lobby, lobby_info);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("Joined lobby %d as member %d (%d members)", lobby.lobbyid(), lobby.me(), lobby.memberids_size());
+
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+	}
+
+	u32 np_handler::leave_lobby(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveLobbyRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveLobby, false);
+
+		if (!get_rpcn()->leave_lobby(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_leave_lobby(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
+		const u64 lobby_id = reply.get<u64>();
+
+		if (!reply.is_error())
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			joined_lobbies.erase(lobby_id);
+		}
+
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+	}
+
+	void np_handler::leave_lobbies_of_context(SceNpMatching2ContextId ctx_id)
+	{
+		std::vector<std::pair<SceNpMatching2LobbyId, SceNpCommunicationId>> to_leave;
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			for (auto it = joined_lobbies.begin(); it != joined_lobbies.end();)
+			{
+				if (it->second.ctx_id != ctx_id)
+				{
+					it++;
+					continue;
+				}
+
+				if (const auto ctx = get_match2_context(ctx_id))
+				{
+					to_leave.emplace_back(it->first, ctx->communicationId);
+				}
+
+				it = joined_lobbies.erase(it);
+			}
+		}
+
+		if (to_leave.empty() || !is_psn_active || !rpcn)
+			return;
+
+		for (const auto& [lobby_id, com_id] : to_leave)
+		{
+			rpcn_log.notice("Leaving lobby %d as its context(%d) is being stopped", lobby_id, ctx_id);
+
+			// No pending request matches this id so the reply is ignored
+			SceNpMatching2LeaveLobbyRequest req{};
+			req.lobbyId = lobby_id;
+			rpcn->leave_lobby(get_req_id(REQUEST_ID_HIGH::MISC), com_id, &req);
+		}
+	}
+
+	u32 np_handler::set_lobby_member_data_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetLobbyMemberDataInternalRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SetLobbyMemberDataInternal, false);
+
+		if (!get_rpcn()->set_lobby_member_data_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_set_lobby_member_data_internal(u32 req_id, rpcn::ErrorType error)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+	}
+
+	u32 np_handler::get_lobby_member_data_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyMemberDataInternalRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyMemberDataInternal, true);
+
+		std::vector<u16> attr_ids;
+		for (u32 i = 0; req->attrId && i < req->attrIdNum; i++)
+		{
+			attr_ids.push_back(req->attrId[i]);
+		}
+
+		// Handled by the list command with a single member
+		if (!get_rpcn()->get_lobby_member_data_internal_list(req_id, get_match2_context(ctx_id)->communicationId, req->lobbyId, {static_cast<u16>(req->memberId)}, attr_ids, true))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	u32 np_handler::get_lobby_member_data_internal_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyMemberDataInternalListRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyMemberDataInternalList, true);
+
+		std::vector<u16> member_ids;
+		for (u32 i = 0; req->memberId && i < req->memberIdNum; i++)
+		{
+			member_ids.push_back(req->memberId[i]);
+		}
+
+		std::vector<u16> attr_ids;
+		for (u32 i = 0; req->attrId && i < req->attrIdNum; i++)
+		{
+			attr_ids.push_back(req->attrId[i]);
+		}
+
+		if (!get_rpcn()->get_lobby_member_data_internal_list(req_id, get_match2_context(ctx_id)->communicationId, req->lobbyId, member_ids, attr_ids, req->extendedData))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_get_lobby_member_data_internal_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		if (error != rpcn::ErrorType::NoError)
+		{
+			cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+			return;
+		}
+
+		const auto resp = reply.get_protobuf<np2_structs::GetLobbyMemberDataInternalListResponse>();
+		ensure(!reply.is_error(), "Malformed reply to GetLobbyMemberDataInternalList command");
+
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(cb_info_opt->ctx_id);
+		const u32 event_key = get_event_key();
+
+		if (cb_info_opt->event_type == SCE_NP_MATCHING2_REQUEST_EVENT_GetLobbyMemberDataInternal)
+		{
+			if (resp->members_size() != 1)
+			{
+				cb_info_opt->queue_callback(req_id, 0, SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER, 0);
+				return;
+			}
+
+			auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetLobbyMemberDataInternal, sizeof(SceNpMatching2GetLobbyMemberDataInternalResponse));
+			auto* member_resp = reinterpret_cast<SceNpMatching2GetLobbyMemberDataInternalResponse*>(edata.data());
+			auto* member = edata.allocate<SceNpMatching2LobbyMemberDataInternal>(sizeof(SceNpMatching2LobbyMemberDataInternal), member_resp->lobbyMemberDataInternal);
+			LobbyMemberDataInternal_to_SceNpMatching2LobbyMemberDataInternal(edata, resp->members(0), member, include_onlinename, include_avatarurl);
+			np_memory.shrink_allocation(edata.addr(), edata.size());
+			cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+			return;
+		}
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_GetLobbyMemberDataInternalList, sizeof(SceNpMatching2GetLobbyMemberDataInternalListResponse));
+		auto* list_resp = reinterpret_cast<SceNpMatching2GetLobbyMemberDataInternalListResponse*>(edata.data());
+		list_resp->lobbyMemberDataInternalNum = resp->members_size();
+		LobbyMemberDataInternals_to_SceNpMatching2LobbyMemberDataInternals(edata, resp->members(), list_resp->lobbyMemberDataInternal, include_onlinename, include_avatarurl);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+	}
+
+	u32 np_handler::send_lobby_chat_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendLobbyChatMessageRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendLobbyChatMessage, false);
+
+		if (!get_rpcn()->send_lobby_chat_message(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_send_lobby_chat_message(u32 req_id, rpcn::ErrorType error)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		if (error != rpcn::ErrorType::NoError)
+		{
+			cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+			return;
+		}
+
+		// The response is a single "filtered" flag, RPCN doesn't filter messages
+		const u32 event_key = get_event_key();
+		auto& edata = allocate_req_result(event_key, sizeof(u32), sizeof(SceNpMatching2SendLobbyChatMessageResponse));
+		reinterpret_cast<SceNpMatching2SendLobbyChatMessageResponse*>(edata.data())->filtered = false;
+		cb_info_opt->queue_callback(req_id, event_key, 0, sizeof(SceNpMatching2SendLobbyChatMessageResponse));
+	}
+
+	u32 np_handler::send_lobby_invitation(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendLobbyInvitationRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendLobbyInvitation, false);
+
+		if (!get_rpcn()->send_lobby_invitation(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_send_lobby_invitation(u32 req_id, rpcn::ErrorType error)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		cb_info_opt->queue_callback(req_id, 0, lobby_error_to_sce_error(error), 0);
+	}
+
+	std::pair<error_code, std::vector<SceNpMatching2LobbyMemberId>> np_handler::local_get_lobby_memberids(SceNpMatching2LobbyId lobby_id, SceNpMatching2LobbyMemberId& me)
+	{
+		std::lock_guard lock(mutex_joined_lobbies);
+
+		const auto it = joined_lobbies.find(lobby_id);
+		if (it == joined_lobbies.end())
+		{
+			return {SCE_NP_MATCHING2_ERROR_LOBBY_NOT_FOUND, {}};
+		}
+
+		me = it->second.me;
+		return {CELL_OK, std::vector<SceNpMatching2LobbyMemberId>(it->second.members.begin(), it->second.members.end())};
 	}
 
 	void np_handler::req_ticket([[maybe_unused]] u32 version, [[maybe_unused]] const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, [[maybe_unused]] const char* entitlement_id, [[maybe_unused]] u32 consumed_count)

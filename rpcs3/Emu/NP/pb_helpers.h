@@ -35,4 +35,12 @@ namespace np
 	void MatchingSearchJoinRoomInfo_to_SceNpMatchingSearchJoinRoomInfo(event_data& edata, const np2_structs::MatchingSearchJoinRoomInfo& resp, SceNpMatchingSearchJoinRoomInfo* room_info);
 	void MatchingAttr_to_SceNpMatchingAttr(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::MatchingAttr>& attr_list, vm::bptr<SceNpMatchingAttr>& first_attr);
 	void OptParam_to_SceNpMatching2SignalingOptParam(const np2_structs::OptParam& resp, SceNpMatching2SignalingOptParam* opt_param);
+	void GetLobbyInfoListResponse_to_SceNpMatching2GetLobbyInfoListResponse(event_data& edata, const np2_structs::GetLobbyInfoListResponse& resp, SceNpMatching2GetLobbyInfoListResponse* sce_resp);
+	void LobbyDataInternal_to_SceNpMatching2LobbyDataInternal(event_data& edata, const np2_structs::LobbyDataInternal& lobby, SceNpMatching2LobbyDataInternal* sce_lobby);
+	void LobbyMemberDataInternal_to_SceNpMatching2LobbyMemberDataInternal(event_data& edata, const np2_structs::LobbyMemberDataInternal& member, SceNpMatching2LobbyMemberDataInternal* sce_member, bool include_onlinename, bool include_avatarurl);
+	void LobbyMemberDataInternals_to_SceNpMatching2LobbyMemberDataInternals(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::LobbyMemberDataInternal>& members, vm::bptr<SceNpMatching2LobbyMemberDataInternal>& sce_members, bool include_onlinename, bool include_avatarurl);
+	void LobbyMemberUpdateInfo_to_SceNpMatching2LobbyMemberUpdateInfo(event_data& edata, const np2_structs::LobbyMemberUpdateInfo& update_info, SceNpMatching2LobbyMemberUpdateInfo* sce_update_info, bool include_onlinename, bool include_avatarurl);
+	void LobbyMemberDataInternalUpdate_to_SceNpMatching2LobbyMemberDataInternalUpdateInfo(event_data& edata, const np2_structs::NotificationLobbyMemberDataInternalUpdate& update, SceNpMatching2LobbyMemberDataInternalUpdateInfo* sce_update_info);
+	void LobbyMessage_to_SceNpMatching2LobbyMessageInfo(event_data& edata, const np2_structs::NotificationLobbyMessage& msg, SceNpMatching2LobbyMessageInfo* sce_msg, bool include_onlinename, bool include_avatarurl);
+	void LobbyInvitation_to_SceNpMatching2LobbyInvitationInfo(event_data& edata, const np2_structs::NotificationLobbyInvitation& inv, SceNpMatching2LobbyInvitationInfo* sce_inv, bool include_onlinename, bool include_avatarurl);
 } // namespace np

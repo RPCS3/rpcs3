@@ -167,6 +167,12 @@ namespace np
 		vm::ptr<SceNpMatching2RoomMessageCallback> room_msg_cb{};
 		u16 room_msg_cb_ctx = 0;
 		vm::ptr<void> room_msg_cb_arg{};
+		vm::ptr<SceNpMatching2LobbyEventCallback> lobby_event_cb{}; // Lobby events
+		u16 lobby_event_cb_ctx = 0;
+		vm::ptr<void> lobby_event_cb_arg{};
+		vm::ptr<SceNpMatching2LobbyMessageCallback> lobby_msg_cb{};
+		u16 lobby_msg_cb_ctx = 0;
+		vm::ptr<void> lobby_msg_cb_arg{};
 
 		// Synchronous requests
 		std::vector<SceNpMatching2ServerId> get_match2_server_list(SceNpMatching2ContextId);
@@ -191,6 +197,14 @@ namespace np
 		u32 get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req);
 		u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
 		u32 get_lobby_info_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyInfoListRequest* req);
+		u32 join_lobby(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2JoinLobbyRequest* req);
+		u32 leave_lobby(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2LeaveLobbyRequest* req);
+		u32 set_lobby_member_data_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetLobbyMemberDataInternalRequest* req);
+		u32 get_lobby_member_data_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyMemberDataInternalRequest* req);
+		u32 get_lobby_member_data_internal_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyMemberDataInternalListRequest* req);
+		u32 send_lobby_chat_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendLobbyChatMessageRequest* req);
+		u32 send_lobby_invitation(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendLobbyInvitationRequest* req);
+		void leave_lobbies_of_context(SceNpMatching2ContextId ctx_id);
 
 		u32 get_match2_event(SceNpMatching2EventKey event_key, u32 dest_addr, u32 size);
 
@@ -244,6 +258,7 @@ namespace np
 		std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method);
 		std::pair<error_code, std::optional<SceNpMatching2SignalingOptParam>> local_get_signaling_opt_param(SceNpMatching2RoomId room_id);
 		error_code local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, u32 ctx_id);
+		std::pair<error_code, std::vector<SceNpMatching2LobbyMemberId>> local_get_lobby_memberids(SceNpMatching2LobbyId lobby_id, SceNpMatching2LobbyMemberId& me);
 
 		// Local GUI functions
 		error_code get_room_member_list_local_gui(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<u32> buflen, vm::ptr<void> buf);
@@ -329,6 +344,14 @@ namespace np
 		void notif_user_kicked_gui(vec_stream& noti);
 		void notif_quickmatch_complete_gui(vec_stream& noti);
 
+		void notif_member_joined_lobby(vec_stream& noti);
+		void notif_member_left_lobby(vec_stream& noti);
+		void notif_updated_lobby_member_data_internal(vec_stream& noti);
+		void notif_lobby_message_received(vec_stream& noti);
+		void notif_lobby_invitation_received(vec_stream& noti);
+		void queue_lobby_event(SceNpMatching2LobbyId lobby_id, SceNpMatching2Event event, u32 event_key, u32 size);
+		void queue_lobby_message(SceNpMatching2LobbyId lobby_id, SceNpMatching2LobbyMemberId src_member_id, SceNpMatching2Event event, u32 event_key, u32 size);
+
 		// Reply handlers
 		void reply_get_world_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_create_join_room(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
@@ -378,6 +401,13 @@ namespace np
 		void reply_get_room_info_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_quickmatch_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_searchjoin_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_get_lobby_info_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_join_lobby(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_leave_lobby(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_set_lobby_member_data_internal(u32 req_id, rpcn::ErrorType error);
+		void reply_get_lobby_member_data_internal_list(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_send_lobby_chat_message(u32 req_id, rpcn::ErrorType error);
+		void reply_send_lobby_invitation(u32 req_id, rpcn::ErrorType error);
 
 		// Helper functions
 		std::pair<bool, bool> get_match2_context_options(u32 ctx_id);
@@ -557,5 +587,17 @@ namespace np
 
 		shared_mutex mutex_quickmatching;
 		std::map<SceNpRoomId, u32> pending_quickmatching;
+
+		// Lobbies joined through RPCN, notifications for other lobbies are dropped
+		struct joined_lobby
+		{
+			SceNpMatching2ContextId ctx_id = 0;
+			SceNpMatching2LobbyMemberId me = 0;
+			std::set<SceNpMatching2LobbyMemberId> members;
+		};
+
+		shared_mutex mutex_joined_lobbies;
+		std::map<SceNpMatching2LobbyId, joined_lobby> joined_lobbies;
+
 	};
 } // namespace np
