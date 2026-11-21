@@ -265,6 +265,12 @@ namespace rsx
 					{
 						if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
 						{
+							// Store only on change, the same EA page is usually accessed through the same IO page
+							if (auto& access_io = render->iomap_table.access_io[ea >> 20]; access_io.load() != offset >> 20)
+							{
+								access_io.release(offset >> 20);
+							}
+
 							return ea;
 						}
 					}
