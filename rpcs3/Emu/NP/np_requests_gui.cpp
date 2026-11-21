@@ -3,8 +3,10 @@
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "np_handler.h"
 #include "np_contexts.h"
+#include "np_helpers.h"
 #include "np_structs_extra.h"
 #include "pb_helpers.h"
 
@@ -12,6 +14,15 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 namespace np
 {
+	struct matching_invitation_data
+	{
+		static constexpr u32 expected_magic = "RMIV"_u32;
+
+		be_t<u32> magic;
+		be_t<u32> slot_type;
+		u8 room_id[sizeof(SceNpRoomId::opt)];
+	};
+
 	std::pair<error_code, shared_ptr<matching_ctx>> gui_prelude(u32 ctx_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 	{
 		auto ctx = get_matching_context(ctx_id);
@@ -198,6 +209,16 @@ namespace np
 
 	void np_handler::reply_join_room_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
 	{
+		handle_join_room_gui_reply(req_id, error, reply, SCE_NP_MATCHING_GUI_EVENT_JOIN_ROOM);
+	}
+
+	void np_handler::reply_accept_invitation_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply)
+	{
+		handle_join_room_gui_reply(req_id, error, reply, SCE_NP_MATCHING_GUI_EVENT_ACCEPT_INVITATION);
+	}
+
+	void np_handler::handle_join_room_gui_reply(u32 req_id, rpcn::ErrorType error, vec_stream& reply, s32 gui_event)
+	{
 		auto ctx = take_pending_gui_request(req_id);
 
 		if (!ctx)
@@ -225,7 +246,7 @@ namespace np
 
 		if (error_code != 0)
 		{
-			ctx->queue_gui_callback(SCE_NP_MATCHING_GUI_EVENT_JOIN_ROOM, error_code);
+			ctx->queue_gui_callback(gui_event, error_code);
 			gui_epilog(ctx);
 			return;
 		}
@@ -247,9 +268,115 @@ namespace np
 			gui_cache.add_member(room_info->room_status.id, cur_member.get_ptr(), true);
 		}
 
-		set_gui_result(SCE_NP_MATCHING_GUI_EVENT_JOIN_ROOM, std::move(edata));
-		ctx->queue_gui_callback(SCE_NP_MATCHING_GUI_EVENT_JOIN_ROOM, 0);
+		set_gui_result(gui_event, std::move(edata));
+		ctx->queue_gui_callback(gui_event, 0);
 		gui_epilog(ctx);
+	}
+
+	error_code np_handler::send_invitation_gui(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> dsts, s32 num, s32 slot_type, vm::cptr<char> subject, vm::cptr<char> body, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+	{
+		auto [error, ctx] = gui_prelude(ctx_id, handler, arg);
+
+		if (error)
+			return error;
+
+		matching_invitation_data invitation{};
+		invitation.magic = matching_invitation_data::expected_magic;
+		invitation.slot_type = slot_type;
+		std::memcpy(invitation.room_id, room_id->opt, sizeof(invitation.room_id));
+
+		const u8* invitation_bytes = reinterpret_cast<const u8*>(&invitation);
+
+		message_data msg_data{
+			.commId = *communicationId,
+			.mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE,
+			.subType = SCE_NP_BASIC_MESSAGE_INVITE_SUBTYPE_ACTION_ACCEPT_DENY,
+			.subject = subject.get_ptr(),
+			.body = body.get_ptr(),
+			.data = std::vector<u8>(invitation_bytes, invitation_bytes + sizeof(invitation))};
+
+		std::set<std::string> npids;
+
+		if (dsts)
+		{
+			for (s32 i = 0; i < num; i++)
+			{
+				npids.insert(npid_to_string(dsts[i]));
+			}
+		}
+
+		sysutil_register_cb([this, ctx, msg_data = std::move(msg_data), npids = std::move(npids)](ppu_thread& cb_ppu) mutable -> s32
+			{
+				s32 error_code = CELL_OK;
+
+				if (npids.empty())
+				{
+					if (exec_sendmessage_dialog(cb_ppu, msg_data, npids) != CELL_OK)
+						error_code = SCE_NP_MATCHING_ERROR_CANCELED;
+				}
+				else
+				{
+					send_message(msg_data, npids);
+				}
+
+				ctx->queue_gui_callback(SCE_NP_MATCHING_GUI_EVENT_SEND_INVITATION, error_code);
+				gui_epilog(ctx);
+				return 0;
+			});
+
+		return CELL_OK;
+	}
+
+	error_code np_handler::accept_invitation_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
+	{
+		auto [error, ctx] = gui_prelude(ctx_id, handler, arg);
+
+		if (error)
+			return error;
+
+		sysutil_register_cb([this, ctx, ctx_id, com_id = *communicationId](ppu_thread& cb_ppu) -> s32
+			{
+				const auto abort_accept = [&ctx](s32 error_code)
+				{
+					ctx->queue_gui_callback(SCE_NP_MATCHING_GUI_EVENT_ACCEPT_INVITATION, error_code);
+					gui_epilog(ctx);
+				};
+
+				SceNpBasicMessageRecvAction recv_action{};
+				u64 msg_id{};
+
+				if (exec_recvmessage_dialog(cb_ppu, SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE, 0, recv_action, msg_id) != CELL_OK || recv_action != SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT)
+				{
+					abort_accept(SCE_NP_MATCHING_ERROR_CANCELED);
+					return 0;
+				}
+
+				const auto opt_msg = get_message(msg_id);
+				matching_invitation_data invitation{};
+
+				if (opt_msg && opt_msg.value()->second.data.size() == sizeof(invitation))
+				{
+					std::memcpy(&invitation, opt_msg.value()->second.data.data(), sizeof(invitation));
+				}
+
+				if (invitation.magic != matching_invitation_data::expected_magic || strncmp(opt_msg.value()->second.commId.data, com_id.data, sizeof(com_id.data) - 1) != 0)
+				{
+					rpcn_log.error("Accepted invitation can't be used by sceNpMatchingAcceptInvitationGUI: msg_id=%d", msg_id);
+					abort_accept(SCE_NP_MATCHING_ERROR_ROOM_NOT_FOUND);
+					return 0;
+				}
+
+				SceNpRoomId room_id{};
+				std::memcpy(room_id.opt, invitation.room_id, sizeof(room_id.opt));
+
+				const u32 req_id = get_req_id(REQUEST_ID_HIGH::GUI);
+				add_gui_request(req_id, ctx_id);
+
+				get_rpcn()->accept_invitation_gui(req_id, room_id, invitation.slot_type == SCE_NP_MATCHING_ROOM_SLOT_TYPE_PRIVATE);
+				return 0;
+			});
+
+		return CELL_OK;
 	}
 
 	error_code np_handler::leave_room_gui(u32 ctx_id, vm::cptr<SceNpRoomId> roomid)

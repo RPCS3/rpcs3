@@ -1876,6 +1876,12 @@ protected:
 	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 };
 
+class ppu_thread;
+
+// Blocking message dialogs, must be called from a PPU thread
+error_code exec_sendmessage_dialog(ppu_thread& ppu, message_data& msg_data, std::set<std::string>& npids);
+error_code exec_recvmessage_dialog(ppu_thread& ppu, u16 mainType, u32 recvOptions, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id);
+
 // Generic functions, also used in SceNpMatchingInt.cpp
 error_code matching_create_room(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
 error_code matching_join_room(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);

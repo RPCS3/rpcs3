@@ -190,6 +190,7 @@ namespace np
 		u32 set_userinfo(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetUserInfoRequest* req);
 		u32 get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req);
 		u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
+		u32 send_room_chat_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomChatMessageRequest* req);
 		u32 get_lobby_info_list(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetLobbyInfoListRequest* req);
 
 		u32 get_match2_event(SceNpMatching2EventKey event_key, u32 dest_addr, u32 size);
@@ -207,6 +208,8 @@ namespace np
 		error_code get_room_info_gui(u32 ctx_id, vm::ptr<SceNpLobbyId> lobby_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingAttr> attr);
 		error_code quickmatch_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num, s32 timeout, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
 		error_code searchjoin_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+		error_code send_invitation_gui(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> dsts, s32 num, s32 slot_type, vm::cptr<char> subject, vm::cptr<char> body, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
+		error_code accept_invitation_gui(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
 
 		void set_current_gui_ctx_id(u32 id);
 
@@ -318,7 +321,7 @@ namespace np
 		void notif_updated_room_data_internal(vec_stream& noti);
 		void notif_updated_room_member_data_internal(vec_stream& noti);
 		void notif_signaling_helper(vec_stream& noti);
-		void notif_room_message_received(vec_stream& noti);
+		void notif_room_message_received(vec_stream& noti, SceNpMatching2Event event_type);
 
 		void generic_gui_notification_handler(vec_stream& noti, std::string_view name, s32 notification_type);
 
@@ -345,6 +348,7 @@ namespace np
 		void reply_set_userinfo(u32 req_id, rpcn::ErrorType error);
 		void reply_get_ping_info(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_send_room_message(u32 req_id, rpcn::ErrorType error);
+		void reply_send_room_chat_message(u32 req_id, rpcn::ErrorType error);
 		void reply_req_sign_infos(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_req_ticket(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_get_board_infos(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
@@ -378,6 +382,8 @@ namespace np
 		void reply_get_room_info_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_quickmatch_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
 		void reply_searchjoin_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void reply_accept_invitation_gui(u32 req_id, rpcn::ErrorType error, vec_stream& reply);
+		void handle_join_room_gui_reply(u32 req_id, rpcn::ErrorType error, vec_stream& reply, s32 gui_event);
 
 		// Helper functions
 		std::pair<bool, bool> get_match2_context_options(u32 ctx_id);

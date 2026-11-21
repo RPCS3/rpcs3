@@ -1186,12 +1186,45 @@ error_code sceNpMatching2RegisterContextCallback(SceNpMatching2ContextId ctxId, 
 error_code sceNpMatching2SendRoomChatMessage(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SendRoomChatMessageRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2SendRoomChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2SendRoomChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam); res != CELL_OK)
 	{
 		return res;
+	}
+
+	if (!reqParam->roomId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID;
+	}
+
+	switch (reqParam->castType)
+	{
+	case SCE_NP_MATCHING2_CASTTYPE_BROADCAST:
+	case SCE_NP_MATCHING2_CASTTYPE_UNICAST:
+	case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM:
+		break;
+	case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
+		if (!reqParam->dst.multicastTarget.memberId || !reqParam->dst.multicastTarget.memberIdNum)
+		{
+			return SCE_NP_MATCHING2_ERROR_INVALID_MESSAGE_TARGET;
+		}
+		break;
+	default:
+		return SCE_NP_MATCHING2_ERROR_INVALID_CASTTYPE;
+	}
+
+	if (!reqParam->msg || !reqParam->msgLen || reqParam->msgLen > SCE_NP_MATCHING2_CHAT_MSG_MAX_SIZE)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	const u32 request_id = nph.send_room_chat_message(ctxId, optParam, reqParam.get_ptr());
+
+	if (assignedReqId)
+	{
+		*assignedReqId = request_id;
 	}
 
 	return CELL_OK;

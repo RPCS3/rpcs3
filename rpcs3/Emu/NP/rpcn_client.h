@@ -347,6 +347,7 @@ namespace rpcn
 		bool set_userinfo(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetUserInfoRequest* req);
 		bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
+		bool send_room_chat_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomChatMessageRequest* req);
 		bool req_sign_infos(u32 req_id, std::string_view npid);
 		bool req_ticket(u32 req_id, std::string_view service_id, const std::vector<u8>& cookie);
 		bool send_message(const message_data& msg_data, const std::set<std::string>& npids);
@@ -384,6 +385,7 @@ namespace rpcn
 		bool get_room_info_gui(u32 req_id, const SceNpRoomId& room_id, vm::ptr<SceNpMatchingAttr> attrs);
 		bool quickmatch_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, s32 available_num);
 		bool searchjoin_gui(u32 req_id, const SceNpCommunicationId& com_id, vm::cptr<SceNpMatchingSearchCondition> cond, vm::cptr<SceNpMatchingAttr> attr);
+		bool accept_invitation_gui(u32 req_id, const SceNpRoomId& room_id, bool private_slot);
 
 		const std::string& get_online_name() const;
 		const std::string& get_avatar_url() const;

@@ -1423,25 +1423,7 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 
 	error_code result = CELL_CANCEL;
 
-	ppu.state += cpu_flag::wait;
-
-	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
-	{
-		auto recv_dlg = manager->create<rsx::overlays::sendmessage_dialog>();
-		result = recv_dlg->Exec(msg_data, npids);
-	}
-	else
-	{
-		input::SetIntercepted(true);
-
-		Emu.BlockingCallFromMainThread([=, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
-		{
-			auto send_dlg = g_emu_callbacks.get_sendmessage_dialog();
-			result = send_dlg->Exec(msg_data, npids);
-		});
-
-		input::SetIntercepted(false);
-	}
+	result = exec_sendmessage_dialog(ppu, msg_data, npids);
 
 	s32 callback_result = result == CELL_OK ? 0 : -1;
 	s32 event           = 0;
@@ -1602,30 +1584,10 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
-	error_code result = CELL_CANCEL;
-
 	SceNpBasicMessageRecvAction recv_result{};
 	u64 chosen_msg_id{};
 
-	ppu.state += cpu_flag::wait;
-
-	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
-	{
-		auto recv_dlg = manager->create<rsx::overlays::recvmessage_dialog>();
-		result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-	}
-	else
-	{
-		input::SetIntercepted(true);
-
-		Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
-		{
-			auto recv_dlg = g_emu_callbacks.get_recvmessage_dialog();
-			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-		});
-
-		input::SetIntercepted(false);
-	}
+	const error_code result = exec_recvmessage_dialog(ppu, mainType, recvOptions, recv_result, chosen_msg_id);
 
 	if (result != CELL_OK)
 	{
@@ -5115,10 +5077,64 @@ error_code sceNpMatchingQuickMatchGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId>
 	return nph.quickmatch_gui(ctx_id, communicationId, cond, available_num, timeout, handler, arg);
 }
 
+error_code exec_sendmessage_dialog(ppu_thread& ppu, message_data& msg_data, std::set<std::string>& npids)
+{
+	error_code result = CELL_CANCEL;
+
+	ppu.state += cpu_flag::wait;
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		auto send_dlg = manager->create<rsx::overlays::sendmessage_dialog>();
+		result = send_dlg->Exec(msg_data, npids);
+	}
+	else
+	{
+		input::SetIntercepted(true);
+
+		Emu.BlockingCallFromMainThread([&result, &msg_data, &npids]()
+		{
+			auto send_dlg = g_emu_callbacks.get_sendmessage_dialog();
+			result = send_dlg->Exec(msg_data, npids);
+		});
+
+		input::SetIntercepted(false);
+	}
+
+	return result;
+}
+
+error_code exec_recvmessage_dialog(ppu_thread& ppu, u16 mainType, u32 recvOptions, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id)
+{
+	error_code result = CELL_CANCEL;
+
+	ppu.state += cpu_flag::wait;
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		auto recv_dlg = manager->create<rsx::overlays::recvmessage_dialog>();
+		result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+	}
+	else
+	{
+		input::SetIntercepted(true);
+
+		Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
+		{
+			auto recv_dlg = g_emu_callbacks.get_recvmessage_dialog();
+			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+		});
+
+		input::SetIntercepted(false);
+	}
+
+	return result;
+}
+
 error_code sceNpMatchingSendInvitationGUI(u32 ctx_id, vm::cptr<SceNpRoomId> room_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpId> dsts, s32 num, s32 slot_type,
     vm::cptr<char> subject, vm::cptr<char> body, sys_memory_container_t container, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpMatchingSendInvitationGUI(ctx_id=%d, room_id=*0x%x, communicationId=*0x%x, dsts=*0x%x, num=%d, slot_type=%d, subject=%s, body=%s, container=%d, handler=*0x%x, arg=*0x%x)", ctx_id,
+	sceNp.warning("sceNpMatchingSendInvitationGUI(ctx_id=%d, room_id=*0x%x, communicationId=*0x%x, dsts=*0x%x, num=%d, slot_type=%d, subject=%s, body=%s, container=%d, handler=*0x%x, arg=*0x%x)", ctx_id,
 	    room_id, communicationId, dsts, num, slot_type, subject, body, container, handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
@@ -5149,23 +5165,12 @@ error_code sceNpMatchingSendInvitationGUI(u32 ctx_id, vm::cptr<SceNpRoomId> room
 	if (slot_type < SCE_NP_MATCHING_ROOM_SLOT_TYPE_PUBLIC || slot_type > SCE_NP_MATCHING_ROOM_SLOT_TYPE_PRIVATE)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	// TODO: set callback: handler + arg
-
-	err = CELL_OK; // SendInvitation
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return err;
+	return nph.send_invitation_gui(ctx_id, room_id, communicationId, dsts, num, slot_type, subject, body, handler, arg);
 }
 
 error_code sceNpMatchingAcceptInvitationGUI(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, sys_memory_container_t container, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg)
 {
-	sceNp.todo("sceNpMatchingAcceptInvitationGUI(ctx_id=%d, communicationId=*0x%x, container=%d, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, container, handler, arg);
+	sceNp.warning("sceNpMatchingAcceptInvitationGUI(ctx_id=%d, communicationId=*0x%x, container=%d, handler=*0x%x, arg=*0x%x)", ctx_id, communicationId, container, handler, arg);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
@@ -5175,18 +5180,7 @@ error_code sceNpMatchingAcceptInvitationGUI(u32 ctx_id, vm::cptr<SceNpCommunicat
 	if (!communicationId || !handler)
 		return SCE_NP_MATCHING_ERROR_INVALID_ARG;
 
-	if (false) // TODO
-		return SCE_NP_MATCHING_ERROR_BUSY;
-
-	// TODO: set callback: handler + arg
-
-	error_code err = CELL_OK; // AcceptInvitation
-	if (err != CELL_OK && static_cast<u32>(err) != SCE_NP_MATCHING_ERROR_BUSY)
-	{
-		// TODO ?
-	}
-
-	return err;
+	return nph.accept_invitation_gui(ctx_id, communicationId, handler, arg);
 }
 
 // FUN_00014d90
