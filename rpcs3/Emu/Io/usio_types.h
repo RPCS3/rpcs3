@@ -84,5 +84,6 @@ struct usio_io_status
 	s8 vital_sensors[2] = {0, 0};
 	s8 wheel_rotation = 0;
 	std::array<bool, 4> taiko_hit_already = {}; // Status of taiko_hit_side_left, taiko_hit_center_right, taiko_hit_side_right, and taiko_hit_center_left from last polling
+	std::string configured_reader{};
 	nfc_reader card_reader{};
 };

@@ -4,6 +4,8 @@
 #include "Emu/Io/usb_device.h"
 #include "Emu/Io/usio_types.h"
 
+#include <mutex>
+
 class usb_device_usio : public usb_device_emulated
 {
 public:
@@ -34,4 +36,12 @@ private:
 	std::vector<u8> response;
 
 	std::array<usio_io_status, 2> m_io_status;
+	std::recursive_mutex m_usio_mutex;
+
+	bool m_expecting_data = false;
+	std::vector<u8> m_usio_data;
+	u32 m_response_seek = 0;
+	u8 m_usio_channel = 0;
+	u16 m_usio_register = 0;
+	u16 m_usio_length = 0;
 };
