@@ -19,6 +19,8 @@
 
 LOG_CHANNEL(patch_log, "PAT");
 
+extern u32 ppu_generate_id(std::string_view name);
+
 template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
 {
