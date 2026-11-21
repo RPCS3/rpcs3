@@ -723,7 +723,7 @@ void nfc_reader::build_response(const std::vector<u8>& in)
 		out.push_back(postamble);
 }
 
-nfc_reader::card_type nfc_reader::get_card_type(std::span<const u8> card)
+nfc_reader::card_type nfc_reader::get_card_type(std::span<const u8> /*card*/)
 {
 	// Currently we only emulate Mifare Classic cards; maybe more card types can be supported in the future.
 	return card_type::mifare_classic;
