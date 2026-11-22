@@ -532,9 +532,6 @@ void save_manager_dialog::UpdateIcons()
 	}
 }
 
-/**
-* Copied method to do sort from save_data_list_dialog
-*/
 void save_manager_dialog::OnSort(int logicalIndex)
 {
 	if (logicalIndex >= 0)

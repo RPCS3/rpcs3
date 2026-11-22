@@ -381,27 +381,6 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_about_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_info_dialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_info_dialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_list_dialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_list_dialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_dialog.cpp">
-      <Filter>Gui\save</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_info_dialog.cpp">
-      <Filter>Gui\save</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp">
-      <Filter>Gui\save</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -1385,9 +1364,6 @@
     <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\save_data_dialog.h">
-      <Filter>Gui\save</Filter>
-    </ClInclude>
     <ClInclude Include="Input\pad_thread.h">
       <Filter>Io</Filter>
     </ClInclude>
@@ -1653,12 +1629,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\welcome_dialog.ui">
       <Filter>Form Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\save_data_info_dialog.h">
-      <Filter>Gui\save</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\save_data_list_dialog.h">
-      <Filter>Gui\save</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\syntax_highlighter.h">
       <Filter>Gui\syntax highlighter</Filter>

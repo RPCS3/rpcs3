@@ -33,7 +33,6 @@
 #include "util/init_mutex.hpp"
 #include "util/console.h"
 #include "qt_video_source.h"
-#include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
 #include "osk_dialog_frame.h"
 #include "stylesheets.h"
@@ -848,7 +847,6 @@ void gui_application::create_callbacks()
 
 	g_emu_callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	g_emu_callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
-	g_emu_callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 
 	g_emu_callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
 	g_emu_callbacks.on_pause  = [this]() { OnEmulatorPause(); };
