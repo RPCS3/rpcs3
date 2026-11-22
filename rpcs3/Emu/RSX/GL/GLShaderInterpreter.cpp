@@ -6,7 +6,7 @@
 #include "GLPipelineCompiler.h"
 
 #include "Emu/RSX/rsx_methods.h"
-#include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
+#include "Emu/RSX/Overlays/Shaders/shader_loading_dialog_native.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/localized_string.h"
 #include "Emu/RSX/Core/RSXContext.h"
@@ -22,21 +22,26 @@ namespace gl
 		m_ctx = ctx;
 	}
 
-	void shader_interpreter::preload(rsx::shader_loading_dialog* dlg)
+	void shader_interpreter::preload(rsx::shader_loading_dialog_native* dlg)
 	{
-		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
-
 		const auto variants = program_common::interpreter::get_interpreter_variants();
 		const u32 limit1 = ::size32(variants.base_pipelines);
 		const u32 limit2 = ::size32(variants.pipelines);
-		dlg->set_limit(0, limit1);
-		dlg->set_limit(1, limit2);
+
+		if (dlg)
+		{
+			dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
+			dlg->set_limit(0, limit1);
+			dlg->set_limit(1, limit2);
+		}
 
 		auto ctr = std::make_shared<atomic_t<u32>>(0);
 		auto progress_hook = [ctr](const std::shared_ptr<interpreter::cached_program>&) { (*ctr)++; };
 
-		auto update_progress = [&](u32 stage)
+		const auto update_progress = [&](u32 stage)
 		{
+			if (!dlg) return;
+
 			const auto completed = ctr->load();
 			const auto limit = stage ? limit2 : limit1;
 			const auto message = get_localized_string(
@@ -63,7 +68,7 @@ namespace gl
 			std::this_thread::sleep_for(16ms);
 			update_progress(0);
 		}
-		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && !dlg->skip_requested());
+		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && (!dlg || !dlg->skip_requested()));
 
 		// Show final progress
 		update_progress(0);
@@ -91,7 +96,7 @@ namespace gl
 			auto base_pipeline = m_program_cache.find(compatible_options);
 			if (base_pipeline == m_program_cache.end())
 			{
-				if (!dlg->skip_requested())
+				if (!dlg || !dlg->skip_requested())
 				{
 					fmt::throw_exception("Base variant was not found in the cache.");
 				}

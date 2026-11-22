@@ -10,7 +10,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/Program/RSXVertexProgram.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
-#include "Overlays/Shaders/shader_loading_dialog.h"
+#include "Overlays/Shaders/shader_loading_dialog_native.h"
 
 #include <chrono>
 
@@ -79,8 +79,7 @@ namespace rsx
 			return fmt::format("%s pipeline object %u of %u", index == 0 ? "Loading" : "Compiling", processed, entry_count);
 		}
 
-		void load_shaders(uint nb_workers, unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count,
-		    shader_loading_dialog* dlg)
+		void load_shaders(uint nb_workers, unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count, shader_loading_dialog_native* dlg)
 		{
 			atomic_t<u32> processed(0);
 
@@ -130,7 +129,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void compile_shaders(uint nb_workers, unpacked_type& unpacked, u32 entry_count, shader_loading_dialog* dlg, steady_clock::time_point skip_after, Args&&... args)
+		void compile_shaders(uint nb_workers, unpacked_type& unpacked, u32 entry_count, shader_loading_dialog_native* dlg, steady_clock::time_point skip_after, Args&&... args)
 		{
 			atomic_t<u32> processed(0);
 
@@ -138,7 +137,7 @@ namespace rsx
 			{
 				u32 pos;
 				// Processed is incremented before work starts in order to avoid two workers working on the same shader
-				while (((pos = processed++) < stop_at) && !Emu.IsStopped() && !dlg->skip_requested())
+				while (((pos = processed++) < stop_at) && !Emu.IsStopped() && (!dlg || !dlg->skip_requested()))
 				{
 					auto& entry = unpacked[pos];
 					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
@@ -150,13 +149,13 @@ namespace rsx
 			await_workers(nb_workers, 1, shader_comp_worker, processed, entry_count, dlg, skip_after);
 		}
 
-		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg,
+		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog_native* dlg,
 			steady_clock::time_point skip_after = steady_clock::time_point::max())
 		{
 			bool skip_enabled = false;
 			const auto update_skip = [&](steady_clock::time_point now)
 			{
-				if (!skip_enabled && now >= skip_after)
+				if (dlg && !skip_enabled && now >= skip_after)
 				{
 					dlg->enable_hold_to_skip();
 					skip_enabled = true;
@@ -175,6 +174,8 @@ namespace rsx
 
 					worker(stop_at);
 
+					if (!dlg) continue;
+
 					// Only update the screen at about 60fps since updating it everytime slows down the process
 					steady_clock::time_point now = steady_clock::now();
 					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 16ms) || (stop_at == entry_count))
@@ -185,7 +186,7 @@ namespace rsx
 					}
 
 					update_skip(now);
-				} while (stop_at < entry_count && !Emu.IsStopped() && !dlg->skip_requested());
+				} while (stop_at < entry_count && !Emu.IsStopped() && (!dlg || !dlg->skip_requested()));
 			}
 			else
 			{
@@ -196,21 +197,28 @@ namespace rsx
 
 				u32 current_progress = 0;
 				u32 last_update_progress = 0;
-				while ((current_progress < entry_count) && !Emu.IsStopped() && !dlg->skip_requested())
+				while ((current_progress < entry_count) && !Emu.IsStopped() && (!dlg || !dlg->skip_requested()))
 				{
 					thread_ctrl::wait_for(16'000); // Around 60fps should be good enough
 
 					if (Emu.IsStopped()) break;
 
-					update_skip(steady_clock::now());
+					if (dlg)
+					{
+						update_skip(steady_clock::now());
+					}
 
 					current_progress = std::min(processed.load(), entry_count);
 
 					if (last_update_progress != current_progress)
 					{
 						last_update_progress = current_progress;
-						dlg->update_msg(step, get_message(step, current_progress, entry_count));
-						dlg->set_value(step, current_progress);
+
+						if (dlg)
+						{
+							dlg->update_msg(step, get_message(step, current_progress, entry_count));
+							dlg->set_value(step, current_progress);
+						}
 					}
 				}
 			}
@@ -238,7 +246,7 @@ namespace rsx
 		}
 
 		template <typename... Args>
-		void load(shader_loading_dialog* dlg, Args&& ...args)
+		void load(shader_loading_dialog_native* dlg, Args&& ...args)
 		{
 			if (root_path.empty())
 			{
@@ -274,18 +282,14 @@ namespace rsx
 			root.rewind();
 
 			// Progress dialog
-			std::unique_ptr<shader_loading_dialog> fallback_dlg;
-			if (!dlg)
+			if (dlg)
 			{
-				fallback_dlg = std::make_unique<shader_loading_dialog>();
-				dlg = fallback_dlg.get();
+				dlg->create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
+				dlg->set_limit(0, entry_count);
+				dlg->set_limit(1, entry_count);
+				dlg->update_msg(0, get_message(0, 0, entry_count));
+				dlg->update_msg(1, get_message(1, 0, entry_count));
 			}
-
-			dlg->create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
-			dlg->set_limit(0, entry_count);
-			dlg->set_limit(1, entry_count);
-			dlg->update_msg(0, get_message(0, 0, entry_count));
-			dlg->update_msg(1, get_message(1, 0, entry_count));
 
 			// The interpreter covers any pipelines we did not link, so the user may skip the linking step after a while
 			const auto skip_after = g_cfg.video.shadermode == shader_mode::async_with_interpreter
@@ -303,8 +307,11 @@ namespace rsx
 
 			compile_shaders(nb_workers, unpacked, entry_count, dlg, skip_after, std::forward<Args>(args)...);
 
-			dlg->refresh();
-			dlg->close();
+			if (dlg)
+			{
+				dlg->refresh();
+				dlg->close();
+			}
 		}
 
 		void store(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)

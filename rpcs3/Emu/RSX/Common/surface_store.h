@@ -585,6 +585,7 @@ namespace rsx
 			{
 				// This was already determined to be invalid and is excluded from testing above
 				invalidated_resources.push_back(std::move(old_surface_storage));
+				old_surface_storage = {};
 			}
 
 			if (!new_surface)

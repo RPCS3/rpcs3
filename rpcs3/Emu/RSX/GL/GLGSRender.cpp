@@ -454,26 +454,25 @@ void GLGSRender::preload_shaders()
 	if (shadermode == shader_mode::async_with_interpreter ||
 		shadermode == shader_mode::interpreter_only)
 	{
-		std::unique_ptr<rsx::shader_loading_dialog> dlg = RSX(m_ctx)->overlay_manager()
+		std::unique_ptr<rsx::shader_loading_dialog_native> dlg = RSX(m_ctx)->overlay_manager()
 			? std::make_unique<rsx::shader_loading_dialog_native>(RSX(m_ctx))
-			: std::make_unique<rsx::shader_loading_dialog>();
+			: nullptr;
+
 		m_shader_interpreter.preload(dlg.get());
-		dlg->close();
+
+		if (dlg)
+		{
+			dlg->close();
+		}
 	}
 
 	if (shadermode != shader_mode::interpreter_only)
 	{
-		if (!RSX(m_ctx)->overlay_manager())
-		{
-			m_frame->hide();
-			m_shaders_cache->load(nullptr);
-			m_frame->show();
-		}
-		else
-		{
-			rsx::shader_loading_dialog_native dlg(RSX(m_ctx));
-			m_shaders_cache->load(&dlg);
-		}
+		std::unique_ptr<rsx::shader_loading_dialog_native> dlg = RSX(m_ctx)->overlay_manager()
+			? std::make_unique<rsx::shader_loading_dialog_native>(RSX(m_ctx))
+			: nullptr;
+
+		m_shaders_cache->load(dlg.get());
 	}
 }
 
