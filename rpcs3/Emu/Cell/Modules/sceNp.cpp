@@ -1430,18 +1430,10 @@ error_code sceNpBasicSendMessageGui(ppu_thread& ppu, vm::cptr<SceNpBasicMessageD
 	}
 	else
 	{
-		input::SetIntercepted(true);
-
-		Emu.BlockingCallFromMainThread([=, &result, msg_data = std::move(msg_data), npids = std::move(npids)]() mutable
-		{
-			auto send_dlg = g_emu_callbacks.get_sendmessage_dialog();
-			result = send_dlg->Exec(msg_data, npids);
-		});
-
-		input::SetIntercepted(false);
+		sceNp.error("sceNpBasicSendMessageGui: Native UI not available. Cannot show send message dialog (result=%s)", result);
 	}
 
-	s32 callback_result = result == CELL_OK ? 0 : -1;
+	const s32 callback_result = result == CELL_OK ? 0 : -1;
 	s32 event           = 0;
 
 	switch (msg->mainType)
@@ -1614,15 +1606,7 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 	}
 	else
 	{
-		input::SetIntercepted(true);
-
-		Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
-		{
-			auto recv_dlg = g_emu_callbacks.get_recvmessage_dialog();
-			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-		});
-
-		input::SetIntercepted(false);
+		sceNp.error("recv_message_gui: Native UI not available. Cannot show receive message dialog (result=%s)", result);
 	}
 
 	if (result != CELL_OK)

@@ -94,7 +94,6 @@ add_library(rpcs3_ui STATIC
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
     recording_settings_dialog.cpp
-    recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
     rsx_debugger.cpp
@@ -106,7 +105,6 @@ add_library(rpcs3_ui STATIC
     screenshot_item.cpp
     screenshot_manager_dialog.cpp
     screenshot_preview.cpp
-    sendmessage_dialog_frame.cpp
     settings.cpp
     settings_dialog.cpp
     shortcut_utils.cpp
