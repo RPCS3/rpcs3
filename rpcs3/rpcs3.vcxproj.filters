@@ -330,12 +330,6 @@
     <ClCompile Include="Input\xinput_pad_handler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_msg_dialog_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_msg_dialog_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\qrc_resources.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
@@ -479,9 +473,6 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\instruction_editor_dialog.cpp">
       <Filter>Gui\debugger</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
-      <Filter>Gui\message dialog</Filter>
     </ClCompile>
     <ClCompile Include="Input\evdev_joystick_handler.cpp">
       <Filter>Io\evdev</Filter>
@@ -1695,9 +1686,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\rsx_debugger.h">
       <Filter>Gui\dev tools</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
-      <Filter>Gui\message dialog</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\save</Filter>

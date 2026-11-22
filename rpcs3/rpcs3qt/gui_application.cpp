@@ -33,7 +33,6 @@
 #include "util/init_mutex.hpp"
 #include "util/console.h"
 #include "qt_video_source.h"
-#include "msg_dialog_frame.h"
 #include "osk_dialog_frame.h"
 #include "stylesheets.h"
 #include "progress_dialog.h"
@@ -824,7 +823,7 @@ void gui_application::create_callbacks()
 		return nullptr;
 	};
 
-	g_emu_callbacks.close_gs_frame  = [this]()
+	g_emu_callbacks.close_gs_frame = [this]()
 	{
 		if (m_game_window)
 		{
@@ -835,7 +834,7 @@ void gui_application::create_callbacks()
 		}
 	};
 
-	g_emu_callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
+	g_emu_callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	g_emu_callbacks.replace_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
 	{
 		// Close and reopen the game window
@@ -845,8 +844,7 @@ void gui_application::create_callbacks()
 		return frame;
 	};
 
-	g_emu_callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
-	g_emu_callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
+	g_emu_callbacks.get_osk_dialog = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 
 	g_emu_callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
 	g_emu_callbacks.on_pause  = [this]() { OnEmulatorPause(); };
