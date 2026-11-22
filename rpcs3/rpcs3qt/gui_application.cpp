@@ -33,7 +33,6 @@
 #include "util/init_mutex.hpp"
 #include "util/console.h"
 #include "qt_video_source.h"
-#include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
 #include "osk_dialog_frame.h"
@@ -854,7 +853,6 @@ void gui_application::create_callbacks()
 	g_emu_callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	g_emu_callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
 	g_emu_callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
-	g_emu_callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	g_emu_callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
 	g_emu_callbacks.on_pause  = [this]() { OnEmulatorPause(); };

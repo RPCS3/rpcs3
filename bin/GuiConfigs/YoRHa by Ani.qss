@@ -433,12 +433,6 @@ QLabel#debugger_frame_pc {
 	background-color: #00ff00; /* Green */
 }
 
-/* Trophy Notification Popup */
-QWidget#trophy_notification_frame {
-	background-color: #b3ac98;
-	color: #4d4940;
-}
-
 /*
 	#sizeSlider: Style the main window's icon size slider so it's not stretched
 */

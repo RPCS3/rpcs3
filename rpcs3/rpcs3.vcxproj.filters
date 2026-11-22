@@ -402,12 +402,6 @@
     <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp">
       <Filter>Gui\save</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\trophy_notification_helper.cpp">
-      <Filter>Gui\trophy</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\trophy_notification_frame.cpp">
-      <Filter>Gui\trophy</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -844,12 +838,6 @@
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_instruction_editor_dialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_trophy_notification_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_notification_frame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_fatal_error_dialog.cpp">
@@ -1418,9 +1406,6 @@
     <ClInclude Include="rpcs3qt\save_data_dialog.h">
       <Filter>Gui\save</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\trophy_notification_helper.h">
-      <Filter>Gui\trophy</Filter>
-    </ClInclude>
     <ClInclude Include="Input\pad_thread.h">
       <Filter>Io</Filter>
     </ClInclude>
@@ -1863,9 +1848,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\instruction_editor_dialog.h">
       <Filter>Gui\debugger</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\trophy_notification_frame.h">
-      <Filter>Gui\trophy</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\fatal_error_dialog.h">
       <Filter>Gui\misc dialogs</Filter>

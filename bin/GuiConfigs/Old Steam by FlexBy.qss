@@ -55,12 +55,6 @@ QWidget#header_section {
     background-color: #46523f;
 }
 
-QWidget#trophy_notification_frame {
-    color: #e5e9df;
-    background-color: #3b4536;
-    border: 1px solid #252b22;
-}
-
 QFrame[frameShape="4"],
 QFrame[frameShape="5"] {
     color: #69745f;

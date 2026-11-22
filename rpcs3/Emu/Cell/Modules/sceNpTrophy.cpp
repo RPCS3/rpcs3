@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
@@ -7,6 +6,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/overlay_trophy_notification.h"
 
 #include "Utilities/rXml.h"
 #include "Loader/TRP.h"
@@ -29,10 +30,6 @@
 #include "util/cctype.hpp"
 
 LOG_CHANNEL(sceNpTrophy);
-
-TrophyNotificationBase::~TrophyNotificationBase()
-{
-}
 
 struct trophy_context_t
 {
@@ -279,9 +276,11 @@ static void show_trophy_notification(const trophy_context_t* ctxt, s32 trophyId)
 		sceNpTrophy.error("Failed to get info for trophy dialog. Error code 0x%x", +ret);
 	}
 
-	if (auto trophy_notification_dialog = g_emu_callbacks.get_trophy_notification_dialog())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		trophy_notification_dialog->ShowTrophyNotification(details, trophy_icon_data);
+		// Allow adding more than one trophy notification. The notification class manages scheduling
+		auto popup = std::make_shared<rsx::overlays::trophy_notification>();
+		manager->add(popup, false)->show(details, trophy_icon_data);
 	}
 }
 
