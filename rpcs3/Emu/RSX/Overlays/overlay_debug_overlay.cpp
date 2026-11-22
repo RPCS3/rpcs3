@@ -43,7 +43,7 @@ namespace rsx
 
 		extern void reset_debug_overlay()
 		{
-			if (!g_cfg.misc.use_native_interface)
+			if (!g_cfg.video.ui.render_native_interface)
 				return;
 
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
@@ -66,7 +66,7 @@ namespace rsx
 
 		extern void set_debug_overlay_text(std::string&& text)
 		{
-			if (!g_cfg.misc.use_native_interface || (!g_cfg.video.debug_overlay && !g_cfg.io.pad_debug_overlay && !g_cfg.io.mouse_debug_overlay))
+			if (!g_cfg.video.ui.render_native_interface || (!g_cfg.video.debug_overlay && !g_cfg.io.pad_debug_overlay && !g_cfg.io.mouse_debug_overlay))
 				return;
 
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())

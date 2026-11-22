@@ -587,7 +587,7 @@ namespace rsx
 		// The ZCULL unit belongs to the thread. The renderer only provides the host queries.
 		zcull_ctrl = std::make_unique<reports::ZCULL_control>();
 
-		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
+		if (g_cfg.video.ui.render_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
 
