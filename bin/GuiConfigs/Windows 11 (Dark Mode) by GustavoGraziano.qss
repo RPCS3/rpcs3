@@ -13,7 +13,7 @@ QWidget {
     font-family: "Segoe UI";
     color: #FFFFFF;
     background-color: transparent;
-	alternate-background-color: #2B2B2B;
+    alternate-background-color: #2B2B2B;
     border: none;
 }
 
@@ -29,16 +29,9 @@ QDialog {
     background-color: #191919;
 }
 
-
 QWidget#cg_disasm, QWidget#trophy_manager {
-	background-color: #222222;
+    background-color: #222222;
 }
-
-QWidget#trophy_notification_frame {
-	background-color: #191919;
-	color: #FFFFFF;
-}
-
 
 /* TOOLTIP */
 QToolTip {

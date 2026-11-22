@@ -45,7 +45,6 @@ struct emu_callbacks
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
 	std::function<std::shared_ptr<class SendMessageDialogBase>()> get_sendmessage_dialog;
 	std::function<std::shared_ptr<class RecvMessageDialogBase>()> get_recvmessage_dialog;
-	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
 	std::function<std::string(const cfg::_base*, u32)> get_localized_setting;

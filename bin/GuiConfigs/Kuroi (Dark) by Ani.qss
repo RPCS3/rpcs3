@@ -253,12 +253,6 @@ QWidget#cg_disasm, QWidget#trophy_manager {
 	background-color: #323232;
 }
 
-/* Trophy Notification Popup */
-QWidget#trophy_notification_frame {
-	background-color: #323232;
-	color: #e6e6e6;
-}
-
 /* Set Toolbar Slider Size */
 QSlider#sizeSlider::groove:horizontal {
 	border: 0em solid transparent;

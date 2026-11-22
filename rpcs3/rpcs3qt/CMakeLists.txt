@@ -121,8 +121,6 @@ add_library(rpcs3_ui STATIC
     table_item_delegate.cpp
     tooltips.cpp
     trophy_manager_dialog.cpp
-    trophy_notification_frame.cpp
-    trophy_notification_helper.cpp
     update_manager.cpp
     user_account.cpp
     user_manager_dialog.cpp

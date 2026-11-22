@@ -161,14 +161,6 @@ using SceNpTrophyStatusCallback = s32(u32 context, u32 status, s32 completed, s3
 // Forward declare this function since trophyunlock needs it
 error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::ptr<SceNpTrophyDetails> details, vm::ptr<SceNpTrophyData> data);
 
-class TrophyNotificationBase
-{
-public:
-	virtual ~TrophyNotificationBase();
-
-	virtual s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophyIconBfr) = 0;
-};
-
 struct current_trophy_name
 {
 	std::mutex mtx;
