@@ -120,6 +120,7 @@ enum class emu_settings_type
 	DisableHWTexelRemapping,
 	DisableBlitEngineScaling,
 	RenderNativeInterface,
+	UseQtOsk,
 
 	// Anaglyph Matrix
 	CustomAnaglyphMatrixLeft,
