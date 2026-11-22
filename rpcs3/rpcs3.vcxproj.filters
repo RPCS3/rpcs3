@@ -945,24 +945,6 @@
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
       <Filter>Gui\rpcn</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp">
-      <Filter>Gui\message dialog</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_sendmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_sendmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\recvmessage_dialog_frame.cpp">
-      <Filter>Gui\message dialog</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_recvmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_recvmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\qt_camera_handler.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
@@ -1881,12 +1863,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\clans_settings_dialog.h">
       <Filter>Gui\rpcn</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\sendmessage_dialog_frame.h">
-      <Filter>Gui\message dialog</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
-      <Filter>Gui\message dialog</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\qt_camera_handler.h">
       <Filter>Io\camera</Filter>
