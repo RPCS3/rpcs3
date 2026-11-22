@@ -11,7 +11,7 @@
 
 #ifdef __linux__
 #include <unistd.h>
-#define CAN_OVERCOMMIT
+//#define CAN_OVERCOMMIT
 #endif
 
 #if defined(__APPLE__)
