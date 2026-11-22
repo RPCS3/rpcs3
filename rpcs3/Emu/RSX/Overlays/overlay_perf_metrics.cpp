@@ -927,7 +927,7 @@ namespace rsx
 
 		extern void reset_performance_overlay()
 		{
-			if (!g_cfg.misc.use_native_interface)
+			if (!g_cfg.video.ui.render_native_interface)
 				return;
 
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())

@@ -2651,7 +2651,7 @@
                  </layout>
                 </widget>
                </item>
-              <item>
+               <item>
                 <widget class="QGroupBox" name="gb_advanced_savestates">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -3232,13 +3232,6 @@
                    <widget class="QCheckBox" name="startBigPictureModeOnBoot">
                     <property name="text">
                      <string>Open Big Picture Mode on boot</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QCheckBox" name="useNativeInterface">
-                    <property name="text">
-                     <string>Use native user interface</string>
                     </property>
                    </widget>
                   </item>
@@ -4654,6 +4647,13 @@
                   </property>
                   <property name="text">
                    <string>Renderdoc Compatibility Mode</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="renderNativeInterface">
+                  <property name="text">
+                   <string>Render Native User Interface</string>
                   </property>
                  </widget>
                 </item>

@@ -1445,7 +1445,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//    / ____ \ (_| |\ V / (_| | | | | (_|  __/ (_| |    | | (_| | |_) |
 	//   /_/    \_\__,_| \_/ \__,_|_| |_|\___\___|\__,_|    |_|\__,_|_.__/
 
-
 	// Checkboxes
 
 	EnhanceCheckBox(emu_settings_type::DebugConsoleMode, ui->debugConsoleMode, tooltips.settings.debug_console_mode);
@@ -1726,7 +1725,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::ShowTrophyPopups, ui->showTrophyPopups, tooltips.settings.show_trophy_popups);
 	EnhanceCheckBox(emu_settings_type::ShowRpcnPopups, ui->showRpcnPopups, tooltips.settings.show_rpcn_popups);
-	EnhanceCheckBox(emu_settings_type::UseNativeInterface, ui->useNativeInterface, tooltips.settings.use_native_interface);
 	EnhanceCheckBox(emu_settings_type::UseRecursiveScan, ui->useRecursiveScan, tooltips.settings.use_recursive_scan);
 
 #if defined(__linux__)
@@ -2293,6 +2291,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::ForceHwMSAAResolve, ui->forceHwMSAAResolve, tooltips.settings.force_hw_MSAA);
 	EnhanceCheckBox(emu_settings_type::UseReBAR, ui->useReBAR, tooltips.settings.use_ReBAR);
 	EnhanceCheckBox(emu_settings_type::DisableOnDiskShaderCache, ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
+	EnhanceCheckBox(emu_settings_type::RenderNativeInterface, ui->renderNativeInterface, tooltips.settings.render_native_interface);
 
 	// Checkboxes: core debug options
 	EnhanceCheckBox(emu_settings_type::StartOnBoot, ui->alwaysStart, tooltips.settings.start_on_boot);
