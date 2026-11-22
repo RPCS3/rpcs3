@@ -6,7 +6,7 @@
 #include "VKHelpers.h"
 #include "VKRenderPass.h"
 
-#include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
+#include "Emu/RSX/Overlays/Shaders/shader_loading_dialog_native.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/RSX/Program/ShaderInterpreter.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -709,10 +709,8 @@ namespace vk
 		return &it.first->second;
 	}
 
-	void shader_interpreter::preload(rsx::shader_loading_dialog* dlg)
+	void shader_interpreter::preload(rsx::shader_loading_dialog_native* dlg)
 	{
-		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
-
 		// Create some basic pipelines that we'll use to seed the base pipeline queue
 		std::vector<vk::pipeline_props> pipe_properties;
 		auto pdev = vk::get_current_renderer();
@@ -791,8 +789,13 @@ namespace vk
 		const auto variants = program_common::interpreter::get_interpreter_variants();
 		const u32 limit1 = ::size32(variants.base_pipelines) * ::size32(pipe_properties);
 		const u32 limit2 = ::size32(variants.pipelines) * ::size32(pipe_properties);
-		dlg->set_limit(0, limit1);
-		dlg->set_limit(1, limit2);
+
+		if (dlg)
+		{
+			dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
+			dlg->set_limit(0, limit1);
+			dlg->set_limit(1, limit2);
+		}
 
 		// Map each base pipeline to the full variants that can alias it
 		std::unordered_set<u64> base_opts;
@@ -854,6 +857,11 @@ namespace vk
 		{
 			std::this_thread::sleep_for(16ms);
 
+			if (!dlg)
+			{
+				continue;
+			}
+
 			const auto completed = ctr->load();
 			dlg->update_msg(0, get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN, "%u %s %u", completed, get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit1));
 			dlg->set_value(0, completed);
@@ -865,9 +873,12 @@ namespace vk
 				dlg->enable_hold_to_skip();
 			}
 		}
-		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && !dlg->skip_requested());
+		while (ctr->load() < limit1 && thread_ctrl::state() != thread_state::aborting && (!dlg || !dlg->skip_requested()));
 
-		dlg->set_value(1, limit2);
-		dlg->refresh();
+		if (dlg)
+		{
+			dlg->set_value(1, limit2);
+			dlg->refresh();
+		}
 	}
 };

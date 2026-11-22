@@ -9,7 +9,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		struct recvmessage_dialog : public user_interface, public RecvMessageDialogBase
+		struct recvmessage_dialog : public user_interface
 		{
 		private:
 			struct list_entry : horizontal_layout
@@ -17,6 +17,8 @@ namespace rsx
 			public:
 				list_entry(std::string_view name, std::string_view subj, std::string_view body);
 			};
+
+			std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 
 			shared_mutex m_mutex;
 			std::vector<std::unique_ptr<overlay_element>> m_entries;
@@ -35,8 +37,8 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			error_code Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) override;
-			void callback_handler(const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) override;
+			error_code Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id);
+			void callback_handler(const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id);
 		};
 	}
 }

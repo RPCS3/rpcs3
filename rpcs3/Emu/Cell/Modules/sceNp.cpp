@@ -1,10 +1,8 @@
 #include "stdafx.h"
-#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellUserInfo.h"
-#include "Emu/Io/interception.h"
 #include "Utilities/StrUtil.h"
 
 #include "sysPrxForUser.h"

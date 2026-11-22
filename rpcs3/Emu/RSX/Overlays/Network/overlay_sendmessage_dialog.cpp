@@ -41,7 +41,7 @@ namespace rsx
 			add_element(text_stack);
 		}
 
-		sendmessage_dialog::sendmessage_dialog() : SendMessageDialogBase()
+		sendmessage_dialog::sendmessage_dialog()
 		{
 			m_dim_background = std::make_unique<overlay_element>();
 			m_dim_background->set_size(virtual_width, virtual_height);

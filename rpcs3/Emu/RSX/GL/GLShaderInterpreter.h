@@ -9,7 +9,7 @@
 namespace rsx
 {
 	struct context;
-	struct shader_loading_dialog;
+	struct shader_loading_dialog_native;
 }
 
 namespace gl
@@ -134,7 +134,7 @@ namespace gl
 		void destroy();
 
 		// Preload the cache
-		void preload(rsx::shader_loading_dialog* dlg);
+		void preload(rsx::shader_loading_dialog_native* dlg);
 
 		// Follows the backend's bound context
 		void set_context(rsx::context* ctx) { m_ctx = ctx; }
