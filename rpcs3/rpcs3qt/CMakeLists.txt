@@ -71,7 +71,6 @@ add_library(rpcs3_ui STATIC
     midi_creator.cpp
     movie_item.cpp
     movie_item_base.cpp
-    msg_dialog_frame.cpp
     music_player_dialog.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp

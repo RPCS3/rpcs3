@@ -105,12 +105,10 @@ void close_msg_dialog();
 error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, msg_dialog_source source, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null, s32* return_code = nullptr);
 error_code open_exit_dialog(const std::string& message, bool is_exit_requested, msg_dialog_source source);
 
+// Fallback dialog used when the native UI is not available.
+// It keeps the dialog state machine alive, but does not render anything and does not take any input.
 class MsgDialogBase
 {
-protected:
-	// the progressbar that will be represented in the taskbar. Use -1 to combine the progress.
-	s32 taskbar_index = 0;
-
 public:
 	atomic_t<MsgDialogState> state{ MsgDialogState::Close };
 
@@ -119,18 +117,7 @@ public:
 
 	std::function<void(s32 status)> on_close = nullptr;
 
-	virtual ~MsgDialogBase();
-	virtual void Create(const std::string& msg, const std::string& title = "") = 0;
-	virtual void Close(bool success) = 0;
-	virtual void SetMsg(const std::string& msg) = 0;
-	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
-	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
-	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;
-	virtual void ProgressBarSetValue(u32 progressBarIndex, u32 value) = 0;
-	virtual void ProgressBarSetLimit(u32 index, u32 limit) = 0;
-
-	void ProgressBarSetTaskbarIndex(s32 index)
-	{
-		taskbar_index = index;
-	}
+	virtual ~MsgDialogBase() = default;
+	virtual void Create(const std::string& /*msg*/, const std::string& /*title*/ = "") { state = MsgDialogState::Open; }
+	virtual void Close(bool /*success*/) {}
 };
