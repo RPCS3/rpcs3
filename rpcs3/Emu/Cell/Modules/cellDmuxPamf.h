@@ -10,7 +10,7 @@
 template <typename T, u32 max_num_of_entries> requires(std::is_trivial_v<T> && max_num_of_entries > 0)
 class alignas(0x80) dmux_pamf_hle_spurs_queue
 {
-	T* buffer;
+	vm::bptr<T> buffer; // The queue's memory backing is in guest memory
 
 	alignas(atomic_t<u32>) std::array<std::byte, sizeof(atomic_t<u32>)> _size; // Stored in a byte array since the PPU context needs to be trivial
 	u32 front;
@@ -44,7 +44,7 @@ class alignas(0x80) dmux_pamf_hle_spurs_queue
 public:
 	void init(T (&buffer)[max_num_of_entries])
 	{
-		this->buffer = buffer;
+		this->buffer.set(vm::get_addr(buffer));
 		new (_size.data()) atomic_t<u32>(0);
 		front = 0;
 		back = 0;
@@ -625,6 +625,8 @@ public:
 
 	void operator()(); // cellSpursMain()
 	static constexpr auto thread_name = "HLE PAMF demuxer SPU thread"sv;
+
+	u32 get_cmd_queue_addr() const { return cmd_queue.addr(); }
 
 private:
 	// These are globals in the SPU thread

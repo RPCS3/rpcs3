@@ -232,6 +232,25 @@ error_code cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostC
 	u32 ow = ctrlParam->outWidth;
 	u32 oh = ctrlParam->outHeight;
 
+	// swscale accesses the pictures through host pointers, so they must be entirely within guest memory
+	const u64 in_size = u64{w} * h * 3 / 2;
+	const u64 out_size = u64{ow} * oh * 4;
+
+	if (!w || !h || !ow || !oh || in_size > u32{umax} || out_size > u32{umax})
+	{
+		return { CELL_VPOST_ERROR_E_ARG_CTRL_INVALID, "in=%dx%d, out=%dx%d", w, h, ow, oh };
+	}
+
+	if (!vm::check_addr(inPicBuff.addr(), vm::page_readable, static_cast<u32>(in_size)))
+	{
+		return CELL_VPOST_ERROR_E_ARG_INPICBUF_INVALID;
+	}
+
+	if (!vm::check_addr(outPicBuff.addr(), vm::page_writable, static_cast<u32>(out_size)))
+	{
+		return CELL_VPOST_ERROR_E_ARG_OUTPICBUF_INVALID;
+	}
+
 	//ctrlParam->inWindow; // ignored
 	if (ctrlParam->inWindow.x) cellVpost.notice("*** inWindow.x = %d", ctrlParam->inWindow.x);
 	if (ctrlParam->inWindow.y) cellVpost.notice("*** inWindow.y = %d", ctrlParam->inWindow.y);
@@ -278,6 +297,12 @@ error_code cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostC
 	//u64 stamp1 = get_guest_system_time();
 
 	vpost->sws = sws_getCachedContext(vpost->sws, w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+
+	// swscale rejects picture sizes it doesn't support
+	if (!vpost->sws)
+	{
+		return { CELL_VPOST_ERROR_E_ARG_CTRL_INVALID, "in=%dx%d, out=%dx%d", w, h, ow, oh };
+	}
 
 	//u64 stamp2 = get_guest_system_time();
 

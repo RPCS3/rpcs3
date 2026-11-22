@@ -315,8 +315,7 @@ struct CellFont
 
 	be_t<u32> fontdata_addr;
 	be_t<u32> origin;
-	struct stbtt_fontinfo* stbfont;
-	// hack: don't place anything after pointer
+	be_t<u32> host_id; // ID of the host font state
 };
 
 struct CellFontRendererConfig

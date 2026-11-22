@@ -175,6 +175,15 @@ struct AtracXdecCmd
 
 CHECK_SIZE(AtracXdecCmd, 0x34);
 
+// Host-side FFmpeg state of a decoder. Never to be stored in guest memory.
+struct AtracXdecAvcodec
+{
+	const AVCodec* codec = nullptr;
+	AVCodecContext* ctx = nullptr;
+	AVPacket* packet = nullptr;
+	AVFrame* frame = nullptr;
+};
+
 struct AtracXdecDecoder
 {
 	be_t<u32> sampling_freq;
@@ -192,23 +201,19 @@ struct AtracXdecDecoder
 
 	// HLE exclusive
 	b8 config_is_set = false; // For savestates
-	const AVCodec* codec = nullptr;
-	AVCodecContext* ctx = nullptr;
-	AVPacket* packet = nullptr;
-	AVFrame* frame = nullptr;
 
-	u8 spurs_stuff[84]; // 120 bytes on LLE, pointers to CellSpurs, CellSpursTaskset, etc.
+	u8 spurs_stuff[119]; // 120 bytes on LLE, pointers to CellSpurs, CellSpursTaskset, etc.
 
 	be_t<u32> spurs_task_id;  // CellSpursTaskId
 
 	AtracXdecDecoder(vm::ptr<u8> work_mem) : work_mem(work_mem) {}
 
-	void alloc_avcodec();
-	void free_avcodec();
-	void init_avcodec();
+	static void alloc_avcodec(AtracXdecAvcodec& av);
+	static void free_avcodec(AtracXdecAvcodec& av);
+	void init_avcodec(AtracXdecAvcodec& av);
 
 	error_code set_config_info(u32 sampling_freq, u32 ch_config_idx, u32 nbytes);
-	error_code init_decode(u32 bw_pcm, u32 nch_out);
+	error_code init_decode(AtracXdecAvcodec& av, u32 bw_pcm, u32 nch_out);
 	error_code parse_ats_header(vm::cptr<u8> au_start_addr);
 };
 
@@ -275,7 +280,7 @@ struct AtracXdecContext
 	{
 	}
 
-	void exec(ppu_thread& ppu);
+	void exec(ppu_thread& ppu, AtracXdecAvcodec& av);
 
 	template <AtracXdecCmdType type>
 	error_code send_command(ppu_thread& ppu, auto&&... args);
@@ -283,6 +288,7 @@ struct AtracXdecContext
 
 static_assert(std::is_standard_layout_v<AtracXdecContext>);
 CHECK_SIZE_ALIGN(AtracXdecContext, 0x268, 8);
+CHECK_MEMBER_OFFSET(AtracXdecContext, decoder, 0x1c0);
 
 constexpr u32 ATXDEC_SPURS_STRUCTS_SIZE = 0x1cf00; // CellSpurs, CellSpursTaskset, context, etc.
 constexpr u16 ATXDEC_SAMPLES_PER_FRAME = 0x800;

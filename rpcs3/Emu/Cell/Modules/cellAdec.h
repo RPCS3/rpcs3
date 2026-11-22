@@ -433,25 +433,31 @@ struct AdecCmdQueue
 	be_t<s32> back = 0;
 	be_t<s32> size = 0;
 
+	// The queue resides in guest memory, so the indices are masked on every access in case the guest corrupted them
+
 	template <bool is_peek = false>
 	void pop(T& cmd)
 	{
+		const s32 _front = front & 3;
+
 		// LLE returns uninitialized stack memory if the queue is empty
-		cmd = elements[front];
+		cmd = elements[_front];
 
 		if constexpr (!is_peek)
 		{
-			elements[front].pcm_handle = 0xff;
-			front = (front + 1) & 3;
+			elements[_front].pcm_handle = 0xff;
+			front = (_front + 1) & 3;
 			size--;
 		}
 	}
 
 	void emplace(auto&&... args)
 	{
-		new (&elements[back]) T(std::forward<decltype(args)>(args)...);
+		const s32 _back = back & 3;
 
-		back = (back + 1) & 3;
+		new (&elements[_back]) T(std::forward<decltype(args)>(args)...);
+
+		back = (_back + 1) & 3;
 		size++;
 	}
 
@@ -554,17 +560,20 @@ public:
 	{
 		ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
-		if (entries[back].state != 0xff)
+		// Sanity check. The queue is in guest memory so we cannot trust the values blindly
+		const s32 _back = back & 3;
+
+		if (entries[_back].state != 0xff)
 		{
 			ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return true; // LLE returns the result of the comparison above
 		}
 
-		entries[back].state = 0x10;
-		entries[back].pcm_item = pcm_item;
-		entries[back].pcm_handle = pcm_handle;
+		entries[_back].state = 0x10;
+		entries[_back].pcm_item = pcm_item;
+		entries[_back].pcm_handle = pcm_handle;
 
-		back = (back + 1) & 3;
+		back = (_back + 1) & 3;
 		size++;
 
 		ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
@@ -580,18 +589,20 @@ public:
 			return {};
 		}
 
-		if (entries[front].state == 0xff)
+		const s32 _front = front & 3;
+
+		if (entries[_front].state == 0xff)
 		{
 			ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return nullptr;
 		}
 
-		const entry* const ret = &entries[front];
+		const entry* const ret = &entries[_front];
 
-		entries[front].state = 0xff;
-		entries[front].pcm_handle = -1;
+		entries[_front].state = 0xff;
+		entries[_front].pcm_handle = -1;
 
-		front = (front + 1) & 3;
+		front = (_front + 1) & 3;
 		size--;
 
 		ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
@@ -601,7 +612,7 @@ public:
 	const entry& peek(ppu_thread& ppu) const
 	{
 		ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
-		const entry& ret = entries[front];
+		const entry& ret = entries[front & 3];
 		ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return ret;
 	}

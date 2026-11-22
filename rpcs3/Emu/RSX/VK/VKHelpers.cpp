@@ -330,4 +330,36 @@ namespace vk
 			vkthr->on_descriptor_pool_fragmentation(is_fatal);
 		}
 	}
+
+	image* copy_image_with_overlays(const render_device& dev, const command_buffer& cmd, std::unique_ptr<image>& dst, image* src, const areai& rect, VkRenderPass pass,
+		const std::function<void(framebuffer_holder* fbo)>& draw_overlays)
+	{
+		if (dst && (dst->format() != src->format() || dst->width() != src->width() || dst->height() != src->height()))
+		{
+			// Dispose correctly
+			vk::remove_framebuffers_with_image(dst.get());
+			vk::get_resource_manager()->dispose(dst);
+		}
+
+		if (!dst)
+		{
+			dst = std::make_unique<vk::image>(dev, dev.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				VK_IMAGE_TYPE_2D, src->format(), src->width(), src->height(), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				0, VMM_ALLOCATION_POOL_SYSTEM);
+		}
+
+		dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vk::copy_image(cmd, src, dst.get(), rect, rect);
+		src->pop_layout(cmd);
+		dst->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+		vk::framebuffer_holder* fbo = vk::get_framebuffer(dev, rect.width(), rect.height(), VK_FALSE, pass, { dst.get() });
+		fbo->add_ref();
+		draw_overlays(fbo);
+		fbo->release();
+
+		return dst.get();
+	}
 }

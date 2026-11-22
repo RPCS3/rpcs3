@@ -1,6 +1,8 @@
 #pragma once
 
 #include "util/types.hpp"
+#include <functional>
+#include <memory>
 #include <vector>
 
 #include "VulkanAPI.h"
@@ -21,6 +23,7 @@ namespace vk
 	struct buffer;
 	class command_buffer;
 	class data_heap;
+	struct framebuffer_holder;
 	struct fence;
 	class image;
 	class instance;
@@ -105,6 +108,11 @@ namespace vk
 			const coord3i& src_rect, const coord3i& dst_rect,
 			const rsx::image_copy_subresource_layers& mip_layers = {},
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+
+	// Copies rect of src into a cached image (dst) with the same size and format as src and draws the overlays into it with the given render pass.
+	// Used for recordings with overlays and for headset rendering, since RSX draws the overlays directly to the window.
+	image* copy_image_with_overlays(const render_device& dev, const command_buffer& cmd, std::unique_ptr<image>& dst, image* src, const areai& rect, VkRenderPass pass,
+		const std::function<void(framebuffer_holder* fbo)>& draw_overlays);
 
 	void copy_scaled_image(const vk::command_buffer& cmd,
 			vk::image* src, vk::image* dst,

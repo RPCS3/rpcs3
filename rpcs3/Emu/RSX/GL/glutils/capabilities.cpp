@@ -100,6 +100,19 @@ namespace gl
 
 		CHECK_EXTENSION_SUPPORT(ARB_robustness);
 
+		// Used to share frames with the OpenXR handler
+		CHECK_EXTENSION_SUPPORT(EXT_memory_object);
+
+		CHECK_EXTENSION_SUPPORT(EXT_memory_object_win32);
+
+		CHECK_EXTENSION_SUPPORT(EXT_memory_object_fd);
+
+		CHECK_EXTENSION_SUPPORT(EXT_semaphore);
+
+		CHECK_EXTENSION_SUPPORT(EXT_semaphore_win32);
+
+		CHECK_EXTENSION_SUPPORT(EXT_semaphore_fd);
+
 #undef CHECK_EXTENSION_SUPPORT
 
 		// Set GLSL version
