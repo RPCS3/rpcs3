@@ -20,9 +20,6 @@ class save_manager_dialog : public QDialog
 public:
 	/**
 	* Class which will handle the managing of saves from all games.
-	* You may think I should just modify save_data_list_dialog.  But, that wouldn't be ideal long term since that class will be refactored into an overlay.
-	* Plus, there's the added complexity of an additional way in which the dialog will spawn differently.
-	* There'll be some duplicated code.  But, in the future, there'll be no duplicated code. So, I don't care.
 	*/
 	explicit save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir = "", QWidget* parent = nullptr);
 public Q_SLOTS:

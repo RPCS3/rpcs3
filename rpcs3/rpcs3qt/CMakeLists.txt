@@ -97,9 +97,6 @@ add_library(rpcs3_ui STATIC
     render_creator.cpp
     rpcn_settings_dialog.cpp
     rsx_debugger.cpp
-    save_data_dialog.cpp
-    save_data_info_dialog.cpp
-    save_data_list_dialog.cpp
     save_manager_dialog.cpp
     savestate_manager_dialog.cpp
     screenshot_item.cpp
