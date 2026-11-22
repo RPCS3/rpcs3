@@ -1750,6 +1750,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::RecordWithOverlays, ui->recordWithOverlays, tooltips.settings.record_with_overlays);
 	EnhanceCheckBox(emu_settings_type::PauseDuringHomeMenu, ui->pauseDuringHomeMenu, tooltips.settings.pause_during_home_menu);
 	EnhanceCheckBox(emu_settings_type::StartSavestatePaused, ui->pausedSavestates, tooltips.settings.paused_savestates);
+	EnhanceCheckBox(emu_settings_type::UseQtOsk, ui->useQtOsk, tooltips.settings.use_qt_osk);
 	EnhanceCheckBox(emu_settings_type::PerfOverlayCenterX, ui->perfOverlayCenterX, tooltips.settings.perf_overlay_center_x);
 	connect(ui->perfOverlayCenterX, &QCheckBox::toggled, [this](bool checked)
 	{

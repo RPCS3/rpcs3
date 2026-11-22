@@ -122,6 +122,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::FsrSharpeningStrength,      get_cfg_location(local_cfg.video.rcas_sharpening_intensity) },
 	{ emu_settings_type::DisableBlitEngineScaling,   get_cfg_location(local_cfg.video.disable_blit_engine_upscaling) },
 	{ emu_settings_type::RenderNativeInterface,      get_cfg_location(local_cfg.video.ui.render_native_interface) },
+	{ emu_settings_type::UseQtOsk,                   get_cfg_location(local_cfg.video.ui.use_qt_osk) },
 
 	// Vulkan
 	{ emu_settings_type::VulkanAdapter,                    get_cfg_location(local_cfg.video.vk.adapter) },

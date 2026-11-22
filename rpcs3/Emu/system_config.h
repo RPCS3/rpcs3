@@ -236,6 +236,7 @@ struct cfg_root : cfg::node
 			native_ui(cfg::node* _this) : cfg::node(_this, "Native UI") {}
 
 			cfg::_bool render_native_interface{ this, "Render native user interface", true, false };
+			cfg::_bool use_qt_osk{ this, "Use Qt On-Screen-Keyboard", false, false };
 			cfg::string default_font{ this, "Default Font", "Arial", false };
 		} ui{ this };
 

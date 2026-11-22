@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/sysPrxForUser.h"
 #include "Emu/Io/interception.h"
@@ -128,21 +129,29 @@ std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create)
 
 	if (create)
 	{
-		const auto init = osk.init.init();
+		auto init = osk.init.init();
 
 		if (!init)
 		{
 			return nullptr;
 		}
 
-		if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+		if (g_cfg.video.ui.use_qt_osk)
+		{
+			osk.dlg = g_emu_callbacks.get_osk_dialog();
+		}
+		else if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 		{
 			std::shared_ptr<rsx::overlays::osk_dialog> dlg = std::make_shared<rsx::overlays::osk_dialog>();
 			osk.dlg = manager->add(dlg);
 		}
-		else
+
+		if (!osk.dlg)
 		{
-			osk.dlg = g_emu_callbacks.get_osk_dialog();
+			// Don't stay initialized without a dialog. Otherwise every following attempt would fail as well.
+			cellOskDialog.error("Failed to create OSK dialog (use_qt_osk=%d)", g_cfg.video.ui.use_qt_osk.get());
+			init.cancel();
+			return nullptr;
 		}
 
 		return osk.dlg;
