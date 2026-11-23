@@ -11,7 +11,7 @@
 
 #ifdef __linux__
 #include <unistd.h>
-#define CAN_OVERCOMMIT
+//#define CAN_OVERCOMMIT
 #endif
 
 #if defined(__APPLE__)
@@ -120,9 +120,9 @@ void jit_announce(uptr func, usz size, std::string_view name)
 static u8* get_jit_memory(bool reset = false)
 {
 	// Reserve 2G memory (magic static)
-	auto reserve = []() -> void*
+	auto reserve = [](void* prev) -> void*
 	{
-		void* ptr = utils::memory_reserve(0x80000000, true);
+		void* ptr = FN(x ? x : utils::memory_reserve(0x80000000, true))(utils::memory_reserve(0x80000000, prev, false, true));
 #ifdef CAN_OVERCOMMIT
 		utils::memory_commit(ptr, 0x80000000);
 		utils::memory_protect(ptr, 0x40000000, utils::protection::wx);
@@ -130,12 +130,12 @@ static u8* get_jit_memory(bool reset = false)
 		return ptr;
 	};
 
-	static void* s_memory2 = reserve();
+	static void* s_memory2 = reserve(nullptr);
 
-	if (s_memory2 && reset)
+	if (reset)
 	{
 		utils::memory_release(s_memory2, 0x80000000);
-		s_memory2 = reserve();
+		s_memory2 = reserve(s_memory2);
 	}
 
 	return static_cast<u8*>(s_memory2);
