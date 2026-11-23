@@ -285,15 +285,15 @@ namespace np
 		invitation.slot_type = slot_type;
 		std::memcpy(invitation.room_id, room_id->opt, sizeof(invitation.room_id));
 
-		const u8* invitation_bytes = reinterpret_cast<const u8*>(&invitation);
-
-		message_data msg_data{
+		message_data msg_data
+		{
 			.commId = *communicationId,
 			.mainType = SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE,
 			.subType = SCE_NP_BASIC_MESSAGE_INVITE_SUBTYPE_ACTION_ACCEPT_DENY,
 			.subject = subject.get_ptr(),
 			.body = body.get_ptr(),
-			.data = std::vector<u8>(invitation_bytes, invitation_bytes + sizeof(invitation))};
+			.data = to_bytes(invitation)
+		};
 
 		std::set<std::string> npids;
 

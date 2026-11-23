@@ -329,14 +329,6 @@ private:
 		u8 brit = 0x00;
 	};
 
-	// Serialize a struct into bytes
-	template <typename T> requires std::is_trivially_copyable_v<T>
-	static inline std::vector<u8> to_bytes(const T& value)
-	{
-		const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
-		return {bytes.begin(), bytes.end()};
-	}
-
 	// Skip the preamble (any bytes before the start code) and return the frame starting at the start code
 	// Returns an empty span if there is no start code
 	static inline std::span<const u8> find_frame(const std::vector<u8>& in)
