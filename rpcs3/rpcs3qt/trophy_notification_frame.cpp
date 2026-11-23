@@ -59,7 +59,7 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	setPalette(black_background);
 
 	// I may consider moving this code later to be done at a better location.
-	QTimer::singleShot(TROPHY_TIMEOUT_MS, [this]()
+	QTimer::singleShot(TROPHY_TIMEOUT_MS, this, [this]()
 	{
 		deleteLater();
 	});

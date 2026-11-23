@@ -30,6 +30,7 @@ private:
 private:
 	bool is_used = false;
 	const std::string usio_backup_path = rpcs3::utils::get_hdd1_dir() + "/caches/usiobackup.bin";
+	static constexpr const char usio_card_path[] = "%s/caches/usio_card_p%d.bin";
 	std::vector<u8> response;
 
 	std::array<usio_io_status, 2> m_io_status;

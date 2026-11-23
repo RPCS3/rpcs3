@@ -8,6 +8,7 @@
 #include "Emu/system_utils.hpp"
 #include "Emu/perf_meter.hpp"
 #include "Emu/perf_monitor.hpp"
+#include "Emu/Io/openxr/openxr_thread.h"
 #include "Emu/vfs_config.h"
 #include "Emu/IPC_config.h"
 #include "Emu/savestate_utils.hpp"
@@ -413,6 +414,7 @@ extern void dump_executable(std::span<const u8> data, const ppu_module<lv2_obj>*
 			{
 				out.trunc(0);
 				out.write(data.data(), data.size());
+				sys_log.success("Saved decrypted ELF at %s", file_path);
 			}
 		}
 		else
@@ -4397,6 +4399,11 @@ bool Emulator::Quit(bool force_quit)
 
 void Emulator::CleanUp()
 {
+#ifdef HAVE_OPENXR
+	// The OpenXR thread is not part of the emulation, so it has to be stopped separately before the program exits
+	openxr::stop_thread();
+#endif
+
 	// Deinitialize object manager to prevent any hanging objects at program exit
 	g_fxo->clear();
 }

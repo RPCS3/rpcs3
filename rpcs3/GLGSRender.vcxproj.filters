@@ -15,6 +15,7 @@
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLOpenXRShare.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
     <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp">
@@ -66,6 +67,7 @@
     <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
     <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
     <ClInclude Include="Emu\RSX\GL\GLShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\GL\GLOpenXRShare.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
     <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />

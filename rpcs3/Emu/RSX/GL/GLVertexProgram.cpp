@@ -180,7 +180,6 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
 	properties2.emulate_depth_clip_only = dev_caps.NV_depth_buffer_float_supported;
-	properties2.low_precision_tests = dev_caps.vendor_NVIDIA;
 	properties2.require_explicit_invariance = dev_caps.vendor_MESA || (dev_caps.vendor_NVIDIA && g_cfg.video.shader_precision != gpu_preset_level::low);
 	properties2.require_instanced_render = !!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS);
 	properties2.require_clip_plane_functions = true;

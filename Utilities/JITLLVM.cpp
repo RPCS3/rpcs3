@@ -218,6 +218,8 @@ struct JITAnnouncer : llvm::JITEventListener
 	}
 };
 
+static atomic_t<usz> s_min_memory_reserve_addr = u64{128} << 32;
+
 // Simple memory manager
 struct MemoryManager1 : llvm::RTDyldMemoryManager
 {
@@ -243,11 +245,18 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	MemoryManager1(std::function<u64(const std::string&)> symbols_cement = {}) noexcept
 		: m_symbols_cement(std::move(symbols_cement))
 	{
-		auto ptr = reinterpret_cast<u8*>(utils::memory_reserve(c_max_size * 3, true));
+		// Reserve in advancing memory to prevent reuse of address space, see jit_announce
+		u8* ptr = nullptr;
+
+		while (!ptr)
+		{
+			ptr = reinterpret_cast<u8*>(utils::memory_reserve(c_max_size * 3, reinterpret_cast<void*>(s_min_memory_reserve_addr.fetch_add(c_max_size * 3)), false, true));
+		}
+
 		m_code_mems = ptr;
 		// ptr += c_max_size;
 		// m_data_ro_mems = ptr;
-		 ptr += c_max_size;
+		ptr += c_max_size;
 		m_data_rw_mems = ptr;
 	}
 
@@ -257,12 +266,11 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	~MemoryManager1() override
 	{
-		// Hack: don't release to prevent reuse of address space, see jit_announce
 		// constexpr auto how_much = [](u64 pos) { return utils::align(pos, pos < c_page_size ? c_page_size / 4 : c_page_size); };
 		// utils::memory_decommit(m_code_mems, how_much(code_ptr));
 		// utils::memory_decommit(m_data_ro_mems, how_much(data_ro_ptr));
 		// utils::memory_decommit(m_data_rw_mems, how_much(data_rw_ptr));
-		utils::memory_decommit(m_code_mems, c_max_size * 3, true);
+		utils::memory_release(m_code_mems, c_max_size * 3);
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override

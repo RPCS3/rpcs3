@@ -16,8 +16,10 @@ void fmt_class_string<input::active_mouse_and_keyboard>::format(std::string& out
 	{
 		switch (value)
 		{
-		case input::active_mouse_and_keyboard::emulated: return "emulated";
 		case input::active_mouse_and_keyboard::pad: return "pad";
+		case input::active_mouse_and_keyboard::emulated: return "emulated";
+		case input::active_mouse_and_keyboard::emulated_mouse_only: return "emulated_mouse_only";
+		case input::active_mouse_and_keyboard::emulated_kb_only: return "emulated_kb_only";
 		}
 
 		return unknown;
@@ -62,9 +64,15 @@ namespace input
 		if (!g_cfg.misc.show_mouse_and_keyboard_toggle_hint)
 			return;
 
-		const localized_string_id id = g_active_mouse_and_keyboard == active_mouse_and_keyboard::emulated
-			? localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED
-			: localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD;
+		localized_string_id id = localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD;
+		switch (g_active_mouse_and_keyboard.load())
+		{
+		case input::active_mouse_and_keyboard::pad: id = localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD; break;
+		case input::active_mouse_and_keyboard::emulated: id = localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED; break;
+		case input::active_mouse_and_keyboard::emulated_mouse_only: id = localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED_MOUSE_ONLY; break;
+		case input::active_mouse_and_keyboard::emulated_kb_only: id = localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED_KB_ONLY; break;
+		}
+
 		rsx::overlays::queue_message(get_localized_string(id), 3'000'000);
 	}
 
@@ -82,7 +90,13 @@ namespace input
 
 	void toggle_mouse_and_keyboard()
 	{
-		g_active_mouse_and_keyboard = g_active_mouse_and_keyboard == active_mouse_and_keyboard::emulated ? active_mouse_and_keyboard::pad : active_mouse_and_keyboard::emulated;
+		switch (g_active_mouse_and_keyboard.load())
+		{
+		case input::active_mouse_and_keyboard::pad: g_active_mouse_and_keyboard = active_mouse_and_keyboard::emulated; break;
+		case input::active_mouse_and_keyboard::emulated: g_active_mouse_and_keyboard = active_mouse_and_keyboard::emulated_mouse_only; break;
+		case input::active_mouse_and_keyboard::emulated_mouse_only: g_active_mouse_and_keyboard = active_mouse_and_keyboard::emulated_kb_only; break;
+		case input::active_mouse_and_keyboard::emulated_kb_only: g_active_mouse_and_keyboard = active_mouse_and_keyboard::pad; break;
+		}
 		input_log.notice("toggle_mouse_and_keyboard: device=%s", g_active_mouse_and_keyboard.load());
 		show_mouse_and_keyboard_overlay();
 	}

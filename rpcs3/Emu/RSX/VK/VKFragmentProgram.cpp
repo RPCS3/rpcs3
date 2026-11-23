@@ -23,7 +23,7 @@ std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 
 std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1)
 {
-	return glsl::compareFunctionImpl(f, Op0, Op1);
+	return glsl::compareFunctionAlias(f, Op0, Op1);
 }
 
 void VKFragmentDecompilerThread::prepareBindingTable()
@@ -122,6 +122,12 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 		required_extensions.emplace_back("GL_EXT_shader_explicit_arithmetic_types_float16");
 	}
 
+	if ((device_props.supports_spirv_intrinsics && !device_props.has_native_half_support) ||
+		device_props.supports_denorm_preserve_f32)
+	{
+		required_extensions.emplace_back("GL_EXT_spirv_intrinsics");
+	}
+
 	if (properties.multisampled_sampler_mask)
 	{
 		required_extensions.emplace_back("GL_ARB_shader_texture_image_samples");
@@ -139,6 +145,13 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	}
 
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
+
+	if (device_props.supports_denorm_preserve_f32)
+	{
+		// RSX compares and moves keep full f32 denormals. Some hardware does not support this (NVIDIA, ironically)
+		// Capability DenormPreserve (4464), ExecutionMode DenormPreserve (4459), bit width 32
+		OS << "spirv_execution_mode(capabilities = [4464], 4459, 32);\n\n";
+	}
 
 	glsl::insert_subheader_block(OS);
 }
@@ -404,11 +417,12 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare || device_props.emulated_depth_storage;
 
-	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !vk::is_NVIDIA(vk::get_driver_vendor());
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 
-	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_output_8bit = !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && m_shader_props.ROP_output_8bit;
+	m_shader_props.ROP_output_fp16_quantize = !!(m_prog.ctrl & RSX_SHADER_CONTROL_F16_FRAMEBUFFER);
 	m_shader_props.ROP_sRGB_packing = !!(m_prog.ctrl & RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER);
 	m_shader_props.ROP_alpha_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST);
 	m_shader_props.ROP_alpha_to_coverage_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE);
@@ -628,14 +642,25 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
 
 	const auto pdev = vk::get_current_renderer();
-	if (g_cfg.video.shader_precision == gpu_preset_level::low)
+	const auto precision = g_cfg.video.shader_precision.get();
+	decompiler.device_props.shader_precision = precision;
+
+	// Ultra keeps the emulated f16 path using f32 as it allows 1:1 accuracy with RSX
+	if (precision != gpu_preset_level::ultra)
 	{
 		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
+	}
+
+	if (precision != gpu_preset_level::low)
+	{
+		// Disable DAZ mode only needed when shader precision is high and above
+		decompiler.device_props.supports_denorm_preserve_f32 = pdev->get_shader_denorm_preserve_f32_support();
 	}
 
 	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
 	decompiler.device_props.emulated_depth_storage = vk::emulate_extended_depth_range();
 	decompiler.device_props.has_low_precision_rounding = vk::is_NVIDIA(vk::get_driver_vendor());
+	decompiler.device_props.supports_spirv_intrinsics = true;
 	decompiler.Task();
 
 	constant_offsets = std::move(decompiler.properties.constant_offsets);

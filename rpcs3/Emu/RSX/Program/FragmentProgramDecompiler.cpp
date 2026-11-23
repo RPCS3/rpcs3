@@ -132,8 +132,11 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 		{
 			code = ClampValue(code, RSX_FP_PRECISION_SATURATE);
 		}
-		else if (dst.prec)
+		else if (dst.prec || dst.fp16)
 		{
+			// Fall back to native precision
+			const auto out_prec = dst.prec ? dst.prec : (dst.fp16 ? RSX_FP_PRECISION_HALF : RSX_FP_PRECISION_REAL);
+
 			switch (dst.opcode)
 			{
 			case RSX_FP_OPCODE_NRM:
@@ -154,16 +157,29 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 				[[fallthrough]];
 			default:
 			{
-				// fp16 precsion flag on f32 register; ignore
-				if (dst.prec == 1 && !dst.fp16)
+				// UP2 produces exact halves, there is nothing to quantize.
+				if (out_prec == RSX_FP_PRECISION_HALF && dst.opcode == RSX_FP_OPCODE_UP2)
+				{
 					break;
+				}
+
+				// fp16 precsion flag on f32 register; replace with precision clamp to match real hardware.
+				if (out_prec == RSX_FP_PRECISION_HALF && !dst.fp16)
+				{
+					code = "_builtin_f16_32_clamp(" + code + ")";
+					break;
+				}
 
 				// Native type already has fp16 clamped (input must have been cast)
-				if (dst.prec == 1 && dst.fp16 && device_props.has_native_half_support)
+				if (out_prec == RSX_FP_PRECISION_HALF &&
+					dst.fp16 &&
+					device_props.has_native_half_support)
+				{
 					break;
+				}
 
 				// clamp value to allowed range
-				code = ClampValue(code, dst.prec);
+				code = ClampValue(code, out_prec);
 				break;
 			}
 			}
@@ -329,7 +345,7 @@ std::string FragmentProgramDecompiler::AddTex()
 
 std::string FragmentProgramDecompiler::AddX2d()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0.)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", Format("$float4(0.)"));
 }
 
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
@@ -382,9 +398,10 @@ bool FragmentProgramDecompiler::DstExpectsSca() const
 
 std::string FragmentProgramDecompiler::Format(const std::string& code, bool ignore_redirects)
 {
-	const std::pair<std::string_view, std::function<std::string()>> repl_list[] =
+	// Operands and conditions expand first. Their text can carry type tokens, which the second pass resolves.
+	const std::pair<std::string_view, std::function<std::string()>> operand_list[] =
 	{
-		{ "$$", []() -> std::string { return "$"; } },
+		{ "$$", []() -> std::string { return "$$"; } }, // Keep escapes for the type pass
 		{ "$0", [this]() -> std::string {return GetSRC<SRC0>(src0);} },
 		{ "$1", [this]() -> std::string {return GetSRC<SRC1>(src1);} },
 		{ "$2", [this]() -> std::string {return GetSRC<SRC2>(src2);} },
@@ -399,7 +416,12 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
-		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
+		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) }
+	};
+
+	const std::pair<std::string_view, std::function<std::string()>> type_list[] =
+	{
+		{ "$$", []() -> std::string { return "$"; } },
 		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } },
 		{ "$float3", [this]() -> std::string { return getFloatTypeName(3); } },
 		{ "$float2", [this]() -> std::string { return getFloatTypeName(2); } },
@@ -424,18 +446,18 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 			std::pair<std::string_view, std::string> repl[] = { { "$0", "x2d" } };
 			std::string result = fmt::replace_all(code, repl);
 
-			return fmt::replace_all(result, repl_list);
+			return fmt::replace_all(fmt::replace_all(result, operand_list), type_list);
 		}
 		}
 	}
 
-	return fmt::replace_all(code, repl_list);
+	return fmt::replace_all(fmt::replace_all(code, operand_list), type_list);
 }
 
 std::string FragmentProgramDecompiler::GetRawCond()
 {
 	static constexpr std::string_view f = "xyzw";
-	const auto zero = getFloatTypeName(4) + "(0.)";
+	const auto zero = "$float4(0.)";
 
 	std::string swizzle, cond;
 	swizzle.reserve(5);
@@ -581,7 +603,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		if (opflags & OPFLAGS::src_cast_f32 && src.fp16 && device_props.has_native_half_support)
 		{
 			// Upconvert if there is a chance for ambiguity
-			ret = getFloatTypeName(4) + "(" + ret + ")";
+			ret = "$float4(" + ret + ")";
 		}
 
 		break;
@@ -660,15 +682,15 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				// Point sprite coord generation. Stacks with the 2D override mask.
 				if (!m_prog.texcoord_is_2d(texcoord))
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+					ret += "$float4(gl_PointCoord, 1., 0.)";
 				}
 				else if (!touches_w)
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., 0.)";
+					ret += "$float4(gl_PointCoord, 0., 0.)";
 				}
 				else
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
+					ret += "$float4(gl_PointCoord, 0., in_w)";
 					properties.has_w_access = true;
 				}
 			}
@@ -677,7 +699,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				// Perspective correct flag multiplies the result by 1/w
 				if (m_prog.texcoord_is_2d(texcoord))
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy * gl_FragCoord.w, 0., 1.)";
+					ret += "$float4(" + reg_var + ".xy * gl_FragCoord.w, 0., 1.)";
 				}
 				else
 				{
@@ -693,11 +715,11 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				}
 				else if (!touches_w)
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., 0.)";
+					ret += "$float4(" + reg_var + ".xy, 0., 0.)";
 				}
 				else
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
+					ret += "$float4(" + reg_var + ".xy, 0., in_w)";
 					properties.has_w_access = true;
 				}
 			}
@@ -902,63 +924,134 @@ std::string FragmentProgramDecompiler::BuildCode()
 	std::string float4 = getFloatTypeName(4);
 	const bool glsl = float4 == "vec4";
 
+	// RSX compares f32 denormals by value. If the host flushes the denormals (FTZ) then we have to emulate them.
+	if (device_props.supports_denorm_preserve_f32 || device_props.shader_precision != gpu_preset_level::ultra)
+	{
+		OS <<
+		"#define _builtin_seq equal\n"
+		"#define _builtin_sne notEqual\n"
+		"#define _builtin_sgt greaterThan\n"
+		"#define _builtin_sge greaterThanEqual\n"
+		"#define _builtin_slt lessThan\n"
+		"#define _builtin_sle lessThanEqual\n\n";
+	}
+	else
+	{
+		// The host compare is only wrong when both operands are zero or denormal, where it sees 0 vs 0.
+		// We can append a special condition via an integer sort key on the raw bits as a workaround.
+		// Specials are already handled by the floating point comparison (i.e NaNs, INFs) so the key only differentiates denorms.
+		OS <<
+		"ivec4 _builtin_f32_key(const in vec4 x)\n"
+		"{\n"
+		"	const ivec4 s = floatBitsToInt(x);\n"
+		"	const ivec4 sign = s >> 31;\n"
+		"	return ((s & 0x7fffffff) ^ sign) - sign;\n" // Sign-magnitude to two's complement, -0 == +0
+		"}\n\n"
+
+		"bvec4 _builtin_seq(const in vec4 a, const in vec4 b) { return bvec4(uvec4(equal(a, b)) & uvec4(equal(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sne(const in vec4 a, const in vec4 b) { return bvec4(uvec4(notEqual(a, b)) | uvec4(notEqual(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sgt(const in vec4 a, const in vec4 b) { return bvec4(uvec4(greaterThanEqual(a, b)) & uvec4(greaterThan(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sge(const in vec4 a, const in vec4 b) { return bvec4(uvec4(greaterThanEqual(a, b)) & uvec4(greaterThanEqual(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_slt(const in vec4 a, const in vec4 b) { return bvec4(uvec4(lessThanEqual(a, b)) & uvec4(lessThan(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n"
+		"bvec4 _builtin_sle(const in vec4 a, const in vec4 b) { return bvec4(uvec4(lessThanEqual(a, b)) & uvec4(lessThanEqual(_builtin_f32_key(a), _builtin_f32_key(b)))); }\n\n";
+	}
+
 	if (properties.has_clamp)
 	{
 		std::string precision_func =
-		"$float4 precision_clamp($float4 x, float _min, float _max)\n"
+		"$float4 precision_clamp(const in $float4 x, const in float _min, const in float _max)\n"
 		"{\n"
-		"	// Treat NaNs as 0\n"
-		"	bvec4 nans = isnan(x);\n"
-		"	x = _select(x, $float4(0.), nans);\n"
-		"	return clamp(x, _min, _max);\n"
+		"	const uvec4 m = floatBitsToUint(x) & 0x7fffffffu;\n"                                         // Abs
+		"	const vec4 v = _select(x, $float4(0.), greaterThan(m - 0x00800000u, uvec4(0x7f000000u)));\n" // Flush NaNs, -0 and denorms to +0
+		"	return clamp(v, _min, _max);\n"
 		"}\n\n";
 
 		if (device_props.has_native_half_support)
 		{
 			precision_func +=
-			"$half4 precision_clamp($half4 x, float _min, float _max)\n"
+			"$half4 precision_clamp(const in $half4 x, const in float _min, const in float _max)\n"
 			"{\n"
-			"	// Treat NaNs as 0\n"
-			"	bvec4 nans = isnan(x);\n"
-			"	x = _select(x, $half4(0.), nans);\n"
-			"	return clamp(x, $half_t(_min), $half_t(_max));\n"
+			"	const bvec4 flush = not(greaterThan(abs(x), $half4(0.)));\n"  // Only ever true for NaNs and +-0. f16 denorms kept
+			"	const $half4 v = _select(x, $half4(0.), flush);\n"            // Flush NaNs and -0 to +0
+			"	return clamp(v, $half_t(_min), $half_t(_max));\n"
 			"}\n\n";
 		}
 
 		OS << Format(precision_func);
 	}
 
-	if (!device_props.has_native_half_support)
+	// F16 conversion is determined by the precision level and host caps
+	const bool low_precision = device_props.shader_precision == gpu_preset_level::low;
+	std::string clamp_func;
+
+	clamp_func +=
+		"#define _builtin_f16_trunc(x) uintBitsToFloat(floatBitsToUint(x) & 0xffffe000u)\n";
+
+	if (device_props.has_native_half_support)
 	{
-		// Accurate float to half clamping (preserves IEEE-754 NaN)
-		std::string clamp_func;
-		if (glsl)
+		if (low_precision)
 		{
+			// Raw host casts. Rounds to nearest and overflows from 65520, P16R rounds as well.
 			clamp_func +=
-			"vec2 clamp16(vec2 val){ return unpackHalf2x16(packHalf2x16(val)); }\n"
-			"vec4 clamp16(vec4 val){ return vec4(clamp16(val.xy), clamp16(val.zw)); }\n\n";
+			"#define clamp16(x) $half4(x)\n"
+			"#define _builtin_f16_32_clamp clamp16\n";
 		}
 		else
 		{
+			// Truncating to 10 mantissa bits makes the host conversion match RSX a bit better.
 			clamp_func +=
-			"$float4 clamp16($float4 x)\n"
-			"{\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
-			"	return x;\n"
-			"}\n\n";
+			"\n"
+			"$half4 clamp16(const in $float4 x) { return $half4(_builtin_f16_trunc(x)); }\n"
+			"$half4 clamp16(const in $half4 x) { return x; }\n\n";
 		}
+	}
+	else if (glsl && device_props.supports_spirv_intrinsics && low_precision)
+	{
+		// OpQuantizeToF16 rounds to nearest and may flush f16 denormals.
+		// Truncating to 10 mantissa bits first makes it slightly more accurate.
+		clamp_func +=
+		"#define clamp16(x) _builtin_f16_quantize(_builtin_f16_trunc(x))\n";
+	}
+	else if (glsl)
+	{
+		// Accurate float to half clamping (preserves IEEE-754 NaN)
+		clamp_func +=
+		"#define clamp16 _builtin_f16_sw_quantize\n\n"
 
-		OS << Format(clamp_func);
+		"vec4 _builtin_f16_sw_quantize(const in vec4 val)\n"
+		"{\n"
+		"	const uvec4 raw = floatBitsToUint(val);\n"
+		"	const vec4 normal = uintBitsToFloat(raw & 0xffffe000u);\n"
+		"	const vec4 truncated = trunc(normal * 16777216.) * (1. / 16777216.);\n"        // Truncates mantissa to 10 bits
+		"	const vec4 inf4 = val * 1e35;\n"                                               // Signed inf+nan shorthand
+		"	const bvec4 ovf = greaterThanEqual(raw & 0x7fffffffu, uvec4(0x47800000u));\n"  // Combined INF+NaN check
+		"	return _select(truncated, inf4, ovf);\n"
+		"}\n\n";
 	}
 	else
 	{
-		// Define raw casts from f32->f16
-		OS <<
-		"#define clamp16(x) " << getHalfTypeName(4) << "(x)\n";
+		// Unimplemented
+		clamp_func +=
+			"#define clamp16(x) (x)\n"
+			"#define _builtin_f16_32_clamp(x) (x)\n";
 	}
+
+	if (glsl && !(device_props.has_native_half_support && low_precision))
+	{
+		// P16R does not round, so it should not quantize, only clamp + flush denorms
+		clamp_func +=
+		"\n"
+		"vec4 _builtin_f16_32_clamp(const in vec4 val)\n"
+		"{\n"
+		"	const uvec4 raw = floatBitsToUint(val);\n"
+		"	const vec4 flushed = _select(val, vec4(0.), equal(raw & 0x7f800000u, uvec4(0u)));\n" // Denormals are zero for F16_32 clamping
+		"	const bvec4 ovf = greaterThanEqual(abs(val), vec4(65536.));\n"
+		"	const vec4 inf4 = val * 1e35;\n"
+		"	return _select(flushed, inf4, ovf);\n"
+		"}\n\n";
+	}
+
+	OS << Format(clamp_func);
 
 	OS <<
 	"#define _builtin_log2 log2\n"
@@ -1057,6 +1150,16 @@ std::string FragmentProgramDecompiler::BuildCode()
 		"}\n\n";
 	}
 
+	if (device_props.supports_spirv_intrinsics &&
+		!device_props.has_native_half_support &&
+		device_props.shader_precision == gpu_preset_level::low)
+	{
+		OS <<
+		"spirv_instruction(id = 116) float _builtin_f16_quantize(float x);\n"
+		"spirv_instruction(id = 116) vec2 _builtin_f16_quantize(vec2 x);\n"
+		"spirv_instruction(id = 116) vec4 _builtin_f16_quantize(vec4 x);\n\n";
+	}
+
 	insertMainStart(OS);
 	OS << main << std::endl;
 
@@ -1090,7 +1193,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::DP2), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP3:
-		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && g_cfg.video.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_PRECISE : FUNCTION::DP3), OPFLAGS::op_extern);
+		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && device_props.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_PRECISE : FUNCTION::DP3), OPFLAGS::op_extern);
 		return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::DP2A), OPFLAGS::op_extern); return true;
@@ -1133,15 +1236,20 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	// PK4 = PK4B (4 signed 8-bit scalars)
 	// PKB = PK4UB (4 unsigned 8-bit scalars)
 	// PK16/UP16 behavior confirmed by Saints Row: Gat out of Hell, ARGB8 -> X16Y16 conversion relies on this to render the wings
-	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packHalf2x16($0.xy)))"); return true;
-	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm4x8($0)))"); return true;
-	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
+	case RSX_FP_OPCODE_PK2:
+		// H sources already hold exact halves, only f32 inputs need the RSX conversion
+		SetDst((src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP)
+			? "$float4(uintBitsToFloat(packHalf2x16($0.xy)))"
+			: "$float4(uintBitsToFloat(packHalf2x16(clamp16($0).xy)))");
+		return true;
+	case RSX_FP_OPCODE_PK4: SetDst("$float4(uintBitsToFloat(packSnorm4x8($0)))"); return true;
+	case RSX_FP_OPCODE_PK16: SetDst("$float4(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
 		// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
 		properties.has_pkg = true;
 		SetDst("_builtin_pkg($0)");
 		return true;
-	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
+	case RSX_FP_OPCODE_PKB: SetDst("$float4(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
 
 	// Custom ISA extensions for 16-bit OR
@@ -1319,13 +1427,15 @@ std::string FragmentProgramDecompiler::Decompile()
 			rop_block->insert_pred(tail_block);
 		}
 
+		// First, run the block annotation pass. ROP block does not require this, only native code does.
+		FP::RegisterAnnotationPass annotation_pass{ m_prog, { .skip_delay_slots = true } };
+		m_is_valid_ucode = m_is_valid_ucode && annotation_pass.run(graph);
+
+		// NOTE: Annotation pass will rebuild block inputs, so we need to add the ROP inputs after it has run.
 		const auto rop_inputs = get_fragment_program_output_set(m_prog.ctrl, m_prog.mrt_buffers_count);
 		rop_block->input_list.insert(rop_block->input_list.end(), rop_inputs.begin(), rop_inputs.end());
 
-		FP::RegisterAnnotationPass annotation_pass{ m_prog, { .skip_delay_slots = true } };
 		FP::RegisterDependencyPass dependency_pass{};
-
-		m_is_valid_ucode = m_is_valid_ucode && annotation_pass.run(graph);
 		m_is_valid_ucode = m_is_valid_ucode && dependency_pass.run(graph);
 	}
 

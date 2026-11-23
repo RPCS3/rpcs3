@@ -1,6 +1,7 @@
 #pragma once
 #include "ShaderParam.h"
 #include "RSXFragmentProgram.h"
+#include "Emu/system_config_types.h"
 
 #include <sstream>
 #include <unordered_map>
@@ -192,7 +193,10 @@ public:
 
 	struct
 	{
+		gpu_preset_level shader_precision = gpu_preset_level::high;
 		bool has_native_half_support = false;
+		bool supports_spirv_intrinsics = false;
+		bool supports_denorm_preserve_f32 = false;
 		bool emulate_depth_compare = false;
 		bool has_low_precision_rounding = false;
 		bool emulated_depth_storage = false;

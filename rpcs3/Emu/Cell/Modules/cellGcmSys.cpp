@@ -5,6 +5,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXThread.h"
 
 #include "cellGcmSys.h"
@@ -94,6 +95,31 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 		return 0x0E800000; // 232MB
 	}
 	return 0x0E000000; // 224MB
+}
+
+u32 gcmGetSystemFlags(u32 sdk_version, b8 is_main_memory)
+{
+	u32 result = is_main_memory ? 0 : 0x10;
+
+	if (sdk_version > 0x21FFFF)
+	{
+		// Unknown
+		//result |= condition ? 0x20 : 0;
+	}
+
+	if (sdk_version > 0x24FFFF)
+	{
+		result |= 0x200;
+	}
+	else
+	{
+		if (rsx::get_current_renderer()->debug_level)
+		{
+			result |= 0x800;
+		}
+	}
+
+	return result;
 }
 
 error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_strict);
@@ -368,7 +394,11 @@ error_code cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cul
 void cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 {
 	cellGcmSys.trace("cellGcmGetConfiguration(config=*0x%x)", config);
-	*config = g_fxo->get<gcm_config>().current_config;
+
+	if (g_fxo->get<gcm_config>().lv2_context_id != umax)
+	{
+		*config = g_fxo->get<gcm_config>().current_config;
+	}
 }
 
 u32 cellGcmGetFlipStatus()
@@ -413,11 +443,14 @@ void _cellGcmFunc15(vm::ptr<CellGcmContextData> context)
 u32 g_defaultCommandBufferBegin, g_defaultCommandBufferFragmentCount;
 
 // Called by cellGcmInit
-error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
+error_code cellGcmInitInternal(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress, b8 is_main_memory)
 {
-	ppu.state += cpu_flag::wait;
+	if (!is_main_memory)
+	{
+		ioAddress = rsx::constants::local_mem_base; 
+	}
 
-	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
+	ppu.state += cpu_flag::wait;
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
@@ -429,7 +462,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 
 	//if (!gcm_cfg.local_size && !gcm_cfg.local_addr)
 	{
-		gcm_cfg.local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
+		gcm_cfg.local_size = gcmGetLocalMemorySize(g_ps3_process_info.sdk_ver);
 		gcm_cfg.local_addr = rsx::constants::local_mem_base;
 		vm::falloc(gcm_cfg.local_addr, gcm_cfg.local_size, vm::video);
 	}
@@ -453,13 +486,19 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 
 	ensure(sys_rsx_device_map(ppu, vm::var<u64>{}, vm::null, 0x8) == CELL_OK);
 	const vm::var<u32> context_id;
-	ensure(sys_rsx_context_allocate(ppu, context_id, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
+
+	ensure(sys_rsx_context_allocate(ppu, context_id, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcmGetSystemFlags(g_ps3_process_info.sdk_ver, is_main_memory)) == CELL_OK);
 	gcm_cfg.lv2_context_id = *context_id;
 
-	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
+	if (is_main_memory)
 	{
-		return CELL_GCM_ERROR_FAILURE;
+		if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
+		{
+			return CELL_GCM_ERROR_FAILURE;
+		}
 	}
+
+	sys_rsx_context_attribute(*context_id, SYS_RSX_CONTEXT_ATTR_CMD_FIFO_RESET, 0x1000, 0x1000, 0, 0);
 
 	gcm_cfg.current_config.ioSize = ioSize;
 	gcm_cfg.current_config.ioAddress = ioAddress;
@@ -500,6 +539,24 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	thread_ctrl::notify(*render->intr_thread);
 
 	return CELL_OK;
+}
+
+error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
+{
+	ppu.state += cpu_flag::wait;
+
+	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
+
+	return cellGcmInitInternal(ppu, context, cmdSize, ioSize, ioAddress, true);
+}
+
+error_code cellGcmInit2_xB70B4AD3(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress, b8 is_main_memory)
+{
+	ppu.state += cpu_flag::wait;
+
+	cellGcmSys.warning("cellGcmInit2_xB70B4AD3(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x, is_main_memory=%s)", context, cmdSize, ioSize, ioAddress, is_main_memory);
+
+	return cellGcmInitInternal(ppu, context, cmdSize, ioSize, ioAddress, is_main_memory);
 }
 
 void cellGcmResetFlipStatus()
@@ -1068,13 +1125,20 @@ error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	if (auto error = sys_rsx_context_iomap(ppu, g_fxo->get<gcm_config>().lv2_context_id, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	const u32 lv2_id = gcm_cfg.lv2_context_id;
+
+	if (lv2_id == umax)
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	if (auto error = sys_rsx_context_iomap(ppu, lv2_id, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
 	{
 		return error;
 	}
 
 	// Assume lock is acquired
-	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	ea >>= 20, io >>= 20, size >>= 20;
 
 	// Fill the offset table
@@ -1586,6 +1650,7 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, _cellGcmFunc1);
 	REG_FUNC(cellGcmSys, _cellGcmFunc15);
 	REG_FUNC(cellGcmSys, _cellGcmInitBody);
+	REG_FNID(cellGcmSys, 0xB70B4AD3, cellGcmInit2_xB70B4AD3);
 	REG_FUNC(cellGcmSys, cellGcmInitSystemMode);
 	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus);
 	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus2);

@@ -70,7 +70,8 @@ bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 		return false;
 	}
 
-	if (input::g_active_mouse_and_keyboard != input::active_mouse_and_keyboard::emulated)
+	const input::active_mouse_and_keyboard kbm_mode = input::g_active_mouse_and_keyboard;
+	if (kbm_mode != input::active_mouse_and_keyboard::emulated && kbm_mode != input::active_mouse_and_keyboard::emulated_kb_only)
 	{
 		if (!m_keys_released)
 		{

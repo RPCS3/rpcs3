@@ -249,9 +249,9 @@ namespace rsx::assembler::FP
 			instruction.bytecode[0] = dst.HEX;
 			instruction.bytecode[1] = src0.HEX;
 
-			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = true };
+			Register src_reg{ .id = static_cast<int>(src_reg_id), .f16 = false };
 			instruction.srcs.push_back({ .reg = std::move(src_reg), .mask = 0xF });
-			instruction.dsts.push_back({ .reg{.id = reg.reg.id, .f16 = false }, .mask = dst.write_mask });
+			instruction.dsts.push_back({ .reg{.id = reg.reg.id, .f16 = true }, .mask = dst.write_mask });
 			result.push_back(std::move(instruction));
 		}
 

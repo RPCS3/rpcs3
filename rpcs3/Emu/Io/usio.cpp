@@ -46,7 +46,7 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 struct usio_memory
 {
 	std::vector<u8> backup_memory;
-	std::array<std::array<u8, 0x40>, g_cfg_usio.players.size()> card_data{};
+	std::array<std::array<u8, nfc_reader::mifare_1k_size>, g_cfg_usio.players.size()> card_data{};
 
 	usio_memory() = default;
 	usio_memory(const usio_memory&) = delete;
@@ -184,10 +184,9 @@ void usb_device_usio::load_backup()
 	for (usz i = 0; i < memory.card_data.size(); i++)
 	{
 		if (fs::file usio_card_file;
-			usio_card_file.open(fmt::format("%s/caches/usio_card_p%d.bin", rpcs3::utils::get_hdd1_dir(), i + 1), fs::read) &&
-			usio_card_file.size() == memory.card_data[i].size())
+			usio_card_file.open(fmt::format(usio_card_path, rpcs3::utils::get_hdd1_dir(), i + 1), fs::read))
 		{
-			usio_card_file.read(memory.card_data[i].data(), memory.card_data[i].size());
+			usio_card_file.read(memory.card_data[i].data(), std::min(static_cast<u64>(memory.card_data[i].size()), usio_card_file.size()));
 		}
 	}
 }
@@ -197,6 +196,8 @@ void usb_device_usio::save_backup()
 	if (!is_used)
 		return;
 
+	usio_memory& memory = g_fxo->get<usio_memory>();
+
 	fs::file usio_backup_file;
 
 	if (!usio_backup_file.open(usio_backup_path, fs::create + fs::write + fs::lock))
@@ -205,10 +206,22 @@ void usb_device_usio::save_backup()
 		return;
 	}
 
-	const u64 file_size = g_fxo->get<usio_memory>().backup_memory.size();
+	const u64 file_size = memory.backup_memory.size();
 
-	usio_backup_file.write(g_fxo->get<usio_memory>().backup_memory.data(), file_size);
+	usio_backup_file.write(memory.backup_memory.data(), file_size);
 	usio_backup_file.trunc(file_size);
+
+	for (usz i = 0; i < memory.card_data.size(); i++)
+	{
+		if (fs::file usio_card_file;
+			usio_card_file.open(fmt::format(usio_card_path, rpcs3::utils::get_hdd1_dir(), i + 1), fs::create + fs::write + fs::lock))
+		{
+			const u64 card_file_size = memory.card_data[i].size();
+
+			usio_card_file.write(memory.card_data[i].data(), card_file_size);
+			usio_card_file.trunc(card_file_size);
+		}
+	}
 }
 
 void usb_device_usio::translate_input_taiko()
@@ -533,9 +546,12 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 		reader_index = static_cast<usio_reg>(reg) == usio_reg::card_reader_0_write ? 0 : 1;
 		auto& status = ::at32(m_io_status, reader_index);
 		const usz card_player = reader_index * 2 + status.card_index;
-		const auto& card = g_fxo->get<usio_memory>().card_data[card_player];
+		std::span<u8> card = {};
 
-		status.card_reader.process_request(buf, card, status.card_tapped);
+		if (status.card_tapped)
+			card = g_fxo->get<usio_memory>().card_data[card_player];
+
+		status.card_reader.process_request(buf, card);
 		break;
 	}
 	default:

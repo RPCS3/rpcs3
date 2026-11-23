@@ -6,12 +6,6 @@ R"(
 #define _test_bit(x, y) (_get_bits(x, y, 1) != 0)
 #define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)
 
-#ifdef _GPU_LOW_PRECISION_COMPARE
-#define CMP_FIXUP(a) (sign(a) * 16. + a)
-#else
-#define CMP_FIXUP(a) (a)
-#endif
-
 #define _builtin_approx_pow(a, b) exp2((b) * log2(a))
 
 #ifdef _ENABLE_LIT_EMULATION

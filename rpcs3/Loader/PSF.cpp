@@ -222,7 +222,7 @@ namespace psf
 		{
 			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, error::corrupt);
 			PSF_CHECK(indices[i].param_len <= indices[i].param_max, error::corrupt);
-			PSF_CHECK(indices[i].param_max > (indices[i].param_fmt == format::string ? 1 : 0), error::corrupt);
+			PSF_CHECK(indices[i].param_max > (indices[i].param_fmt == format::string ? 1u : 0u), error::corrupt);
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);

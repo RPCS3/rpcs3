@@ -75,6 +75,8 @@ private:
 		case localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_OFF: return tr("Analog limiter of player %0 disabled", "Analog limiter toggled off").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_ANALOG_LIMITER_TOGGLED_ON: return tr("Analog limiter of player %0 enabled", "Analog limiter toggled on").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED: return tr("Mouse and keyboard are now used as emulated devices.", "Mouse and keyboard emulated");
+		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED_MOUSE_ONLY: return tr("Mouse is now used as emulated device.", "Mouse emulated");
+		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_EMULATED_KB_ONLY: return tr("Keyboard is now used as emulated device.", "Keyboard emulated");
 		case localized_string_id::RSX_OVERLAYS_MOUSE_AND_KEYBOARD_PAD: return tr("Mouse and keyboard are now used as pad.", "Mouse and keyboard pad");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME: return tr("ERROR: HDD boot game is corrupted. The application will continue.", "Game Error");
@@ -256,6 +258,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_RESOLUTION_SCALE_THRESHOLD: return tr("Resolution Scale Threshold", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STRETCH_TO_DISPLAY: return tr("Stretch To Display Area", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STEREO_MODE: return tr("Stereo Mode", "Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_OPENXR_RENDER_MODE: return tr("OpenXR Render Mode", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT: return tr("Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_BACKGROUND_INPUT: return tr("Background Input Enabled", "Input");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT_KEEP_PADS_CONNECTED: return tr("Keep Pads Connected", "Input");

@@ -28,6 +28,9 @@
     <Filter Include="Emu\Io\Null">
       <UniqueIdentifier>{fcac6852-b45f-4cf2-afee-cf56bcea14e5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\Io\openxr">
+      <UniqueIdentifier>{244b66a0-133d-4ca9-b212-6d2753b82725}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Emu\GPU">
       <UniqueIdentifier>{6674e2ab-90cd-47de-a852-d21643ab18c2}</UniqueIdentifier>
     </Filter>
@@ -1161,6 +1164,15 @@
     </ClCompile>
     <ClCompile Include="Emu\perf_monitor.cpp">
       <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\openxr\openxr_session.cpp">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\openxr\openxr_input.cpp">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\openxr\openxr_renderer.cpp">
+      <Filter>Emu\Io\openxr</Filter>
     </ClCompile>
     <ClCompile Include="Crypto\decrypt_binaries.cpp">
       <Filter>Crypto</Filter>
@@ -2577,6 +2589,27 @@
     </ClInclude>
     <ClInclude Include="Emu\perf_monitor.hpp">
       <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_common.h">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_frame_share.h">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_frame_share_vk.h">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_input.h">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_renderer.h">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_session.h">
+      <Filter>Emu\Io\openxr</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\openxr\openxr_thread.h">
+      <Filter>Emu\Io\openxr</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>

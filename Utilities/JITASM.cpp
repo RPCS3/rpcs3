@@ -117,10 +117,10 @@ void jit_announce(uptr func, usz size, std::string_view name)
 	}
 }
 
-static u8* get_jit_memory()
+static u8* get_jit_memory(bool reset = false)
 {
 	// Reserve 2G memory (magic static)
-	static void* const s_memory2 = []() -> void*
+	auto reserve = []() -> void*
 	{
 		void* ptr = utils::memory_reserve(0x80000000, true);
 #ifdef CAN_OVERCOMMIT
@@ -128,7 +128,15 @@ static u8* get_jit_memory()
 		utils::memory_protect(ptr, 0x40000000, utils::protection::wx);
 #endif
 		return ptr;
-	}();
+	};
+
+	static void* s_memory2 = reserve();
+
+	if (s_memory2 && reset)
+	{
+		utils::memory_release(s_memory2, 0x80000000);
+		s_memory2 = reserve();
+	}
 
 	return static_cast<u8*>(s_memory2);
 }
@@ -315,12 +323,7 @@ void jit_runtime::finalize() noexcept
 	pthread_jit_write_protect_np(false);
 #endif
 	// Reset JIT memory
-#ifdef CAN_OVERCOMMIT
-	utils::memory_reset(get_jit_memory(), 0x80000000, true);
-	utils::memory_protect(get_jit_memory(), 0x40000000, utils::protection::wx);
-#else
-	utils::memory_decommit(get_jit_memory(), 0x80000000, true);
-#endif
+	get_jit_memory(true);
 
 	s_code_pos = 0;
 	s_data_pos = 0;

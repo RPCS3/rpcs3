@@ -148,7 +148,7 @@ static u64 _sys_rsx_get_timestamp()
 	return get_timebased_time();
 }
 
-static void set_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
+static void _sys_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
 {
 	{
 		rsx::eng_lock rlock(render);
@@ -200,7 +200,7 @@ static void set_rsx_dmactl(rsx::thread* render, rsx::context* ctx, u64 get_put)
 	}
 }
 
-bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3)
+bool _sys_rsx_send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 data3, std::unique_lock<shared_mutex>* lock)
 {
 	if (!ctx->fw.driver_info)
 	{
@@ -211,30 +211,56 @@ bool rsx::thread::send_event(rsx::context* ctx, u64 data1, u64 event_flags, u64 
 	// Filter event bits, send them only if they are masked by gcm
 	// Except the upper 32-bits, they are reserved for unmapped io events and execute unconditionally
 	event_flags &= vm::_ref<RsxDriverInfo>(ctx->fw.driver_info).handlers | 0xffff'ffffull << 32;
-
 	if (!event_flags)
 	{
 		// Nothing to do
 		return true;
 	}
 
-	auto error = sys_event_port_send(ctx->fw.rsx_event_port, data1, event_flags, data3);
+	// Must be externally locked before we reach here.
+	const bool owns_lock = lock && lock->owns_lock();
+	const auto context_id = ctx->id();
+	auto rsxthr = ctx->rsxthr;
+	auto cpu = get_current_cpu_thread();
 
+	auto error = sys_event_port_send(ctx->fw.rsx_event_port, data1, event_flags, data3);
 	while (error + 0u == CELL_EBUSY)
 	{
-		auto cpu = get_current_cpu_thread();
-
 		if (cpu && cpu->get_class() == thread_class::ppu)
 		{
 			// Deschedule
 			lv2_obj::sleep(*cpu, 100);
 		}
 
+		// Release the lock, dump the context
+		if (owns_lock)
+		{
+			lock->unlock();
+			ctx = nullptr;
+		}
+
 		// Wait a bit before resending event
 		thread_ctrl::wait_for(100);
 
+		if (owns_lock)
+		{
+			// Re-acquire the lock and grab the context
+			if (!_sys_rsx_lock_context_calls(rsxthr, *lock))
+			{
+				return false;
+			}
+
+			if (!(ctx = rsxthr->find_context(context_id)))
+			{
+				// Context lost
+				return false;
+			}
+		}
+
 		if (cpu && cpu->get_class() == thread_class::rsx)
+		{
 			cpu->cpu_wait({});
+		}
 
 		if (Emu.IsStopped() || (cpu && cpu->check_state()))
 		{
@@ -447,7 +473,9 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 {
 	cpu.state += cpu_flag::wait;
 
-	sys_rsx.warning("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
+	const bool has_unknown_system_flags = (system_mode & ~0xA30) != 0;
+
+	(has_unknown_system_flags ? sys_rsx.error : sys_rsx.warning)("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
 
 	if (!vm::check_addr(rsx::constants::local_mem_base))
@@ -552,6 +580,8 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	ctx->display_buffers_count = 0;
 	ctx->current_display_buffer = 0;
 	ctx->fw.label_addr = vm::cast(*lpar_reports);
+
+	ctx->fw.is_fifo_rsx_local = !!(system_mode & 0x10);
 	render->init_context(ctx, dma_address);
 
 	if (first)
@@ -817,23 +847,23 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(ctx->fw.driver_info);
 	switch (package_id)
 	{
-	case 0x001: // FIFO
+	case SYS_RSX_CONTEXT_ATTR_CMD_FIFO_RESET: // FIFO
 	{
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
 		const u64 get_put = put << 32 | get;
 
-		set_rsx_dmactl(render, ctx, get_put);
+		_sys_rsx_dmactl(render, ctx, get_put);
 		break;
 	}
-	case 0x100: // Display mode set
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_MODE: // Display mode set
 		break;
-	case 0x101: // Display sync set, cellGcmSetFlipMode
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_VSYNC: // Display sync set, cellGcmSetFlipMode
 		// a4 == 2 is vsync, a4 == 1 is hsync
 		render->requested_vsync.store(a4 == 2);
 		break;
 
-	case 0x102: // Display flip
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_FLIP: // Display flip
 	{
 		u32 flip_idx = ~0u;
 
@@ -887,7 +917,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 		break;
 	}
-	case 0x103: // Display Queue
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_QUEUE: // Display Queue
 	{
 		// NOTE: There currently seem to only be 2 active heads on PS3
 		ensure(a3 < 2);
@@ -896,7 +926,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
 		render->on_frame_end(ctx, static_cast<u32>(a4));
-		if (!render->send_event(ctx, 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
+		if (!_sys_rsx_send_event(ctx, 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0, &lock))
 		{
 			break;
 		}
@@ -907,7 +937,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 		break;
 	}
-	case 0x104: // Display buffer
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_BUFFER: // Display buffer
 	{
 		const u8 id = a3 & 0xFF;
 		if (id > 7)
@@ -930,13 +960,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		ctx->display_buffers_count = std::max<u32>(id + 1, ctx->display_buffers_count);
 		break;
 	}
-	case 0x105: // destroy buffer?
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_BUFFER_RESET: // destroy buffer?
 		break;
 
 	case 0x106: // ? (Used by cellGcmInitPerfMon)
 		break;
 
-	case 0x108: // cellGcmSetVBlankFrequency, cellGcmSetSecondVFrequency
+	case SYS_RSX_CONTEXT_ATTR_CMD_DISPLAY_VBLANK: // cellGcmSetVBlankFrequency, cellGcmSetSecondVFrequency
 		// a4 == 3, CELL_GCM_DISPLAY_FREQUENCY_59_94HZ
 		// a4 == 2, CELL_GCM_DISPLAY_FREQUENCY_SCANOUT
 		// a4 == 4, CELL_GCM_DISPLAY_FREQUENCY_DISABLE
@@ -956,7 +986,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		break;
 
-	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
+	case SYS_RSX_CONTEXT_ATTR_CMD_FLIP_STATUS: // ? Involved in managing flip status through cellGcmResetFlipStatus
 	{
 		if (a3 > 7)
 		{
@@ -972,7 +1002,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		});
 		break;
 	}
-	case 0x10b:
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_CURSOR_POS:
 		// when a4=3, cellGcmSetCursorPosition(a5=xpos, a6=ypos)
 		// when a4=2, cellGcmSetCursorImageOffset(a5=offset)
 		if (a4 == 3)
@@ -982,7 +1012,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		else
 			sys_rsx.error("Unknown subfunction 0x%llx (package=0x10b)", a4);
 		break;
-	case 0x10c:
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_CURSOR:
 		// when a4=1, cellGcmSetCursorEnable()
 		// when a4=2, cellGcmSetCursorDisable()
 		if (a4 == 1)
@@ -992,13 +1022,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		else
 			sys_rsx.error("Unknown subfunction 0x%llx (package=0x10c)", a4);
 		break;
-	case 0x10d:
+	case SYS_RSX_CONTEXT_ATTR_CMD_CURSOR_INIT:
 		// cellGcmInitCursor(a3=1, a4=1, a5=0, a6=0)
 		ensure(a4 == 1);
 		_sys_rsx_init_cursor_overlay();
 		break;
 
-	case 0x300: // Tiles
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_TILE: // Tiles
 	{
 		//a4 high bits = ret.tile = (location + 1) | (bank << 4) | ((offset / 0x10000) << 16) | (location << 31);
 		//a4 low bits = ret.limit = ((offset + size - 1) / 0x10000) << 16 | (location << 31);
@@ -1020,7 +1050,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u32 pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
 		const u32 comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
 		const u32 base = (a5 & 0xFFFFFFFF) & 0x7FF;
-		//const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
+		const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0x3;
 		const bool bound = ((a4 >> 32) & 0x3) != 0;
 
 		const auto range = utils::address_range32::start_length(offset, size);
@@ -1074,11 +1104,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		tile.pitch = pitch;
 		tile.comp = comp;
 		tile.base = base;
-		tile.bank = base;
+		tile.bank = bank;
 		tile.bound = bound;
 		break;
 	}
-	case 0x301: // Depth-buffer (Z-cull)
+	case SYS_RSX_CONTEXT_ATTR_CMD_SET_ZCULL: // Depth-buffer (Z-cull)
 	{
 		//a4 high = region = (1 << 0) | (zFormat << 4) | (aaFormat << 8);
 		//a4 low = size = ((width >> 6) << 22) | ((height >> 6) << 6);
@@ -1167,7 +1197,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// NOTE: Realhw resets 16 bytes of this semaphore for some reason
 		vm::_ptr<atomic_t<u128>>(ctx->fw.label_addr + 0x10)->store(u128{});
 
-		render->send_event(ctx, 0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
+		_sys_rsx_send_event(ctx, 0, SYS_RSX_EVENT_FLIP_BASE << 1, 0, &lock);
 		break;
 	}
 	case 0xFED: // hack: vblank command
@@ -1203,7 +1233,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (render->enable_second_vhandler)
 			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
 
-		render->send_event(ctx, 0, event_flags, 0);
+		_sys_rsx_send_event(ctx, 0, event_flags, 0, &lock);
 		break;
 	}
 
@@ -1226,7 +1256,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			driverInfo.userCmdParam = intr_cause;
 		}
 
-		render->send_event(ctx, 0, SYS_RSX_EVENT_USER_CMD, 0);
+		_sys_rsx_send_event(ctx, 0, SYS_RSX_EVENT_USER_CMD, 0, &lock);
 		break;
 	}
 

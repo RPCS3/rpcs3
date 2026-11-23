@@ -91,7 +91,8 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 		return false;
 	}
 
-	if (input::g_active_mouse_and_keyboard != input::active_mouse_and_keyboard::emulated)
+	const input::active_mouse_and_keyboard kbm_mode = input::g_active_mouse_and_keyboard;
+	if (kbm_mode != input::active_mouse_and_keyboard::emulated && kbm_mode != input::active_mouse_and_keyboard::emulated_mouse_only)
 	{
 		return false;
 	}

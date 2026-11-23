@@ -81,17 +81,17 @@ namespace glsl
 			switch (f)
 			{
 			case COMPARE::SEQ:
-				return fmt::format("CMP_FIXUP(%s) == CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s == %s", Op0, Op1);
 			case COMPARE::SGE:
-				return fmt::format("CMP_FIXUP(%s) >= CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s >= %s", Op0, Op1);
 			case COMPARE::SGT:
-				return fmt::format("CMP_FIXUP(%s) > CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s > %s", Op0, Op1);
 			case COMPARE::SLE:
-				return fmt::format("CMP_FIXUP(%s) <= CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s <= %s", Op0, Op1);
 			case COMPARE::SLT:
-				return fmt::format("CMP_FIXUP(%s) < CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s < %s", Op0, Op1);
 			case COMPARE::SNE:
-				return fmt::format("CMP_FIXUP(%s) != CMP_FIXUP(%s)", Op0, Op1);
+				return fmt::format("%s != %s", Op0, Op1);
 			}
 		}
 		else
@@ -99,18 +99,39 @@ namespace glsl
 			switch (f)
 			{
 			case COMPARE::SEQ:
-				return fmt::format("equal(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("equal(%s, %s)", Op0, Op1);
 			case COMPARE::SGE:
-				return fmt::format("greaterThanEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("greaterThanEqual(%s, %s)", Op0, Op1);
 			case COMPARE::SGT:
-				return fmt::format("greaterThan(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("greaterThan(%s, %s)", Op0, Op1);
 			case COMPARE::SLE:
-				return fmt::format("lessThanEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("lessThanEqual(%s, %s)", Op0, Op1);
 			case COMPARE::SLT:
-				return fmt::format("lessThan(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("lessThan(%s, %s)", Op0, Op1);
 			case COMPARE::SNE:
-				return fmt::format("notEqual(CMP_FIXUP(%s), CMP_FIXUP(%s))", Op0, Op1);
+				return fmt::format("notEqual(%s, %s)", Op0, Op1);
 			}
+		}
+
+		fmt::throw_exception("Unknown compare function");
+	}
+
+	std::string compareFunctionAlias(COMPARE f, std::string_view Op0, std::string_view Op1)
+	{
+		switch (f)
+		{
+		case COMPARE::SEQ:
+			return fmt::format("_builtin_seq(%s, %s)", Op0, Op1);
+		case COMPARE::SGE:
+			return fmt::format("_builtin_sge(%s, %s)", Op0, Op1);
+		case COMPARE::SGT:
+			return fmt::format("_builtin_sgt(%s, %s)", Op0, Op1);
+		case COMPARE::SLE:
+			return fmt::format("_builtin_sle(%s, %s)", Op0, Op1);
+		case COMPARE::SLT:
+			return fmt::format("_builtin_slt(%s, %s)", Op0, Op1);
+		case COMPARE::SNE:
+			return fmt::format("_builtin_sne(%s, %s)", Op0, Op1);
 		}
 
 		fmt::throw_exception("Unknown compare function");
@@ -180,10 +201,6 @@ namespace glsl
 	void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props)
 	{
 		std::vector<std::string_view> enabled_options;
-		if (props.low_precision_tests)
-		{
-			enabled_options.push_back("_GPU_LOW_PRECISION_COMPARE");
-		}
 
 		if (props.require_lit_emulation)
 		{
@@ -248,6 +265,11 @@ namespace glsl
 				enabled_options.push_back("_32_BIT_OUTPUT");
 			}
 
+			if (props.ROP_output_8bit)
+			{
+				enabled_options.push_back("_ENABLE_8BIT_FRAMEBUFFER");
+			}
+
 			if (props.ROP_sRGB_packing)
 			{
 				enabled_options.push_back("_ENABLE_FRAMEBUFFER_SRGB");
@@ -261,6 +283,11 @@ namespace glsl
 			if (props.ROP_output_rounding)
 			{
 				enabled_options.push_back("_ENABLE_ROP_OUTPUT_ROUNDING");
+			}
+
+			if (props.ROP_output_fp16_quantize)
+			{
+				enabled_options.push_back("_ENABLE_FP16_EXPORT_QUANTIZATION");
 			}
 
 			if (props.ROP_alpha_test)

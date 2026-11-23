@@ -138,14 +138,14 @@ bool comparison_passes(const in float a, const in float b, const in uint func)
 	switch (func)
 	{
 		default:
-		case 0: return false; //never
-		case 1: return (CMP_FIXUP(a) < CMP_FIXUP(b)); //less
-		case 2: return (CMP_FIXUP(a) == CMP_FIXUP(b)); //equal
-		case 3: return (CMP_FIXUP(a) <= CMP_FIXUP(b)); //lequal
-		case 4: return (CMP_FIXUP(a) > CMP_FIXUP(b)); //greater
-		case 5: return (CMP_FIXUP(a) != CMP_FIXUP(b)); //nequal
-		case 6: return (CMP_FIXUP(a) >= CMP_FIXUP(b)); //gequal
-		case 7: return true; //always
+		case 0: return false;    // never
+		case 1: return (a < b);  // less
+		case 2: return (a == b); // equal
+		case 3: return (a <= b); // lequal
+		case 4: return (a > b);  // greater
+		case 5: return (a != b); // nequal
+		case 6: return (a >= b); // gequal
+		case 7: return true;     // always
 	}
 }
 #endif
