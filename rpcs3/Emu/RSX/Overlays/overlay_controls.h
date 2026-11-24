@@ -280,7 +280,7 @@ namespace rsx
 			virtual font* get_font() const;
 			virtual std::vector<vertex> render_text(const char32_t* string, f32 x, f32 y);
 			virtual compiled_resource& get_compiled();
-			void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
+			virtual void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const;
 			virtual void set_selected(bool selected) { static_cast<void>(selected); }
 			virtual void set_visible(bool visible) { this->visible = visible; m_is_compiled = false; }
 			virtual bool is_visible() const { return visible; }
