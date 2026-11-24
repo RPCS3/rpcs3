@@ -168,15 +168,18 @@ bool config_checker::check_config(cfg_mode mode, QString content_or_serial, QStr
 			}
 		}
 
-		if (mode == cfg_mode::database_config && !m_db_config.empty())
+		if (!m_db_config.empty())
 		{
-			gui_log.notice("config_checker: Applying database config: %s", custom_config_path);
-
-			if (!config->from_string(m_db_config))
+			if (mode == cfg_mode::database_config)
 			{
-				gui_log.error("config_checker: Failed to apply database config:\n%s", m_db_config);
-				result = tr("Failed to apply database config!");
-				return false;
+				gui_log.notice("config_checker: Applying database config: %s", custom_config_path);
+
+				if (!config->from_string(m_db_config))
+				{
+					gui_log.error("config_checker: Failed to apply database config:\n%s", m_db_config);
+					result = tr("Failed to apply database config!");
+					return false;
+				}
 			}
 
 			config_db_only = std::make_unique<cfg_root>();
