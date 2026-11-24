@@ -55,8 +55,9 @@ enum class emu_settings_type
 	PPUReservationPriorityOverSPUs,
 	AccurateSpuReservations,
 	SPUMmioDelay,
+	PPUEventWakeUpDelay,
 
-	// Graphics
+	// Video
 	Renderer,
 	Resolution,
 	AspectRatio,
@@ -106,7 +107,6 @@ enum class emu_settings_type
 	RelaxedZCULL,
 	PreciseZCULL,
 	DriverWakeUpDelay,
-	PPUEventWakeUpDelay,
 	VulkanAsyncTextureUploads,
 	VulkanAsyncSchedulerDriver,
 	AllowHostGPULabels,
@@ -119,6 +119,8 @@ enum class emu_settings_type
 	DisableHWBlending,
 	DisableHWTexelRemapping,
 	DisableBlitEngineScaling,
+	RenderNativeInterface,
+	UseQtOsk,
 
 	// Anaglyph Matrix
 	CustomAnaglyphMatrixLeft,
@@ -199,7 +201,6 @@ enum class emu_settings_type
 	PreventDisplaySleep,
 	ShowTrophyPopups,
 	ShowRpcnPopups,
-	UseNativeInterface,
 	UseRecursiveScan,
 	ShowShaderCompilationHint,
 	ShowPPUCompilationHint,

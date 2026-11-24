@@ -65,7 +65,7 @@ void progress_dialog_server::operator()()
 		return whole_state;
 	};
 
-	const auto create_native_dialog = [&native_dlg](const std::string& text, bool* show_overlay_message)
+	const auto create_native_dialog = [&native_dlg](const std::string& text, bool check_show_overlay_message)
 	{
 		if (const auto renderer = rsx::get_current_renderer())
 		{
@@ -73,18 +73,15 @@ void progress_dialog_server::operator()()
 			// Wait for init to complete within reasonable time. Abort just in case we have hardware/driver issues.
 			renderer->is_initialized.wait(0, atomic_wait_timeout(5 * 1000000000ull));
 
-			auto manager = g_fxo->try_get<rsx::overlays::display_manager>();
-
-			if (show_overlay_message)
+			if (check_show_overlay_message)
 			{
-				*show_overlay_message = g_fxo->get<progress_dialog_workaround>().show_overlay_message_only;
-				if (*show_overlay_message)
+				if (g_fxo->get<progress_dialog_workaround>().show_overlay_message_only)
 				{
-					return;
+					return true;
 				}
 			}
 
-			if (manager)
+			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
 				MsgDialogType type{};
 				type.se_mute_on         = true;
@@ -98,6 +95,8 @@ void progress_dialog_server::operator()()
 				native_dlg->progress_bar_set_message(0, get_localized_string(localized_string_id::PROGRESS_DIALOG_PLEASE_WAIT));
 			}
 		}
+
+		return false;
 	};
 
 	while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
@@ -146,34 +145,8 @@ void progress_dialog_server::operator()()
 
 		g_system_progress_canceled = false;
 
-		// Initialize message dialog
-		bool show_overlay_message = false; // Only show an overlay message after initial loading is done.
-		std::shared_ptr<MsgDialogBase> dlg;
-
-		create_native_dialog(text0, &show_overlay_message);
-
-		if (!show_overlay_message && !native_dlg && (dlg = g_emu_callbacks.get_msg_dialog()))
-		{
-			dlg->type.se_normal          = true;
-			dlg->type.bg_invisible       = true;
-			dlg->type.progress_bar_count = 1;
-			dlg->on_close = [](s32 /*status*/)
-			{
-				Emu.CallFromMainThread([]()
-				{
-					// Abort everything
-					sys_log.notice("Aborted progress dialog");
-					Emu.GracefulShutdown(false, true);
-				});
-
-				g_system_progress_canceled = true;
-			};
-
-			Emu.CallFromMainThread([dlg, text0]()
-			{
-				dlg->Create(text0, text0);
-			});
-		}
+		// Initialize message dialog. Only show an overlay message after initial loading is done.
+		const bool show_overlay_message = create_native_dialog(text0, true);
 
 		u32 ftotal = 0;
 		u32 fdone = 0;
@@ -256,6 +229,11 @@ void progress_dialog_server::operator()()
 					}
 
 					sleep_for = 10000;
+					continue;
+				}
+
+				if (!native_dlg)
+				{
 					continue;
 				}
 
@@ -348,29 +326,13 @@ void progress_dialog_server::operator()()
 				}
 
 				// Changes detected, send update
-				if (native_dlg)
+				if (text_changed)
 				{
-					if (text_changed)
-					{
-						native_dlg->set_text(text1);
-					}
-
-					native_dlg->progress_bar_set_message(0, std::move(progr));
-					native_dlg->progress_bar_set_value(0, static_cast<f32>(value));
+					native_dlg->set_text(text1);
 				}
-				else if (dlg)
-				{
-					Emu.CallFromMainThread([=]()
-					{
-						if (text_changed)
-						{
-							dlg->SetMsg(text1);
-						}
 
-						dlg->ProgressBarSetMsg(0, progr);
-						dlg->ProgressBarSetValue(0, value);
-					});
-				}
+				native_dlg->progress_bar_set_message(0, std::move(progr));
+				native_dlg->progress_bar_set_value(0, static_cast<f32>(value));
 			}
 
 			if (show_overlay_message)
@@ -400,21 +362,10 @@ void progress_dialog_server::operator()()
 			break;
 		}
 
-		if (show_overlay_message)
-		{
-			// Do nothing
-		}
-		else if (native_dlg)
+		if (native_dlg)
 		{
 			native_dlg->close(false, false);
 			native_dlg.reset();
-		}
-		else if (dlg)
-		{
-			Emu.CallFromMainThread([=]()
-			{
-				dlg->Close(true);
-			});
 		}
 
 		// Cleanup
@@ -440,7 +391,7 @@ void progress_dialog_server::operator()()
 		}
 		else
 		{
-			create_native_dialog(text, nullptr);
+			create_native_dialog(text, false);
 		}
 		if (native_dlg)
 		{

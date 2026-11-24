@@ -9,7 +9,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		struct sendmessage_dialog : public user_interface, public SendMessageDialogBase
+		struct sendmessage_dialog : public user_interface
 		{
 		private:
 			struct list_entry : horizontal_layout
@@ -17,6 +17,8 @@ namespace rsx
 			public:
 				list_entry(std::string_view msg);
 			};
+
+			std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 
 			shared_mutex m_mutex;
 			std::vector<std::string> m_entry_names;
@@ -39,8 +41,8 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			error_code Exec(message_data& msg_data, std::set<std::string>& npids) override;
-			void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status) override;
+			error_code Exec(message_data& msg_data, std::set<std::string>& npids);
+			void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status);
 		};
 	}
 }

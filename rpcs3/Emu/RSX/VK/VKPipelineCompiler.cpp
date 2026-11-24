@@ -40,6 +40,11 @@ namespace vk
 		{
 			for (auto&& job : m_work_queue.pop_all())
 			{
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					break;
+				}
+
 				if (!job.is_graphics_job)
 				{
 					auto compiled = int_compile_compute_pipe(job.compute_data, job.inputs, job.flags);
@@ -353,6 +358,15 @@ namespace vk
 
 	void destroy_pipe_compiler()
 	{
+		if (g_pipe_compilers)
+		{
+			// Abort all workers first, otherwise each worker is only aborted when it is joined, while the others keep compiling.
+			for (auto& thread : *g_pipe_compilers)
+			{
+				thread = thread_state::aborting;
+			}
+		}
+
 		g_pipe_compilers.reset();
 
 		if (g_pipeline_cache)

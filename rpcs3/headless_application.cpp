@@ -4,10 +4,7 @@
 #include "Emu/system_config.h"
 #include "Emu/RSX/Core/RSXRendererFactory.h"
 #include "Emu/RSX/GSFrameBase.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
-#include "Emu/Cell/Modules/cellSaveData.h"
-#include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
 #include "util/video_source.h"
@@ -137,10 +134,7 @@ void headless_application::create_callbacks()
 		return std::unique_ptr<GSFrameBase>();
 	};
 
-	g_emu_callbacks.get_msg_dialog                 = []() -> std::shared_ptr<MsgDialogBase> { return std::shared_ptr<MsgDialogBase>(); };
-	g_emu_callbacks.get_osk_dialog                 = []() -> std::shared_ptr<OskDialogBase> { return std::shared_ptr<OskDialogBase>(); };
-	g_emu_callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };
-	g_emu_callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::unique_ptr<TrophyNotificationBase>(); };
+	g_emu_callbacks.get_osk_dialog = []() -> std::shared_ptr<OskDialogBase> { return std::shared_ptr<OskDialogBase>(); };
 
 	g_emu_callbacks.on_run    = [](bool /*start_playtime*/) {};
 	g_emu_callbacks.on_pause  = []() {};

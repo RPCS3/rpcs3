@@ -1,9 +1,7 @@
 #include "stdafx.h"
-#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/interception.h"
 
@@ -12,8 +10,6 @@
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
-
-#include <thread>
 
 #include "util/init_mutex.hpp"
 
@@ -55,10 +51,6 @@ void fmt_class_string<msg_dialog_source>::format(std::string& out, u64 arg)
 	});
 }
 
-MsgDialogBase::~MsgDialogBase()
-{
-}
-
 struct msg_info
 {
 	std::shared_ptr<MsgDialogBase> dlg;
@@ -76,7 +68,8 @@ struct msg_info
 			return nullptr;
 		}
 
-		dlg = g_emu_callbacks.get_msg_dialog();
+		// Invisible fallback dialog. Used if the native UI is not available.
+		dlg = std::make_shared<MsgDialogBase>();
 
 		return dlg;
 	}
@@ -109,6 +102,7 @@ struct msg_info
 struct msg_dlg_thread_info
 {
 	atomic_t<u64> wait_until = 0;
+	atomic_t<s32> close_status = CELL_MSGDIALOG_BUTTON_NONE; // Button result passed to on_close of the invisible fallback dialog
 
 	void operator()()
 	{
@@ -149,7 +143,7 @@ struct msg_dlg_thread_info
 					continue;
 				}
 
-				dlg->on_close(CELL_MSGDIALOG_BUTTON_NONE);
+				dlg->on_close(close_status.load());
 			}
 		}
 	}
@@ -222,6 +216,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		return res;
 	}
 
+	// The native UI is not available. Use an invisible dialog that does not take any input.
 	const auto dlg = g_fxo->get<msg_info>().make();
 
 	if (!dlg)
@@ -231,6 +226,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 	if (s32 ret = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0); ret < 0)
 	{
+		g_fxo->get<msg_info>().remove();
 		return CellSysutilError{ret + 0u};
 	}
 
@@ -261,39 +257,34 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 			g_fxo->get<msg_dlg_thread>().wait_until = 0;
 			g_fxo->get<msg_info>().remove();
+
+			// Wake up a blocking open_msg_dialog
+			dlg->state.notify_all();
 		}
 
 		input::SetIntercepted(false);
 	};
 
+	// The game must not receive any input while the dialog is open, even if the dialog is invisible
 	input::SetIntercepted(true);
 
-	auto& ppu = *get_current_cpu_thread();
-	lv2_obj::sleep(ppu);
+	dlg->Create(msgString.get_ptr());
 
-	// PS3 memory must not be accessed by Main thread
-	std::string msg_string = msgString.get_ptr();
-
-	// Run asynchronously in GUI thread
-	Emu.CallFromMainThread([&, msg_string = std::move(msg_string)]()
+	// Nobody can press the buttons of an invisible dialog, so we have to answer it with the default button after a short delay.
+	// Dialogs without buttons or with progress bars stay open until they are closed by the caller.
+	if (_type.progress_bar_count == 0 && _type.button_type.unshifted() != CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE)
 	{
-		dlg->Create(msg_string);
-		lv2_obj::awake(&ppu);
-	});
+		const s32 status = _type.button_type.unshifted() == CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO
+			? (_type.default_cursor.unshifted() == CELL_MSGDIALOG_TYPE_DEFAULT_CURSOR_NO ? CELL_MSGDIALOG_BUTTON_NO : CELL_MSGDIALOG_BUTTON_YES)
+			: CELL_MSGDIALOG_BUTTON_OK;
 
-	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
-	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
+		cellSysutil.warning("open_msg_dialog: Native UI not available. Closing invisible dialog with button %d in 2 seconds", status);
 
-		if (state & cpu_flag::signal)
-		{
-			break;
-		}
-
-		ppu.state.wait(state);
+		// The close thread calls on_close with this status once the time is up
+		auto& thr = g_fxo->get<msg_dlg_thread>();
+		thr.close_status = status;
+		thr.wait_until = get_guest_system_time() + 2'000'000;
+		thr.wait_until.notify_one();
 	}
 
 	if (is_blocking)
@@ -304,7 +295,9 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 			{
 				break;
 			}
-			std::this_thread::yield();
+
+			// Wait for the dialog to close. The timeout lets us notice when the emulation stops.
+			dlg->state.wait(MsgDialogState::Open, atomic_wait_timeout{1'000'000});
 		}
 	}
 
@@ -333,6 +326,7 @@ void close_msg_dialog()
 		g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
 		input::SetIntercepted(false);    // so we need to reenable the pads here
 		sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+		dlg->state.notify_all();
 	}
 }
 
@@ -540,6 +534,7 @@ error_code cellMsgDialogClose(f32 delay)
 	}
 
 	auto& thr = g_fxo->get<msg_dlg_thread>();
+	thr.close_status = CELL_MSGDIALOG_BUTTON_NONE;
 	thr.wait_until = wait_until;
 	thr.wait_until.notify_one();
 	return CELL_OK;
@@ -579,6 +574,7 @@ error_code cellMsgDialogAbort()
 	g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
 	input::SetIntercepted(false);     // so we need to reenable the pads here
 	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+	dlg->state.notify_all();
 
 	return CELL_OK;
 }
@@ -625,11 +621,6 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallFromMainThread([=, msg = std::string{ msgString.get_ptr() }]
-	{
-		dlg->ProgressBarSetMsg(progressBarIndex, msg);
-	});
-
 	return CELL_OK;
 }
 
@@ -657,11 +648,6 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	Emu.CallFromMainThread([=]
-	{
-		dlg->ProgressBarReset(progressBarIndex);
-	});
-
 	return CELL_OK;
 }
 
@@ -688,11 +674,6 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
-
-	Emu.CallFromMainThread([=]
-	{
-		dlg->ProgressBarInc(progressBarIndex, delta);
-	});
 
 	return CELL_OK;
 }

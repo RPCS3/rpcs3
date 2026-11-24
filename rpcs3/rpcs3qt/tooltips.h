@@ -136,6 +136,7 @@ public:
 		const QString num_ppu_threads              = tr("Affects maximum amount of PPU threads running concurrently, the value of 1 has very low compatibility with games.\n2 is the default, if unsure do not modify this setting.");
 		const QString disable_hw_texel_remapping   = tr("Disables use of hardware-native color-space remapping formats such as _sRGB and _SNORM suffixes.\nDisabling this option increases accuracy compared to PS3 but can also introduce some noise due to how the software emulation works.");
 		const QString disable_hw_blending          = tr("Force use of programmable blending for backends that support the feature.\nPurely a debugging option, you don't stand to gain anything by enabling this.");
+		const QString render_native_interface      = tr("Renders native HUD within the game window that can interact with game controllers.");
 
 		// emulator
 
@@ -164,7 +165,7 @@ public:
 		const QString show_mouse_and_keyboard_toggle_hint = tr("Shows mouse and keyboard toggle hint using the native overlay.");
 		const QString show_fatal_error_hints       = tr("Shows fatal error hints using the native overlay.");
 		const QString show_capture_hints           = tr("Shows screenshot and recording hints using the native overlay.");
-		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
+		const QString use_qt_osk                   = tr("Shows the Qt On-Screen-Keyboard instead of the native overlay.");
 		const QString use_recursive_scan           = tr("Enables use of recursive scan on subfolders when scanning games from the selected folder.\nWhen disabled, games are scanned only on the selected folder.");
 		const QString record_with_overlays         = tr("Enables recording with overlays.\nThis also affects screenshots.");
 		const QString pause_during_home_menu       = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");

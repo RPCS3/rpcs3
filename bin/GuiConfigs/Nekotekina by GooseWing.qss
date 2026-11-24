@@ -463,12 +463,6 @@ QLabel#debugger_frame_pc {
 }
 
 
-/* Trophy Notification Popup */
-QWidget#trophy_notification_frame {
-	background-color: #b3ac98;
-	color: #4d4940;
-}
-
 /* Game Grid */
 #game_list_grid_item[selected="true"] {
 	background: #615c51;

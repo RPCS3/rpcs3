@@ -13,6 +13,8 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Cell/Modules/cellUserInfo.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/RSX/Overlays/overlay_manager.h"
+#include "Emu/RSX/Overlays/overlay_save_dialog.h"
 #include "Emu/system_config.h"
 
 #include "cellSaveData.h"
@@ -54,10 +56,6 @@ void fmt_class_string<CellSaveDataError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
-}
-
-SaveDialogBase::~SaveDialogBase()
-{
 }
 
 std::string SaveDataEntry::date() const
@@ -129,6 +127,43 @@ struct savedata_manager
 	atomic_t<bool> enable_overlay{false};
 	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
+
+s32 show_save_data_list(const std::string& base_dir, std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay)
+{
+	cellSaveData.notice("show_save_data_list(save_entries=%d, focused=%d, op=0x%x, listSet=*0x%x, enable_overlay=%d)", save_entries.size(), focused, op, listSet, enable_overlay);
+
+	// TODO: Implement proper error checking in savedata_op?
+	const bool use_end = sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_BEGIN, 0) >= 0;
+
+	if (!use_end)
+	{
+		cellSaveData.error("show_save_data_list(): Not able to notify DRAWING_BEGIN callback because one has already been sent!");
+	}
+
+	s32 result = -2;
+
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	{
+		cellSaveData.notice("show_save_data_list: Showing native UI dialog");
+
+		result = manager->create<rsx::overlays::save_dialog>()->show(base_dir, save_entries, focused, op, listSet, enable_overlay);
+		if (result == rsx::overlays::user_interface::selection_code::error)
+		{
+			cellSaveData.error("show_save_data_list: Native UI dialog returned error");
+		}
+		else
+		{
+			cellSaveData.notice("show_save_data_list: Native UI dialog returned with selection %d", result);
+		}
+	}
+	else
+	{
+		cellSaveData.error("show_save_data_list: Native UI not available. Cannot show save data list (result=%d)", result);
+	}
+
+	if (use_end) sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+	return result;
+}
 
 int check_filename(std::string_view file_path, bool disallow_system_files, bool account_sfo_pfd)
 {
@@ -321,11 +356,8 @@ static error_code select_and_delete(ppu_thread& ppu)
 		// Yield before a blocking dialog is being spawned
 		lv2_obj::sleep(ppu);
 
-		// Display a blocking Save Data List asynchronously in the GUI thread.
-		if (auto save_dialog = g_emu_callbacks.get_save_dialog())
-		{
-			selected = save_dialog->ShowSaveDataList(base_dir, save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null, g_fxo->get<savedata_manager>().enable_overlay);
-		}
+		// Display a blocking Save Data List asynchronously in the RSX thread.
+		selected = show_save_data_list(base_dir, save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null, g_fxo->get<savedata_manager>().enable_overlay);
 
 		// Reschedule after a blocking dialog returns
 		if (ppu.check_state())
@@ -1262,15 +1294,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// Yield before a blocking dialog is being spawned
 			lv2_obj::sleep(ppu);
 
-			// Display a blocking Save Data List asynchronously in the GUI thread.
-			if (auto save_dialog = g_emu_callbacks.get_save_dialog())
-			{
-				selected = save_dialog->ShowSaveDataList(base_dir, save_entries, focused, operation, listSet, g_fxo->get<savedata_manager>().enable_overlay);
-			}
-			else
-			{
-				selected = -2;
-			}
+			// Display a blocking Save Data List asynchronously in the RSX thread.
+			selected = show_save_data_list(base_dir, save_entries, focused, operation, listSet, g_fxo->get<savedata_manager>().enable_overlay);
 
 			// Reschedule after a blocking dialog returns
 			if (ppu.check_state())

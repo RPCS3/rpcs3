@@ -11,7 +11,7 @@ class VKFragmentProgram;
 namespace rsx
 {
 	struct context;
-	struct shader_loading_dialog;
+	struct shader_loading_dialog_native;
 }
 
 namespace vk
@@ -93,7 +93,7 @@ namespace vk
 		// Follows the backend's bound context
 		void set_context(rsx::context* ctx) { m_ctx = ctx; }
 
-		void preload(rsx::shader_loading_dialog* dlg);
+		void preload(rsx::shader_loading_dialog_native* dlg);
 
 		glsl::program* get(
 			const vk::pipeline_props& properties,

@@ -1852,30 +1852,6 @@ namespace rpcn
 	class rpcn_client;
 }
 
-class SendMessageDialogBase
-{
-public:
-	virtual ~SendMessageDialogBase() = default;
-
-	virtual error_code Exec(message_data& msg_data, std::set<std::string>& npids) = 0;
-	virtual void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status) = 0;
-
-protected:
-	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
-};
-
-class RecvMessageDialogBase
-{
-public:
-	virtual ~RecvMessageDialogBase() = default;
-
-	virtual error_code Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) = 0;
-	virtual void callback_handler(const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id) = 0;
-
-protected:
-	std::shared_ptr<rpcn::rpcn_client> m_rpcn;
-};
-
 // Generic functions, also used in SceNpMatchingInt.cpp
 error_code matching_create_room(u32 ctx_id, vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpMatchingAttr> attr, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);
 error_code matching_join_room(u32 ctx_id, vm::ptr<SceNpRoomId> room_id, vm::ptr<SceNpMatchingGUIHandler> handler, vm::ptr<void> arg);

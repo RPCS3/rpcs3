@@ -19,7 +19,7 @@ cfg_location get_cfg_location(const cfg::_base& leaf)
 
 const std::map<emu_settings_type, cfg_location> settings_location =
 {
-	// Core Tab
+	// Core
 	{ emu_settings_type::PPUDecoder,                 get_cfg_location(local_cfg.core.ppu_decoder) },
 	{ emu_settings_type::SPUDecoder,                 get_cfg_location(local_cfg.core.spu_decoder) },
 	{ emu_settings_type::HookStaticFuncs,            get_cfg_location(local_cfg.core.hook_functions) },
@@ -62,8 +62,9 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccurateSpuReservations,    get_cfg_location(local_cfg.core.spu_accurate_reservations) },
 	{ emu_settings_type::AccurateSpuReservations,    get_cfg_location(local_cfg.core.spu_accurate_reservations) },
 	{ emu_settings_type::SPUMmioDelay,               get_cfg_location(local_cfg.core.spu_mmio_delay_enabled) },
+	{ emu_settings_type::PPUEventWakeUpDelay,        get_cfg_location(local_cfg.core.ppu_event_wakeup_delay) },
 
-	// Graphics Tab
+	// Video
 	{ emu_settings_type::Renderer,                   get_cfg_location(local_cfg.video.renderer) },
 	{ emu_settings_type::Resolution,                 get_cfg_location(local_cfg.video.resolution) },
 	{ emu_settings_type::AspectRatio,                get_cfg_location(local_cfg.video.aspect_ratio) },
@@ -110,7 +111,6 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VBlankRate,                 get_cfg_location(local_cfg.video.vblank_rate) },
 	{ emu_settings_type::VBlankNTSCFixup,            get_cfg_location(local_cfg.video.vblank_ntsc) },
 	{ emu_settings_type::DriverWakeUpDelay,          get_cfg_location(local_cfg.video.driver_wakeup_delay) },
-	{ emu_settings_type::PPUEventWakeUpDelay,        get_cfg_location(local_cfg.core.ppu_event_wakeup_delay) },
 	{ emu_settings_type::AllowHostGPULabels,         get_cfg_location(local_cfg.video.host_label_synchronization) },
 	{ emu_settings_type::DisableMSLFastMath,         get_cfg_location(local_cfg.video.disable_msl_fast_math) },
 	{ emu_settings_type::OutputScalingMode,          get_cfg_location(local_cfg.video.output_scaling) },
@@ -121,6 +121,8 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DisableHWTexelRemapping,    get_cfg_location(local_cfg.video.disable_hardware_blending) },
 	{ emu_settings_type::FsrSharpeningStrength,      get_cfg_location(local_cfg.video.rcas_sharpening_intensity) },
 	{ emu_settings_type::DisableBlitEngineScaling,   get_cfg_location(local_cfg.video.disable_blit_engine_upscaling) },
+	{ emu_settings_type::RenderNativeInterface,      get_cfg_location(local_cfg.video.ui.render_native_interface) },
+	{ emu_settings_type::UseQtOsk,                   get_cfg_location(local_cfg.video.ui.use_qt_osk) },
 
 	// Vulkan
 	{ emu_settings_type::VulkanAdapter,                    get_cfg_location(local_cfg.video.vk.adapter) },
@@ -208,7 +210,6 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PreventDisplaySleep,             get_cfg_location(local_cfg.misc.prevent_display_sleep) },
 	{ emu_settings_type::ShowTrophyPopups,                get_cfg_location(local_cfg.misc.show_trophy_popups) },
 	{ emu_settings_type::ShowRpcnPopups,                  get_cfg_location(local_cfg.misc.show_rpcn_popups) },
-	{ emu_settings_type::UseNativeInterface,              get_cfg_location(local_cfg.misc.use_native_interface) },
 	{ emu_settings_type::UseRecursiveScan,                get_cfg_location(local_cfg.misc.use_recursive_scan) },
 	{ emu_settings_type::ShowShaderCompilationHint,       get_cfg_location(local_cfg.misc.show_shader_compilation_hint) },
 	{ emu_settings_type::ShowPPUCompilationHint,          get_cfg_location(local_cfg.misc.show_ppu_compilation_hint) },

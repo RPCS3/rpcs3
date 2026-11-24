@@ -990,9 +990,6 @@
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp">
-      <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -2338,9 +2335,6 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h">
-      <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Shaders</Filter>
     </ClInclude>
     <ClInclude Include="Emu\title.h">

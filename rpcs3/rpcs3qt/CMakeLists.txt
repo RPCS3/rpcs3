@@ -71,7 +71,6 @@ add_library(rpcs3_ui STATIC
     midi_creator.cpp
     movie_item.cpp
     movie_item_base.cpp
-    msg_dialog_frame.cpp
     music_player_dialog.cpp
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
@@ -94,19 +93,14 @@ add_library(rpcs3_ui STATIC
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
     recording_settings_dialog.cpp
-    recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
     rsx_debugger.cpp
-    save_data_dialog.cpp
-    save_data_info_dialog.cpp
-    save_data_list_dialog.cpp
     save_manager_dialog.cpp
     savestate_manager_dialog.cpp
     screenshot_item.cpp
     screenshot_manager_dialog.cpp
     screenshot_preview.cpp
-    sendmessage_dialog_frame.cpp
     settings.cpp
     settings_dialog.cpp
     shortcut_utils.cpp
@@ -121,8 +115,6 @@ add_library(rpcs3_ui STATIC
     table_item_delegate.cpp
     tooltips.cpp
     trophy_manager_dialog.cpp
-    trophy_notification_frame.cpp
-    trophy_notification_helper.cpp
     update_manager.cpp
     user_account.cpp
     user_manager_dialog.cpp

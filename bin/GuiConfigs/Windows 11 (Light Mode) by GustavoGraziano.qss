@@ -34,11 +34,6 @@ QWidget#cg_disasm, QWidget#trophy_manager {
 	background-color: #F3F3F3;
 }
 
-QWidget#trophy_notification_frame {
-	background-color: #F3F3F3;
-	color: #1B1B1B;
-}
-
 
 /* TOOLTIP */
 QToolTip {

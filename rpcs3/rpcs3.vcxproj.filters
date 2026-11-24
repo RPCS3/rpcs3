@@ -330,12 +330,6 @@
     <ClCompile Include="Input\xinput_pad_handler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_msg_dialog_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_msg_dialog_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\qrc_resources.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
@@ -380,33 +374,6 @@
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_about_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_info_dialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_info_dialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_list_dialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_list_dialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_dialog.cpp">
-      <Filter>Gui\save</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_info_dialog.cpp">
-      <Filter>Gui\save</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\save_data_list_dialog.cpp">
-      <Filter>Gui\save</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\trophy_notification_helper.cpp">
-      <Filter>Gui\trophy</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\trophy_notification_frame.cpp">
-      <Filter>Gui\trophy</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -506,9 +473,6 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\instruction_editor_dialog.cpp">
       <Filter>Gui\debugger</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
-      <Filter>Gui\message dialog</Filter>
     </ClCompile>
     <ClCompile Include="Input\evdev_joystick_handler.cpp">
       <Filter>Io\evdev</Filter>
@@ -846,12 +810,6 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_instruction_editor_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_trophy_notification_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_notification_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_fatal_error_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -956,24 +914,6 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
       <Filter>Gui\rpcn</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\sendmessage_dialog_frame.cpp">
-      <Filter>Gui\message dialog</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_sendmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_sendmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3qt\recvmessage_dialog_frame.cpp">
-      <Filter>Gui\message dialog</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_recvmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_recvmessage_dialog_frame.cpp">
-      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\qt_camera_handler.cpp">
       <Filter>Io\camera</Filter>
@@ -1415,12 +1355,6 @@
     <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\save_data_dialog.h">
-      <Filter>Gui\save</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\trophy_notification_helper.h">
-      <Filter>Gui\trophy</Filter>
-    </ClInclude>
     <ClInclude Include="Input\pad_thread.h">
       <Filter>Io</Filter>
     </ClInclude>
@@ -1687,12 +1621,6 @@
     <CustomBuild Include="rpcs3qt\welcome_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\save_data_info_dialog.h">
-      <Filter>Gui\save</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\save_data_list_dialog.h">
-      <Filter>Gui\save</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\syntax_highlighter.h">
       <Filter>Gui\syntax highlighter</Filter>
     </CustomBuild>
@@ -1758,9 +1686,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\rsx_debugger.h">
       <Filter>Gui\dev tools</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\msg_dialog_frame.h">
-      <Filter>Gui\message dialog</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\save</Filter>
@@ -1864,9 +1789,6 @@
     <CustomBuild Include="rpcs3qt\instruction_editor_dialog.h">
       <Filter>Gui\debugger</Filter>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\trophy_notification_frame.h">
-      <Filter>Gui\trophy</Filter>
-    </CustomBuild>
     <CustomBuild Include="rpcs3qt\fatal_error_dialog.h">
       <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
@@ -1899,12 +1821,6 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\clans_settings_dialog.h">
       <Filter>Gui\rpcn</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\sendmessage_dialog_frame.h">
-      <Filter>Gui\message dialog</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
-      <Filter>Gui\message dialog</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\qt_camera_handler.h">
       <Filter>Io\camera</Filter>

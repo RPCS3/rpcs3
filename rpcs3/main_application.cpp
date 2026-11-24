@@ -443,6 +443,19 @@ void main_application::create_callbacks()
 			}
 			font_dirs.push_back(std::move(font_dir));
 		}
+
+#ifdef __APPLE__
+		// Qt does not report the system font directories on all macOS versions.
+		// Arial and other standard fonts are located in the Supplemental sub directory, which is not searched recursively.
+		for (const std::string& font_dir : { "/System/Library/Fonts/"s, "/System/Library/Fonts/Supplemental/"s })
+		{
+			if (std::find(font_dirs.cbegin(), font_dirs.cend(), font_dir) == font_dirs.cend())
+			{
+				font_dirs.push_back(font_dir);
+			}
+		}
+#endif
+
 		return font_dirs;
 	};
 

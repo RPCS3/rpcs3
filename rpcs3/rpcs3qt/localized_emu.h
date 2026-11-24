@@ -53,6 +53,7 @@ private:
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO: return tr("No", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_CANCEL: return tr("Back", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_OK: return tr("OK", "Message Dialog");
+		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_HOLD_TO_SKIP: return tr("Hold to skip", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_TITLE: return tr("Save Dialog", "Save Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_DELETE: return tr("Delete Save", "Save Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_LOAD: return tr("Load Save", "Save Dialog");
