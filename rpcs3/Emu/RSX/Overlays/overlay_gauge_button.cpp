@@ -54,6 +54,11 @@ namespace rsx::overlays
 		m_is_compiled = false;
 	}
 
+	void gauge_button::measure_text(u16& width, u16& height, bool ignore_word_wrap) const
+	{
+		m_button.measure_text(width, height, ignore_word_wrap);
+	}
+
 	void gauge_button::set_text(std::string_view text)
 	{
 		m_button.set_text(text);

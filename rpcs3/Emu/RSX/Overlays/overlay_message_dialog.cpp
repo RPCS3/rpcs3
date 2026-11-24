@@ -55,8 +55,14 @@ namespace rsx
 			fade_animation.duration_sec = 0.15f;
 
 			btn_hold_to_skip.set_size(30, 30);
-			btn_hold_to_skip.set_pos(625, 640);
+			btn_hold_to_skip.set_font(16);
+			btn_hold_to_skip.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_HOLD_TO_SKIP);
 			btn_hold_to_skip.set_image_resource(resource_config::confirm_button_resource());
+
+			// Center the icon and its label horizontally.
+			u16 text_w = 0, text_h = 0;
+			btn_hold_to_skip.measure_text(text_w, text_h);
+			btn_hold_to_skip.set_pos(static_cast<s16>((virtual_width - (40 + text_w)) / 2), 640);
 
 			update_custom_background();
 
