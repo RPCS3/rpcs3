@@ -1119,12 +1119,11 @@ void compressed_zstd_serialization_file_handler::finalize(utils::serial& ar)
 		return;
 	}
 
-	auto& m_zd = m_stream->m_zd;
-
 	if (m_read_inited)
 	{
 		//ZSTD_decompressEnd(m_stream->m_zd);
-		ensure(ZSTD_freeDCtx(m_zd));
+		ensure(ZSTD_freeDCtx(m_stream->m_zd) == 0);
+		m_stream->m_zd = nullptr;
 		m_read_inited = false;
 		return;
 	}
