@@ -852,6 +852,14 @@ constexpr u64 operator""_u64(const char* s, usz len)
 	return std::bit_cast<u64>(buf);
 }
 
+// Serialize a trivially copyable object into a byte vector
+template <typename T> requires std::is_trivially_copyable_v<T>
+inline std::vector<u8> to_bytes(const T& value)
+{
+	const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
+	return {bytes.begin(), bytes.end()};
+}
+
 #if !defined(__INTELLISENSE__) && !__has_builtin(__builtin_COLUMN) && !defined(_MSC_VER)
 constexpr unsigned __builtin_COLUMN()
 {

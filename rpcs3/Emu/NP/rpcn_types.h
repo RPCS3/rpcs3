@@ -73,6 +73,8 @@ namespace rpcn
 		SyncTrophies,
 		DeleteTrophies,
 		GetTss,
+		SendRoomChatMessage,
+		AcceptInvitationGUI,
 	};
 
 	enum class NotificationType : u16
@@ -96,6 +98,7 @@ namespace rpcn
 		RoomOwnerChangedGUI,
 		UserKickedGUI,
 		QuickMatchCompleteGUI,
+		RoomChatMessageReceived,
 	};
 
 	enum class rpcn_state

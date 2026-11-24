@@ -1309,6 +1309,7 @@ namespace np
 					case rpcn::CommandType::SetUserInfo: reply_set_userinfo(req_id, error); break;
 					case rpcn::CommandType::PingRoomOwner: reply_get_ping_info(req_id, error, reply_data); break;
 					case rpcn::CommandType::SendRoomMessage: reply_send_room_message(req_id, error); break;
+					case rpcn::CommandType::SendRoomChatMessage: reply_send_room_chat_message(req_id, error); break;
 					case rpcn::CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, error, reply_data); break;
 					case rpcn::CommandType::RequestTicket: reply_req_ticket(req_id, error, reply_data); break;
 					case rpcn::CommandType::GetBoardInfos: reply_get_board_infos(req_id, error, reply_data); break;
@@ -1341,6 +1342,7 @@ namespace np
 					case rpcn::CommandType::GetRoomInfoGUI: reply_get_room_info_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::QuickMatchGUI: reply_quickmatch_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchJoinRoomGUI: reply_searchjoin_gui(req_id, error, reply_data); break;
+					case rpcn::CommandType::AcceptInvitationGUI: reply_accept_invitation_gui(req_id, error, reply_data); break;
 					case rpcn::CommandType::GetTss: reply_get_tss(req_id, error, reply_data); break;
 					default: fmt::throw_exception("Unknown reply(%d) received!", command); break;
 					}
@@ -1358,7 +1360,8 @@ namespace np
 					case rpcn::NotificationType::RoomDestroyed: notif_room_destroyed(noti_data); break;
 					case rpcn::NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(noti_data); break;
 					case rpcn::NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(noti_data); break;
-					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(noti_data); break;
+					case rpcn::NotificationType::RoomMessageReceived: notif_room_message_received(noti_data, SCE_NP_MATCHING2_ROOM_MSG_EVENT_Message); break;
+					case rpcn::NotificationType::RoomChatMessageReceived: notif_room_message_received(noti_data, SCE_NP_MATCHING2_ROOM_MSG_EVENT_ChatMessage); break;
 					case rpcn::NotificationType::SignalingHelper: notif_signaling_helper(noti_data); break;
 					case rpcn::NotificationType::MemberJoinedRoomGUI: notif_member_joined_room_gui(noti_data); break;
 					case rpcn::NotificationType::MemberLeftRoomGUI: notif_member_left_room_gui(noti_data); break;

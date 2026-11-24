@@ -794,6 +794,55 @@ namespace np
 		return req_id;
 	}
 
+	u32 np_handler::send_room_chat_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomChatMessageRequest* req)
+	{
+		const u32 req_id = generate_callback_info(ctx_id, optParam, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomChatMessage, false);
+
+		if (!get_rpcn()->send_room_chat_message(req_id, get_match2_context(ctx_id)->communicationId, req))
+		{
+			rpcn_log.error("Disconnecting from RPCN!");
+			is_psn_active = false;
+		}
+
+		return req_id;
+	}
+
+	void np_handler::reply_send_room_chat_message(u32 req_id, rpcn::ErrorType error)
+	{
+		auto cb_info_opt = take_pending_request(req_id);
+
+		if (!cb_info_opt)
+			return;
+
+		s32 error_code = CELL_OK;
+
+		switch (error)
+		{
+		case rpcn::ErrorType::NoError: break;
+		case rpcn::ErrorType::RoomMissing: error_code = SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM; break;
+		case rpcn::ErrorType::Unauthorized: error_code = SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN; break;
+		case rpcn::ErrorType::InvalidInput:
+		case rpcn::ErrorType::Unsupported: error_code = SCE_NP_MATCHING2_SERVER_ERROR_BAD_REQUEST; break;
+		default: fmt::throw_exception("Unexpected error in reply to SendRoomChatMessage: %s", error);
+		}
+
+		if (error_code != CELL_OK)
+		{
+			cb_info_opt->queue_callback(req_id, 0, error_code, 0);
+			return;
+		}
+
+		// The request always has event data on success, RPCN has no vulgarity filter so the message is never filtered
+		const u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_SendRoomChatMessage, sizeof(SceNpMatching2SendRoomChatMessageResponse));
+		auto* resp = reinterpret_cast<SceNpMatching2SendRoomChatMessageResponse*>(edata.data());
+		resp->filtered = false;
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		cb_info_opt->queue_callback(req_id, event_key, 0, edata.size());
+	}
+
 	void np_handler::reply_send_room_message(u32 req_id, rpcn::ErrorType error)
 	{
 		auto cb_info_opt = take_pending_request(req_id);

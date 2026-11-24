@@ -217,7 +217,7 @@ namespace np
 		}
 	}
 
-	void np_handler::notif_room_message_received(vec_stream& noti)
+	void np_handler::notif_room_message_received(vec_stream& noti, SceNpMatching2Event event_type)
 	{
 		u64 room_id        = noti.get<u64>();
 		u16 member_id      = noti.get<u16>();
@@ -247,7 +247,9 @@ namespace np
 			break;
 		}
 
-		if (!valid_destination || message_info->msg().size() > SCE_NP_MATCHING2_BIN_MSG_MAX_SIZE)
+		const u32 max_msg_size = event_type == SCE_NP_MATCHING2_ROOM_MSG_EVENT_ChatMessage ? SCE_NP_MATCHING2_CHAT_MSG_MAX_SIZE : SCE_NP_MATCHING2_BIN_MSG_MAX_SIZE;
+
+		if (!valid_destination || message_info->msg().size() > max_msg_size)
 		{
 			rpcn_log.error("Received malformed RoomMessageReceived notification");
 			return;
@@ -261,13 +263,13 @@ namespace np
 		RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(edata, *message_info, notif_data, include_onlinename, include_avatarurl);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
-		rpcn_log.notice("Received notification of a room message from member(%d) in room(%d)", member_id, room_id);
+		rpcn_log.notice("Received notification of a room %smessage from member(%d) in room(%d)", event_type == SCE_NP_MATCHING2_ROOM_MSG_EVENT_ChatMessage ? "chat " : "", member_id, room_id);
 
 		if (room_msg_cb)
 		{
-			sysutil_register_cb([room_msg_cb = this->room_msg_cb, room_msg_cb_ctx = this->room_msg_cb_ctx, room_id, member_id, event_key, room_msg_cb_arg = this->room_msg_cb_arg, size = edata.size()](ppu_thread& cb_ppu) -> s32
+			sysutil_register_cb([room_msg_cb = this->room_msg_cb, room_msg_cb_ctx = this->room_msg_cb_ctx, room_id, member_id, event_type, event_key, room_msg_cb_arg = this->room_msg_cb_arg, size = edata.size()](ppu_thread& cb_ppu) -> s32
 				{
-					room_msg_cb(cb_ppu, room_msg_cb_ctx, room_id, member_id, SCE_NP_MATCHING2_ROOM_MSG_EVENT_Message, event_key, 0, size, room_msg_cb_arg);
+					room_msg_cb(cb_ppu, room_msg_cb_ctx, room_id, member_id, event_type, event_key, 0, size, room_msg_cb_arg);
 					return 0;
 				});
 		}
