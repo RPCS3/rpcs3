@@ -32,6 +32,7 @@ namespace rsx::overlays
 		void set_text(std::string_view text) override;
 		void set_unicode_text(std::u32string_view text) override;
 		void set_font(u16 font_size, std::string_view font_name = {}) override;
+		void measure_text(u16& width, u16& height, bool ignore_word_wrap = false) const override;
 
 		void set_pos(s16 _x, s16 _y) override;
 		void set_size(u16 _w, u16 _h) override;
