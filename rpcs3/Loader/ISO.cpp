@@ -1126,7 +1126,8 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 		file_name.erase(file_name.end() - 2, file_name.end());
 	}
 
-	if (file_name.size() > 1 && file_name.ends_with("."))
+	// Strip the trailing dot of ISO9660 names without extension ("NAME."), but keep the parent directory record ("..")
+	if (file_name.size() > 1 && file_name != ".." && file_name.ends_with("."))
 	{
 		file_name.pop_back();
 	}
