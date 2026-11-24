@@ -198,17 +198,17 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 			return;
 		}
 
-		z_stream& m_zs = m_stream->m_zs;
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
 		if (m_read_inited)
 		{
 			finalize(ar);
 		}
 
+		z_stream& m_zs = m_stream->m_zs;
 		m_zs = {};
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 		ensure(deflateInit2(&m_zs, ar.expect_little_data() ? 9 : 8, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK);
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
@@ -240,11 +240,14 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 		m_zs.avail_out = 0;
 		m_zs.next_in = nullptr;
 		m_zs.next_out = nullptr;
-	#ifndef _MSC_VER
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wold-style-cast"
-	#endif
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 		ensure(inflateInit2(&m_zs, 16 + 15) == Z_OK);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 		m_read_inited = true;
 		m_errored = false;
 	}
