@@ -569,7 +569,7 @@ void compressed_serialization_file_handler::finalize(utils::serial& ar)
 	}
 
 	auto& stream = *m_stream;
-	z_stream& m_zs = m_stream->m_zs;
+	z_stream& m_zs = stream.m_zs;
 
 	if (m_read_inited)
 	{
@@ -785,7 +785,6 @@ usz compressed_serialization_file_handler::get_size(const utils::serial& ar, usz
 struct compressed_zstd_stream_data
 {
 	ZSTD_DCtx* m_zd{};
-	ZSTD_DStream* m_zs{};
 	lf_queue<std::vector<u8>> m_queued_data_to_process;
 	lf_queue<std::vector<u8>> m_queued_data_to_write;
 };
@@ -838,9 +837,7 @@ void compressed_zstd_serialization_file_handler::initialize(utils::serial& ar)
 			finalize(ar);
 		}
 
-		auto& m_zd = m_stream->m_zd;
-		m_zd = ZSTD_createDCtx();
-		m_stream->m_zs = ZSTD_createDStream();
+		m_stream->m_zd = ZSTD_createDCtx();
 		m_read_inited = true;
 		m_errored = false;
 	}
@@ -1015,7 +1012,7 @@ usz compressed_zstd_serialization_file_handler::read_at(utils::serial& ar, usz r
 
 	initialize(ar);
 
-	auto& m_zd = m_stream->m_zd;
+	ZSTD_DCtx* m_zd = m_stream->m_zd;
 
 	const usz total_to_read = size;
 	usz read_size = 0;
