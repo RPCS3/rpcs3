@@ -198,17 +198,17 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 			return;
 		}
 
-		z_stream& m_zs = m_stream->m_zs;
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#endif
 		if (m_read_inited)
 		{
 			finalize(ar);
 		}
 
+		z_stream& m_zs = m_stream->m_zs;
 		m_zs = {};
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 		ensure(deflateInit2(&m_zs, ar.expect_little_data() ? 9 : 8, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY) == Z_OK);
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
@@ -240,11 +240,14 @@ void compressed_serialization_file_handler::initialize(utils::serial& ar)
 		m_zs.avail_out = 0;
 		m_zs.next_in = nullptr;
 		m_zs.next_out = nullptr;
-	#ifndef _MSC_VER
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wold-style-cast"
-	#endif
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 		ensure(inflateInit2(&m_zs, 16 + 15) == Z_OK);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 		m_read_inited = true;
 		m_errored = false;
 	}
@@ -566,7 +569,7 @@ void compressed_serialization_file_handler::finalize(utils::serial& ar)
 	}
 
 	auto& stream = *m_stream;
-	z_stream& m_zs = m_stream->m_zs;
+	z_stream& m_zs = stream.m_zs;
 
 	if (m_read_inited)
 	{
@@ -782,7 +785,6 @@ usz compressed_serialization_file_handler::get_size(const utils::serial& ar, usz
 struct compressed_zstd_stream_data
 {
 	ZSTD_DCtx* m_zd{};
-	ZSTD_DStream* m_zs{};
 	lf_queue<std::vector<u8>> m_queued_data_to_process;
 	lf_queue<std::vector<u8>> m_queued_data_to_write;
 };
@@ -835,9 +837,7 @@ void compressed_zstd_serialization_file_handler::initialize(utils::serial& ar)
 			finalize(ar);
 		}
 
-		auto& m_zd = m_stream->m_zd;
-		m_zd = ZSTD_createDCtx();
-		m_stream->m_zs = ZSTD_createDStream();
+		m_stream->m_zd = ZSTD_createDCtx();
 		m_read_inited = true;
 		m_errored = false;
 	}
@@ -1012,7 +1012,7 @@ usz compressed_zstd_serialization_file_handler::read_at(utils::serial& ar, usz r
 
 	initialize(ar);
 
-	auto& m_zd = m_stream->m_zd;
+	ZSTD_DCtx* m_zd = m_stream->m_zd;
 
 	const usz total_to_read = size;
 	usz read_size = 0;
@@ -1119,12 +1119,11 @@ void compressed_zstd_serialization_file_handler::finalize(utils::serial& ar)
 		return;
 	}
 
-	auto& m_zd = m_stream->m_zd;
-
 	if (m_read_inited)
 	{
 		//ZSTD_decompressEnd(m_stream->m_zd);
-		ensure(ZSTD_freeDCtx(m_zd));
+		ensure(ZSTD_freeDCtx(m_stream->m_zd) == 0);
+		m_stream->m_zd = nullptr;
 		m_read_inited = false;
 		return;
 	}
