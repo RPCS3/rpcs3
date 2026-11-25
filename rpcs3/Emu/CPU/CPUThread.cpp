@@ -1681,7 +1681,7 @@ extern bool try_lock_spu_threads_in_a_state_compatible_with_savestates(bool reve
 			}
 		}
 
-		if (!savable_threads)
+		if (!savable_threads && !spu_list->empty())
 		{
 			std::this_thread::yield();
 			continue;
