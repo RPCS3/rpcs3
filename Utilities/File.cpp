@@ -1611,8 +1611,22 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 	}
 
 #ifdef _WIN32
-	const auto ws1 = to_wchar(from);
-	const auto ws2 = to_wchar(to);
+	// MoveFileExW fails with ERROR_INVALID_PARAMETER on some Windows builds if a directory path ends with a delimiter
+	const auto trim_delim = [](std::string_view path) -> std::string_view
+	{
+		const usz pos = path.find_last_not_of(delim);
+
+		// Keep the delimiter of a root path (e.g. "C:/")
+		if (pos == umax || (pos == 1 && path[1] == ':'))
+		{
+			return path;
+		}
+
+		return path.substr(0, pos + 1);
+	};
+
+	const auto ws1 = to_wchar(trim_delim(from));
+	const auto ws2 = to_wchar(trim_delim(to));
 
 	if (!MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING : 0))
 	{
