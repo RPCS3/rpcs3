@@ -1631,8 +1631,9 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 	// Only strip the delimiters of an existing directory, so a path such as "file.txt/" still fails
 	const bool trim = (from_trim.size() != from.size() || to_trim.size() != to.size()) && is_dir(from);
 
-	const auto ws1 = to_wchar(trim ? from_trim : std::string_view(from));
-	const auto ws2 = to_wchar(trim ? to_trim : std::string_view(to));
+	// to_wchar() requires a null-terminated string
+	const auto ws1 = to_wchar(trim ? std::string(from_trim) : from);
+	const auto ws2 = to_wchar(trim ? std::string(to_trim) : to);
 
 	if (!MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING : 0))
 	{
