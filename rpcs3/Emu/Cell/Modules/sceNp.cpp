@@ -3450,7 +3450,7 @@ error_code sceNpLookupPollAsync(s32 transId, vm::ptr<s32> result)
 	return CELL_OK;
 }
 
-static error_code lookup_npid(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> option)
+static error_code lookup_npid(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::ptr<SceNpId> npId, vm::ptr<void> /*option*/)
 {
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
