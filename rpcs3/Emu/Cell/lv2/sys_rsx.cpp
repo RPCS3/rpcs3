@@ -748,7 +748,9 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 		const u32 prev_ea = table.ea[io + i];
 		table.ea[io + i].release(static_cast<u32>(ea + i) << 20);
 		if (prev_ea + 1) table.io[prev_ea >> 20].release(-1); // Clear previous mapping if exists
+		if (prev_ea + 1) table.access_io[prev_ea >> 20].release(-1);
 		table.io[ea + i].release(static_cast<u32>(io + i) << 20);
+		table.access_io[ea + i].release(-1);
 	}
 
 	return CELL_OK;
@@ -796,6 +798,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
 		const u32 ea_entry = table.ea[io];
 		table.ea[io++].release(-1);
 		if (ea_entry + 1) table.io[ea_entry >> 20].release(-1);
+		if (ea_entry + 1) table.access_io[ea_entry >> 20].release(-1);
 	}
 
 	return CELL_OK;

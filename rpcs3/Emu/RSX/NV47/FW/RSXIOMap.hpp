@@ -46,6 +46,10 @@ namespace rsx
 
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
+
+		// IO page of the last RSX access to each EA page (main memory can be mapped at several IO offsets)
+		std::array<atomic_t<u32>, 4096> access_io;
+
 		std::array<shared_mutex, 0x1'0000'0000 / c_lock_stride> rs;
 
 		rsx_iomap_table() noexcept;
