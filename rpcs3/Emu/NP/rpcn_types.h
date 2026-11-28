@@ -73,6 +73,13 @@ namespace rpcn
 		SyncTrophies,
 		DeleteTrophies,
 		GetTss,
+		GetLobbyInfoList,
+		JoinLobby,
+		LeaveLobby,
+		SetLobbyMemberDataInternal,
+		GetLobbyMemberDataInternalList,
+		SendLobbyChatMessage,
+		SendLobbyInvitation,
 	};
 
 	enum class NotificationType : u16
@@ -96,6 +103,11 @@ namespace rpcn
 		RoomOwnerChangedGUI,
 		UserKickedGUI,
 		QuickMatchCompleteGUI,
+		MemberJoinedLobby,
+		MemberLeftLobby,
+		UpdatedLobbyMemberDataInternal,
+		LobbyMessageReceived,
+		LobbyInvitationReceived,
 	};
 
 	enum class rpcn_state

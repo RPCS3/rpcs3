@@ -4,6 +4,21 @@
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
+// Lobby structures are filled by RPCN, sizes derived from SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_*
+static_assert(sizeof(SceNpMatching2JoinedSessionInfo) == 32);
+static_assert(sizeof(SceNpMatching2LobbyMemberBinAttrInternal) == 24);
+static_assert(sizeof(SceNpMatching2LobbyMemberDataInternal) == 80);
+static_assert(sizeof(SceNpMatching2LobbyMemberIdList) == 16);
+static_assert(sizeof(SceNpMatching2LobbyDataExternal) == 64);
+static_assert(sizeof(SceNpMatching2LobbyDataInternal) == 48);
+static_assert(sizeof(SceNpMatching2LobbyMessageDestination) == 8);
+static_assert(sizeof(SceNpMatching2LobbyMemberUpdateInfo) == 28);
+static_assert(sizeof(SceNpMatching2LobbyMemberDataInternalUpdateInfo) == 64);
+static_assert(sizeof(SceNpMatching2LobbyMessageInfo) == 20);
+static_assert(sizeof(SceNpMatching2JoinLobbyRequest) == 48);
+static_assert(sizeof(SceNpMatching2SendLobbyChatMessageRequest) == 32);
+static_assert(sizeof(SceNpMatching2GetLobbyMemberDataInternalListRequest) == 32);
+
 namespace np
 {
 	void BinAttr_to_SceNpMatching2BinAttr(event_data& edata, const np2_structs::BinAttr& bin_attr, SceNpMatching2BinAttr* binattr_info)
@@ -660,4 +675,262 @@ namespace np
 		opt_param->hubMemberId = resp.hubmemberid().value();
 	}
 
+
+	static void JoinedSessionInfos_to_SceNpMatching2JoinedSessionInfos(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::JoinedSessionInfo>& sessions, vm::bptr<SceNpMatching2JoinedSessionInfo>& sce_sessions, be_t<u32>& sce_sessions_num)
+	{
+		sce_sessions_num = sessions.size();
+
+		if (sessions.empty())
+			return;
+
+		auto* ptr_sessions = edata.allocate<SceNpMatching2JoinedSessionInfo>(sizeof(SceNpMatching2JoinedSessionInfo) * sessions.size(), sce_sessions);
+		for (int i = 0; i < sessions.size(); i++)
+		{
+			const auto& session           = sessions.Get(i);
+			ptr_sessions[i].sessionType   = ::narrow<u8>(session.sessiontype());
+			ptr_sessions[i].serverId      = ::narrow<u16>(session.serverid());
+			ptr_sessions[i].worldId       = session.worldid();
+			ptr_sessions[i].lobbyId       = session.lobbyid();
+			ptr_sessions[i].roomId        = session.roomid();
+			ptr_sessions[i].joinDate.tick = session.joindate();
+		}
+	}
+
+	static void LobbyMemberBinAttrInternals_to_SceNpMatching2LobbyMemberBinAttrInternals(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::RoomMemberBinAttrInternal>& attrs, vm::bptr<SceNpMatching2LobbyMemberBinAttrInternal>& sce_attrs, be_t<u32>& sce_attrs_num)
+	{
+		sce_attrs_num = attrs.size();
+
+		if (attrs.empty())
+			return;
+
+		auto* ptr_attrs = edata.allocate<SceNpMatching2LobbyMemberBinAttrInternal>(sizeof(SceNpMatching2LobbyMemberBinAttrInternal) * attrs.size(), sce_attrs);
+		for (int i = 0; i < attrs.size(); i++)
+		{
+			ptr_attrs[i].updateDate.tick = attrs.Get(i).updatedate();
+			BinAttr_to_SceNpMatching2BinAttr(edata, attrs.Get(i).data(), &ptr_attrs[i].data);
+		}
+	}
+
+	template <typename T>
+	static void LobbyDestination_to_SceNpMatching2LobbyMessageDestination(event_data& edata, const T& msg, SceNpMatching2CastType cast_type, vm::bptr<SceNpMatching2LobbyMessageDestination>& sce_dst)
+	{
+		if (cast_type == SCE_NP_MATCHING2_CASTTYPE_BROADCAST)
+			return;
+
+		auto* dst = edata.allocate<SceNpMatching2LobbyMessageDestination>(sizeof(SceNpMatching2LobbyMessageDestination), sce_dst);
+
+		switch (cast_type)
+		{
+		case SCE_NP_MATCHING2_CASTTYPE_UNICAST:
+			dst->unicastTarget = msg.dst_size() ? ::narrow<u16>(msg.dst(0)) : 0;
+			break;
+		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
+		{
+			dst->multicastTarget.memberIdNum = msg.dst_size();
+			edata.allocate<u16>(sizeof(u16) * msg.dst_size(), dst->multicastTarget.memberId);
+			// Written through the vm pointer so the ids end up big endian
+			for (int i = 0; i < msg.dst_size(); i++)
+			{
+				dst->multicastTarget.memberId[i] = ::narrow<u16>(msg.dst(i));
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	void GetLobbyInfoListResponse_to_SceNpMatching2GetLobbyInfoListResponse(event_data& edata, const np2_structs::GetLobbyInfoListResponse& resp, SceNpMatching2GetLobbyInfoListResponse* sce_resp)
+	{
+		sce_resp->range.startIndex = resp.startindex();
+		sce_resp->range.total      = resp.total();
+		sce_resp->range.size       = resp.lobbies_size();
+
+		if (resp.lobbies_size() == 0)
+			return;
+
+		auto* ptr_lobbies = edata.allocate<SceNpMatching2LobbyDataExternal>(sizeof(SceNpMatching2LobbyDataExternal) * resp.lobbies_size(), sce_resp->lobbyDataExternal);
+
+		for (int i = 0; i < resp.lobbies_size(); i++)
+		{
+			const auto& lobby = resp.lobbies(i);
+			auto* sce_lobby   = &ptr_lobbies[i];
+
+			if (i < (resp.lobbies_size() - 1))
+			{
+				sce_lobby->next = sce_resp->lobbyDataExternal + i + 1;
+				edata.add_relocation<SceNpMatching2LobbyDataExternal>(sce_lobby->next);
+			}
+
+			sce_lobby->serverId     = ::narrow<u16>(lobby.serverid());
+			sce_lobby->worldId      = lobby.worldid();
+			sce_lobby->lobbyId      = lobby.lobbyid();
+			sce_lobby->maxSlot      = lobby.maxslot();
+			sce_lobby->curMemberNum = lobby.curmembernum();
+			sce_lobby->flagAttr     = lobby.flagattr();
+
+			if (lobby.lobbysearchableintattrexternal_size())
+			{
+				sce_lobby->lobbySearchableIntAttrExternalNum = lobby.lobbysearchableintattrexternal_size();
+				auto* ptr_attrs = edata.allocate<SceNpMatching2IntAttr>(sizeof(SceNpMatching2IntAttr) * sce_lobby->lobbySearchableIntAttrExternalNum, sce_lobby->lobbySearchableIntAttrExternal);
+				for (int j = 0; j < lobby.lobbysearchableintattrexternal_size(); j++)
+				{
+					ptr_attrs[j].id  = lobby.lobbysearchableintattrexternal(j).id().value();
+					ptr_attrs[j].num = lobby.lobbysearchableintattrexternal(j).num();
+				}
+			}
+
+			if (lobby.lobbysearchablebinattrexternal_size())
+			{
+				sce_lobby->lobbySearchableBinAttrExternalNum = lobby.lobbysearchablebinattrexternal_size();
+				auto* ptr_attrs = edata.allocate<SceNpMatching2BinAttr>(sizeof(SceNpMatching2BinAttr) * sce_lobby->lobbySearchableBinAttrExternalNum, sce_lobby->lobbySearchableBinAttrExternal);
+				BinAttrs_to_SceNpMatching2BinAttrs(edata, lobby.lobbysearchablebinattrexternal(), ptr_attrs);
+			}
+
+			if (lobby.lobbybinattrexternal_size())
+			{
+				sce_lobby->lobbyBinAttrExternalNum = lobby.lobbybinattrexternal_size();
+				auto* ptr_attrs = edata.allocate<SceNpMatching2BinAttr>(sizeof(SceNpMatching2BinAttr) * sce_lobby->lobbyBinAttrExternalNum, sce_lobby->lobbyBinAttrExternal);
+				BinAttrs_to_SceNpMatching2BinAttrs(edata, lobby.lobbybinattrexternal(), ptr_attrs);
+			}
+		}
+	}
+
+	void LobbyDataInternal_to_SceNpMatching2LobbyDataInternal(event_data& edata, const np2_structs::LobbyDataInternal& lobby, SceNpMatching2LobbyDataInternal* sce_lobby)
+	{
+		sce_lobby->serverId = ::narrow<u16>(lobby.serverid());
+		sce_lobby->worldId  = lobby.worldid();
+		sce_lobby->lobbyId  = lobby.lobbyid();
+		sce_lobby->maxSlot  = lobby.maxslot();
+		sce_lobby->flagAttr = lobby.flagattr();
+
+		sce_lobby->memberIdList.memberIdNum = lobby.memberids_size();
+		sce_lobby->memberIdList.me          = ::narrow<u16>(lobby.me());
+
+		if (lobby.memberids_size())
+		{
+			edata.allocate<u16>(sizeof(u16) * lobby.memberids_size(), sce_lobby->memberIdList.memberId);
+			// Written through the vm pointer so the ids end up big endian
+			for (int i = 0; i < lobby.memberids_size(); i++)
+			{
+				sce_lobby->memberIdList.memberId[i] = ::narrow<u16>(lobby.memberids(i));
+			}
+		}
+
+		if (lobby.lobbybinattrinternal_size())
+		{
+			sce_lobby->lobbyBinAttrInternalNum = lobby.lobbybinattrinternal_size();
+			auto* ptr_attrs = edata.allocate<SceNpMatching2LobbyBinAttrInternal>(sizeof(SceNpMatching2LobbyBinAttrInternal) * sce_lobby->lobbyBinAttrInternalNum, sce_lobby->lobbyBinAttrInternal);
+			for (int i = 0; i < lobby.lobbybinattrinternal_size(); i++)
+			{
+				const auto& attr             = lobby.lobbybinattrinternal(i);
+				ptr_attrs[i].updateDate.tick = attr.updatedate();
+				ptr_attrs[i].updateMemberId  = attr.updatememberid().value();
+				BinAttr_to_SceNpMatching2BinAttr(edata, attr.data(), &ptr_attrs[i].data);
+			}
+		}
+	}
+
+	void LobbyMemberDataInternal_to_SceNpMatching2LobbyMemberDataInternal(event_data& edata, const np2_structs::LobbyMemberDataInternal& member, SceNpMatching2LobbyMemberDataInternal* sce_member, bool include_onlinename, bool include_avatarurl)
+	{
+		UserInfo_to_SceNpUserInfo2(edata, member.userinfo(), &sce_member->userInfo, include_onlinename, include_avatarurl);
+		sce_member->joinDate.tick = member.joindate();
+		sce_member->memberId      = ::narrow<u16>(member.memberid());
+		sce_member->flagAttr      = member.flagattr();
+		JoinedSessionInfos_to_SceNpMatching2JoinedSessionInfos(edata, member.joinedsessioninfo(), sce_member->joinedSessionInfo, sce_member->joinedSessionInfoNum);
+		LobbyMemberBinAttrInternals_to_SceNpMatching2LobbyMemberBinAttrInternals(edata, member.lobbymemberbinattrinternal(), sce_member->lobbyMemberBinAttrInternal, sce_member->lobbyMemberBinAttrInternalNum);
+	}
+
+	void LobbyMemberDataInternals_to_SceNpMatching2LobbyMemberDataInternals(event_data& edata, const google::protobuf::RepeatedPtrField<np2_structs::LobbyMemberDataInternal>& members, vm::bptr<SceNpMatching2LobbyMemberDataInternal>& sce_members, bool include_onlinename, bool include_avatarurl)
+	{
+		if (members.empty())
+			return;
+
+		auto* ptr_members = edata.allocate<SceNpMatching2LobbyMemberDataInternal>(sizeof(SceNpMatching2LobbyMemberDataInternal) * members.size(), sce_members);
+
+		for (int i = 0; i < members.size(); i++)
+		{
+			if (i < (members.size() - 1))
+			{
+				ptr_members[i].next = sce_members + i + 1;
+				edata.add_relocation<SceNpMatching2LobbyMemberDataInternal>(ptr_members[i].next);
+			}
+
+			LobbyMemberDataInternal_to_SceNpMatching2LobbyMemberDataInternal(edata, members.Get(i), &ptr_members[i], include_onlinename, include_avatarurl);
+		}
+	}
+
+	void LobbyMemberUpdateInfo_to_SceNpMatching2LobbyMemberUpdateInfo(event_data& edata, const np2_structs::LobbyMemberUpdateInfo& update_info, SceNpMatching2LobbyMemberUpdateInfo* sce_update_info, bool include_onlinename, bool include_avatarurl)
+	{
+		sce_update_info->eventCause = ::narrow<u8>(update_info.eventcause());
+
+		if (update_info.has_optdata())
+		{
+			sce_update_info->optData.length = update_info.optdata().len();
+			for (usz i = 0; i < 16 && i < update_info.optdata().data().size(); i++)
+			{
+				sce_update_info->optData.data[i] = update_info.optdata().data()[i];
+			}
+		}
+
+		if (update_info.has_lobbymemberdatainternal())
+		{
+			auto* ptr_member = edata.allocate<SceNpMatching2LobbyMemberDataInternal>(sizeof(SceNpMatching2LobbyMemberDataInternal), sce_update_info->lobbyMemberDataInternal);
+			LobbyMemberDataInternal_to_SceNpMatching2LobbyMemberDataInternal(edata, update_info.lobbymemberdatainternal(), ptr_member, include_onlinename, include_avatarurl);
+		}
+	}
+
+	void LobbyMemberDataInternalUpdate_to_SceNpMatching2LobbyMemberDataInternalUpdateInfo(event_data& edata, const np2_structs::NotificationLobbyMemberDataInternalUpdate& update, SceNpMatching2LobbyMemberDataInternalUpdateInfo* sce_update_info)
+	{
+		sce_update_info->memberId = ::narrow<u16>(update.memberid());
+		if (!update.npid().empty())
+		{
+			std::memcpy(sce_update_info->npId.handle.data, update.npid().c_str(), std::min<usz>(16, update.npid().size()));
+		}
+		sce_update_info->flagFilter  = update.flagfilter();
+		sce_update_info->newFlagAttr = update.newflagattr();
+		JoinedSessionInfos_to_SceNpMatching2JoinedSessionInfos(edata, update.newjoinedsessioninfo(), sce_update_info->newJoinedSessionInfo, sce_update_info->newJoinedSessionInfoNum);
+		LobbyMemberBinAttrInternals_to_SceNpMatching2LobbyMemberBinAttrInternals(edata, update.newlobbymemberbinattrinternal(), sce_update_info->newLobbyMemberBinAttrInternal, sce_update_info->newLobbyMemberBinAttrInternalNum);
+	}
+
+	void LobbyMessage_to_SceNpMatching2LobbyMessageInfo(event_data& edata, const np2_structs::NotificationLobbyMessage& msg, SceNpMatching2LobbyMessageInfo* sce_msg, bool include_onlinename, bool include_avatarurl)
+	{
+		sce_msg->filtered = msg.filtered();
+		sce_msg->castType = ::narrow<u8>(msg.casttype());
+		LobbyDestination_to_SceNpMatching2LobbyMessageDestination(edata, msg, sce_msg->castType, sce_msg->dst);
+
+		if (msg.has_srcmember())
+		{
+			auto* ptr_sce_userinfo = edata.allocate<SceNpUserInfo2>(sizeof(SceNpUserInfo2), sce_msg->srcMember);
+			UserInfo_to_SceNpUserInfo2(edata, msg.srcmember(), ptr_sce_userinfo, include_onlinename, include_avatarurl);
+		}
+
+		if (!msg.msg().empty())
+		{
+			sce_msg->msgLen    = ::size32(msg.msg());
+			auto* ptr_msg_data = static_cast<u8*>(const_cast<void*>(edata.allocate<const void>(::size32(msg.msg()), sce_msg->msg)));
+			memcpy(ptr_msg_data, msg.msg().data(), msg.msg().size());
+		}
+	}
+
+	void LobbyInvitation_to_SceNpMatching2LobbyInvitationInfo(event_data& edata, const np2_structs::NotificationLobbyInvitation& inv, SceNpMatching2LobbyInvitationInfo* sce_inv, bool include_onlinename, bool include_avatarurl)
+	{
+		sce_inv->castType = ::narrow<u8>(inv.casttype());
+		LobbyDestination_to_SceNpMatching2LobbyMessageDestination(edata, inv, sce_inv->castType, sce_inv->dst);
+
+		if (inv.has_srcmember())
+		{
+			auto* ptr_sce_userinfo = edata.allocate<SceNpUserInfo2>(sizeof(SceNpUserInfo2), sce_inv->srcMember);
+			UserInfo_to_SceNpUserInfo2(edata, inv.srcmember(), ptr_sce_userinfo, include_onlinename, include_avatarurl);
+		}
+
+		JoinedSessionInfos_to_SceNpMatching2JoinedSessionInfos(edata, inv.targetsession(), sce_inv->invitationData.targetSession, sce_inv->invitationData.targetSessionNum);
+
+		if (!inv.optdata().empty())
+		{
+			sce_inv->invitationData.optDataLen = ::size32(inv.optdata());
+			auto* ptr_opt_data                 = static_cast<u8*>(edata.allocate<void>(::size32(inv.optdata()), sce_inv->invitationData.optData));
+			memcpy(ptr_opt_data, inv.optdata().data(), inv.optdata().size());
+		}
+	}
 } // namespace np

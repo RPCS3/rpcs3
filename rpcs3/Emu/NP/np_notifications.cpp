@@ -425,4 +425,197 @@ namespace np
 		ctx->wakey = 1;
 		ctx->wakey.notify_one();
 	}
+
+	void np_handler::queue_lobby_event(SceNpMatching2LobbyId lobby_id, SceNpMatching2Event event, u32 event_key, u32 size)
+	{
+		if (!lobby_event_cb)
+		{
+			get_match2_event(event_key, 0, 0);
+			return;
+		}
+
+		sysutil_register_cb([lobby_event_cb = this->lobby_event_cb, lobby_event_cb_ctx = this->lobby_event_cb_ctx, lobby_id, event, event_key, lobby_event_cb_arg = this->lobby_event_cb_arg, size](ppu_thread& cb_ppu) -> s32
+			{
+				lobby_event_cb(cb_ppu, lobby_event_cb_ctx, lobby_id, event, event_key, 0, size, lobby_event_cb_arg);
+				return 0;
+			});
+	}
+
+	void np_handler::queue_lobby_message(SceNpMatching2LobbyId lobby_id, SceNpMatching2LobbyMemberId src_member_id, SceNpMatching2Event event, u32 event_key, u32 size)
+	{
+		if (!lobby_msg_cb)
+		{
+			get_match2_event(event_key, 0, 0);
+			return;
+		}
+
+		sysutil_register_cb([lobby_msg_cb = this->lobby_msg_cb, lobby_msg_cb_ctx = this->lobby_msg_cb_ctx, lobby_id, src_member_id, event, event_key, lobby_msg_cb_arg = this->lobby_msg_cb_arg, size](ppu_thread& cb_ppu) -> s32
+			{
+				lobby_msg_cb(cb_ppu, lobby_msg_cb_ctx, lobby_id, src_member_id, event, event_key, 0, size, lobby_msg_cb_arg);
+				return 0;
+			});
+	}
+
+	void np_handler::notif_member_joined_lobby(vec_stream& noti)
+	{
+		auto notification = noti.get_protobuf<np2_structs::NotificationLobbyMemberUpdate>();
+
+		if (noti.is_error() || !notification->has_updateinfo() || !notification->updateinfo().has_lobbymemberdatainternal())
+		{
+			rpcn_log.error("Received faulty MemberJoinedLobby notification");
+			return;
+		}
+
+		const u64 lobby_id = notification->lobbyid();
+		const u16 member_id = ::narrow<u16>(notification->updateinfo().lobbymemberdatainternal().memberid());
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			const auto it = joined_lobbies.find(lobby_id);
+			if (it == joined_lobbies.end())
+				return;
+
+			it->second.members.insert(member_id);
+		}
+
+		const u32 event_key = get_event_key();
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(lobby_event_cb_ctx);
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_LobbyMemberUpdateInfo, sizeof(SceNpMatching2LobbyMemberUpdateInfo));
+		auto* notif_data = reinterpret_cast<SceNpMatching2LobbyMemberUpdateInfo*>(edata.data());
+		LobbyMemberUpdateInfo_to_SceNpMatching2LobbyMemberUpdateInfo(edata, notification->updateinfo(), notif_data, include_onlinename, include_avatarurl);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("Received notification that user %s(%d) joined the lobby(%d)", notification->updateinfo().lobbymemberdatainternal().userinfo().npid(), member_id, lobby_id);
+
+		queue_lobby_event(lobby_id, SCE_NP_MATCHING2_LOBBY_EVENT_MemberJoined, event_key, edata.size());
+	}
+
+	void np_handler::notif_member_left_lobby(vec_stream& noti)
+	{
+		auto notification = noti.get_protobuf<np2_structs::NotificationLobbyMemberUpdate>();
+
+		if (noti.is_error() || !notification->has_updateinfo() || !notification->updateinfo().has_lobbymemberdatainternal())
+		{
+			rpcn_log.error("Received faulty MemberLeftLobby notification");
+			return;
+		}
+
+		const u64 lobby_id = notification->lobbyid();
+		const u16 member_id = ::narrow<u16>(notification->updateinfo().lobbymemberdatainternal().memberid());
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			const auto it = joined_lobbies.find(lobby_id);
+			if (it == joined_lobbies.end())
+				return;
+
+			it->second.members.erase(member_id);
+		}
+
+		const u32 event_key = get_event_key();
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(lobby_event_cb_ctx);
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_LobbyMemberUpdateInfo, sizeof(SceNpMatching2LobbyMemberUpdateInfo));
+		auto* notif_data = reinterpret_cast<SceNpMatching2LobbyMemberUpdateInfo*>(edata.data());
+		LobbyMemberUpdateInfo_to_SceNpMatching2LobbyMemberUpdateInfo(edata, notification->updateinfo(), notif_data, include_onlinename, include_avatarurl);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("Received notification that user %s(%d) left the lobby(%d)", notification->updateinfo().lobbymemberdatainternal().userinfo().npid(), member_id, lobby_id);
+
+		queue_lobby_event(lobby_id, SCE_NP_MATCHING2_LOBBY_EVENT_MemberLeft, event_key, edata.size());
+	}
+
+	void np_handler::notif_updated_lobby_member_data_internal(vec_stream& noti)
+	{
+		auto notification = noti.get_protobuf<np2_structs::NotificationLobbyMemberDataInternalUpdate>();
+
+		if (noti.is_error())
+		{
+			rpcn_log.error("Received faulty UpdatedLobbyMemberDataInternal notification");
+			return;
+		}
+
+		const u64 lobby_id = notification->lobbyid();
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			if (!joined_lobbies.contains(lobby_id))
+				return;
+		}
+
+		const u32 event_key = get_event_key();
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_LobbyMemberDataInternalUpdateInfo, sizeof(SceNpMatching2LobbyMemberDataInternalUpdateInfo));
+		auto* notif_data = reinterpret_cast<SceNpMatching2LobbyMemberDataInternalUpdateInfo*>(edata.data());
+		LobbyMemberDataInternalUpdate_to_SceNpMatching2LobbyMemberDataInternalUpdateInfo(edata, *notification, notif_data);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("Received notification that member %d of lobby(%d) updated its data", notification->memberid(), lobby_id);
+
+		queue_lobby_event(lobby_id, SCE_NP_MATCHING2_LOBBY_EVENT_UpdatedLobbyMemberDataInternal, event_key, edata.size());
+	}
+
+	void np_handler::notif_lobby_message_received(vec_stream& noti)
+	{
+		auto notification = noti.get_protobuf<np2_structs::NotificationLobbyMessage>();
+
+		if (noti.is_error() || notification->msg().size() > SCE_NP_MATCHING2_CHAT_MSG_MAX_SIZE || notification->dst_size() > SCE_NP_MATCHING2_LOBBY_MAX_SLOT)
+		{
+			rpcn_log.error("Received faulty LobbyMessageReceived notification");
+			return;
+		}
+
+		const u64 lobby_id = notification->lobbyid();
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			if (!joined_lobbies.contains(lobby_id))
+				return;
+		}
+
+		const u32 event_key = get_event_key();
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(lobby_msg_cb_ctx);
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_LobbyMessageInfo, sizeof(SceNpMatching2LobbyMessageInfo));
+		auto* notif_data = reinterpret_cast<SceNpMatching2LobbyMessageInfo*>(edata.data());
+		LobbyMessage_to_SceNpMatching2LobbyMessageInfo(edata, *notification, notif_data, include_onlinename, include_avatarurl);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("Received notification of a lobby message from member(%d) in lobby(%d)", notification->srcmemberid(), lobby_id);
+
+		queue_lobby_message(lobby_id, ::narrow<u16>(notification->srcmemberid()), SCE_NP_MATCHING2_LOBBY_MSG_EVENT_ChatMessage, event_key, edata.size());
+	}
+
+	void np_handler::notif_lobby_invitation_received(vec_stream& noti)
+	{
+		auto notification = noti.get_protobuf<np2_structs::NotificationLobbyInvitation>();
+
+		if (noti.is_error() || notification->targetsession_size() > SCE_NP_MATCHING2_INVITATION_TARGET_SESSION_MAX ||
+			notification->optdata().size() > SCE_NP_MATCHING2_INVITATION_OPTION_DATA_MAX_SIZE || notification->dst_size() > SCE_NP_MATCHING2_LOBBY_MAX_SLOT)
+		{
+			rpcn_log.error("Received faulty LobbyInvitationReceived notification");
+			return;
+		}
+
+		const u64 lobby_id = notification->lobbyid();
+
+		{
+			std::lock_guard lock(mutex_joined_lobbies);
+			if (!joined_lobbies.contains(lobby_id))
+				return;
+		}
+
+		const u32 event_key = get_event_key();
+		const auto [include_onlinename, include_avatarurl] = get_match2_context_options(lobby_msg_cb_ctx);
+
+		auto& edata = allocate_req_result(event_key, SCE_NP_MATCHING2_EVENT_DATA_MAX_SIZE_LobbyInvitationInfo, sizeof(SceNpMatching2LobbyInvitationInfo));
+		auto* notif_data = reinterpret_cast<SceNpMatching2LobbyInvitationInfo*>(edata.data());
+		LobbyInvitation_to_SceNpMatching2LobbyInvitationInfo(edata, *notification, notif_data, include_onlinename, include_avatarurl);
+		np_memory.shrink_allocation(edata.addr(), edata.size());
+
+		rpcn_log.notice("Received a lobby invitation from member(%d) in lobby(%d)", notification->srcmemberid(), lobby_id);
+
+		queue_lobby_message(lobby_id, ::narrow<u16>(notification->srcmemberid()), SCE_NP_MATCHING2_LOBBY_MSG_EVENT_Invitation, event_key, edata.size());
+	}
 } // namespace np
