@@ -318,6 +318,16 @@ namespace rpcs3::utils
 		return fs::get_config_dir() + "screenshots/";
 	}
 
+	std::string get_commerce_dir()
+	{
+		return fs::get_config_dir() + "commerce/";
+	}
+
+	std::string get_commerce_dir_by_serial(const std::string& serial)
+	{
+		return get_commerce_dir() + serial;
+	}
+	
 	static std::string escape_path_component(std::string_view component)
 	{
 		if (component == ".")

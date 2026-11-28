@@ -633,6 +633,7 @@ enum
 	SCE_NP_COMMERCE_CATEGORY_IMAGEURL_LEN = 128,
 	SCE_NP_COMMERCE_PRODUCT_ID_LEN = 48,
 	SCE_NP_COMMERCE_PRODUCT_NAME_LEN = 192,
+	SCE_NP_COMMERCE_PRODUCT_IMAGEURL_LEN = 128,
 	SCE_NP_COMMERCE_SKU_ID_LEN = 56,
 	SCE_NP_COMMERCE_SKU_NAME_LEN = 64,
 	SCE_NP_COMMERCE_SKU_DESCRIPTION_LEN = 384,
@@ -1446,7 +1447,7 @@ struct SceNpDate
 // Entitlement ID (fixed-length)
 struct SceNpEntitlementId
 {
-	u8 data[SCE_NP_ENTITLEMENT_ID_SIZE]; // Unsigned char? What is the right type...?
+	char data[SCE_NP_ENTITLEMENT_ID_SIZE];
 };
 
 // Callback for getting the connection status
