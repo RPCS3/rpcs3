@@ -375,7 +375,7 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 	{
 		sys_process.success("Process finished");
 		signal_system_cache_can_stay();
-		Emu.Kill();
+		Emu.Kill(!Emu.ContinuousModeEnabled(false));
 	});
 
 	// Wait for GUI thread
