@@ -17,9 +17,12 @@ struct pcsc_card_info
 	std::vector<u8> pmm;
 	u16 system_code = 0xFFFF;
 	std::vector<u8> historical_bytes;
+	std::vector<u8> ats;
 	bool is_felica = false;
+	u8 felica_speed = 0; // 0 = default/unknown, 1 = 212 kbps, 2 = 424 kbps
 	bool is_mifare = false;
 	bool is_iso14443_4 = false;
+	bool is_type_b = false;
 	u16 atqa = 0x0000;
 	u8 sak = 0x00;
 	bool sak_valid = false;
@@ -29,6 +32,8 @@ struct pcsc_card_info
 class pcsc_driver
 {
 public:
+	static constexpr std::string_view fake_reader_name = "Fake";
+
 	pcsc_driver();
 	~pcsc_driver();
 
@@ -61,11 +66,15 @@ public:
 	// Disconnects from the current card
 	void disconnect_card(bool reset = false);
 
+	// Releases target session (resets auth / exits Part 3 mode, keeping non-reset handles warm until removal)
+	void release_target(bool reset_auth = false);
+
 	// Clears cached card identity information
 	void invalidate_card_cache();
 
-	// Returns card presence and identity information (UID, ATR, FeliCa/MIFARE type)
-	pcsc_card_info get_card_info();
+	// Returns card presence and identity information (UID, ATR, FeliCa/MIFARE type).
+	// When verify_presence is false, returns the validated active session cache without re-polling PC/SC.
+	pcsc_card_info get_card_info(bool verify_presence = true);
 
 	// Sends APDU command via SCardTransmit and receives response (including SW1/SW2)
 	bool transmit_apdu(std::span<const u8> apdu, std::vector<u8>& response);
@@ -108,4 +117,7 @@ private:
 
 	// Configures reader hardware parameters (e.g. FeliCa polling on Identiv uTrust 370xF)
 	void configure_reader_if_needed();
+
+	// Marks the reader as temporarily unavailable/disconnected while keeping the driver open for auto-reconnect
+	void mark_reader_disconnected(s64 ret);
 };

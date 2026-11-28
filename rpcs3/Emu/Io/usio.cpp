@@ -126,8 +126,10 @@ usb_device_usio::usb_device_usio(const std::array<u8, 7>& location)
 
 	load_backup();
 
-	m_io_status[0].card_reader.set_device_name(g_cfg.io.usio_nfc_reader_1.get());
-	m_io_status[1].card_reader.set_device_name(g_cfg.io.usio_nfc_reader_2.get());
+	m_io_status[0].configured_reader = g_cfg.io.usio_nfc_reader_1.get();
+	m_io_status[0].card_reader.set_device_name(m_io_status[0].configured_reader);
+	m_io_status[1].configured_reader = g_cfg.io.usio_nfc_reader_2.get();
+	m_io_status[1].card_reader.set_device_name(m_io_status[1].configured_reader);
 }
 
 usb_device_usio::~usb_device_usio()
@@ -518,7 +520,7 @@ void usb_device_usio::translate_input_tekken()
 	response[2] = 0b00010000; // DIP switches, 8 in total
 }
 
-void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
+void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg, usz max_size)
 {
 	usz reader_index = 0;
 	switch (static_cast<usio_reg>(reg))
@@ -539,8 +541,9 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 
 	auto& status = ::at32(m_io_status, reader_index);
 	const std::string target_reader = (reader_index == 0) ? g_cfg.io.usio_nfc_reader_1.get() : g_cfg.io.usio_nfc_reader_2.get();
-	if (status.card_reader.get_device_name() != target_reader)
+	if (status.configured_reader != target_reader)
 	{
+		status.configured_reader = target_reader;
 		status.card_reader.set_device_name(target_reader);
 	}
 
@@ -556,7 +559,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case usio_reg::card_reader_0_read:
 	case usio_reg::card_reader_1_read:
 	{
-		status.card_reader.write_buffer(buf);
+		status.card_reader.write_buffer(buf, max_size);
 		break;
 	}
 	case usio_reg::card_reader_0_write:
@@ -578,6 +581,7 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 
 void usb_device_usio::tap_card(usz player)
 {
+	std::lock_guard lock(m_usio_mutex);
 	auto& status = ::at32(m_io_status, player / 2);
 	status.card_tapped = true;
 	status.card_index = player % 2;
@@ -686,7 +690,7 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 		case usio_reg::card_reader_0_read:
 		case usio_reg::card_reader_1_read:
 		{
-			emulate_card_reader(response, reg);
+			emulate_card_reader(response, reg, size);
 			break;
 		}
 		case usio_reg::input_tekken:
@@ -771,12 +775,7 @@ void usb_device_usio::usio_init(u8 channel, u16 reg, u16 size)
 
 void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
-	static bool expecting_data = false;
-	static std::vector<u8> usio_data;
-	static u32 response_seek = 0;
-	static u8 usio_channel   = 0;
-	static u16 usio_register = 0;
-	static u16 usio_length   = 0;
+	std::lock_guard lock(m_usio_mutex);
 
 	transfer->fake            = true;
 	transfer->expected_result = HC_CC_NOERR;
@@ -791,15 +790,16 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	{
 		transfer->expected_count = buf_size;
 
-		if (expecting_data)
+		if (m_expecting_data)
 		{
-			usio_data.insert(usio_data.end(), buf, buf + buf_size);
-			usio_length -= buf_size;
+			const u32 chunk = std::min<u32>(buf_size, m_usio_length);
+			m_usio_data.insert(m_usio_data.end(), buf, buf + chunk);
+			m_usio_length -= ::narrow<u16>(chunk);
 
-			if (usio_length == 0)
+			if (m_usio_length == 0)
 			{
-				expecting_data = false;
-				usio_write(usio_channel, usio_register, usio_data);
+				m_expecting_data = false;
+				usio_write(m_usio_channel, m_usio_register, m_usio_data);
 			}
 			return;
 		}
@@ -813,33 +813,33 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 
 		const auto cmd = read_from_ptr<usio_command>(std::span<const u8>(buf, buf_size));
 
-		usio_channel  = cmd.op_channel & 0xF;
-		usio_register = cmd.reg;
-		usio_length   = cmd.length;
+		m_usio_channel  = cmd.op_channel & 0xF;
+		m_usio_register = cmd.reg;
+		m_usio_length   = cmd.length;
 
 		// Write has to be checked first, because it contains the read bit
 		if ((cmd.op_channel & USIO_COMMAND_WRITE) == USIO_COMMAND_WRITE)
 		{
-			usio_log.trace("UsioWrite(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
-			if (((~(usio_register >> 8)) & 0xF0) != cmd.reg_check)
+			usio_log.trace("UsioWrite(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", m_usio_channel, m_usio_register, m_usio_length);
+			if (((~(m_usio_register >> 8)) & 0xF0) != cmd.reg_check)
 			{
 				usio_log.error("Invalid UsioWrite command");
 				return;
 			}
-			expecting_data = true;
-			usio_data.clear();
+			m_expecting_data = true;
+			m_usio_data.clear();
 		}
 		else if ((cmd.op_channel & USIO_COMMAND_READ) == USIO_COMMAND_READ)
 		{
-			usio_log.trace("UsioRead(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
-			response_seek = 0;
+			usio_log.trace("UsioRead(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", m_usio_channel, m_usio_register, m_usio_length);
+			m_response_seek = 0;
 			response.clear();
-			usio_read(usio_channel, usio_register, usio_length);
+			usio_read(m_usio_channel, m_usio_register, m_usio_length);
 		}
 		else if ((cmd.op_channel & USIO_COMMAND_INIT) == USIO_COMMAND_INIT)
 		{
-			usio_log.trace("UsioInit(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", usio_channel, usio_register, usio_length);
-			usio_init(usio_channel, usio_register, usio_length);
+			usio_log.trace("UsioInit(Channel: 0x%02X, Register: 0x%04X, Length: 0x%04X)", m_usio_channel, m_usio_register, m_usio_length);
+			usio_init(m_usio_channel, m_usio_register, m_usio_length);
 		}
 		else
 		{
@@ -849,9 +849,9 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	}
 	case usio_endpoint::response_in:
 	{
-		const u32 size = std::min(buf_size, static_cast<u32>(response.size() - response_seek));
-		memcpy(buf, response.data() + response_seek, size);
-		response_seek += size;
+		const u32 size = std::min(buf_size, static_cast<u32>(response.size() - m_response_seek));
+		memcpy(buf, response.data() + m_response_seek, size);
+		m_response_seek += size;
 		transfer->expected_count = size;
 		break;
 	}

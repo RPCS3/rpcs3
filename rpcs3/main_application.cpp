@@ -46,6 +46,8 @@
 #include <QStandardPaths> // This shouldn't be outside rpcs3qt...
 #include <thread>
 
+#include "Emu/Io/buzzer_player.h"
+
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -146,6 +148,7 @@ void main_application::OnEmuSettingsChange()
 
 	audio::configure_audio();
 	audio::configure_rsxaudio();
+	buzzer_player::notify_settings_changed();
 	rsx::overlays::reset_performance_overlay();
 	rsx::overlays::reset_debug_overlay();
 }

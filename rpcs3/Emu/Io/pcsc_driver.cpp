@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <charconv>
+#include <chrono>
 #include <cstring>
 #include <mutex>
 
@@ -55,6 +57,8 @@ namespace
 	constexpr pcsc_dword_t C_RESET_CARD = SCARD_RESET_CARD;
 	constexpr pcsc_dword_t C_UNPOWER_CARD = SCARD_UNPOWER_CARD;
 	constexpr pcsc_dword_t C_STATE_UNAWARE = SCARD_STATE_UNAWARE;
+	constexpr pcsc_dword_t C_STATE_UNKNOWN = SCARD_STATE_UNKNOWN;
+	constexpr pcsc_dword_t C_STATE_UNAVAILABLE = SCARD_STATE_UNAVAILABLE;
 	constexpr pcsc_dword_t C_STATE_PRESENT = SCARD_STATE_PRESENT;
 	constexpr pcsc_dword_t C_STATUS_ABSENT = SCARD_ABSENT;
 	constexpr pcsc_long_t C_SUCCESS = SCARD_S_SUCCESS;
@@ -92,6 +96,8 @@ namespace
 	constexpr pcsc_dword_t C_RESET_CARD = SCARD_RESET_CARD;
 	constexpr pcsc_dword_t C_UNPOWER_CARD = SCARD_UNPOWER_CARD;
 	constexpr pcsc_dword_t C_STATE_UNAWARE = SCARD_STATE_UNAWARE;
+	constexpr pcsc_dword_t C_STATE_UNKNOWN = SCARD_STATE_UNKNOWN;
+	constexpr pcsc_dword_t C_STATE_UNAVAILABLE = SCARD_STATE_UNAVAILABLE;
 	constexpr pcsc_dword_t C_STATE_PRESENT = SCARD_STATE_PRESENT;
 	constexpr pcsc_dword_t C_STATUS_ABSENT = SCARD_ABSENT;
 	constexpr pcsc_long_t C_SUCCESS = SCARD_S_SUCCESS;
@@ -142,8 +148,10 @@ namespace
 	constexpr pcsc_dword_t C_RESET_CARD = 1;
 	constexpr pcsc_dword_t C_UNPOWER_CARD = 2;
 	constexpr pcsc_dword_t C_STATE_UNAWARE = 0;
+	constexpr pcsc_dword_t C_STATE_UNKNOWN = 0x00000004;
+	constexpr pcsc_dword_t C_STATE_UNAVAILABLE = 0x00000008;
 	constexpr pcsc_dword_t C_STATE_PRESENT = 0x00000020;
-	constexpr pcsc_dword_t C_STATUS_ABSENT = 1;
+	constexpr pcsc_dword_t C_STATUS_ABSENT = 2; // pcsc-lite SCARD_ABSENT bitmask (Windows uses enum value 1 via winscard.h)
 	constexpr pcsc_long_t C_SUCCESS = 0;
 	constexpr pcsc_long_t C_NO_READERS = static_cast<pcsc_long_t>(0x8010002E);
 	constexpr pcsc_long_t C_NO_SERVICE = static_cast<pcsc_long_t>(0x8010001D);
@@ -395,65 +403,10 @@ namespace
 		constexpr u16 VENDOR_ID_IDENTIV = 0x04E6; // Identiv / SCM Microsystems, Inc.
 		constexpr u16 VENDOR_ID_CHICONY = 0x04F2; // Chicony (OEM keyboard with Identiv chip)
 
-		// Product IDs from CLOUD.inf driver and uTrust 370xF User Manual
-		constexpr u16 PID_CHICONY_KUS0967  = 0x0967; // USB Smart Card Keyboard
-		constexpr u16 PID_SCL3711          = 0x5411; // SCL3711 Contactless USB Dongle
-		constexpr u16 PID_STC5_DFU         = 0x5601; // STC5 DFU Adapter
-		constexpr u16 PID_UTRUST_5500_SAM  = 0x5610; // uTrust 5500 SAM Reader (MI_00)
-		constexpr u16 PID_UTRUST_5500_CL   = 0x5610; // uTrust 5500 Contactless Reader (MI_01)
-		constexpr u16 PID_UTRUST_5501_SAM  = 0x5611; // uTrust 5501 SAM Reader (MI_00)
-		constexpr u16 PID_UTRUST_5501_CL   = 0x5611; // uTrust 5501 Contactless Reader (MI_01)
-		constexpr u16 PID_UTRUST_3720_CL   = 0x5612; // uTrust 3720 Contactless Reader
-		constexpr u16 PID_UTRUST_3721_CL   = 0x5613; // uTrust 3721 Contactless Reader (MI_00)
-		constexpr u16 PID_UTRUST_5501_CLS  = 0x5614; // uTrust 5501 Contactless Reader
-		constexpr u16 PID_STC4_DFU         = 0x5700; // STC4 DFU Adapter
-		constexpr u16 PID_STC4_DFU_SEC     = 0x5701; // STC4 DFU Adapter (Secondary)
-		constexpr u16 PID_UTRUST_2700F     = 0x5710; // uTrust 2700 F Smart Card Reader
-		constexpr u16 PID_UTRUST_2710F     = 0x5711; // uTrust 2710 F Smart Card Reader
-		constexpr u16 PID_SCR331_2700F     = 0x5712; // SCR331 CLOUD 2700 F
-		constexpr u16 PID_UTRUST_2980F     = 0x5713; // uTrust 2980 F Smart Card Reader
-		constexpr u16 PID_IAUTH2           = 0x5714; // iAuthenticate 2.0
-		constexpr u16 PID_UTRUST_2700F_FIDO= 0x5715; // uTrust 2700 F FIDO Authenticator (MI_01)
-		constexpr u16 PID_UTRUST_4700F_CNT  = 0x5720; // uTrust 4700 F Contact Reader (MI_00)
-		constexpr u16 PID_UTRUST_4700F_CL   = 0x5720; // uTrust 4700 F CL Reader (MI_01)
-		constexpr u16 PID_UTRUST_4710F_SAM  = 0x5721; // uTrust 4710 F SAM Reader (MI_00)
-		constexpr u16 PID_UTRUST_4710F_CL   = 0x5721; // uTrust 4710 F CL Reader (MI_01)
-		constexpr u16 PID_CLOUD_4000F_CNT   = 0x5723; // CLOUD 4000 F DTC Contact Reader (MI_00)
-		constexpr u16 PID_CLOUD_4000F_CL    = 0x5723; // CLOUD 4000 F DTC CL Reader (MI_01)
-		constexpr u16 PID_UTRUST_4701F_CNT  = 0x5724; // uTrust 4701 F Contact Reader (MI_00)
-		constexpr u16 PID_UTRUST_4701F_CL   = 0x5724; // uTrust 4701 F CL Reader (MI_01)
-		constexpr u16 PID_UTRUST_4711F_SAM  = 0x5725; // uTrust 4711 F SAM Reader (MI_00)
-		constexpr u16 PID_UTRUST_4711F_CL   = 0x5725; // uTrust 4711 F CL Reader (MI_01)
-		constexpr u16 PID_UTRUST_4701_CT_CL = 0x5726; // uTrust 4701 F CT_CL Reader
-		constexpr u16 PID_SMARTOS_CT        = 0x5727; // Identiv SmartOS Contact Reader (MI_00)
-		constexpr u16 PID_SMARTOS_CL        = 0x5727; // Identiv SmartOS Contactless Reader (MI_01)
-		constexpr u16 PID_SMARTOS_CTC       = 0x5728; // Identiv SmartOS Contact Reader (MI_00)
-		constexpr u16 PID_SMARTOS_CLS       = 0x5728; // Identiv SmartOS Contactless Reader (MI_01)
-		constexpr u16 PID_CLOUD_2190F       = 0x5750; // CLOUD 2190 F Smart Card Reader (MI_01)
-		constexpr u16 PID_UTRUST_3700F_CL   = 0x5790; // uTrust 3700 F CL Reader (CLOUD3700F_BSI_CL)
-		constexpr u16 PID_UTRUST_3701F_CL   = 0x5791; // uTrust 3701 F CL Reader (CLOUD3701F_LASCOM_CL)
-		constexpr u16 PID_SMARTOS_CLM       = 0x5792; // Identiv SmartOS Contactless Reader
-		constexpr u16 PID_UTRUST_2700R      = 0x5810; // uTrust 2700 R Smart Card Reader
-		constexpr u16 PID_CLOUD_2900R       = 0x5811; // CLOUD 2900 R Smart Card Reader
-		constexpr u16 PID_CLOUD_2910R       = 0x5812; // CLOUD 2910 R Smart Card Reader
-		constexpr u16 PID_SCR3310_2700R     = 0x5813; // SCR3310 CLOUD 2700 R
-		constexpr u16 PID_SCR3500A          = 0x5814; // SCR3500 A Contact Reader
-		constexpr u16 PID_SCR3500B          = 0x5815; // SCR3500 B Contact Reader
-		constexpr u16 PID_UTRUST_3512       = 0x5816; // uTrust 3512 SAM slot Token
-		constexpr u16 PID_UTRUST_3522_CC    = 0x5817; // uTrust 3522 embd SE Token
-		constexpr u16 PID_MAXX_LIGHT2       = 0x5818; // @MAXX Light2 token
-		constexpr u16 PID_MAXX_ID1          = 0x5819; // @MAXX ID-1 Smart Card Reader
-		constexpr u16 PID_UTRUST_3522_DI    = 0x581A; // uTrust 3522 embd SE RFID Token
-		constexpr u16 PID_CLOUD_2910R_TAG   = 0x581B; // CLOUD 2910 R Taglio SC Reader
-		constexpr u16 PID_SCR35XX           = 0x581C; // SCR35xx USB Smart Card Reader
-		constexpr u16 PID_SCR3500C          = 0x581D; // SCR3500 C Contact Reader
-		constexpr u16 PID_MYAUTH2_CTC       = 0x5821; // myAuthenticate 2.0
-		constexpr u16 PID_MYAUTH2_CNT       = 0x5822; // myAuthenticate 2.0
-		constexpr u16 PID_UTRUST_2700R_C    = 0x5823; // uTrust 2700 R Smart Card Reader
-		constexpr u16 PID_UTRUST_2700R_C5   = 0x5825; // uTrust 2700 R Smart Card Reader
-		constexpr u16 PID_UTRUST_TOKEN_FLEX = 0x5826; // uTrust Token Flex
+		constexpr u16 PID_CHICONY_KUS0967 = 0x0967;
+		constexpr u16 PID_SCL3711         = 0x5411;
+		constexpr u16 PID_CLOUD_2190F     = 0x5750;
 
-		// Checks if the given PID belongs to an Identiv product range (CLOUD.inf)
 		inline bool is_identiv_pid(u16 pid)
 		{
 			return pid == PID_SCL3711 ||
@@ -464,7 +417,6 @@ namespace
 				(pid >= 0x5810 && pid <= 0x5826);   // uTrust 2700 R, 2900 R, 3512, 3522, SCR3500, myAuth, Flex
 		}
 
-		// Checks if the given VID/PID pair corresponds to an Identiv reader
 		inline bool is_identiv_vid_pid(u16 vid, u16 pid)
 		{
 			if (vid == VENDOR_ID_IDENTIV)
@@ -473,16 +425,10 @@ namespace
 				return pid == 0 || is_identiv_pid(pid);
 			}
 
-			if (vid == VENDOR_ID_CHICONY && pid == PID_CHICONY_KUS0967)
-			{
-				return true;
-			}
-
-			return false;
+			return vid == VENDOR_ID_CHICONY && pid == PID_CHICONY_KUS0967;
 		}
 	} // namespace identiv
 
-	// Helper to parse USB VID and PID from device paths or identifier strings
 	inline bool parse_usb_vid_pid(std::string_view str, u16& out_vid, u16& out_pid)
 	{
 		if (str.empty())
@@ -492,71 +438,45 @@ namespace
 
 		const std::string lower = fmt::to_lower(str);
 
-		// Format 1: Standard Windows / PnP string: VID_04E6&PID_5790 (or VID_04E6, PID_5790)
-		auto vid_pos = lower.find("vid_");
-		if (vid_pos == std::string::npos)
+		const auto find_prefix_end = [&](std::initializer_list<std::string_view> prefixes) -> usz
 		{
-			vid_pos = lower.find("vid&");
-		}
-		if (vid_pos == std::string::npos)
-		{
-			vid_pos = lower.find("vid=");
-		}
-
-		auto pid_pos = lower.find("pid_");
-		if (pid_pos == std::string::npos)
-		{
-			pid_pos = lower.find("pid&");
-		}
-		if (pid_pos == std::string::npos)
-		{
-			pid_pos = lower.find("pid=");
-		}
-
-		if (vid_pos != std::string::npos && pid_pos != std::string::npos)
-		{
-			vid_pos += 4;
-			pid_pos += 4;
-			if (vid_pos + 4 <= lower.size() && pid_pos + 4 <= lower.size())
+			for (const std::string_view prefix : prefixes)
 			{
-				u16 vid = 0;
-				u16 pid = 0;
-				const auto [v_ptr, v_ec] = std::from_chars(lower.data() + vid_pos, lower.data() + vid_pos + 4, vid, 16);
-				const auto [p_ptr, p_ec] = std::from_chars(lower.data() + pid_pos, lower.data() + pid_pos + 4, pid, 16);
-				if (v_ec == std::errc{} && p_ec == std::errc{})
+				if (const usz pos = lower.find(prefix); pos != std::string::npos)
 				{
-					out_vid = vid;
-					out_pid = pid;
-					return true;
+					return pos + prefix.size();
 				}
 			}
+			return std::string::npos;
+		};
+
+		const auto parse_hex4 = [&](usz pos, u16& val) -> bool
+		{
+			if (pos == std::string::npos || pos + 4 > lower.size())
+			{
+				return false;
+			}
+			const auto [ptr, ec] = std::from_chars(lower.data() + pos, lower.data() + pos + 4, val, 16);
+			return ec == std::errc{};
+		};
+
+		// Standard Windows / PnP format: VID_04E6&PID_5790 (or vid& / vid=)
+		u16 vid = 0;
+		u16 pid = 0;
+		if (parse_hex4(find_prefix_end({"vid_", "vid&", "vid="}), vid) &&
+			parse_hex4(find_prefix_end({"pid_", "pid&", "pid="}), pid))
+		{
+			out_vid = vid;
+			out_pid = pid;
+			return true;
 		}
 
-		// Format 2: Linux / macOS libusb / ccid style: "04e6:5790" or "04e6/5790"
-		const auto colon_pos = lower.find("04e6:");
-		if (colon_pos != std::string::npos && colon_pos + 9 <= lower.size())
+		// Linux / macOS libusb / CCID style: "04e6:5790" or "04e6/5790"
+		if (parse_hex4(find_prefix_end({"04e6:", "04e6/"}), pid))
 		{
-			u16 pid = 0;
-			const auto [p_ptr, p_ec] = std::from_chars(lower.data() + colon_pos + 5, lower.data() + colon_pos + 9, pid, 16);
-			if (p_ec == std::errc{})
-			{
-				out_vid = identiv::VENDOR_ID_IDENTIV;
-				out_pid = pid;
-				return true;
-			}
-		}
-
-		const auto slash_pos = lower.find("04e6/");
-		if (slash_pos != std::string::npos && slash_pos + 9 <= lower.size())
-		{
-			u16 pid = 0;
-			const auto [p_ptr, p_ec] = std::from_chars(lower.data() + slash_pos + 5, lower.data() + slash_pos + 9, pid, 16);
-			if (p_ec == std::errc{})
-			{
-				out_vid = identiv::VENDOR_ID_IDENTIV;
-				out_pid = pid;
-				return true;
-			}
+			out_vid = identiv::VENDOR_ID_IDENTIV;
+			out_pid = pid;
+			return true;
 		}
 
 		return false;
@@ -570,30 +490,195 @@ namespace
 			return {};
 		}
 
-		std::vector<u8> buf(512, 0);
-		pcsc_dword_t attr_len = static_cast<pcsc_dword_t>(buf.size() - 1);
-		pcsc_long_t ret = SCardGetAttrib(card, attr_id, buf.data(), &attr_len);
+		char stack_buf[512]{};
+		pcsc_dword_t attr_len = static_cast<pcsc_dword_t>(sizeof(stack_buf) - 1);
+		pcsc_long_t ret = SCardGetAttrib(card, attr_id, reinterpret_cast<u8*>(stack_buf), &attr_len);
 		if (ret == C_SUCCESS && attr_len > 0)
 		{
-			const char* str = reinterpret_cast<const char*>(buf.data());
-			return std::string(str, strnlen(str, attr_len));
+			return std::string(stack_buf, strnlen(stack_buf, attr_len));
 		}
 
-		// Try two-step length query if buffer was insufficient
+		// Try two-step length query directly into return string if buffer was insufficient
 		attr_len = 0;
 		ret = SCardGetAttrib(card, attr_id, nullptr, &attr_len);
 		if (ret == C_SUCCESS && attr_len > 0)
 		{
-			buf.assign(attr_len + 1, 0);
-			ret = SCardGetAttrib(card, attr_id, buf.data(), &attr_len);
+			std::string result(attr_len + 1, '\0');
+			ret = SCardGetAttrib(card, attr_id, reinterpret_cast<u8*>(result.data()), &attr_len);
 			if (ret == C_SUCCESS && attr_len > 0)
 			{
-				const char* str = reinterpret_cast<const char*>(buf.data());
-				return std::string(str, strnlen(str, attr_len));
+				result.resize(strnlen(result.data(), attr_len));
+				return result;
 			}
 		}
 
 		return {};
+	}
+
+	inline std::span<const u8> build_short_apdu(std::array<u8, 261>& buf, u8 cla, u8 ins, u8 p1, u8 p2, std::span<const u8> data)
+	{
+		buf[0] = cla;
+		buf[1] = ins;
+		buf[2] = p1;
+		buf[3] = p2;
+		buf[4] = static_cast<u8>(data.size());
+		if (!data.empty())
+		{
+			std::memcpy(buf.data() + 5, data.data(), data.size());
+		}
+		return {buf.data(), 5 + data.size()};
+	}
+
+	inline std::span<const u8> build_transparent_apdu(std::array<u8, 264>& buf, std::span<const u8> payload, bool with_le)
+	{
+		usz pos = 0;
+		buf[pos++] = 0xFF;
+		buf[pos++] = 0xC2;
+		buf[pos++] = 0x00;
+		buf[pos++] = 0x01;
+		if (payload.size() <= 127)
+		{
+			buf[pos++] = static_cast<u8>(payload.size() + 2);
+			buf[pos++] = 0x95;
+			buf[pos++] = static_cast<u8>(payload.size());
+		}
+		else
+		{
+			buf[pos++] = static_cast<u8>(payload.size() + 3);
+			buf[pos++] = 0x95;
+			buf[pos++] = 0x81;
+			buf[pos++] = static_cast<u8>(payload.size());
+		}
+		std::memcpy(buf.data() + pos, payload.data(), payload.size());
+		pos += payload.size();
+		if (with_le)
+		{
+			buf[pos++] = 0x00; // Le = 0x00 (ISO 7816-4 Case 4)
+		}
+		return {buf.data(), pos};
+	}
+
+	inline u16 extract_sw(std::span<const u8> rapdu)
+	{
+		return rapdu.size() >= 2 ? static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back()) : 0;
+	}
+
+	// ISO 7816-4 Case 2 short APDU exchange with automatic SW 6C xx exact-Le retry
+	inline u16 transmit_case2_apdu(pcsc_driver& driver, std::array<u8, 5>& apdu, std::vector<u8>& resp)
+	{
+		if (!driver.transmit_apdu(apdu, resp) || resp.size() < 2)
+		{
+			return 0;
+		}
+		u16 sw = extract_sw(resp);
+		if ((sw & 0xFF00) == 0x6C00)
+		{
+			apdu[4] = static_cast<u8>(sw & 0xFF);
+			if (!driver.transmit_apdu(apdu, resp) || resp.size() < 2)
+			{
+				return 0;
+			}
+			sw = extract_sw(resp);
+		}
+		return sw;
+	}
+
+	// PC/SC Part 3 Supp. 2 Transparent Exchange (FF C2 00 01), retrying without Le on SW 67 00
+	inline bool transmit_transparent_apdu(pcsc_driver& driver, std::span<const u8> payload, std::vector<u8>& rapdu, usz& out_off, usz& out_len, bool allow_tag96)
+	{
+		out_off = 0;
+		out_len = 0;
+		if (payload.size() > 252)
+		{
+			return false;
+		}
+
+		std::array<u8, 264> trans_buf{};
+		bool ok = driver.transmit_apdu(build_transparent_apdu(trans_buf, payload, true), rapdu);
+		if (!ok || (rapdu.size() == 2 && extract_sw(rapdu) == 0x6700))
+		{
+			ok = driver.transmit_apdu(build_transparent_apdu(trans_buf, payload, false), rapdu);
+		}
+		if (!ok || rapdu.size() < 4 || extract_sw(rapdu) != 0x9000)
+		{
+			return false;
+		}
+
+		const usz tlv_end = rapdu.size() - 2;
+		const usz min_97_len = allow_tag96 ? 2u : 1u;
+		usz tlv_offset = 0;
+		while (tlv_offset + 2 <= tlv_end)
+		{
+			const u8 tag = rapdu[tlv_offset];
+			usz header_len = 2;
+			usz len = rapdu[tlv_offset + 1];
+			if (len == 0x81)
+			{
+				if (tlv_offset + 3 > tlv_end)
+				{
+					break;
+				}
+				header_len = 3;
+				len = rapdu[tlv_offset + 2];
+			}
+			else if (len == 0x82)
+			{
+				if (tlv_offset + 4 > tlv_end)
+				{
+					break;
+				}
+				header_len = 4;
+				len = (static_cast<usz>(rapdu[tlv_offset + 2]) << 8) | rapdu[tlv_offset + 3];
+			}
+			else if (len > 0x82)
+			{
+				break;
+			}
+
+			if (tlv_offset + header_len + len <= tlv_end)
+			{
+				if (tag == 0x97 && len >= min_97_len)
+				{
+					out_off = tlv_offset + header_len;
+					out_len = len;
+					return true;
+				}
+				if (allow_tag96 && tag == 0x96 && len > 2 && out_len == 0)
+				{
+					out_off = tlv_offset + header_len;
+					out_len = len;
+				}
+			}
+			tlv_offset += header_len + len;
+		}
+
+		return out_len > 0;
+	}
+
+	constexpr bool is_reader_unavailable_error(pcsc_long_t ret)
+	{
+		return ret == static_cast<pcsc_long_t>(0x80100009) /* SCARD_E_UNKNOWN_READER */ ||
+			ret == static_cast<pcsc_long_t>(0x80100017) /* SCARD_E_READER_UNAVAILABLE */ ||
+			ret == static_cast<pcsc_long_t>(0x8010001D) /* SCARD_E_NO_SERVICE */ ||
+			ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
+			ret == C_NO_READERS /* SCARD_E_NO_READERS_AVAILABLE (0x8010002E) */;
+	}
+
+	constexpr bool is_recoverable_comm_error(pcsc_long_t ret)
+	{
+		return is_reader_unavailable_error(ret) ||
+			ret == static_cast<pcsc_long_t>(0x80100003) /* SCARD_E_INVALID_HANDLE */ ||
+			ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */;
+	}
+
+	constexpr bool is_status_absent(pcsc_dword_t state)
+	{
+#if defined(_WIN32)
+		return state == 0 || state == C_STATUS_ABSENT;
+#else
+		// pcsc-lite reports SCardStatus state as a bitmask (SCARD_UNKNOWN=0x01, SCARD_ABSENT=0x02)
+		return state <= 0x0001 || (state & C_STATUS_ABSENT) != 0;
+#endif
 	}
 } // namespace
 
@@ -604,17 +689,104 @@ struct pcsc_driver::impl
 	pcsc_dword_t m_active_protocol = C_PROTO_UNDEFINED;
 	std::string m_reader_name;
 	std::recursive_mutex m_mutex;
+	std::atomic<bool> m_is_open{false};
+	bool m_reader_disconnected = false;
+	std::chrono::steady_clock::time_point m_last_reconnect_attempt{};
 	bool m_card_info_cached = false;
 	pcsc_card_info m_cached_card_info{};
+	pcsc_dword_t m_last_event_state = 0;
+	pcsc_dword_t m_cached_event_state = 0;
+	std::vector<u8> m_last_event_atr;
+	bool m_in_part3_mode = false;
 	bool m_reader_configured = false;
-	bool m_reader_config_attempted = false;
+	bool m_reader_config_attempted_direct = false;
+	bool m_reader_config_attempted_shared = false;
+	bool m_ioctl_escape_blocked = false;
 	u16 m_vendor_id = 0;
 	u16 m_product_id = 0;
 	bool m_is_identiv = false;
 	bool m_identiv_checked = false;
 
-	// Hardware-only Identiv reader detection using three complementary hardware layers
-	// (Zero reliance on reader display name / whitelist string comparison)
+	struct failed_auth_entry
+	{
+		std::array<u8, 16> uid{};
+		u8 uid_len = 0;
+		u8 sector = 0;
+		u8 key_type = 0;
+		std::array<u8, 6> key{};
+	};
+	static constexpr usz max_failed_auth_cache = 64;
+	std::array<failed_auth_entry, max_failed_auth_cache> m_failed_auth_cache{};
+	usz m_failed_auth_count = 0;
+
+	bool is_auth_failed_cached(std::span<const u8> uid, u8 sector, u8 key_type, std::span<const u8, 6> key) const
+	{
+		if (uid.empty() || uid.size() > 16)
+		{
+			return false;
+		}
+		for (usz i = 0; i < m_failed_auth_count; ++i)
+		{
+			const auto& entry = m_failed_auth_cache[i];
+			if (entry.sector == sector && entry.key_type == key_type &&
+				entry.uid_len == uid.size() && std::memcmp(entry.uid.data(), uid.data(), uid.size()) == 0 &&
+				std::memcmp(entry.key.data(), key.data(), 6) == 0)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void record_failed_auth(std::span<const u8> uid, u8 sector, u8 key_type, std::span<const u8, 6> key)
+	{
+		if (uid.empty() || uid.size() > 16 || is_auth_failed_cached(uid, sector, key_type, key))
+		{
+			return;
+		}
+		if (m_failed_auth_count >= max_failed_auth_cache)
+		{
+			std::move(m_failed_auth_cache.begin() + 1, m_failed_auth_cache.begin() + max_failed_auth_cache, m_failed_auth_cache.begin());
+			--m_failed_auth_count;
+		}
+		auto& entry = m_failed_auth_cache[m_failed_auth_count++];
+		std::memcpy(entry.uid.data(), uid.data(), uid.size());
+		entry.uid_len = static_cast<u8>(uid.size());
+		entry.sector = sector;
+		entry.key_type = key_type;
+		std::memcpy(entry.key.data(), key.data(), 6);
+	}
+
+	void invalidate_failed_auth(std::span<const u8> uid)
+	{
+		if (uid.empty() || uid.size() > 16)
+		{
+			m_failed_auth_count = 0;
+			return;
+		}
+		usz write_idx = 0;
+		for (usz i = 0; i < m_failed_auth_count; ++i)
+		{
+			const auto& entry = m_failed_auth_cache[i];
+			const bool match = (entry.uid_len == uid.size() && std::memcmp(entry.uid.data(), uid.data(), uid.size()) == 0);
+			if (!match)
+			{
+				if (write_idx != i)
+				{
+					m_failed_auth_cache[write_idx] = entry;
+				}
+				++write_idx;
+			}
+		}
+		m_failed_auth_count = write_idx;
+	}
+
+	void clear_failed_auth_cache()
+	{
+		m_failed_auth_count = 0;
+	}
+
+	// Hardware-only Identiv reader detection (checks local attributes before Escape 0x12 I/O)
 	bool is_identiv(pcsc_driver* driver = nullptr)
 	{
 		if (m_identiv_checked)
@@ -627,10 +799,7 @@ struct pcsc_driver::impl
 			return false;
 		}
 
-		// Layer 1: Hardware ID detection via PC/SC SCARD_ATTR_DEVICE_SYSTEM_NAME_A
-		// On Windows, returns the OS PnP device interface path, e.g.:
-		// "\\?\\USB#VID_04E6&PID_5790#<Serial>#{50dd5230-ba8a-11d1-bf5d-0000f805f530}"
-		// Directly yields the USB Vendor ID and Product ID without relying on reader name strings.
+		// Layer 1: USB VID/PID via PC/SC SCARD_ATTR_DEVICE_SYSTEM_NAME_A
 		if (m_card != 0)
 		{
 			const std::string sys_name = get_pcsc_attribute(m_card, SCARD_ATTR_DEVICE_SYSTEM_NAME_A);
@@ -644,7 +813,6 @@ struct pcsc_driver::impl
 					m_product_id = pid;
 					if (identiv::is_identiv_vid_pid(vid, pid))
 					{
-						nfc_log.trace("PC/SC: Identified Identiv hardware via Device System Name (VID: 0x%04X, PID: 0x%04X)", vid, pid);
 						m_is_identiv = true;
 						m_identiv_checked = true;
 						return true;
@@ -653,10 +821,7 @@ struct pcsc_driver::impl
 			}
 		}
 
-		// Layer 2: Hardware Escape Query: READER_GET_IFDTYPE (Escape 0x12)
-		// uTrust_370xF_User_Manual.pdf Section 6.3.3.3 (Page 51):
-		// Reader firmware directly returns its PID in little-endian format (2 bytes).
-		// e.g. 0x90 0x57 for CLOUD 3700 F (PID 0x5790); 0x91 0x57 for CLOUD 3701 F (PID 0x5791).
+		// Layer 2: Hardware Escape Query: READER_GET_IFDTYPE (Escape 0x12, uTrust Manual Section 6.3.3.3)
 		if (driver && m_card != 0)
 		{
 			const std::array<u8, 1> ifd_cmd{0x12};
@@ -668,7 +833,6 @@ struct pcsc_driver::impl
 				{
 					m_vendor_id = identiv::VENDOR_ID_IDENTIV;
 					m_product_id = pid;
-					nfc_log.trace("PC/SC: Identified Identiv hardware via READER_GET_IFDTYPE Escape 0x12 (PID: 0x%04X)", pid);
 					m_is_identiv = true;
 					m_identiv_checked = true;
 					return true;
@@ -676,25 +840,7 @@ struct pcsc_driver::impl
 			}
 		}
 
-		// Layer 3: Hardware Vendor attribute: SCARD_ATTR_VENDOR_NAME
-		// Driver or USB descriptor iManufacturer string (e.g. "Identiv", "SCM")
-		if (m_card != 0)
-		{
-			const std::string vendor_name = get_pcsc_attribute(m_card, SCARD_ATTR_VENDOR_NAME);
-			if (!vendor_name.empty())
-			{
-				const std::string lower_v = fmt::to_lower(vendor_name);
-				if (lower_v.find("identiv") != std::string::npos || lower_v.find("scm") != std::string::npos)
-				{
-					nfc_log.trace("PC/SC: Identified Identiv hardware via SCARD_ATTR_VENDOR_NAME ('%s')", vendor_name);
-					m_is_identiv = true;
-					m_identiv_checked = true;
-					return true;
-				}
-			}
-		}
-
-		if (m_card != 0)
+		if (m_card != 0 && (m_active_protocol == C_PROTO_T0 || m_active_protocol == C_PROTO_T1))
 		{
 			m_identiv_checked = true;
 		}
@@ -735,7 +881,8 @@ struct pcsc_driver::impl
 			SCardReleaseContext(m_context);
 			m_context = 0;
 			m_reader_configured = false;
-			m_reader_config_attempted = false;
+			m_reader_config_attempted_direct = false;
+			m_reader_config_attempted_shared = false;
 			m_is_identiv = false;
 			m_identiv_checked = false;
 			m_vendor_id = 0;
@@ -743,6 +890,12 @@ struct pcsc_driver::impl
 		}
 	}
 };
+
+namespace
+{
+	static std::mutex s_claimed_readers_mutex;
+	static std::unordered_map<std::string, const void*> s_claimed_readers;
+}
 
 pcsc_driver::pcsc_driver()
 	: m_impl(std::make_unique<impl>())
@@ -755,7 +908,16 @@ pcsc_driver::~pcsc_driver()
 }
 
 pcsc_driver::pcsc_driver(pcsc_driver&&) noexcept = default;
-pcsc_driver& pcsc_driver::operator=(pcsc_driver&&) noexcept = default;
+
+pcsc_driver& pcsc_driver::operator=(pcsc_driver&& other) noexcept
+{
+	if (this != &other)
+	{
+		close();
+		m_impl = std::move(other.m_impl);
+	}
+	return *this;
+}
 
 std::vector<std::string> pcsc_driver::list_readers()
 {
@@ -800,32 +962,86 @@ std::vector<std::string> pcsc_driver::list_readers()
 
 bool pcsc_driver::open(std::string_view reader_name)
 {
+	if (!m_impl)
+	{
+		return false;
+	}
+
 	std::lock_guard lock(m_impl->m_mutex);
 
-	if (reader_name.empty() || reader_name == "Fake")
+	if (reader_name.empty() || reader_name == fake_reader_name)
 	{
 		close();
 		return false;
 	}
 
-	if (m_impl->m_reader_name == reader_name && m_impl->context_valid())
+	if (m_impl->m_reader_name == reader_name && is_open() && (m_impl->context_valid() || m_impl->m_reader_disconnected))
 	{
 		return true;
 	}
 
+	// Release any prior reader claim by this instance before atomically claiming the new reader
 	close();
 
-	if (!m_impl->ensure_context())
 	{
-		nfc_log.error("PC/SC: Failed to establish context");
-		return false;
+		std::lock_guard claim_lock(s_claimed_readers_mutex);
+		const auto [it, inserted] = s_claimed_readers.try_emplace(std::string(reader_name), m_impl.get());
+		if (!inserted && it->second != m_impl.get())
+		{
+			nfc_log.error("PC/SC: Reader '%s' is already claimed; falling back to '%s'",
+				reader_name, fake_reader_name);
+			return false;
+		}
 	}
 
 	m_impl->m_reader_name = reader_name;
 
-	// Try connecting to card if present, or open direct connection
-	if (!connect_card())
+	const auto enter_hotplug_wait = [&]()
 	{
+		disconnect_card(false);
+		m_impl->release_context();
+		m_impl->m_last_event_state = 0;
+		m_impl->m_reader_disconnected = true;
+		m_impl->m_last_reconnect_attempt = std::chrono::steady_clock::now();
+		m_impl->m_is_open.store(true, std::memory_order_release);
+		nfc_log.error("PC/SC: Reader '%s' is not connected; waiting for hotplug", reader_name);
+		return true;
+	};
+
+	if (!m_impl->ensure_context())
+	{
+		return enter_hotplug_wait();
+	}
+
+	// Probe reader availability before attempting card/direct connection
+	pcsc_reader_state_t probe_state{};
+	probe_state.szReader = m_impl->m_reader_name.c_str();
+	probe_state.dwCurrentState = C_STATE_UNAWARE;
+	const pcsc_long_t probe_ret = SCardGetStatusChange(m_impl->m_context, 0, &probe_state, 1);
+	if (probe_ret != C_SUCCESS || (probe_state.dwEventState & (C_STATE_UNKNOWN | C_STATE_UNAVAILABLE)) != 0)
+	{
+		if (probe_ret == C_SUCCESS || is_recoverable_comm_error(probe_ret))
+		{
+			return enter_hotplug_wait();
+		}
+
+		nfc_log.error("PC/SC: Failed to query reader '%s' (0x%08X)", reader_name, static_cast<u32>(probe_ret));
+		close();
+		return false;
+	}
+
+	m_impl->m_last_event_state = probe_state.dwEventState;
+	const bool card_present = (probe_state.dwEventState & C_STATE_PRESENT) != 0;
+
+	// Try connecting to card if present, or open direct connection for reader configuration
+	if (!card_present || !connect_card())
+	{
+		if (m_impl->m_reader_disconnected)
+		{
+			m_impl->m_is_open.store(true, std::memory_order_release);
+			return true;
+		}
+
 		// Try direct connection for reader-level escape commands
 		pcsc_dword_t proto = C_PROTO_UNDEFINED;
 		const pcsc_long_t ret = SCardConnect(
@@ -843,14 +1059,29 @@ bool pcsc_driver::open(std::string_view reader_name)
 		else
 		{
 			m_impl->m_card = 0;
+			if (is_recoverable_comm_error(ret))
+			{
+				return enter_hotplug_wait();
+			}
 		}
 	}
 
 	m_impl->m_reader_configured = false;
-	m_impl->m_reader_config_attempted = false;
+	m_impl->m_reader_config_attempted_direct = false;
+	m_impl->m_reader_config_attempted_shared = false;
+	m_impl->m_is_open.store(true, std::memory_order_release);
 	configure_reader_if_needed();
 
-	nfc_log.success("PC/SC: Successfully opened reader '%s'", reader_name);
+	if (m_impl->m_reader_disconnected)
+	{
+		return true;
+	}
+	if (!m_impl->context_valid())
+	{
+		return enter_hotplug_wait();
+	}
+
+	nfc_log.success("PC/SC: Opened reader '%s'", reader_name);
 	return true;
 }
 
@@ -864,28 +1095,30 @@ void pcsc_driver::configure_reader_if_needed()
 	// Check if reader is Identiv uTrust / CLOUD 370x F / 470x F
 	if (m_impl->is_identiv(this))
 	{
-		// In Direct mode (no card connected), if CCID Escape is blocked by Windows driver
-		// (uTrust Manual Section 6.3.1), do not retry repeatedly during is_card_present() polling.
-		// Instead, retry once card is connected in Shared mode where PAPDU_ESCAPE_CMD can be used.
-		if (m_impl->m_reader_config_attempted && m_impl->m_active_protocol == C_PROTO_UNDEFINED)
+		const bool is_shared = (m_impl->m_active_protocol == C_PROTO_T0 || m_impl->m_active_protocol == C_PROTO_T1);
+		if (is_shared)
 		{
-			return;
+			if (m_impl->m_reader_config_attempted_shared)
+			{
+				return;
+			}
+			m_impl->m_reader_config_attempted_shared = true;
+		}
+		else
+		{
+			if (m_impl->m_reader_config_attempted_direct)
+			{
+				return;
+			}
+			m_impl->m_reader_config_attempted_direct = true;
 		}
 
-		m_impl->m_reader_config_attempted = true;
-
-		// Configure contactless polling to detect all supported technologies (Type A, Type B, FeliCa 212/424, Topaz)
-		// uTrust Manual Section 6.3.4.4 (Page 60-61): Factory default is Type A + Type B (0x02).
-		// Without setting the bitmask to include FeliCa (0x20, 0x40), FeliCa cards will not be detected by the reader firmware.
-		// Try standard 3-byte command first {0x95, 0xFF, 0xFF} (All technologies per uTrust Manual Section 6.3.4.4),
-		// then fall back to standard NFC Forum bitmask 0xE3 (Type A + B + FeliCa 212/424 + Topaz)
-		// or 0x63 (Type A + B + FeliCa 212/424), and finally 2-byte simple mode 0x02 (Type A + Type B).
-		static const std::vector<u8> try_set_type_cmds[] = {
-			{0x95, 0xFF, 0xFF}, // 3-byte All technologies (uTrust Manual Section 6.3.4.4)
-			{0x95, 0xFF, 0xE3}, // 3-byte NFC Forum (Type A, Type B, FeliCa 212/424, Topaz)
-			{0x95, 0xFF, 0x63}, // 3-byte Mainstream (Type A, Type B, FeliCa 212/424)
-			{0x95, 0x02},       // 2-byte Simple mode: Type A + Type B (uTrust Manual Section 6.3.4.4)
-		};
+		// Enable FeliCa polling in addition to default Type A + Type B (uTrust Manual Section 6.3.4.4)
+		static constexpr std::array<u8, 3> cmd_all{0x95, 0xFF, 0xFF};
+		static constexpr std::array<u8, 3> cmd_nfc_forum{0x95, 0xFF, 0xE3};
+		static constexpr std::array<u8, 3> cmd_mainstream{0x95, 0xFF, 0x63};
+		static constexpr std::array<u8, 2> cmd_simple{0x95, 0x02};
+		const std::span<const u8> try_set_type_cmds[] = {cmd_all, cmd_nfc_forum, cmd_mainstream, cmd_simple};
 
 		std::vector<u8> resp;
 		for (const auto& cmd : try_set_type_cmds)
@@ -897,42 +1130,78 @@ void pcsc_driver::configure_reader_if_needed()
 			}
 		}
 
-		if (!m_impl->m_reader_configured)
+		if (!m_impl->m_reader_configured && is_shared)
 		{
-			nfc_log.error("PC/SC: Failed to configure contactless polling types for '%s' (uTrust Escape 0x95 failed). If using default Windows CCID driver, ensure EscapeCommandEnable registry key is set to 1.", m_impl->m_reader_name);
+			nfc_log.error("PC/SC: Failed to configure FeliCa polling for '%s' (Escape 0x95); ensure EscapeCommandEnable=1 if using Windows CCID driver",
+				m_impl->m_reader_name);
 		}
 	}
-	else
+	else if (m_impl->m_active_protocol == C_PROTO_T0 || m_impl->m_active_protocol == C_PROTO_T1)
 	{
 		m_impl->m_reader_configured = true;
 	}
 }
 
+void pcsc_driver::mark_reader_disconnected(s64 ret)
+{
+	if (!m_impl)
+	{
+		return;
+	}
+
+	std::lock_guard lock(m_impl->m_mutex);
+	m_impl->m_last_event_state = 0;
+	disconnect_card(false);
+	m_impl->release_context();
+
+	if (!m_impl->m_reader_disconnected)
+	{
+		m_impl->m_reader_disconnected = true;
+		nfc_log.error("PC/SC: Reader '%s' disconnected (0x%08X); waiting for reconnect",
+			m_impl->m_reader_name, static_cast<u32>(ret));
+	}
+
+	m_impl->m_last_reconnect_attempt = std::chrono::steady_clock::now();
+}
+
 void pcsc_driver::close()
 {
+	if (!m_impl)
+	{
+		return;
+	}
+
+	m_impl->m_is_open.store(false, std::memory_order_release);
 	std::lock_guard lock(m_impl->m_mutex);
+	if (!m_impl->m_reader_name.empty())
+	{
+		std::lock_guard claim_lock(s_claimed_readers_mutex);
+		const auto it = s_claimed_readers.find(m_impl->m_reader_name);
+		if (it != s_claimed_readers.end() && it->second == m_impl.get())
+		{
+			s_claimed_readers.erase(it);
+		}
+	}
 	disconnect_card(false);
-	m_impl->m_card_info_cached = false;
-	m_impl->m_cached_card_info = {};
+	m_impl->m_reader_disconnected = false;
+	m_impl->m_last_reconnect_attempt = {};
+	m_impl->m_last_event_state = 0;
 	m_impl->m_reader_configured = false;
-	m_impl->m_reader_config_attempted = false;
+	m_impl->m_reader_config_attempted_direct = false;
+	m_impl->m_reader_config_attempted_shared = false;
+	m_impl->m_ioctl_escape_blocked = false;
 	m_impl->m_is_identiv = false;
 	m_impl->m_identiv_checked = false;
 	m_impl->m_vendor_id = 0;
 	m_impl->m_product_id = 0;
+	m_impl->clear_failed_auth_cache();
 	m_impl->release_context();
 	m_impl->m_reader_name.clear();
 }
 
 bool pcsc_driver::is_open() const
 {
-	if (!m_impl)
-	{
-		return false;
-	}
-
-	std::lock_guard lock(m_impl->m_mutex);
-	return !m_impl->m_reader_name.empty() && m_impl->m_reader_name != "Fake";
+	return m_impl && m_impl->m_is_open.load(std::memory_order_acquire);
 }
 
 std::string pcsc_driver::get_reader_name() const
@@ -948,20 +1217,53 @@ std::string pcsc_driver::get_reader_name() const
 
 bool pcsc_driver::is_card_present()
 {
-	std::lock_guard lock(m_impl->m_mutex);
-	if (m_impl->m_reader_name.empty())
+	if (!m_impl)
 	{
 		return false;
+	}
+
+	std::lock_guard lock(m_impl->m_mutex);
+	if (!is_open() || m_impl->m_reader_name.empty())
+	{
+		return false;
+	}
+
+	if (m_impl->m_reader_disconnected)
+	{
+		const auto now = std::chrono::steady_clock::now();
+		if (now - m_impl->m_last_reconnect_attempt < std::chrono::milliseconds(500))
+		{
+			return false;
+		}
+		m_impl->m_last_reconnect_attempt = now;
+
+		if (!m_impl->ensure_context())
+		{
+			return false;
+		}
+
+		pcsc_reader_state_t probe_state{};
+		probe_state.szReader = m_impl->m_reader_name.c_str();
+		probe_state.dwCurrentState = C_STATE_UNAWARE;
+		const pcsc_long_t probe_ret = SCardGetStatusChange(m_impl->m_context, 0, &probe_state, 1);
+		if (probe_ret != C_SUCCESS || (probe_state.dwEventState & (C_STATE_UNKNOWN | C_STATE_UNAVAILABLE)) != 0)
+		{
+			disconnect_card(false);
+			m_impl->release_context();
+			return false;
+		}
+
+		m_impl->m_reader_disconnected = false;
+		m_impl->m_reader_configured = false;
+		m_impl->m_reader_config_attempted_direct = false;
+		m_impl->m_reader_config_attempted_shared = false;
+		nfc_log.success("PC/SC: Reconnected to reader '%s'", m_impl->m_reader_name);
 	}
 
 	if (!m_impl->ensure_context())
 	{
+		mark_reader_disconnected(static_cast<s64>(0x8010001D));
 		return false;
-	}
-
-	if (!m_impl->m_reader_configured)
-	{
-		configure_reader_if_needed();
 	}
 
 	pcsc_reader_state_t state{};
@@ -969,8 +1271,26 @@ bool pcsc_driver::is_card_present()
 	state.dwCurrentState = C_STATE_UNAWARE;
 
 	const pcsc_long_t ret = SCardGetStatusChange(m_impl->m_context, 0, &state, 1);
+
 	if (ret == C_SUCCESS)
 	{
+		if ((state.dwEventState & (C_STATE_UNKNOWN | C_STATE_UNAVAILABLE)) != 0)
+		{
+			mark_reader_disconnected(static_cast<s64>(0x80100017));
+			return false;
+		}
+
+		m_impl->m_last_event_state = state.dwEventState;
+		const usz atr_len = std::min<usz>(state.cbAtr, sizeof(state.rgbAtr));
+		if (atr_len > 0)
+		{
+			m_impl->m_last_event_atr.assign(state.rgbAtr, state.rgbAtr + atr_len);
+		}
+		else
+		{
+			m_impl->m_last_event_atr.clear();
+		}
+
 		const bool present = (state.dwEventState & C_STATE_PRESENT) != 0;
 		if (!present)
 		{
@@ -980,33 +1300,65 @@ bool pcsc_driver::is_card_present()
 			}
 			else
 			{
-				m_impl->m_card_info_cached = false;
-				m_impl->m_cached_card_info = {};
+				invalidate_card_cache();
+			}
+
+			if (!m_impl->m_reader_configured && !m_impl->m_reader_config_attempted_direct && m_impl->m_card == 0)
+			{
+				pcsc_dword_t proto = C_PROTO_UNDEFINED;
+				const pcsc_long_t dir_ret = SCardConnect(
+					m_impl->m_context,
+					m_impl->m_reader_name.c_str(),
+					C_SHARE_DIRECT,
+					C_PROTO_UNDEFINED,
+					&m_impl->m_card,
+					&proto);
+				if (dir_ret == C_SUCCESS)
+				{
+					m_impl->m_active_protocol = proto;
+					configure_reader_if_needed();
+					m_impl->m_reader_config_attempted_direct = true;
+					// Do not retain an idle DIRECT handle if escape IOCTLs failed; T1 SHARED will configure on first card
+					if (!m_impl->m_reader_configured && m_impl->m_card != 0 && m_impl->m_active_protocol == C_PROTO_UNDEFINED)
+					{
+						SCardDisconnect(m_impl->m_card, C_LEAVE_CARD);
+						m_impl->m_card = 0;
+					}
+				}
+				else if (is_recoverable_comm_error(dir_ret))
+				{
+					mark_reader_disconnected(dir_ret);
+					return false;
+				}
+				else
+				{
+					m_impl->m_reader_config_attempted_direct = true;
+				}
+			}
+		}
+		else if (m_impl->m_card_info_cached)
+		{
+			// Invalidate cached card info immediately if the OS event counter or ATR indicates a quick card swap
+			const bool counter_changed = (m_impl->m_cached_event_state & 0xFFFF0000u) != 0 &&
+				(state.dwEventState & 0xFFFF0000u) != (m_impl->m_cached_event_state & 0xFFFF0000u);
+			const bool atr_changed = !m_impl->m_last_event_atr.empty() &&
+				!m_impl->m_cached_card_info.atr.empty() &&
+				m_impl->m_last_event_atr != m_impl->m_cached_card_info.atr;
+			if (counter_changed || atr_changed)
+			{
+				disconnect_card(false);
 			}
 		}
 		return present;
 	}
 
 	// Reader may have been unplugged or USB communication disrupted
-	m_impl->m_card_info_cached = false;
-	m_impl->m_cached_card_info = {};
-	if (m_impl->m_card != 0)
-	{
-		SCardDisconnect(m_impl->m_card, C_LEAVE_CARD);
-		m_impl->m_card = 0;
-		m_impl->m_active_protocol = C_PROTO_UNDEFINED;
-	}
+	m_impl->m_last_event_state = 0;
+	disconnect_card(false);
 
-	// Invalidate stale context on critical errors so next call will re-establish automatically upon reconnection
-	if (ret == static_cast<pcsc_long_t>(0x80100003) /* SCARD_E_INVALID_HANDLE */ ||
-		ret == static_cast<pcsc_long_t>(0x80100009) /* SCARD_E_UNKNOWN_READER */ ||
-		ret == static_cast<pcsc_long_t>(0x80100017) /* SCARD_E_READER_UNAVAILABLE */ ||
-		ret == static_cast<pcsc_long_t>(0x8010001D) /* SCARD_E_NO_SERVICE */ ||
-		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
-		ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */)
+	if (is_recoverable_comm_error(ret))
 	{
-		m_impl->release_context();
-		m_impl->m_reader_configured = false;
+		mark_reader_disconnected(ret);
 	}
 
 	return false;
@@ -1014,9 +1366,14 @@ bool pcsc_driver::is_card_present()
 
 bool pcsc_driver::connect_card()
 {
+	if (!m_impl)
+	{
+		return false;
+	}
+
 	std::lock_guard lock(m_impl->m_mutex);
 
-	if (m_impl->m_reader_name.empty())
+	if (m_impl->m_reader_name.empty() || m_impl->m_reader_disconnected)
 	{
 		return false;
 	}
@@ -1035,10 +1392,20 @@ bool pcsc_driver::connect_card()
 		pcsc_dword_t proto = 0;
 		u8 atr[36]{};
 		pcsc_dword_t atrlen = sizeof(atr);
-		if (SCardStatus(m_impl->m_card, rname, &rlen, &state, &proto, atr, &atrlen) == C_SUCCESS &&
-			state != C_STATUS_ABSENT && state > 0)
+		const pcsc_long_t status_ret = SCardStatus(m_impl->m_card, rname, &rlen, &state, &proto, atr, &atrlen);
+		if (status_ret == C_SUCCESS && !is_status_absent(state))
 		{
-			return true;
+			const bool atr_changed = atrlen > 0 && !m_impl->m_cached_card_info.atr.empty() &&
+				(atrlen != m_impl->m_cached_card_info.atr.size() ||
+				 std::memcmp(atr, m_impl->m_cached_card_info.atr.data(), atrlen) != 0);
+			if (!atr_changed)
+			{
+				if (proto == C_PROTO_T0 || proto == C_PROTO_T1)
+				{
+					m_impl->m_active_protocol = proto;
+				}
+				return true;
+			}
 		}
 		disconnect_card(false);
 	}
@@ -1049,6 +1416,7 @@ bool pcsc_driver::connect_card()
 		SCardDisconnect(m_impl->m_card, C_LEAVE_CARD);
 		m_impl->m_card = 0;
 		m_impl->m_active_protocol = C_PROTO_UNDEFINED;
+		m_impl->m_in_part3_mode = false;
 	}
 
 	pcsc_dword_t active = C_PROTO_UNDEFINED;
@@ -1063,19 +1431,30 @@ bool pcsc_driver::connect_card()
 	if (ret == C_SUCCESS)
 	{
 		m_impl->m_active_protocol = active;
+		m_impl->m_in_part3_mode = false;
 		return true;
 	}
 
 	m_impl->m_card = 0;
 	m_impl->m_active_protocol = C_PROTO_UNDEFINED;
+	m_impl->m_in_part3_mode = false;
+	if (is_recoverable_comm_error(ret))
+	{
+		mark_reader_disconnected(ret);
+	}
 	return false;
 }
 
 void pcsc_driver::disconnect_card(bool reset)
 {
+	if (!m_impl)
+	{
+		return;
+	}
+
 	std::lock_guard lock(m_impl->m_mutex);
-	m_impl->m_card_info_cached = false;
-	m_impl->m_cached_card_info = {};
+	invalidate_card_cache();
+	m_impl->m_in_part3_mode = false;
 	if (m_impl->m_card != 0)
 	{
 		SCardDisconnect(m_impl->m_card, reset ? C_RESET_CARD : C_LEAVE_CARD);
@@ -1084,37 +1463,101 @@ void pcsc_driver::disconnect_card(bool reset)
 	}
 }
 
+void pcsc_driver::release_target(bool reset_auth)
+{
+	if (!m_impl)
+	{
+		return;
+	}
+
+	std::lock_guard lock(m_impl->m_mutex);
+	if (m_impl->m_card == 0)
+	{
+		m_impl->m_in_part3_mode = false;
+		invalidate_card_cache();
+		return;
+	}
+
+	if (reset_auth)
+	{
+		disconnect_card(true);
+		return;
+	}
+
+	if (m_impl->m_in_part3_mode)
+	{
+		if (!part4_switch(true))
+		{
+			disconnect_card(true);
+		}
+	}
+}
+
 void pcsc_driver::invalidate_card_cache()
 {
+	if (!m_impl)
+	{
+		return;
+	}
+
 	std::lock_guard lock(m_impl->m_mutex);
 	m_impl->m_card_info_cached = false;
 	m_impl->m_cached_card_info = {};
+	m_impl->m_cached_event_state = 0;
+	m_impl->m_last_event_atr.clear();
 }
 
-pcsc_card_info pcsc_driver::get_card_info()
+pcsc_card_info pcsc_driver::get_card_info(bool verify_presence)
 {
+	if (!is_open())
+	{
+		return {};
+	}
+
 	std::lock_guard lock(m_impl->m_mutex);
+
+	const bool has_live_shared_handle = m_impl->m_card != 0 &&
+		(m_impl->m_active_protocol == C_PROTO_T0 || m_impl->m_active_protocol == C_PROTO_T1);
+
+	// Fast path for active data exchanges immediately following InListPassiveTarget / InAutoPoll:
+	// avoids redundant SCardGetStatusChange/SCardStatus IPC stalls while a new card settles in OS PC/SC.
+	if (!verify_presence && !m_impl->m_reader_disconnected && has_live_shared_handle &&
+		m_impl->m_card_info_cached && m_impl->m_cached_card_info.present)
+	{
+		return m_impl->m_cached_card_info;
+	}
 
 	pcsc_card_info info{};
 	if (!is_card_present())
 	{
 		disconnect_card(false);
-		m_impl->m_card_info_cached = false;
-		m_impl->m_cached_card_info = {};
 		return info;
 	}
 
 	if (m_impl->m_card_info_cached && m_impl->m_cached_card_info.present)
 	{
-		return m_impl->m_cached_card_info;
-	}
+		const bool event_counter_unchanged = has_live_shared_handle &&
+			(m_impl->m_last_event_state & 0xFFFF0000u) != 0 &&
+			(m_impl->m_last_event_state & 0xFFFF0000u) == (m_impl->m_cached_event_state & 0xFFFF0000u);
+		if (event_counter_unchanged)
+		{
+			return m_impl->m_cached_card_info;
+		}
 
-	info.present = true;
+		// Fallback check on backends without upper-word event counters: verify handle via SCardStatus
+		if (connect_card() && m_impl->m_card_info_cached && m_impl->m_cached_card_info.present)
+		{
+			return m_impl->m_cached_card_info;
+		}
+	}
 
 	if (!connect_card())
 	{
 		return info;
 	}
+
+	info.present = true;
+	m_impl->m_in_part3_mode = false;
 
 	// If reader configuration previously failed in direct mode (e.g. SCardControl blocked by OS driver),
 	// retry now in shared mode where PAPDU_ESCAPE_CMD (FF CC 00 00 ...) can succeed via SCardTransmit
@@ -1136,41 +1579,136 @@ pcsc_card_info pcsc_driver::get_card_info()
 		info.atr.assign(atr_buf, atr_buf + atr_len);
 	}
 
-	// Query UID using PAPDU_GET_UID (FF CA 00 00 00)
-	// uTrust_370xF_User_Manual.pdf Section 6.1.2 / PC/SC Part 3 Section 3.2.2.1.3
-	std::vector<u8> get_uid_apdu = {0xFF, 0xCA, 0x00, 0x00, 0x00};
-	std::vector<u8> uid_resp;
-	if (transmit_apdu(get_uid_apdu, uid_resp) && uid_resp.size() >= 2)
-	{
-		u16 sw = static_cast<u16>((uid_resp[uid_resp.size() - 2] << 8) | uid_resp.back());
+	bool is_type_a = true;
+	const bool is_utrust = m_impl->is_identiv(this);
 
-		// ISO 7816-4: If reader/card requests exact Le via SW 6C xx, re-issue with specified length
-		if ((sw & 0xFF00) == 0x6C00)
+	// On Identiv readers, query Escape 0xDA FIRST because it returns UID + Tech + Arch + SAK in a single roundtrip.
+	// Avoids an extra FF CA 00 00 00 APDU roundtrip unless 0xDA fails or omits the UID.
+	if (is_utrust)
+	{
+		// Try uTrust Escape 0xDA (CNTLESS_GET_CARD_DETAILS)
+		// uTrust_370xF_User_Manual.pdf Section 6.3.4.12 (Page 66-67)
+		static constexpr std::array<u8, 1> details_in = {0xDA};
+		std::vector<u8> details_out;
+		bool got_details = send_escape(details_in, details_out);
+		if (!got_details && !m_impl->m_reader_disconnected && !m_impl->context_valid())
 		{
-			get_uid_apdu[4] = static_cast<u8>(sw & 0xFF);
-			if (transmit_apdu(get_uid_apdu, uid_resp) && uid_resp.size() >= 2)
-			{
-				sw = static_cast<u16>((uid_resp[uid_resp.size() - 2] << 8) | uid_resp.back());
-			}
+			// Context reset on recoverable comm error (e.g. 0x80100017); re-configure polling and retry 0xDA once
+			configure_reader_if_needed();
+			got_details = send_escape(details_in, details_out);
 		}
 
-		if (sw == 0x9000)
+		if (got_details && details_out.size() >= 3)
+		{
+			const u8 card_tech = details_out[0];
+			const u8 card_arch = details_out[1];
+			const u8 uid_len = details_out[2];
+
+			// Byte 0: 0x00=Type A, 0x01=Type B, 0x04=FeliCa 212, 0x08=FeliCa 424
+			// Byte 1: 0x00=Memory card, 0x01=T-CL card, 0x02=Dual interface, 0x43=FeliCa
+			if (card_tech == 0x04 || card_tech == 0x08 || card_arch == 0x43)
+			{
+				info.is_felica = true;
+				info.felica_speed = (card_tech == 0x08) ? 2 : 1;
+				// uTrust_370xF_User_Manual.pdf Section 6.3.4.12 (Page 67): B2 = 0x08 for FeliCa NFCID2
+				if (uid_len == 8 && details_out.size() >= 11)
+				{
+					info.uid.assign(details_out.begin() + 3, details_out.begin() + 11);
+				}
+			}
+			else if (card_tech == 0x00) // Type A
+			{
+				is_type_a = true;
+				if (card_arch == 0x00)
+				{
+					info.is_mifare = true;
+				}
+				else if (card_arch == 0x01 || card_arch == 0x02)
+				{
+					info.is_iso14443_4 = true;
+				}
+
+				if (uid_len >= 4 && uid_len <= 10 && details_out.size() >= 3u + uid_len)
+				{
+					info.uid.assign(details_out.begin() + 3, details_out.begin() + 3 + uid_len);
+				}
+
+				if (details_out.size() >= 20)
+				{
+					info.sak = details_out[19];
+					info.sak_valid = true;
+				}
+			}
+			else if (card_tech == 0x01) // Type B
+			{
+				is_type_a = false;
+				info.is_type_b = true;
+				if (card_arch == 0x01 || card_arch == 0x02)
+				{
+					info.is_iso14443_4 = true;
+				}
+
+				if (uid_len >= 4 && uid_len <= 10 && details_out.size() >= 3u + uid_len)
+				{
+					info.uid.assign(details_out.begin() + 3, details_out.begin() + 3 + uid_len);
+				}
+			}
+		}
+		else if (!m_impl->m_reader_disconnected)
+		{
+			// Fallback for older uTrust / SCM firmware: CNTLESS_GET_CARD_INFO (Escape 0x11)
+			// uTrust_370xF_User_Manual.pdf Section 6.3.4.1 (Page 58)
+			static constexpr std::array<u8, 1> info_in = {0x11};
+			std::vector<u8> info_out;
+			if (send_escape(info_in, info_out) && info_out.size() >= 3)
+			{
+				const u8 card_type_info = info_out[2];
+				const u8 upper = (card_type_info >> 4) & 0x0F;
+				const u8 lower = card_type_info & 0x0F;
+				is_type_a = (lower == 0x00);
+				if (lower == 0x01)
+				{
+					info.is_type_b = true;
+				}
+				if (upper == 0x00)
+				{
+					info.is_mifare = true;
+				}
+				else if (upper == 0x01 || upper == 0x02)
+				{
+					info.is_iso14443_4 = true;
+				}
+			}
+
+			if (m_impl->m_reader_disconnected || m_impl->m_card == 0)
+			{
+				return {};
+			}
+		}
+		else
+		{
+			return {};
+		}
+	}
+
+	// Query UID using PAPDU_GET_UID (FF CA 00 00 00) if not already obtained from Identiv Escape 0xDA
+	if (info.uid.empty())
+	{
+		std::array<u8, 5> get_uid_apdu = {0xFF, 0xCA, 0x00, 0x00, 0x00};
+		std::vector<u8> uid_resp;
+		const u16 last_sw = transmit_case2_apdu(*this, get_uid_apdu, uid_resp);
+		if (last_sw == 0x9000)
 		{
 			uid_resp.resize(uid_resp.size() - 2);
 			info.uid = std::move(uid_resp);
 		}
-	}
-
-	// Fallback for non-standard readers rejecting Le=0x00 with SW 67 00 (Wrong length)
-	if (info.uid.empty())
-	{
-		for (u8 try_le : {0x04, 0x07, 0x08, 0x0A})
+		else if (last_sw == 0x6700)
 		{
-			get_uid_apdu[4] = try_le;
-			if (transmit_apdu(get_uid_apdu, uid_resp) && uid_resp.size() >= 2)
+			// Fallback for readers rejecting Le=0x00 with SW 67 00 (Wrong length)
+			for (u8 try_le : {0x04, 0x07, 0x08, 0x0A})
 			{
-				const u16 sw = static_cast<u16>((uid_resp[uid_resp.size() - 2] << 8) | uid_resp.back());
-				if (sw == 0x9000)
+				get_uid_apdu[4] = try_le;
+				if (transmit_apdu(get_uid_apdu, uid_resp) && extract_sw(uid_resp) == 0x9000)
 				{
 					uid_resp.resize(uid_resp.size() - 2);
 					info.uid = std::move(uid_resp);
@@ -1180,93 +1718,10 @@ pcsc_card_info pcsc_driver::get_card_info()
 		}
 	}
 
-	bool is_type_a = true;
-
-	// Try uTrust Escape 0xDA (CNTLESS_GET_CARD_DETAILS)
-	// uTrust_370xF_User_Manual.pdf Section 6.3.4.12 (Page 66-67)
-	std::vector<u8> details_in = {0xDA};
-	std::vector<u8> details_out;
-	if (send_escape(details_in, details_out) && details_out.size() >= 3)
-	{
-		const u8 card_tech = details_out[0];
-		const u8 card_arch = details_out[1];
-
-		// Byte 0: 0x00=Type A, 0x01=Type B, 0x04=FeliCa 212, 0x08=FeliCa 424
-		// Byte 1: 0x00=Memory card, 0x01=T-CL card, 0x43=FeliCa
-		if (card_tech == 0x04 || card_tech == 0x08 || card_arch == 0x43)
-		{
-			info.is_felica = true;
-			if (details_out.size() >= 11 && info.uid.empty())
-			{
-				info.uid.assign(details_out.begin() + 3, details_out.begin() + 11);
-			}
-		}
-		else if (card_tech == 0x00) // Type A
-		{
-			is_type_a = true;
-			if (card_arch == 0x00)
-			{
-				info.is_mifare = true;
-			}
-			else if (card_arch == 0x01 || card_arch == 0x02)
-			{
-				info.is_iso14443_4 = true;
-			}
-
-			const u8 uid_len = details_out[2];
-			if (info.uid.empty() && uid_len > 0 && details_out.size() >= 3u + uid_len)
-			{
-				info.uid.assign(details_out.begin() + 3, details_out.begin() + 3 + uid_len);
-			}
-
-			if (details_out.size() >= 20)
-			{
-				info.sak = details_out[19];
-				info.sak_valid = true;
-			}
-		}
-		else if (card_tech == 0x01) // Type B
-		{
-			is_type_a = false;
-			if (card_arch == 0x01 || card_arch == 0x02)
-			{
-				info.is_iso14443_4 = true;
-			}
-
-			const u8 uid_len = details_out[2];
-			if (info.uid.empty() && uid_len > 0 && details_out.size() >= 3u + uid_len)
-			{
-				info.uid.assign(details_out.begin() + 3, details_out.begin() + 3 + uid_len);
-			}
-		}
-	}
-	else
-	{
-		// Fallback for older uTrust / SCM firmware: CNTLESS_GET_CARD_INFO (Escape 0x11)
-		// uTrust_370xF_User_Manual.pdf Section 6.3.4.1 (Page 58)
-		std::vector<u8> info_in = {0x11};
-		std::vector<u8> info_out;
-		if (send_escape(info_in, info_out) && info_out.size() >= 3)
-		{
-			const u8 card_type_info = info_out[2];
-			const u8 upper = (card_type_info >> 4) & 0x0F;
-			const u8 lower = card_type_info & 0x0F;
-			is_type_a = (lower == 0x00);
-			if (upper == 0x00)
-			{
-				info.is_mifare = true;
-			}
-			else if (upper == 0x01 || upper == 0x02)
-			{
-				info.is_iso14443_4 = true;
-			}
-		}
-	}
-
 	// Parse ATR if technology is not yet definitively determined
+	bool is_pcsc_storage = false;
 	if (!info.atr.empty() && !info.is_felica)
 	{
-		bool is_pcsc_storage = false;
 		// Contactless Storage Token ATR (PC/SC Part 3 Section 3.1.3.2.3 / uTrust Manual Section 5.3.3.1)
 		// Standard ATR format: 3B 8x 80 01 [Historical Bytes...] [TCK]
 		// Storage tokens contain COMPACT-TLV with tag 0x4F (AID) and PC/SC RID A0 00 00 03 06
@@ -1289,6 +1744,7 @@ pcsc_card_info pcsc_driver::get_card_info()
 				else if (standard >= 0x04 && standard <= 0x09) // ISO 14443 Type B standard (PC/SC Part 3 Supplemental Table 2)
 				{
 					is_type_a = false;
+					info.is_type_b = true;
 				}
 				else if (standard >= 0x01 && standard <= 0x03) // ISO 14443 Type A standard (Parts 1, 2, 3)
 				{
@@ -1334,7 +1790,7 @@ pcsc_card_info pcsc_driver::get_card_info()
 					info.is_felica = true;
 					break;
 				default:
-					if (!info.is_felica)
+					if (!info.is_felica && is_type_a)
 					{
 						info.is_mifare = true;
 					}
@@ -1343,61 +1799,61 @@ pcsc_card_info pcsc_driver::get_card_info()
 				break; // Only process the first RID match
 			}
 		}
+	}
 
-		if (is_pcsc_storage)
+	if (is_pcsc_storage)
+	{
+		// Storage tokens (MIFARE Classic, Ultralight, FeliCa) are not ISO 14443-4 T=CL cards
+		info.is_iso14443_4 = false;
+	}
+	else if (!info.is_mifare && !info.is_felica)
+	{
+		if (info.sak_valid && !info.is_type_b)
 		{
-			// Storage tokens (MIFARE Classic, Ultralight, FeliCa) are not ISO 14443-4 T=CL cards
-			info.is_iso14443_4 = false;
-		}
-		else if (!info.is_mifare && !info.is_felica)
-		{
-			if (info.sak_valid)
+			if ((info.sak & 0x20) != 0)
 			{
-				if ((info.sak & 0x20) != 0)
-				{
-					info.is_iso14443_4 = true;
-				}
-				else if (info.sak == 0x00 && info.uid.size() == 7)
-				{
-					// MIFARE Ultralight / NTAG (SAK 0x00, 7-byte UID)
-					info.is_mifare = true;
-					info.atqa = 0x0044;
-				}
-				else if (info.sak == 0x09)
-				{
-					// MIFARE Mini (SAK 0x09)
-					info.is_mifare = true;
-					info.atqa = 0x0004;
-				}
-				else if (info.sak == 0x18)
-				{
-					// MIFARE Classic 4K
-					info.is_mifare = true;
-					info.atqa = 0x0002;
-				}
-				else if (info.sak == 0x08 || (info.sak & 0x08) != 0)
-				{
-					// MIFARE Classic 1K / compatible (SAK 0x08, Infineon clone SAK 0x88, Plus SL1 SAK 0x19)
-					info.is_mifare = true;
-					info.atqa = 0x0004;
-				}
+				info.is_iso14443_4 = true;
+			}
+			if (info.sak == 0x00 && info.uid.size() == 7)
+			{
+				// MIFARE Ultralight / NTAG (SAK 0x00, 7-byte UID)
+				info.is_mifare = true;
+				info.atqa = 0x0044;
+			}
+			else if (info.sak == 0x09)
+			{
+				// MIFARE Mini (SAK 0x09)
+				info.is_mifare = true;
+				info.atqa = 0x0004;
+			}
+			else if (info.sak == 0x18 || info.sak == 0x38)
+			{
+				// MIFARE Classic 4K / dual-interface 4K + T=CL (SAK 0x18 / 0x38)
+				info.is_mifare = true;
+				info.atqa = 0x0002;
+			}
+			else if ((info.sak & 0x08) != 0)
+			{
+				// MIFARE Classic 1K / compatible / dual-interface Classic + T=CL (SAK 0x08, 0x28, 0x88, 0x19)
+				info.is_mifare = true;
+				info.atqa = 0x0004;
+			}
+		}
+		else if (!info.atr.empty())
+		{
+			// Non-storage card ATR (no PC/SC storage RID A0 00 00 03 06).
+			// Per PC/SC Part 3 Section 3.1.3.2 and uTrust Manual Section 5.3.3.2,
+			// an activated non-storage card with T=1 / ATS mapping is an ISO 14443-4 T=CL card.
+			info.is_iso14443_4 = true;
+			if (is_type_a)
+			{
+				info.sak = 0x20;
+				info.atqa = 0x0344;
+				info.sak_valid = true;
 			}
 			else
 			{
-				// Non-storage card ATR (no PC/SC storage RID A0 00 00 03 06).
-				// Per PC/SC Part 3 Section 3.1.3.2 and uTrust Manual Section 5.3.3.2,
-				// an activated non-storage card with T=1 / ATS mapping is an ISO 14443-4 T=CL card.
-				info.is_iso14443_4 = true;
-				if (is_type_a)
-				{
-					info.sak = 0x20;
-					info.atqa = 0x0344;
-					info.sak_valid = true;
-				}
-				else
-				{
-					info.sak_valid = false;
-				}
+				info.sak_valid = false;
 			}
 		}
 	}
@@ -1437,25 +1893,26 @@ pcsc_card_info pcsc_driver::get_card_info()
 		}
 	}
 
-	// If 8-byte UID is present and not explicitly MIFARE, treat as FeliCa NFCID2
-	if (info.uid.size() == 8 && !info.is_mifare)
+	// If 8-byte UID is present and not explicitly MIFARE or Type B, treat as FeliCa NFCID2
+	if (info.uid.size() == 8 && !info.is_mifare && !info.is_type_b)
 	{
 		info.is_felica = true;
 	}
 
-	// Retrieve Historical Bytes for ISO 14443-4 T=CL cards
+	// Retrieve Historical Bytes / ATS for ISO 14443-4 T=CL cards
 	if (info.is_iso14443_4)
 	{
 		// Method 1: uTrust Escape 0x93 (CNTLESS_GET_ATS_ATQB) - uTrust Manual Section 6.3.4.2
-		// Returns full ATS for Type A T=CL cards; parse to extract historical bytes only
-		// ATS format: [TL] [T0] [TA(1) if T0 bit4] [TB(1) if T0 bit5] [TC(1) if T0 bit6] [Hist. Bytes]
-		// (Only applicable for Type A; for Type B, Escape 0x93 returns ATQB instead of ATS)
-		if (is_type_a)
+		// Returns full ATS for Type A T=CL cards; preserve raw ATS and extract historical bytes
+		if (is_utrust && is_type_a)
 		{
-			std::vector<u8> ats_in = {0x93};
+			static constexpr std::array<u8, 1> ats_in = {0x93};
 			std::vector<u8> ats_out;
-			if (send_escape(ats_in, ats_out) && ats_out.size() >= 2)
+			if (send_escape(ats_in, ats_out) && ats_out.size() >= 2 && ats_out[0] >= 2 && ats_out[0] <= ats_out.size())
 			{
+				const usz max_ats_len = static_cast<usz>(ats_out[0]);
+				info.ats.assign(ats_out.begin(), ats_out.begin() + max_ats_len);
+
 				const u8 t0 = ats_out[1];
 				usz hb_offset = 2;
 				if (t0 & 0x10)
@@ -1470,7 +1927,6 @@ pcsc_card_info pcsc_driver::get_card_info()
 				{
 					hb_offset++; // TC(1) present
 				}
-				const usz max_ats_len = std::min(ats_out.size(), static_cast<usz>(ats_out[0]));
 				if (hb_offset < max_ats_len)
 				{
 					info.historical_bytes.assign(ats_out.begin() + hb_offset, ats_out.begin() + max_ats_len);
@@ -1478,34 +1934,22 @@ pcsc_card_info pcsc_driver::get_card_info()
 			}
 		}
 
-		// Method 2: Standard PC/SC Get Historical Bytes (FF CA 01 00 00) - PC/SC Part 3 Section 3.2.2.1.3
+		// Method 2: Standard PC/SC Get Historical Bytes (FF CA 01 00 00)
 		if (info.historical_bytes.empty())
 		{
-			std::vector<u8> get_hb = {0xFF, 0xCA, 0x01, 0x00, 0x00};
+			std::array<u8, 5> get_hb = {0xFF, 0xCA, 0x01, 0x00, 0x00};
 			std::vector<u8> hb_resp;
-			if (transmit_apdu(get_hb, hb_resp) && hb_resp.size() >= 2)
+			if (transmit_case2_apdu(*this, get_hb, hb_resp) == 0x9000)
 			{
-				u16 sw = static_cast<u16>((hb_resp[hb_resp.size() - 2] << 8) | hb_resp.back());
-
-				// ISO 7816-4: If reader/card requests exact Le via SW 6C xx, re-issue with specified length
-				if ((sw & 0xFF00) == 0x6C00)
+				hb_resp.resize(hb_resp.size() - 2);
+				if (std::any_of(hb_resp.begin(), hb_resp.end(), [](u8 b) { return b != 0; }))
 				{
-					get_hb[4] = static_cast<u8>(sw & 0xFF);
-					if (transmit_apdu(get_hb, hb_resp) && hb_resp.size() >= 2)
-					{
-						sw = static_cast<u16>((hb_resp[hb_resp.size() - 2] << 8) | hb_resp.back());
-					}
-				}
-
-				if (sw == 0x9000)
-				{
-					hb_resp.resize(hb_resp.size() - 2);
 					info.historical_bytes = std::move(hb_resp);
 				}
 			}
 		}
 
-		// Method 3: Parse directly from ATR (uTrust Manual Section 5.3.3.2 Page 25 / PC/SC Part 3 Section 3.1.3.2.3)
+		// Method 3: Parse directly from ATR (uTrust Manual Section 5.3.3.2 / PC/SC Part 3 Section 3.1.3.2.3)
 		if (info.historical_bytes.empty() && info.atr.size() >= 4 &&
 			info.atr[0] == 0x3B && (info.atr[1] & 0xF0) == 0x80 && info.atr[2] == 0x80 && info.atr[3] == 0x01)
 		{
@@ -1517,59 +1961,38 @@ pcsc_card_info pcsc_driver::get_card_info()
 		}
 	}
 
-	// If card is FeliCa, retrieve real PMm and System Code
 	if (info.is_felica)
 	{
-		// Method 1: Sony PaSoRi (RC-S380) / standard PC/SC GET DATA for FeliCa PMm (FF CA 01 00 00)
-		// Sony SDK for NFC User's Manual (PC/SC Edition) Section 3.2.6
-		if (info.pmm.empty())
+		// Method 1: Standard PC/SC GET DATA for FeliCa PMm (FF CA 01 00 00)
+		// Skip on Identiv uTrust where FF CA 01 00 00 always returns SW 6A 81 (unsupported)
+		if (!is_utrust && info.pmm.empty())
 		{
-			std::vector<u8> get_pmm_apdu = {0xFF, 0xCA, 0x01, 0x00, 0x00};
+			std::array<u8, 5> get_pmm_apdu = {0xFF, 0xCA, 0x01, 0x00, 0x00};
 			std::vector<u8> pmm_resp;
-			if (transmit_apdu(get_pmm_apdu, pmm_resp) && pmm_resp.size() >= 2)
+			if (transmit_case2_apdu(*this, get_pmm_apdu, pmm_resp) == 0x9000 && pmm_resp.size() == 10)
 			{
-				u16 sw = static_cast<u16>((pmm_resp[pmm_resp.size() - 2] << 8) | pmm_resp.back());
-				if ((sw & 0xFF00) == 0x6C00)
-				{
-					get_pmm_apdu[4] = static_cast<u8>(sw & 0xFF);
-					if (transmit_apdu(get_pmm_apdu, pmm_resp) && pmm_resp.size() >= 2)
-					{
-						sw = static_cast<u16>((pmm_resp[pmm_resp.size() - 2] << 8) | pmm_resp.back());
-					}
-				}
-				if (sw == 0x9000 && pmm_resp.size() == 10) // 8B PMm + 2B SW
-				{
-					pmm_resp.resize(8);
-					info.pmm = std::move(pmm_resp);
-				}
+				pmm_resp.resize(8);
+				info.pmm = std::move(pmm_resp);
 			}
 		}
 
-		// Method 2: Pseudo-APDU PAPDU_FELICA_REQC (uTrust Manual Section 6.2.13, Page 41)
-		// APDU: FF 40 00 00 04 FF FF 01 00
-		// Data: SystemCode(FFFF) + RequestCode(01=Request System Code) + TimeSlot(00=1 slot)
-		// Note: Some manual revisions label byte 7 as RFU; firmware treats it as FeliCa Request Code.
-		// Returns: 16 bytes NFCID2 (8B IDm + 8B PMm), 2 bytes System Code, SW1, SW2
-		std::vector<u8> reqc_apdu = {0xFF, 0x40, 0x00, 0x00, 0x04, 0xFF, 0xFF, 0x01, 0x00};
+		// Method 2: Pseudo-APDU PAPDU_FELICA_REQC (FF 40 00 00 04 FF FF 01 00)
+		static constexpr std::array<u8, 9> reqc_apdu = {0xFF, 0x40, 0x00, 0x00, 0x04, 0xFF, 0xFF, 0x01, 0x00};
 		std::vector<u8> reqc_resp;
-		if (transmit_apdu(reqc_apdu, reqc_resp) && reqc_resp.size() >= 18)
+		if (transmit_apdu(reqc_apdu, reqc_resp) && reqc_resp.size() >= 18 && extract_sw(reqc_resp) == 0x9000)
 		{
-			const u16 sw = static_cast<u16>((reqc_resp[reqc_resp.size() - 2] << 8) | reqc_resp.back());
-			if (sw == 0x9000)
+			info.uid.assign(reqc_resp.begin(), reqc_resp.begin() + 8);
+			info.pmm.assign(reqc_resp.begin() + 8, reqc_resp.begin() + 16);
+			if (reqc_resp.size() >= 20)
 			{
-				info.uid.assign(reqc_resp.begin(), reqc_resp.begin() + 8);
-				info.pmm.assign(reqc_resp.begin() + 8, reqc_resp.begin() + 16);
-				if (reqc_resp.size() >= 20)
-				{
-					info.system_code = static_cast<u16>((reqc_resp[16] << 8) | reqc_resp[17]);
-				}
+				info.system_code = static_cast<u16>((reqc_resp[16] << 8) | reqc_resp[17]);
 			}
 		}
 
 		// Method 3: Fallback to raw FeliCa Polling frame via felica_pass_thru if PMm or System Code still missing
 		if (info.pmm.empty() || info.system_code == 0xFFFF)
 		{
-			const std::vector<u8> poll_cmd = {0x06, 0x00, 0xFF, 0xFF, 0x01, 0x00};
+			static constexpr std::array<u8, 6> poll_cmd = {0x06, 0x00, 0xFF, 0xFF, 0x01, 0x00};
 			std::vector<u8> poll_resp;
 			if (felica_pass_thru(poll_cmd, poll_resp) && poll_resp.size() >= 18 && poll_resp[1] == 0x01)
 			{
@@ -1583,19 +2006,44 @@ pcsc_card_info pcsc_driver::get_card_info()
 		}
 	}
 
+	// Per PN532 / uTrust 370xF semantics (UM0701-02 §7.3.5 / §7.3.13, uTrust §6.1.2 / §6.3.4.12),
+	// a target cannot be selected without retrieving a valid UID / PUPI / NFCID2t from the card.
+	const usz min_uid_size = info.is_felica ? 8 : 4;
+	if (m_impl->m_reader_disconnected || m_impl->m_card == 0 || info.uid.size() < min_uid_size)
+	{
+		disconnect_card(false);
+		info = {};
+		return info;
+	}
+
 	m_impl->m_cached_card_info = info;
+	m_impl->m_cached_event_state = m_impl->m_last_event_state;
+	m_impl->m_in_part3_mode = false;
 	m_impl->m_card_info_cached = true;
 	return info;
 }
 
 bool pcsc_driver::transmit_apdu(std::span<const u8> apdu, std::vector<u8>& response)
 {
-	std::lock_guard lock(m_impl->m_mutex);
 	response.clear();
-
-	if (apdu.empty() || !connect_card())
+	if (!m_impl)
 	{
 		return false;
+	}
+
+	std::lock_guard lock(m_impl->m_mutex);
+
+	if (apdu.empty())
+	{
+		return false;
+	}
+
+	if (m_impl->m_card == 0 || (m_impl->m_active_protocol != C_PROTO_T0 && m_impl->m_active_protocol != C_PROTO_T1))
+	{
+		if (!connect_card())
+		{
+			return false;
+		}
 	}
 
 	const auto* pci = get_pci(m_impl->m_active_protocol);
@@ -1622,21 +2070,20 @@ bool pcsc_driver::transmit_apdu(std::span<const u8> apdu, std::vector<u8>& respo
 		return true;
 	}
 
-	// Reset card handle and cache only upon fatal communication failure or card removal
+	// Reset card handle upon card removal, abort, or unresponsive card, or reset both handle and context on recoverable reader/comm errors
 	if (ret == static_cast<pcsc_long_t>(0x80100069) /* SCARD_W_REMOVED_CARD */ ||
 		ret == static_cast<pcsc_long_t>(0x80100068) /* SCARD_W_RESET_CARD */ ||
-		ret == static_cast<pcsc_long_t>(0x80100003) /* SCARD_E_INVALID_HANDLE */ ||
-		ret == static_cast<pcsc_long_t>(0x80100009) /* SCARD_E_UNKNOWN_READER */ ||
-		ret == static_cast<pcsc_long_t>(0x80100017) /* SCARD_E_READER_UNAVAILABLE */ ||
-		ret == static_cast<pcsc_long_t>(0x8010001D) /* SCARD_E_NO_SERVICE */ ||
-		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
-		ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */)
+		ret == static_cast<pcsc_long_t>(0x80100066) /* SCARD_W_UNRESPONSIVE_CARD */ ||
+		ret == static_cast<pcsc_long_t>(0x80100067) /* SCARD_W_UNPOWERED_CARD */ ||
+		ret == static_cast<pcsc_long_t>(0x80100002) /* SCARD_E_CANCELLED */ ||
+		ret == static_cast<pcsc_long_t>(0x000003E3) /* ERROR_OPERATION_ABORTED */)
 	{
 		disconnect_card(false);
-		if (ret != static_cast<pcsc_long_t>(0x80100069) && ret != static_cast<pcsc_long_t>(0x80100068))
-		{
-			m_impl->release_context();
-		}
+	}
+	else if (is_recoverable_comm_error(ret))
+	{
+		disconnect_card(false);
+		m_impl->release_context();
 	}
 
 	return false;
@@ -1644,12 +2091,13 @@ bool pcsc_driver::transmit_apdu(std::span<const u8> apdu, std::vector<u8>& respo
 
 bool pcsc_driver::control(u32 control_code, std::span<const u8> in_data, std::vector<u8>& out_data)
 {
-	std::lock_guard lock(m_impl->m_mutex);
 	out_data.clear();
-	if (!is_open())
+	if (!m_impl || !is_open())
 	{
 		return false;
 	}
+
+	std::lock_guard lock(m_impl->m_mutex);
 
 	// SCardControl works on card handle in shared mode or direct mode
 	if (m_impl->m_card == 0)
@@ -1696,46 +2144,39 @@ bool pcsc_driver::control(u32 control_code, std::span<const u8> in_data, std::ve
 		return true;
 	}
 
-	// Reset stale card handle and cache upon fatal communication failure (do not discard handle on unsupported IOCTL)
-	if (ret == static_cast<pcsc_long_t>(0x80100069) /* SCARD_W_REMOVED_CARD */ ||
-		ret == static_cast<pcsc_long_t>(0x80100068) /* SCARD_W_RESET_CARD */ ||
-		ret == static_cast<pcsc_long_t>(0x80100003) /* SCARD_E_INVALID_HANDLE */ ||
-		ret == static_cast<pcsc_long_t>(0x80100009) /* SCARD_E_UNKNOWN_READER */ ||
-		ret == static_cast<pcsc_long_t>(0x80100017) /* SCARD_E_READER_UNAVAILABLE */ ||
-		ret == static_cast<pcsc_long_t>(0x8010001D) /* SCARD_E_NO_SERVICE */ ||
-		ret == static_cast<pcsc_long_t>(0x8010001E) /* SCARD_E_SERVICE_STOPPED */ ||
-		ret == static_cast<pcsc_long_t>(0x8010002F) /* SCARD_E_COMM_DATA_LOST */)
+	// Reset stale card handle upon fatal communication failure or card removal (do not discard handle on unsupported IOCTL)
+	if (is_recoverable_comm_error(ret))
 	{
 		disconnect_card(false);
-		if (ret != static_cast<pcsc_long_t>(0x80100069) && ret != static_cast<pcsc_long_t>(0x80100068))
-		{
-			m_impl->release_context();
-		}
-		else
-		{
-			// If card was removed or reset, reconnect in DIRECT mode and retry escape command
-			pcsc_dword_t proto = C_PROTO_UNDEFINED;
-			if (SCardConnect(m_impl->m_context, m_impl->m_reader_name.c_str(), C_SHARE_DIRECT, C_PROTO_UNDEFINED, &m_impl->m_card, &proto) == C_SUCCESS)
-			{
-				m_impl->m_active_protocol = proto;
-				bytes_ret = 0;
-				const pcsc_long_t retry_ret = SCardControl(
-					m_impl->m_card,
-					control_code,
-					in_data.data(),
-					static_cast<pcsc_dword_t>(in_data.size()),
-					recv_buf,
-					sizeof(recv_buf),
-					&bytes_ret);
+		m_impl->release_context();
+	}
+	else if (ret == static_cast<pcsc_long_t>(0x80100069) /* SCARD_W_REMOVED_CARD */ ||
+		ret == static_cast<pcsc_long_t>(0x80100068) /* SCARD_W_RESET_CARD */)
+	{
+		disconnect_card(false);
 
-				if (retry_ret == C_SUCCESS)
+		// If card was removed or reset, reconnect in DIRECT mode and retry escape command
+		pcsc_dword_t proto = C_PROTO_UNDEFINED;
+		if (SCardConnect(m_impl->m_context, m_impl->m_reader_name.c_str(), C_SHARE_DIRECT, C_PROTO_UNDEFINED, &m_impl->m_card, &proto) == C_SUCCESS)
+		{
+			m_impl->m_active_protocol = proto;
+			bytes_ret = 0;
+			const pcsc_long_t retry_ret = SCardControl(
+				m_impl->m_card,
+				control_code,
+				in_data.data(),
+				static_cast<pcsc_dword_t>(in_data.size()),
+				recv_buf,
+				sizeof(recv_buf),
+				&bytes_ret);
+
+			if (retry_ret == C_SUCCESS)
+			{
+				if (bytes_ret > 0)
 				{
-					if (bytes_ret > 0)
-					{
-						out_data.assign(recv_buf, recv_buf + bytes_ret);
-					}
-					return true;
+					out_data.assign(recv_buf, recv_buf + bytes_ret);
 				}
+				return true;
 			}
 		}
 	}
@@ -1746,63 +2187,76 @@ bool pcsc_driver::control(u32 control_code, std::span<const u8> in_data, std::ve
 bool pcsc_driver::send_escape(std::span<const u8> escape_data, std::vector<u8>& response)
 {
 	response.clear();
-	if (escape_data.empty())
+	if (!m_impl || escape_data.empty())
 	{
 		return false;
 	}
 
-	// Method 1: SCardControl via CCID_ESCAPE_CTL (uTrust Manual Section 6.3.1)
-	if (control(CCID_ESCAPE_CTL, escape_data, response))
+	std::lock_guard lock(m_impl->m_mutex);
+
+	bool is_shared = (m_impl->m_active_protocol == C_PROTO_T0 || m_impl->m_active_protocol == C_PROTO_T1);
+	if (m_impl->m_ioctl_escape_blocked && !is_shared && m_impl->m_card == 0)
 	{
-		return true;
+		// Avoid retrying blocked SCardControl IOCTLs after a handle/context reset when a shared card connection works
+		is_shared = connect_card();
 	}
+	const bool skip_ioctl = m_impl->m_ioctl_escape_blocked && is_shared;
+
+	if (!skip_ioctl)
+	{
+		// Method 1: SCardControl via CCID_ESCAPE_CTL (uTrust Manual Section 6.3.1)
+		if (control(CCID_ESCAPE_CTL, escape_data, response))
+		{
+			return true;
+		}
 
 #if defined(_WIN32)
-	// On Windows, try IOCTL_SMARTCARD_VENDOR_IFD_EXCHANGE if standard CCID escape (3500) fails or is blocked
-	constexpr pcsc_dword_t CCID_VENDOR_CTL = SCARD_CTL_CODE(2048);
-	if (control(CCID_VENDOR_CTL, escape_data, response))
-	{
-		return true;
-	}
+		// Identiv uTrust only defines IOCTL_CCID_ESCAPE (3500); skip 2048 to avoid 65 ms driver timeouts
+		if (!m_impl->m_is_identiv)
+		{
+			constexpr pcsc_dword_t CCID_VENDOR_CTL = SCARD_CTL_CODE(2048);
+			if (control(CCID_VENDOR_CTL, escape_data, response))
+			{
+				return true;
+			}
+		}
 #else
-	// On Linux / macOS pcsc-lite, some CCID drivers map escape to SCARD_CTL_CODE(1)
-	constexpr pcsc_dword_t CCID_ESCAPE_CTL_ALT = (0x42000000 + 1);
-	if (control(CCID_ESCAPE_CTL_ALT, escape_data, response))
-	{
-		return true;
-	}
+		// On Linux / macOS pcsc-lite, some CCID drivers map escape to SCARD_CTL_CODE(1)
+		constexpr pcsc_dword_t CCID_ESCAPE_CTL_ALT = (0x42000000 + 1);
+		if (control(CCID_ESCAPE_CTL_ALT, escape_data, response))
+		{
+			return true;
+		}
 #endif
+	}
 
 	// Method 2: Fallback to vendor-specific PAPDU_ESCAPE_CMD (uTrust Manual Section 6.1.3)
 	// Command APDU: FF CC 00 00 Lc <escape_data>
 	// Used when CCID Escape IOCTL is blocked by the OS driver
 	if (escape_data.size() <= 255)
 	{
-		std::vector<u8> apdu;
-		if (escape_data.size() >= 5 && escape_data[0] == 0xFF && escape_data[1] == 0x70)
+		std::array<u8, 261> apdu_buf{};
+		std::span<const u8> apdu = escape_data;
+		if (!(escape_data.size() >= 5 && escape_data[0] == 0xFF && escape_data[1] == 0x70))
 		{
-			// Note 2: Commands defined using READER_GENERIC_ESCAPE (FF 70 04 E6 Lc ...) have ISO 7816 APDU format
-			// and are transmitted directly without prepending FF CC 00 00
-			apdu.assign(escape_data.begin(), escape_data.end());
-		}
-		else
-		{
-			apdu = {0xFF, 0xCC, 0x00, 0x00, static_cast<u8>(escape_data.size())};
-			apdu.insert(apdu.end(), escape_data.begin(), escape_data.end());
+			apdu = build_short_apdu(apdu_buf, 0xFF, 0xCC, 0x00, 0x00, escape_data);
 		}
 
-		std::vector<u8> rapdu;
-		if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
+		if (transmit_apdu(apdu, response) && response.size() >= 2)
 		{
-			const u8 sw1 = rapdu[rapdu.size() - 2];
-			const u8 sw2 = rapdu.back();
+			const u8 sw1 = response[response.size() - 2];
+			const u8 sw2 = response.back();
 			if (sw1 == 0x90 && sw2 == 0x00)
 			{
-				rapdu.resize(rapdu.size() - 2);
-				response = std::move(rapdu);
+				if (!skip_ioctl && !m_impl->m_ioctl_escape_blocked)
+				{
+					m_impl->m_ioctl_escape_blocked = true;
+				}
+				response.resize(response.size() - 2);
 				return true;
 			}
 		}
+		response.clear();
 	}
 
 	return false;
@@ -1816,411 +2270,268 @@ bool pcsc_driver::felica_pass_thru(std::span<const u8> felica_cmd, std::vector<u
 		return false;
 	}
 
+	std::lock_guard lock(m_impl->m_mutex);
+
 	const bool has_len = (felica_cmd[0] == felica_cmd.size() && felica_cmd.size() >= 2);
 	const usz base = has_len ? 1 : 0;
 	const u8 fcmd = felica_cmd[base];
-
-	// Method 1: Identiv CNTLESS_FELICA_PASS_THRU (Escape Code 0xF3)
-	// uTrust_370xF_User_Manual.pdf Section 6.3.4.15 (Page 69)
-	// Input:  [0xF3] [FeliCa command bytes (DataOut)]
-	// Output: [FeliCa response bytes (DataIn)]
-	std::vector<u8> escape_cmd;
-	escape_cmd.reserve(1 + felica_cmd.size());
-	escape_cmd.push_back(0xF3); // CNTLESS_FELICA_PASS_THRU
-	escape_cmd.insert(escape_cmd.end(), felica_cmd.begin(), felica_cmd.end());
-
-	std::vector<u8> escape_resp;
+	const bool is_utrust = m_impl->is_identiv(this);
 
 	auto is_valid_felica = [&](std::vector<u8>& resp) -> bool
 	{
-		if (resp.size() >= 2 && resp[1] == static_cast<u8>(fcmd + 1))
+		if (resp.size() >= 2 && resp[0] >= 2 && resp[0] <= resp.size() && resp[1] == static_cast<u8>(fcmd + 1))
 		{
 			// Byte 0 is length byte, Byte 1 is Response Code. Truncate driver padding if any.
-			if (resp.size() >= resp[0] && resp[0] >= 2)
-			{
-				resp.resize(resp[0]);
-			}
+			resp.resize(resp[0]);
 		}
-		else if (!resp.empty() && resp[0] == static_cast<u8>(fcmd + 1))
+		else if (!resp.empty() && resp[0] == static_cast<u8>(fcmd + 1) && resp.size() + 1 <= 255)
 		{
 			// Reader firmware stripped length byte; prepend length byte
 			resp.insert(resp.begin(), static_cast<u8>(resp.size() + 1));
 		}
 
-		// Validate that the response conforms to standard FeliCa framing:
-		// Byte 0 is length (must match buffer size), Byte 1 is Response Code (must match Command Code + 1)
+		// Validate standard FeliCa framing: Byte 0 == size, Byte 1 == Command Code + 1
 		return resp.size() >= 2 && resp[0] == resp.size() && resp[1] == static_cast<u8>(fcmd + 1);
 	};
 
-	bool valid_resp = send_escape(escape_cmd, escape_resp) && is_valid_felica(escape_resp);
-
-	// Fallback 1: If primary format failed to obtain a valid FeliCa response, try alternative framing format
-	// (uTrust manual: "At least 1 byte of command is required"; toggle between with and without length byte)
-	if (!valid_resp)
+	// Method 1: Identiv CNTLESS_FELICA_PASS_THRU (Escape Code 0xF3)
+	// Firmware prepends the JIS X 6319-4 length byte itself; sending one to uTrust causes a ~5.4s RF timeout.
+	std::array<u8, 264> cmd_buf{};
+	const usz raw_len = felica_cmd.size() - base;
+	if (raw_len <= 255)
 	{
-		std::vector<u8> alt_cmd = {0xF3};
-		if (has_len && felica_cmd.size() > 1)
+		cmd_buf[0] = 0xF3;
+		std::memcpy(cmd_buf.data() + 1, felica_cmd.data() + base, raw_len);
+		if (send_escape(std::span<const u8>(cmd_buf.data(), 1 + raw_len), felica_resp) && is_valid_felica(felica_resp))
 		{
-			alt_cmd.insert(alt_cmd.end(), felica_cmd.begin() + 1, felica_cmd.end());
+			return true;
 		}
-		else if (!has_len)
-		{
-			alt_cmd.push_back(static_cast<u8>(felica_cmd.size() + 1));
-			alt_cmd.insert(alt_cmd.end(), felica_cmd.begin(), felica_cmd.end());
-		}
-
-		valid_resp = send_escape(alt_cmd, escape_resp) && is_valid_felica(escape_resp);
 	}
 
-	if (valid_resp)
+	// Fallback 1: Only for non-Identiv OEM readers whose 0xF3 expects explicit length prefix
+	if (!is_utrust && felica_cmd.size() <= (has_len ? 255u : 254u))
 	{
-		felica_resp = std::move(escape_resp);
-		return true;
+		usz alt_len = 0;
+		cmd_buf[alt_len++] = 0xF3;
+		if (!has_len)
+		{
+			cmd_buf[alt_len++] = static_cast<u8>(felica_cmd.size() + 1);
+		}
+		std::memcpy(cmd_buf.data() + alt_len, felica_cmd.data(), felica_cmd.size());
+		alt_len += felica_cmd.size();
+		if (send_escape(std::span<const u8>(cmd_buf.data(), alt_len), felica_resp) && is_valid_felica(felica_resp))
+		{
+			return true;
+		}
 	}
+
+	felica_resp.clear();
+	std::vector<u8> rapdu;
+
+	// Transmit a FeliCa pseudo-APDU in cmd_buf and retry with Le=0x00 / SW 6C xx if required by OS driver
+	const auto transmit_felica_apdu = [&](usz apdu_len) -> bool
+	{
+		if (transmit_apdu(std::span<const u8>(cmd_buf.data(), apdu_len), rapdu) && rapdu.size() >= 2)
+		{
+			const u16 sw = extract_sw(rapdu);
+			if (sw == 0x9000)
+			{
+				return true;
+			}
+			if ((sw == 0x6700 || (sw & 0xFF00) == 0x6C00) && apdu_len < cmd_buf.size())
+			{
+				const u8 corrected_le = (sw & 0xFF00) == 0x6C00 ? static_cast<u8>(sw & 0xFF) : 0x00;
+				usz retry_len = apdu_len;
+				if (retry_len == 5)
+				{
+					// Replace existing Le on Case 2 short APDUs instead of turning them into invalid 6-byte headers
+					cmd_buf[4] = corrected_le;
+				}
+				else
+				{
+					cmd_buf[retry_len++] = corrected_le;
+				}
+				transmit_apdu(std::span<const u8>(cmd_buf.data(), retry_len), rapdu);
+			}
+			return true;
+		}
+		return false;
+	};
+
+	const auto wrap_felica_response = [&](u8 resp_code, std::span<const u8> body)
+	{
+		felica_resp.resize(2 + body.size());
+		felica_resp[0] = static_cast<u8>(2 + body.size());
+		felica_resp[1] = resp_code;
+		if (!body.empty())
+		{
+			std::memcpy(felica_resp.data() + 2, body.data(), body.size());
+		}
+	};
+
+	const auto finish_pseudo_apdu = [&](usz apdu_len, usz min_resp_len, u8 resp_code, usz fixed_copy_len = 0) -> bool
+	{
+		if (transmit_felica_apdu(apdu_len) && rapdu.size() >= min_resp_len && extract_sw(rapdu) == 0x9000)
+		{
+			const usz body_len = fixed_copy_len ? fixed_copy_len : (rapdu.size() - 2);
+			wrap_felica_response(resp_code, std::span<const u8>(rapdu.data(), body_len));
+			return true;
+		}
+		return false;
+	};
+
+	const auto calc_block_list_len = [&](usz blk_offset, u8 num_blocks) -> usz
+	{
+		usz blk_len = 0;
+		usz scan = blk_offset;
+		for (u8 b = 0; b < num_blocks && scan < felica_cmd.size(); ++b)
+		{
+			// JIS X 6319-4 Section 8.2.7: Bit 7 = 1 is 2-byte element, Bit 7 = 0 is 3-byte element
+			const usz elem_sz = (felica_cmd[scan] & 0x80) ? 2 : 3;
+			blk_len += elem_sz;
+			scan += elem_sz;
+		}
+		return blk_len;
+	};
 
 	// Method 2: Fallback to Pseudo-APDU based on FeliCa command opcode
-	// E.g. PAPDU_FELICA_REQC (FF 40 00 00 04 ...) for Polling (cmd 0x00)
 	if (felica_cmd.size() >= base + 1)
 	{
-		if (fcmd == 0x00 && felica_cmd.size() >= base + 3) // Polling (System Code requires at least 2 bytes)
+		if (fcmd == 0x00 && felica_cmd.size() >= base + 3) // Polling
 		{
-			const u8 sys_msb = felica_cmd[base + 1];
-			const u8 sys_lsb = felica_cmd[base + 2];
-			// JIS X 6319-4 Section 8.2.3: Defaults are 0x00 for Request Code and Time Slot Number if omitted
 			const u8 req_code = (felica_cmd.size() >= base + 4) ? felica_cmd[base + 3] : 0x00;
 			const u8 tsn = (felica_cmd.size() >= base + 5) ? felica_cmd[base + 4] : 0x00;
-
-			std::vector<u8> apdu = {0xFF, 0x40, 0x00, 0x00, 0x04, sys_msb, sys_lsb, req_code, tsn};
-			std::vector<u8> rapdu;
-			if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 18) // At least 16B payload (IDm + PMm) + 2B SW
+			cmd_buf[0] = 0xFF;
+			cmd_buf[1] = 0x40;
+			cmd_buf[2] = 0x00;
+			cmd_buf[3] = 0x00;
+			cmd_buf[4] = 0x04;
+			cmd_buf[5] = felica_cmd[base + 1];
+			cmd_buf[6] = felica_cmd[base + 2];
+			cmd_buf[7] = req_code;
+			cmd_buf[8] = tsn;
+			if (finish_pseudo_apdu(9, 18, 0x01))
 			{
-				const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-				if (sw == 0x9000)
-				{
-					// Synthesize standard FeliCa polling response:
-					// Length byte + RespCode (0x01) + NFCID2 (8B) + PMm (8B) [+ 2B SystemCode if returned]
-					const usz data_len = rapdu.size() - 2;
-					felica_resp.resize(2 + data_len);
-					felica_resp[0] = static_cast<u8>(2 + data_len);
-					felica_resp[1] = 0x01;
-					std::memcpy(felica_resp.data() + 2, rapdu.data(), data_len);
-					return true;
-				}
+				return true;
 			}
 		}
-		else if (fcmd == 0x02 && felica_cmd.size() >= base + 10) // Request Service (PAPDU_FELICA_REQ_SERVICE, Section 6.2.14)
+		else if (fcmd == 0x02 && felica_cmd.size() >= base + 10) // Request Service
 		{
-			// FeliCa raw ReqService: [Len: 1B] [0x02] [IDm: 8B] [NumServices: 1B] [ServiceList: 2*N]
 			const u8 num_services = felica_cmd[base + 9];
 			const usz srv_offset = base + 10;
 			const usz srv_len = num_services * 2;
 			if (felica_cmd.size() >= srv_offset + srv_len && srv_len <= 255)
 			{
-				std::vector<u8> apdu = {0xFF, 0x42, num_services, 0x00, static_cast<u8>(srv_len)};
-				apdu.insert(apdu.end(), felica_cmd.begin() + srv_offset, felica_cmd.begin() + srv_offset + srv_len);
-
-				std::vector<u8> rapdu;
-				if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 11) // 8B IDm + 1B NumServices + 2B SW (JIS X 6319-4 Section 8.2.4 / uTrust Section 6.2.14)
+				cmd_buf[0] = 0xFF;
+				cmd_buf[1] = 0x42;
+				cmd_buf[2] = num_services;
+				cmd_buf[3] = 0x00;
+				cmd_buf[4] = static_cast<u8>(srv_len);
+				std::memcpy(cmd_buf.data() + 5, felica_cmd.data() + srv_offset, srv_len);
+				if (finish_pseudo_apdu(5 + srv_len, 11, 0x03))
 				{
-					const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-					if (sw == 0x9000)
+					return true;
+				}
+			}
+		}
+		else if ((fcmd == 0x04 || fcmd == 0x0C) && felica_cmd.size() >= base + 9) // Request Response / System Code
+		{
+			cmd_buf[0] = 0xFF;
+			cmd_buf[1] = (fcmd == 0x04) ? 0x44 : 0x4A;
+			cmd_buf[2] = 0x00;
+			cmd_buf[3] = 0x00;
+			cmd_buf[4] = 0x00;
+			if (finish_pseudo_apdu(5, 11, static_cast<u8>(fcmd + 1)))
+			{
+				return true;
+			}
+		}
+		else if ((fcmd == 0x06 || fcmd == 0x08) && felica_cmd.size() >= base + 11) // Read / Write Without Encryption
+		{
+			const u8 num_services = felica_cmd[base + 9];
+			const usz srv_offset = base + 10;
+			const usz srv_len = num_services * 2;
+			if (felica_cmd.size() > srv_offset + srv_len)
+			{
+				const u8 num_blocks = felica_cmd[srv_offset + srv_len];
+				const usz blk_offset = srv_offset + srv_len + 1;
+				const usz blk_len = calc_block_list_len(blk_offset, num_blocks);
+				const usz data_offset = blk_offset + blk_len;
+				const usz data_len = (fcmd == 0x08) ? static_cast<usz>(num_blocks) * 16 : 0;
+				const usz payload_len = srv_len + blk_len + data_len;
+				if (felica_cmd.size() >= data_offset + data_len && payload_len <= 255 && blk_len == static_cast<usz>(num_blocks) * 2)
+				{
+					cmd_buf[0] = 0xFF;
+					cmd_buf[1] = (fcmd == 0x06) ? 0x46 : 0x48;
+					cmd_buf[2] = num_services;
+					cmd_buf[3] = num_blocks;
+					cmd_buf[4] = static_cast<u8>(payload_len);
+					std::memcpy(cmd_buf.data() + 5, felica_cmd.data() + srv_offset, srv_len);
+					std::memcpy(cmd_buf.data() + 5 + srv_len, felica_cmd.data() + blk_offset, blk_len);
+					if (data_len > 0)
 					{
-						// rapdu data: 8B IDm + 1B NumServices/Areas (n) + 2*n B Service versions
-						const usz data_len = rapdu.size() - 2;
-						felica_resp.resize(2 + data_len);
-						felica_resp[0] = static_cast<u8>(2 + data_len);
-						felica_resp[1] = 0x03; // ReqService response code
-						std::memcpy(felica_resp.data() + 2, rapdu.data(), data_len);
+						std::memcpy(cmd_buf.data() + 5 + srv_len + blk_len, felica_cmd.data() + data_offset, data_len);
+					}
+					if (finish_pseudo_apdu(5 + payload_len, 12, static_cast<u8>(fcmd + 1), (fcmd == 0x08) ? 10 : 0))
+					{
 						return true;
 					}
-				}
-			}
-		}
-		else if (fcmd == 0x04 && felica_cmd.size() >= base + 9) // Request Response (PAPDU_FELICA_REQ_RESPONSE, Section 6.2.15)
-		{
-			// FeliCa raw ReqResponse: [Len: 1B] [0x04] [IDm: 8B]
-			std::vector<u8> apdu = {0xFF, 0x44, 0x00, 0x00, 0x00};
-			std::vector<u8> rapdu;
-			if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 11) // 8B IDm + 1B Mode + 2B SW
-			{
-				const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-				if (sw == 0x9000)
-				{
-					const usz data_len = rapdu.size() - 2;
-					felica_resp.resize(2 + data_len);
-					felica_resp[0] = static_cast<u8>(2 + data_len);
-					felica_resp[1] = 0x05; // ReqResponse response code
-					std::memcpy(felica_resp.data() + 2, rapdu.data(), data_len);
-					return true;
-				}
-			}
-		}
-		else if (fcmd == 0x06 && felica_cmd.size() >= base + 11) // Read Without Encryption
-		{
-			// Data: [Len] [0x06] [IDm: 8B] [NumServices: 1B] [ServiceList: 2*N] [NumBlocks: 1B] [BlockList: 2~3*M]
-			const u8 num_services = felica_cmd[base + 9];
-			const usz srv_offset = base + 10;
-			const usz srv_len = num_services * 2;
-			if (felica_cmd.size() > srv_offset + srv_len)
-			{
-				const u8 num_blocks = felica_cmd[srv_offset + srv_len];
-				const usz blk_offset = srv_offset + srv_len + 1;
-				// Calculate actual block list byte length (FeliCa elements may be 2 or 3 bytes based on bit 7)
-				usz blk_len = 0;
-				{
-					usz scan = blk_offset;
-					for (u8 b = 0; b < num_blocks && scan < felica_cmd.size(); ++b)
-					{
-						// JIS X 6319-4 Section 8.2.7: Bit 7 = 1 is 2-byte element, Bit 7 = 0 is 3-byte element
-						const usz elem_sz = (felica_cmd[scan] & 0x80) ? 2 : 3;
-						blk_len += elem_sz;
-						scan += elem_sz;
-					}
-				}
-				if (felica_cmd.size() >= blk_offset + blk_len)
-				{
-					// Identiv Section 6.2.16: FF 46 P1(NumServices) P2(NumBlocks) P3(2*(P1+P2)) Data(ServiceList, BlockList)
-					// uTrust PAPDU assumes all block list elements are 2 bytes; skip if 3-byte elements are present
-					const usz payload_len = srv_len + blk_len;
-					if (payload_len <= 255 && blk_len == static_cast<usz>(num_blocks) * 2)
-					{
-						std::vector<u8> apdu = {0xFF, 0x46, num_services, num_blocks, static_cast<u8>(payload_len)};
-						apdu.insert(apdu.end(), felica_cmd.begin() + srv_offset, felica_cmd.begin() + srv_offset + srv_len);
-						apdu.insert(apdu.end(), felica_cmd.begin() + blk_offset, felica_cmd.begin() + blk_offset + blk_len);
-
-						std::vector<u8> rapdu;
-						if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 12) // 8B IDm + 1B SF1 + 1B SF2 + 2B SW (JIS X 6319-4 Section 8.2 / uTrust Section 6.2.16)
-						{
-							const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-							if (sw == 0x9000)
-							{
-								rapdu.resize(rapdu.size() - 2);
-								felica_resp.clear();
-								felica_resp.push_back(static_cast<u8>(rapdu.size() + 2));
-								felica_resp.push_back(0x07); // Read response code
-								felica_resp.insert(felica_resp.end(), rapdu.begin(), rapdu.end());
-								return true;
-							}
-						}
-					}
-				}
-			}
-		}
-		else if (fcmd == 0x08 && felica_cmd.size() >= base + 11) // Write Without Encryption (PAPDU_FELICA_WRITE_BLK, Section 6.2.17)
-		{
-			// FeliCa raw Write: [Len: 1B] [0x08] [IDm: 8B] [NumServices: 1B] [ServiceList: 2*N] [NumBlocks: 1B] [BlockList: 2~3*M] [BlockData: 16*M]
-			const u8 num_services = felica_cmd[base + 9];
-			const usz srv_offset = base + 10;
-			const usz srv_len = num_services * 2;
-			if (felica_cmd.size() > srv_offset + srv_len)
-			{
-				const u8 num_blocks = felica_cmd[srv_offset + srv_len];
-				const usz blk_offset = srv_offset + srv_len + 1;
-				// Calculate actual block list byte length (FeliCa elements may be 2 or 3 bytes based on bit 7)
-				usz blk_len = 0;
-				{
-					usz scan = blk_offset;
-					for (u8 b = 0; b < num_blocks && scan < felica_cmd.size(); ++b)
-					{
-						// JIS X 6319-4 Section 8.2.7: Bit 7 = 1 is 2-byte element, Bit 7 = 0 is 3-byte element
-						const usz elem_sz = (felica_cmd[scan] & 0x80) ? 2 : 3;
-						blk_len += elem_sz;
-						scan += elem_sz;
-					}
-				}
-				const usz data_offset = blk_offset + blk_len;
-				const usz data_len = num_blocks * 16;
-				if (felica_cmd.size() >= data_offset + data_len)
-				{
-					// Identiv Section 6.2.17: FF 48 P1(NumServices) P2(NumBlocks) P3(2*(P1+P2) + 16*P2) Data(ServiceList, BlockList, BlockData)
-					// uTrust PAPDU assumes all block list elements are 2 bytes; skip if 3-byte elements are present
-					const usz payload_len = srv_len + blk_len + data_len;
-					if (payload_len <= 255 && blk_len == static_cast<usz>(num_blocks) * 2)
-					{
-						std::vector<u8> apdu = {0xFF, 0x48, num_services, num_blocks, static_cast<u8>(payload_len)};
-						apdu.insert(apdu.end(), felica_cmd.begin() + srv_offset, felica_cmd.begin() + srv_offset + srv_len);
-						apdu.insert(apdu.end(), felica_cmd.begin() + blk_offset, felica_cmd.begin() + blk_offset + blk_len);
-						apdu.insert(apdu.end(), felica_cmd.begin() + data_offset, felica_cmd.begin() + data_offset + data_len);
-
-						std::vector<u8> rapdu;
-						if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 12) // 8B IDm + 1B SF1 + 1B SF2 + 2B SW (JIS X 6319-4 Section 8.2 / uTrust Section 6.2.17)
-						{
-							const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-							if (sw == 0x9000)
-							{
-								// Synthesize FeliCa Write response: [Len=12 (0x0C)] [RespCode=0x09] [IDm: 8B] [SF1: 1B] [SF2: 1B]
-								felica_resp.resize(12);
-								felica_resp[0] = 0x0C;
-								felica_resp[1] = 0x09;
-								std::memcpy(felica_resp.data() + 2, rapdu.data(), 10);
-								return true;
-							}
-						}
-					}
-				}
-			}
-		}
-		else if (fcmd == 0x0C && felica_cmd.size() >= base + 9) // Request System Code (PAPDU_FELICA_SYS_CODE, Section 6.2.18)
-		{
-			// FeliCa raw ReqSystemCode: [Len: 1B = 0x0A] [0x0C] [IDm: 8B]
-			std::vector<u8> apdu = {0xFF, 0x4A, 0x00, 0x00, 0x00};
-			std::vector<u8> rapdu;
-			if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 11) // 8B IDm + 1B NumSysCodes + 2*n B SysCodes + 2B SW
-			{
-				const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-				if (sw == 0x9000)
-				{
-					const usz data_len = rapdu.size() - 2;
-					felica_resp.resize(2 + data_len);
-					felica_resp[0] = static_cast<u8>(2 + data_len);
-					felica_resp[1] = 0x0D; // ReqSystemCode response code
-					std::memcpy(felica_resp.data() + 2, rapdu.data(), data_len);
-					return true;
 				}
 			}
 		}
 	}
 
 	// Assemble RF frame with mandatory JIS X 6319-4 Section 6.2 length byte prefix if input lacks it
-	std::vector<u8> rf_frame_buf;
+	std::array<u8, 256> rf_frame_buf{};
+	std::span<const u8> rf_cmd = felica_cmd;
 	if (!has_len)
 	{
-		rf_frame_buf.reserve(1 + felica_cmd.size());
-		rf_frame_buf.push_back(static_cast<u8>(felica_cmd.size() + 1));
-		rf_frame_buf.insert(rf_frame_buf.end(), felica_cmd.begin(), felica_cmd.end());
+		if (felica_cmd.size() >= 255)
+		{
+			return false;
+		}
+		rf_frame_buf[0] = static_cast<u8>(felica_cmd.size() + 1);
+		std::memcpy(rf_frame_buf.data() + 1, felica_cmd.data(), felica_cmd.size());
+		rf_cmd = {rf_frame_buf.data(), 1 + felica_cmd.size()};
 	}
-	const std::span<const u8> rf_cmd = has_len ? felica_cmd : std::span<const u8>(rf_frame_buf);
+
+	const auto finalize_felica_slice = [&](std::span<const u8> slice) -> bool
+	{
+		if (slice.size() >= 2 && slice[0] == slice.size() && slice[1] == static_cast<u8>(fcmd + 1))
+		{
+			felica_resp.assign(slice.begin(), slice.end());
+			return true;
+		}
+		if (!slice.empty() && slice[0] == static_cast<u8>(fcmd + 1) && slice.size() + 1 <= 255)
+		{
+			felica_resp.resize(slice.size() + 1);
+			felica_resp[0] = static_cast<u8>(slice.size() + 1);
+			std::memcpy(felica_resp.data() + 1, slice.data(), slice.size());
+			return true;
+		}
+		return false;
+	};
 
 	// Method 3: PC/SC Part 3 Supplemental Document Transparent Exchange (FF C2 00 01)
-	// Standard transceive object: Tag 0x95 [Len] [Data]. Response: Tag 0x97 [Len] [ICC Response Data] + Tag 0x96 [Len] [Status] + 90 00
-	if (rf_cmd.size() <= 252)
 	{
-		// ISO/IEC 7816-4 Section 5.2.2 BER-TLV length encoding:
-		// Length <= 127 uses 1 byte; length > 127 uses 0x81 followed by 1 byte length
-		std::vector<u8> trans_apdu;
-		if (rf_cmd.size() <= 127)
+		usz cand_off = 0;
+		usz cand_len = 0;
+		if (transmit_transparent_apdu(*this, rf_cmd, rapdu, cand_off, cand_len, true) &&
+			finalize_felica_slice(std::span<const u8>(rapdu.data() + cand_off, cand_len)))
 		{
-			trans_apdu = {0xFF, 0xC2, 0x00, 0x01, static_cast<u8>(rf_cmd.size() + 2), 0x95, static_cast<u8>(rf_cmd.size())};
-		}
-		else
-		{
-			trans_apdu = {0xFF, 0xC2, 0x00, 0x01, static_cast<u8>(rf_cmd.size() + 3), 0x95, 0x81, static_cast<u8>(rf_cmd.size())};
-		}
-		trans_apdu.insert(trans_apdu.end(), rf_cmd.begin(), rf_cmd.end());
-		trans_apdu.push_back(0x00); // Le = 0x00 (PC/SC Part 3 Supplement 2 Section 2.1 / ISO 7816-4 Case 4)
-
-		std::vector<u8> rapdu;
-		bool trans_ok = transmit_apdu(trans_apdu, rapdu);
-		if (!trans_ok || (rapdu.size() == 2 && rapdu[0] == 0x67 && rapdu[1] == 0x00))
-		{
-			// Fallback: retry without Le if non-standard driver rejects Case 4 Le with SW 67 00
-			trans_apdu.pop_back();
-			trans_ok = transmit_apdu(trans_apdu, rapdu);
-		}
-
-		if (trans_ok && rapdu.size() >= 4)
-		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				rapdu.resize(rapdu.size() - 2);
-				// Parse BER-TLV (ISO/IEC 7816-4 Section 5.2.2 / PC/SC Part 3 Supplement 2 Section 2.2):
-				// Prioritize Tag 0x97 (PC/SC standard ICC Response Data Object)
-				// Fall back to non-status Tag 0x96 (> 2 bytes) only for non-standard vendor implementations
-				usz tlv_offset = 0;
-				std::vector<u8> cand;
-				while (tlv_offset + 2 <= rapdu.size())
-				{
-					const u8 tag = rapdu[tlv_offset];
-					usz header_len = 2;
-					usz len = rapdu[tlv_offset + 1];
-
-					if (len == 0x81)
-					{
-						if (tlv_offset + 3 > rapdu.size())
-						{
-							break;
-						}
-						header_len = 3;
-						len = rapdu[tlv_offset + 2];
-					}
-					else if (len == 0x82)
-					{
-						if (tlv_offset + 4 > rapdu.size())
-						{
-							break;
-						}
-						header_len = 4;
-						len = (static_cast<usz>(rapdu[tlv_offset + 2]) << 8) | rapdu[tlv_offset + 3];
-					}
-					else if (len > 0x82)
-					{
-						break;
-					}
-
-					if (tlv_offset + header_len + len <= rapdu.size() && len >= 2)
-					{
-						if (tag == 0x97) // Standard ICC Response Data Object
-						{
-							cand.assign(rapdu.begin() + tlv_offset + header_len, rapdu.begin() + tlv_offset + header_len + len);
-							break;
-						}
-						else if (tag == 0x96 && len > 2 && cand.empty()) // Non-standard vendor payload (excluding 2-byte Response Status)
-						{
-							cand.assign(rapdu.begin() + tlv_offset + header_len, rapdu.begin() + tlv_offset + header_len + len);
-						}
-					}
-					tlv_offset += header_len + len;
-				}
-
-				if (!cand.empty())
-				{
-					// Validate FeliCa Response Code (fcmd + 1) per JIS X 6319-4 Section 8.1 Table 12
-					if (cand.size() >= 2 && cand[0] == cand.size() && cand[1] == static_cast<u8>(fcmd + 1))
-					{
-						felica_resp = std::move(cand);
-						return true;
-					}
-					else if (cand.size() >= 1 && cand[0] == static_cast<u8>(fcmd + 1))
-					{
-						felica_resp.clear();
-						felica_resp.push_back(static_cast<u8>(cand.size() + 1));
-						felica_resp.insert(felica_resp.end(), cand.begin(), cand.end());
-						return true;
-					}
-				}
-			}
+			return true;
 		}
 	}
 
 	// Method 4: Generic PC/SC Direct Transmit APDU (FF 00 00 00 Lc <rf_cmd>)
-	// Supported by standard PC/SC contactless readers (e.g. Sony PaSoRi RC-S380, ACS ACR122U)
 	if (rf_cmd.size() <= 255)
 	{
-		std::vector<u8> direct_apdu = {0xFF, 0x00, 0x00, 0x00, static_cast<u8>(rf_cmd.size())};
-		direct_apdu.insert(direct_apdu.end(), rf_cmd.begin(), rf_cmd.end());
-
-		std::vector<u8> rapdu;
-		if (transmit_apdu(direct_apdu, rapdu) && rapdu.size() >= 2)
+		std::array<u8, 261> direct_buf{};
+		const auto direct_apdu = build_short_apdu(direct_buf, 0xFF, 0x00, 0x00, 0x00, rf_cmd);
+		if (transmit_apdu(direct_apdu, rapdu) && rapdu.size() >= 4 && extract_sw(rapdu) == 0x9000 &&
+			finalize_felica_slice(std::span<const u8>(rapdu.data(), rapdu.size() - 2)))
 		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000 && rapdu.size() >= 4) // At least 2B payload + 2B SW
-			{
-				rapdu.resize(rapdu.size() - 2);
-				// Validate FeliCa Response Code (fcmd + 1) per JIS X 6319-4 Section 8.1 Table 12
-				if (rapdu.size() >= 2 && rapdu[0] == rapdu.size() && rapdu[1] == static_cast<u8>(fcmd + 1))
-				{
-					felica_resp = std::move(rapdu);
-					return true;
-				}
-				else if (rapdu.size() >= 1 && rapdu[0] == static_cast<u8>(fcmd + 1))
-				{
-					felica_resp.clear();
-					felica_resp.push_back(static_cast<u8>(rapdu.size() + 1));
-					felica_resp.insert(felica_resp.end(), rapdu.begin(), rapdu.end());
-					return true;
-				}
-			}
+			return true;
 		}
 	}
 
@@ -2234,131 +2545,92 @@ bool pcsc_driver::mifare_authenticate(u8 block, bool key_a, std::span<const u8, 
 		return false;
 	}
 
+	std::lock_guard lock(m_impl->m_mutex);
+
 	const u8 key_type = key_a ? 0x60 : 0x61;
+	const u8 sector = (block < 128) ? static_cast<u8>(block / 4) : static_cast<u8>(32 + (block - 128) / 16);
 
-	// Check if reader is Identiv uTrust / CLOUD 370x F / 470x F
-	const bool is_utrust = m_impl->is_identiv(this);
-
-	// Step 1: Load Keys APDU (PAPDU_MIFARE_LOAD_KEYS, Section 6.2.3, Page 32-34)
-	// PC/SC Part 3: FF 82 <Key Structure> <Key Number> 06 <6 bytes key>
-	// P1 = 0x00: Card key, plain transmission, volatile memory
-	// P2 = key_slot: On standard PC/SC readers, slot 0x00 is used.
-	// On uTrust 370xF, Section 6.2.3 shows P2 = key_type (0x60 for Key A, 0x61 for Key B).
-	u8 load_slot = is_utrust ? key_type : 0x00;
-	std::vector<u8> load_key_apdu = {0xFF, 0x82, 0x00, load_slot, 0x06};
-	load_key_apdu.insert(load_key_apdu.end(), key.begin(), key.end());
-
-	std::vector<u8> rapdu;
-	bool load_ok = transmit_apdu(load_key_apdu, rapdu) && rapdu.size() >= 2 &&
-	               ((rapdu[rapdu.size() - 2] << 8) | rapdu.back()) == 0x9000;
-
-	if (!load_ok)
+	if (m_impl->is_auth_failed_cached(m_impl->m_cached_card_info.uid, sector, key_type, key))
 	{
-		// Try alternate slot: 0x00 if uTrust preferred slot failed, or key_type if 0x00 failed
-		load_slot = (load_slot == 0x00) ? key_type : 0x00;
-		load_key_apdu[3] = load_slot;
-		load_ok = transmit_apdu(load_key_apdu, rapdu) && rapdu.size() >= 2 &&
-		          ((rapdu[rapdu.size() - 2] << 8) | rapdu.back()) == 0x9000;
+		return false;
 	}
 
+	const auto record_rejected_key = [&]()
+	{
+		m_impl->record_failed_auth(m_impl->m_cached_card_info.uid, sector, key_type, key);
+	};
+
+	const bool is_utrust = m_impl->is_identiv(this);
+
+	// For dual-interface cards (e.g. SAK 0x28), ensure reader switches from T=CL mode to MIFARE mode (uTrust Section 6.2.12)
+	if (is_utrust && m_impl->m_cached_card_info.is_iso14443_4 && m_impl->m_cached_card_info.is_mifare && !m_impl->m_in_part3_mode)
+	{
+		part4_switch(false);
+	}
+
+	// Step 1: Load Keys APDU (uTrust Section 6.2.3 uses P2=key_type; standard PC/SC uses slot 0x00)
+	u8 load_slot = is_utrust ? key_type : 0x00;
+	std::array<u8, 11> load_key_apdu = {0xFF, 0x82, 0x00, load_slot, 0x06, key[0], key[1], key[2], key[3], key[4], key[5]};
+
+	std::vector<u8> rapdu;
+	bool load_ok = transmit_apdu(load_key_apdu, rapdu) && extract_sw(rapdu) == 0x9000;
+	if (!load_ok)
+	{
+		load_slot = (load_slot == 0x00) ? key_type : 0x00;
+		load_key_apdu[3] = load_slot;
+		load_ok = transmit_apdu(load_key_apdu, rapdu) && extract_sw(rapdu) == 0x9000;
+	}
 	if (!load_ok)
 	{
 		return false;
 	}
 
-	// Step 2: Authenticate APDU (PAPDU_MIFARE_AUTHENTICATE, Section 6.2.4, Page 34)
-	// PC/SC Part 3: FF 86 00 00 05 [B0:Version(01)] [B1:BlockMSB] [B2:BlockLSB] [B3:KeyType] [B4:KeyNumber]
-	// PC/SC Part 3 specifies B4 must match the loaded key slot.
-	// uTrust manual Section 6.2.4 explicitly specifies B4 shall be set to 0x01.
+	const auto is_auth_rejected_sw = [](u16 sw) -> bool
+	{
+		return sw == 0x6300 || sw == 0x6982 || sw == 0x6983 || sw == 0x6985 || (sw & 0xFFF0) == 0x63C0;
+	};
+
+	// Step 2: Authenticate APDU (uTrust Section 6.2.4 specifies KeyNumber B4=0x01; PC/SC Part 3 uses loaded slot)
 	const u8 primary_auth_slot = is_utrust ? 0x01 : load_slot;
-	std::vector<u8> auth_apdu = {0xFF, 0x86, 0x00, 0x00, 0x05, 0x01, 0x00, block, key_type, primary_auth_slot};
-	if (transmit_apdu(auth_apdu, rapdu) && rapdu.size() >= 2)
+	std::array<u8, 10> auth_apdu = {0xFF, 0x86, 0x00, 0x00, 0x05, 0x01, 0x00, block, key_type, primary_auth_slot};
+	std::array<u8, 5> tried_slots{};
+	usz tried_count = 0;
+	for (const u8 slot : {primary_auth_slot, load_slot, u8{0x01}, key_type, u8{0x00}})
 	{
-		const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
+		if (std::find(tried_slots.begin(), tried_slots.begin() + tried_count, slot) != tried_slots.begin() + tried_count)
+		{
+			continue;
+		}
+		tried_slots[tried_count++] = slot;
+		auth_apdu[9] = slot;
+		if (!transmit_apdu(auth_apdu, rapdu) || rapdu.size() < 2)
+		{
+			return false;
+		}
+		const u16 sw = extract_sw(rapdu);
 		if (sw == 0x9000)
 		{
 			return true;
 		}
-	}
-
-	// Fallback 1: Match load_slot
-	if (auth_apdu[9] != load_slot)
-	{
-		auth_apdu[9] = load_slot;
-		if (transmit_apdu(auth_apdu, rapdu) && rapdu.size() >= 2)
+		if (is_auth_rejected_sw(sw))
 		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				return true;
-			}
+			// Card rejected the key; do not waste RF time retrying alternate key slots or legacy FF 88
+			record_rejected_key();
+			return false;
 		}
 	}
 
-	// Fallback 2: Slot 0x01 (uTrust standard slot)
-	if (auth_apdu[9] != 0x01)
+	// Obsolete authenticate format FF 88 for legacy readers
+	for (const u8 slot : {load_slot, u8{0x00}})
 	{
-		auth_apdu[9] = 0x01;
-		if (transmit_apdu(auth_apdu, rapdu) && rapdu.size() >= 2)
-		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				return true;
-			}
-		}
-	}
-
-	// Fallback 3: key_type (0x60 / 0x61) for readers that index slots by key type
-	if (auth_apdu[9] != key_type)
-	{
-		auth_apdu[9] = key_type;
-		if (transmit_apdu(auth_apdu, rapdu) && rapdu.size() >= 2)
-		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				return true;
-			}
-		}
-	}
-
-	// Fallback 4: Slot 0x00 (PC/SC Part 3 standard key slot)
-	if (auth_apdu[9] != 0x00)
-	{
-		auth_apdu[9] = 0x00;
-		if (transmit_apdu(auth_apdu, rapdu) && rapdu.size() >= 2)
-		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				return true;
-			}
-		}
-	}
-
-	// Format B: Obsolete authenticate format FF 88 (not in uTrust manual; legacy reader support)
-	std::vector<u8> auth_apdu_b = {0xFF, 0x88, 0x00, block, key_type, load_slot};
-	if (transmit_apdu(auth_apdu_b, rapdu) && rapdu.size() >= 2)
-	{
-		const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-		if (sw == 0x9000)
+		const std::array<u8, 6> auth_apdu_b = {0xFF, 0x88, 0x00, block, key_type, slot};
+		if (transmit_apdu(auth_apdu_b, rapdu) && extract_sw(rapdu) == 0x9000)
 		{
 			return true;
 		}
-	}
-
-	// Fallback for legacy readers indexing loaded keys at slot 0x00
-	if (load_slot != 0x00)
-	{
-		auth_apdu_b[5] = 0x00;
-		if (transmit_apdu(auth_apdu_b, rapdu) && rapdu.size() >= 2)
+		if (slot == 0x00)
 		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				return true;
-			}
+			break;
 		}
 	}
 
@@ -2373,72 +2645,92 @@ bool pcsc_driver::mifare_read(u8 block, std::vector<u8>& block_data)
 		return false;
 	}
 
-	// PAPDU_MIFARE_READ_BINARY: FF B0 AddrMSB(00) AddrLSB(block) Le(10)
-	// uTrust_370xF_User_Manual.pdf Section 6.2.1 (Page 30)
-	std::vector<u8> read_apdu = {0xFF, 0xB0, 0x00, block, 0x10};
+	std::lock_guard lock(m_impl->m_mutex);
+
+	std::array<u8, 5> read_apdu = {0xFF, 0xB0, 0x00, block, 0x10};
 	std::vector<u8> rapdu;
-	bool read_ok = transmit_apdu(read_apdu, rapdu) && rapdu.size() >= 2 &&
-	               ((rapdu[rapdu.size() - 2] << 8) | rapdu.back()) == 0x9000;
+	bool read_ok = false;
 
-	if (!read_ok)
+	for (u8 try_le : {u8{0x10}, u8{0x04}, u8{0x00}})
 	{
-		// Fallback 1 for readers that reject Le=0x10 on 4-byte cards (MIFARE Ultralight/NTAG): try Le=0x04
-		read_apdu[4] = 0x04;
-		read_ok = transmit_apdu(read_apdu, rapdu) && rapdu.size() >= 2 &&
-		          ((rapdu[rapdu.size() - 2] << 8) | rapdu.back()) == 0x9000;
-	}
-
-	if (!read_ok)
-	{
-		// Fallback 2 for readers expecting wildcard/full block Le=0x00 (PC/SC Part 3 Section 3.2.2.1.8)
-		read_apdu[4] = 0x00;
-		read_ok = transmit_apdu(read_apdu, rapdu) && rapdu.size() >= 2 &&
-		          ((rapdu[rapdu.size() - 2] << 8) | rapdu.back()) == 0x9000;
-	}
-
-	if (read_ok)
-	{
-		rapdu.resize(rapdu.size() - 2);
-		block_data = std::move(rapdu);
-
-		// uTrust 370xF manual Section 6.2.1 explicitly states:
-		// "Regardless of the value given in Le, this command will always return the entire block content:
-		//  16 bytes for MIFARE Classic, 4 bytes for MIFARE UL and UL C"
-		// The standard MIFARE Ultralight read command (0x30) expects 16 bytes (4 pages of 4 bytes).
-		// If only 4 bytes were returned, fetch the subsequent 3 blocks to assemble the full 16-byte buffer.
-		if (block_data.size() == 4)
+		read_apdu[4] = try_le;
+		const u16 last_sw = transmit_case2_apdu(*this, read_apdu, rapdu);
+		if (last_sw == 0)
 		{
-			const u8 successful_le = read_apdu[4];
-			for (u8 next_block = 1; next_block < 4; ++next_block)
-			{
-				if (static_cast<u16>(block) + next_block > 255)
-					break;
+			break;
+		}
+		if (last_sw == 0x9000)
+		{
+			read_ok = true;
+			break;
+		}
+		if (last_sw != 0x6700 && (last_sw & 0xFF00) != 0x6C00 && last_sw != 0x6282)
+		{
+			// Auth/card error rather than wrong Le; don't waste RF retries on alternate lengths
+			break;
+		}
+	}
 
-				const std::vector<u8> next_apdu = {0xFF, 0xB0, 0x00, static_cast<u8>(block + next_block), successful_le};
-				std::vector<u8> next_rapdu;
-				if (transmit_apdu(next_apdu, next_rapdu) && next_rapdu.size() >= 6)
-				{
-					const u16 next_sw = (next_rapdu[next_rapdu.size() - 2] << 8) | next_rapdu.back();
-					if (next_sw == 0x9000)
-					{
-						block_data.insert(block_data.end(), next_rapdu.begin(), next_rapdu.begin() + 4);
-						continue;
-					}
-				}
+	if (!read_ok)
+	{
+		return false;
+	}
+
+	rapdu.resize(rapdu.size() - 2);
+	block_data = std::move(rapdu);
+	rapdu.reserve(32); // Preserve scratch vector after move so Ultralight multi-page assembly avoids reallocations
+
+	// Assemble 16-byte buffer (4 pages) for 4-byte MIFARE Ultralight / UL C blocks
+	if (block_data.size() == 4)
+	{
+		const u8 successful_le = read_apdu[4];
+		bool rolled_over = false;
+		for (u8 next_block = 1; next_block < 4; ++next_block)
+		{
+			u16 target_page = rolled_over
+				? ((static_cast<u16>(block) + next_block) % 16)
+				: (static_cast<u16>(block) + next_block);
+			if (target_page > 255)
+			{
 				break;
 			}
 
-			// If reading near card boundary yields less than 16 bytes, pad with zeroes to satisfy 16B Mifare frame
-			if (block_data.size() < 16)
+			auto read_page = [&](u16 page) -> bool
 			{
-				block_data.resize(16, 0x00);
+				const std::array<u8, 5> next_apdu = {0xFF, 0xB0, 0x00, static_cast<u8>(page), successful_le};
+				if (transmit_apdu(next_apdu, rapdu) && rapdu.size() >= 6 && extract_sw(rapdu) == 0x9000)
+				{
+					block_data.insert(block_data.end(), rapdu.begin(), rapdu.begin() + 4);
+					return true;
+				}
+				return false;
+			};
+
+			if (read_page(target_page))
+			{
+				continue;
 			}
+
+			// Standard 16-page MIFARE Ultralight (MF0ICU1) rolls over from page 15 back to page 0
+			if (!rolled_over && block < 16 && target_page >= 16)
+			{
+				rolled_over = true;
+				if (read_page(target_page % 16))
+				{
+					continue;
+				}
+			}
+			break;
 		}
 
-		return true;
+		// Pad boundary reads shorter than 16 bytes with zeroes to satisfy 16B MIFARE frame
+		if (block_data.size() < 16)
+		{
+			block_data.resize(16, 0x00);
+		}
 	}
 
-	return false;
+	return true;
 }
 
 bool pcsc_driver::mifare_write(u8 block, std::span<const u8> block_data)
@@ -2448,38 +2740,26 @@ bool pcsc_driver::mifare_write(u8 block, std::span<const u8> block_data)
 		return false;
 	}
 
-	// PAPDU_MIFARE_UPDATE_BINARY: FF D6 AddrMSB(00) AddrLSB(block) Lc <data>
-	// uTrust_370xF_User_Manual.pdf Section 6.2.2 (Page 31)
-	std::vector<u8> write_apdu = {0xFF, 0xD6, 0x00, block, static_cast<u8>(block_data.size())};
-	write_apdu.insert(write_apdu.end(), block_data.begin(), block_data.end());
+	std::lock_guard lock(m_impl->m_mutex);
+
+	std::array<u8, 261> write_buf{};
+	const auto write_apdu = build_short_apdu(write_buf, 0xFF, 0xD6, 0x00, block, block_data);
 
 	std::vector<u8> rapdu;
-	if (transmit_apdu(write_apdu, rapdu) && rapdu.size() >= 2)
+	if (transmit_apdu(write_apdu, rapdu) && extract_sw(rapdu) == 0x9000)
 	{
-		const u16 sw = (rapdu[rapdu.size() - 2] << 8) | rapdu.back();
-		if (sw == 0x9000)
-		{
-			return true;
-		}
+		m_impl->invalidate_failed_auth(m_impl->m_cached_card_info.uid);
+		return true;
 	}
 
-	// Per uTrust Section 6.2.2 and NXP MF0ICU1 Section 8.5.3 (COMPATIBILITY WRITE):
-	// MIFARE Ultralight blocks (pages) are 4 bytes. If a 16-byte write was rejected by the
-	// reader firmware with SW 67 00 (Length incorrect), fall back to writing only the first
-	// 4 bytes to the addressed block (the remaining 12 bytes are discarded per MF0ICU1 Section 8.5.3).
-	// Never write across subsequent blocks to prevent overwriting Lock bytes or OTP.
+	// Ultralight fallback (4-byte page COMPATIBILITY WRITE per MF0ICU1 Section 8.5.3)
 	if (block_data.size() == 16)
 	{
-		std::vector<u8> page_apdu = {0xFF, 0xD6, 0x00, block, 0x04};
-		page_apdu.insert(page_apdu.end(), block_data.begin(), block_data.begin() + 4);
-		std::vector<u8> page_rapdu;
-		if (transmit_apdu(page_apdu, page_rapdu) && page_rapdu.size() >= 2)
+		const std::array<u8, 9> page_apdu = {0xFF, 0xD6, 0x00, block, 0x04, block_data[0], block_data[1], block_data[2], block_data[3]};
+		if (transmit_apdu(page_apdu, rapdu) && extract_sw(rapdu) == 0x9000)
 		{
-			const u16 page_sw = (page_rapdu[page_rapdu.size() - 2] << 8) | page_rapdu.back();
-			if (page_sw == 0x9000)
-			{
-				return true;
-			}
+			m_impl->invalidate_failed_auth(m_impl->m_cached_card_info.uid);
+			return true;
 		}
 	}
 
@@ -2494,16 +2774,24 @@ bool pcsc_driver::part3_pass_thru(std::span<const u8> data, std::vector<u8>& res
 		return false;
 	}
 
-	// PAPDU_ISO14443_PART3_PASS_THRU: FF EF DiscardCRC(01) 00 Lc <Data>
-	// uTrust_370xF_User_Manual.pdf Section 6.2.11 (Page 40)
-	// P1 = 0x01 instructs reader to discard CRC bytes from response (standard PN532 InDataExchange payload)
-	std::vector<u8> apdu = {0xFF, 0xEF, 0x01, 0x00, static_cast<u8>(data.size())};
-	apdu.insert(apdu.end(), data.begin(), data.end());
+	std::lock_guard lock(m_impl->m_mutex);
+
+	// PAPDU_ISO14443_PART3_PASS_THRU: FF EF P1(01=DiscardCRC) 00 Lc <Data>
+	std::array<u8, 261> apdu_buf{};
+	const auto apdu = build_short_apdu(apdu_buf, 0xFF, 0xEF, 0x01, 0x00, data);
 
 	std::vector<u8> rapdu;
 	if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
 	{
-		const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
+		u16 sw = extract_sw(rapdu);
+		if (sw == 0x6700 || (sw & 0xFF00) == 0x6C00)
+		{
+			apdu_buf[5 + data.size()] = (sw & 0xFF00) == 0x6C00 ? static_cast<u8>(sw & 0xFF) : 0x00;
+			if (transmit_apdu(std::span<const u8>(apdu_buf.data(), 6 + data.size()), rapdu) && rapdu.size() >= 2)
+			{
+				sw = extract_sw(rapdu);
+			}
+		}
 		if (sw == 0x9000)
 		{
 			rapdu.resize(rapdu.size() - 2);
@@ -2513,92 +2801,36 @@ bool pcsc_driver::part3_pass_thru(std::span<const u8> data, std::vector<u8>& res
 	}
 
 	// Fallback with P1 = 0x00 (Transmit CRC) if P1 = 0x01 is rejected by firmware
-	apdu[2] = 0x00;
-	if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
+	apdu_buf[2] = 0x00;
+	if (transmit_apdu(apdu, rapdu) && extract_sw(rapdu) == 0x9000)
 	{
-		const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-		if (sw == 0x9000)
+		rapdu.resize(rapdu.size() - 2);
+		if (rapdu.size() >= 2)
 		{
 			rapdu.resize(rapdu.size() - 2);
-			// Strip 2 CRC bytes if present so caller receives clean payload
-			if (rapdu.size() >= 2)
-			{
-				rapdu.resize(rapdu.size() - 2);
-			}
-			response = std::move(rapdu);
+		}
+		response = std::move(rapdu);
+		return true;
+	}
+
+	// Fallback 2: PC/SC Part 3 Supp. 2 Transparent Exchange (FF C2 00 01)
+	{
+		usz resp_off = 0;
+		usz resp_len = 0;
+		if (transmit_transparent_apdu(*this, data, rapdu, resp_off, resp_len, false))
+		{
+			response.assign(rapdu.begin() + resp_off, rapdu.begin() + resp_off + resp_len);
 			return true;
 		}
 	}
 
-	// Fallback 2: PC/SC Part 3 Supplement 2 Section 2.1 Transparent Exchange (FF C2 00 01)
-	if (data.size() <= 252)
+	// Fallback 3: Generic Direct Transmit APDU (FF 00 00 00 Lc <Data>)
+	const auto direct_apdu = build_short_apdu(apdu_buf, 0xFF, 0x00, 0x00, 0x00, data);
+	if (transmit_apdu(direct_apdu, rapdu) && extract_sw(rapdu) == 0x9000)
 	{
-		std::vector<u8> trans_apdu;
-		if (data.size() <= 127)
-		{
-			trans_apdu = {0xFF, 0xC2, 0x00, 0x01, static_cast<u8>(data.size() + 2), 0x95, static_cast<u8>(data.size())};
-		}
-		else
-		{
-			trans_apdu = {0xFF, 0xC2, 0x00, 0x01, static_cast<u8>(data.size() + 3), 0x95, 0x81, static_cast<u8>(data.size())};
-		}
-		trans_apdu.insert(trans_apdu.end(), data.begin(), data.end());
-		trans_apdu.push_back(0x00); // Le = 0x00 (PC/SC Part 3 Supplement 2 Section 2.1 / ISO 7816-4 Case 4)
-
-		bool trans_ok = transmit_apdu(trans_apdu, rapdu);
-		if (!trans_ok || (rapdu.size() == 2 && rapdu[0] == 0x67 && rapdu[1] == 0x00))
-		{
-			trans_apdu.pop_back();
-			trans_ok = transmit_apdu(trans_apdu, rapdu);
-		}
-
-		if (trans_ok && rapdu.size() >= 4)
-		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				rapdu.resize(rapdu.size() - 2);
-				usz tlv_offset = 0;
-				while (tlv_offset + 2 <= rapdu.size())
-				{
-					const u8 tag = rapdu[tlv_offset];
-					usz header_len = 2;
-					usz len = rapdu[tlv_offset + 1];
-					if (len == 0x81)
-					{
-						if (tlv_offset + 3 > rapdu.size())
-						{
-							break;
-						}
-						header_len = 3;
-						len = rapdu[tlv_offset + 2];
-					}
-					if (tlv_offset + header_len + len <= rapdu.size() && tag == 0x97 && len > 0)
-					{
-						response.assign(rapdu.begin() + tlv_offset + header_len, rapdu.begin() + tlv_offset + header_len + len);
-						return true;
-					}
-					tlv_offset += header_len + len;
-				}
-			}
-		}
-	}
-
-	// Fallback 3 for generic PC/SC readers: Direct Transmit APDU (FF 00 00 00 Lc <Data>)
-	if (data.size() <= 255)
-	{
-		std::vector<u8> direct_apdu = {0xFF, 0x00, 0x00, 0x00, static_cast<u8>(data.size())};
-		direct_apdu.insert(direct_apdu.end(), data.begin(), data.end());
-		if (transmit_apdu(direct_apdu, rapdu) && rapdu.size() >= 2)
-		{
-			const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-			if (sw == 0x9000)
-			{
-				rapdu.resize(rapdu.size() - 2);
-				response = std::move(rapdu);
-				return true;
-			}
-		}
+		rapdu.resize(rapdu.size() - 2);
+		response = std::move(rapdu);
+		return true;
 	}
 
 	return false;
@@ -2612,69 +2844,52 @@ bool pcsc_driver::tcl_pass_thru(std::span<const u8> data, std::vector<u8>& respo
 		return false;
 	}
 
+	std::lock_guard lock(m_impl->m_mutex);
+
 	const bool is_utrust = m_impl->is_identiv(this);
+	std::vector<u8> rapdu;
+
+	const auto try_wrapped_tcl = [&]() -> bool
+	{
+		if (data.size() > 255)
+		{
+			return false;
+		}
+		std::array<u8, 261> apdu_buf{};
+		const auto apdu = build_short_apdu(apdu_buf, 0xFF, 0xFE, 0x00, 0x00, data);
+		if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
+		{
+			const u16 sw = extract_sw(rapdu);
+			// Filter reader rejection status words (uTrust Manual Section 7.1)
+			if (sw != 0x6D00 && sw != 0x6E00 && sw != 0x6A81 && sw != 0x6F00 && sw != 0x6800 && sw != 0x6B00)
+			{
+				response = std::move(rapdu);
+				return true;
+			}
+		}
+		return false;
+	};
+
+	const auto try_direct_tcl = [&]() -> bool
+	{
+		if (data.size() >= 4 && transmit_apdu(data, rapdu) && rapdu.size() >= 2)
+		{
+			response = std::move(rapdu);
+			return true;
+		}
+		return false;
+	};
 
 	if (is_utrust)
 	{
-		// Method 1 for Identiv: PAPDU_TCL_PASS_THRU (FF FE 00 00 Lc <Data>)
-		// uTrust_370xF_User_Manual.pdf Section 6.2.10 (Page 39)
-		// Note: "The card itself will send SW1, SW2."
-		// Lc (P3) is 1 byte, applicable when data payload <= 255 bytes
-		if (data.size() <= 255)
+		if (m_impl->m_in_part3_mode)
 		{
-			std::vector<u8> apdu = {0xFF, 0xFE, 0x00, 0x00, static_cast<u8>(data.size())};
-			apdu.insert(apdu.end(), data.begin(), data.end());
-
-			std::vector<u8> rapdu;
-			if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
-			{
-				const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-				// Filter reader rejection status words (uTrust Manual Section 7.1) so unsupported FF FE falls back to direct T=1
-				if (sw != 0x6D00 && sw != 0x6E00 && sw != 0x6A81 && sw != 0x6F00 && sw != 0x6800 && sw != 0x6B00)
-				{
-					response = std::move(rapdu);
-					return true;
-				}
-			}
+			part4_switch(true);
 		}
-
-		// Fallback for Identiv in direct T=1 connection (or standard short/extended APDUs > 255 bytes): direct APDU pass-through without wrapper
-		std::vector<u8> rapdu;
-		if (transmit_apdu(data, rapdu) && rapdu.size() >= 2)
-		{
-			response = std::move(rapdu);
-			return true;
-		}
-	}
-	else
-	{
-		// Method 1 for generic PC/SC readers: Standard PC/SC Part 7 direct APDU pass-through without wrapper
-		std::vector<u8> rapdu;
-		if (transmit_apdu(data, rapdu) && rapdu.size() >= 2)
-		{
-			response = std::move(rapdu);
-			return true;
-		}
-
-		// Fallback: try PAPDU_TCL_PASS_THRU in case of OEM firmware derivative
-		if (data.size() <= 255)
-		{
-			std::vector<u8> apdu = {0xFF, 0xFE, 0x00, 0x00, static_cast<u8>(data.size())};
-			apdu.insert(apdu.end(), data.begin(), data.end());
-			if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
-			{
-				const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-				// Filter reader rejection status words (uTrust Section 7.1)
-				if (sw != 0x6D00 && sw != 0x6E00 && sw != 0x6A81 && sw != 0x6F00 && sw != 0x6800 && sw != 0x6B00)
-				{
-					response = std::move(rapdu);
-					return true;
-				}
-			}
-		}
+		return try_wrapped_tcl() || try_direct_tcl();
 	}
 
-	return false;
+	return try_direct_tcl() || try_wrapped_tcl();
 }
 
 bool pcsc_driver::part4_switch(bool to_tcl)
@@ -2684,15 +2899,15 @@ bool pcsc_driver::part4_switch(bool to_tcl)
 		return false;
 	}
 
-	// PAPDU_ISO14443_PART4_PART3_SWITCH: FF F8 P1 00 00
-	// uTrust_370xF_User_Manual.pdf Section 6.2.12 (Page 40)
-	// P1 = 0x00: MIFARE mode to TCL mode; P1 = 0x01: TCL mode to MIFARE mode
-	const std::vector<u8> apdu = {0xFF, 0xF8, static_cast<u8>(to_tcl ? 0x00 : 0x01), 0x00, 0x00};
+	std::lock_guard lock(m_impl->m_mutex);
+
+	// PAPDU_ISO14443_PART4_PART3_SWITCH (uTrust Manual Section 6.2.12): FF F8 P1 00 00
+	const std::array<u8, 5> apdu = {0xFF, 0xF8, static_cast<u8>(to_tcl ? 0x00 : 0x01), 0x00, 0x00};
 	std::vector<u8> rapdu;
-	if (transmit_apdu(apdu, rapdu) && rapdu.size() >= 2)
+	if (transmit_apdu(apdu, rapdu) && extract_sw(rapdu) == 0x9000)
 	{
-		const u16 sw = static_cast<u16>((rapdu[rapdu.size() - 2] << 8) | rapdu.back());
-		return sw == 0x9000;
+		m_impl->m_in_part3_mode = !to_tcl;
+		return true;
 	}
 	return false;
 }
