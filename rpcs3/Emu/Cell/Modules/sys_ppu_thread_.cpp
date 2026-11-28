@@ -40,6 +40,11 @@ static u32 ppu_alloc_tls()
 	{
 		// Alternative (big) TLS allocation
 		addr = vm::alloc(s_tls_size, vm::main);
+
+		if (!addr)
+		{
+			return 0;
+		}
 	}
 
 	std::memset(vm::base(addr), 0, 0x30); // Clear system area (TODO)
@@ -82,12 +87,12 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 
 	ppu.state += cpu_flag::wait;
 
-	s_tls_area = vm::alloc(0x40000, vm::main) + 0x30;
+	s_tls_area = ensure(vm::alloc(0x40000, vm::main)) + 0x30;
 	s_tls_max  = (0x40000 - 0x30) / s_tls_size;
 	s_tls_map  = std::make_unique<atomic_t<bool>[]>(s_tls_max);
 
 	// Allocate TLS for main thread
-	ppu.gpr[13] = ppu_alloc_tls() + 0x7000 + 0x30;
+	ppu.gpr[13] = ensure(ppu_alloc_tls()) + 0x7000 + 0x30;
 
 	ppu.check_state();
 
