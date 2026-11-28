@@ -1246,8 +1246,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			SubscribeTooltip(gb, tooltip);
 		};
 
+#ifdef __linux__
+		setup_nfc_combo(ui->usioNfcReader1Box, ui->gb_usio_reader_1, emu_settings_type::USIONFCReader1, tooltips.settings.usio_nfc_reader_linux);
+		setup_nfc_combo(ui->usioNfcReader2Box, ui->gb_usio_reader_2, emu_settings_type::USIONFCReader2, tooltips.settings.usio_nfc_reader_linux);
+#else
 		setup_nfc_combo(ui->usioNfcReader1Box, ui->gb_usio_reader_1, emu_settings_type::USIONFCReader1, tooltips.settings.usio_nfc_reader);
 		setup_nfc_combo(ui->usioNfcReader2Box, ui->gb_usio_reader_2, emu_settings_type::USIONFCReader2, tooltips.settings.usio_nfc_reader);
+#endif
+
 	}
 
 	EnhanceCheckBox(emu_settings_type::BackgroundInput, ui->backgroundInputBox, tooltips.settings.background_input);
