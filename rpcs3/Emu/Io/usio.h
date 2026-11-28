@@ -4,6 +4,8 @@
 #include "Emu/Io/usb_device.h"
 #include "Emu/Io/usio_types.h"
 
+#include <mutex>
+
 class usb_device_usio : public usb_device_emulated
 {
 public:
@@ -21,7 +23,7 @@ private:
 	void save_backup();
 	void translate_input_taiko();
 	void translate_input_tekken();
-	void emulate_card_reader(std::vector<u8>& buf, u16 reg);
+	void emulate_card_reader(std::vector<u8>& buf, u16 reg, usz max_size = ~usz{0});
 	void tap_card(usz player);
 	void usio_write(u8 channel, u16 reg, std::vector<u8>& data);
 	void usio_read(u8 channel, u16 reg, u16 size);
@@ -34,4 +36,12 @@ private:
 	std::vector<u8> response;
 
 	std::array<usio_io_status, 2> m_io_status;
+	std::recursive_mutex m_usio_mutex;
+
+	bool m_expecting_data = false;
+	std::vector<u8> m_usio_data;
+	u32 m_response_seek = 0;
+	u8 m_usio_channel = 0;
+	u16 m_usio_register = 0;
+	u16 m_usio_length = 0;
 };

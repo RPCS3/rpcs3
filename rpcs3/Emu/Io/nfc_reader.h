@@ -3,24 +3,41 @@
 #include "util/types.hpp"
 #include "util/endian.hpp"
 #include "mifare_types.h"
+#include "pcsc_driver.h"
 
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <initializer_list>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <span>
+#include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
+
+class buzzer_player;
 
 // NFC controller host protocol
 class nfc_reader
 {
 public:
 	nfc_reader();
+	~nfc_reader();
+
+	// Sets the reader mode / PC/SC device name ("Fake" or empty for internal emulation, or PC/SC device name)
+	void set_device_name(const std::string& name);
+	std::string get_device_name() const;
 
 	// Get the buffer size required by write_buffer
 	usz get_buffer_size() const;
 
-	// Writes ACK and response to an external buffer
-	void write_buffer(std::vector<u8>& out);
+	// Writes ACK and response to an external buffer (up to max_size bytes)
+	void write_buffer(std::vector<u8>& out, usz max_size = ~usz{0});
 
 	// Processes a request received from the host (accepts arbitrary card size, e.g. 0x40 sector 0 or 0x400 full 1K)
 	void process_request(const std::vector<u8>& in, std::span<u8> card);
@@ -30,6 +47,19 @@ public:
 	static constexpr usz mifare_4k_blocks = 256;
 
 private:
+	// Buzzer audio player
+	std::unique_ptr<buzzer_player> m_buzzer;
+
+	// PC/SC Reader integration
+	std::string m_device_name = std::string(pcsc_driver::fake_reader_name);
+	std::shared_ptr<pcsc_driver> m_pcsc;
+
+	// Thread-safe snapshot of active PC/SC driver instance
+	std::shared_ptr<pcsc_driver> get_pcsc() const;
+
+	// Fallback to Fake if PC/SC driver was disconnected/unplugged, returns true if active PC/SC mode
+	bool fallback_to_fake_if_disconnected();
+
 	// Mifare Classic authentication key type
 	enum class auth_key : u8
 	{
@@ -39,13 +69,13 @@ private:
 	};
 
 	// Variables for retaining internal status
-	bool m_remove_pre_and_postamble = false;
-	bool m_send_ack = false;
-	bool m_send_response = false;
-	std::vector<u8> m_response = {};
+	static constexpr usz no_response_offset = ~usz{0};
+	std::vector<u8> m_tx_buffer = {};
+	usz m_tx_read_pos = 0;
+	usz m_response_offset = no_response_offset;
 
 	// Mifare Classic internal authentication state
-	int m_authenticated_sector = -1;
+	s32 m_authenticated_sector = -1;
 	auth_key m_authenticated_key = auth_key::none;
 	std::array<u8, mifare_block_size> m_transfer_buffer = {};
 	bool m_transfer_buffer_valid = false;
@@ -60,7 +90,7 @@ private:
 	u8 m_gpio_p7 = 0x06;
 	u8 m_gpio_i0i1 = 0x00;
 	u8 m_target_state = 0x00;
-	u8 m_parameters_flags = 0x34; // UM0701-02 Table 15 default: fAutomaticATR_RES(bit 2) | fAutomaticRATS(bit 4) | fISO14443-4_PICC(bit 5)
+	std::atomic<u8> m_parameters_flags{0x34}; // UM0701-02 Table 15 default: fAutomaticATR_RES(bit 2) | fAutomaticRATS(bit 4) | fISO14443-4_PICC(bit 5)
 	u8 m_last_error = 0x00;
 	u8 m_sam_mode = 0x01;
 	u8 m_atr_res_timeout = 0x0B;
@@ -162,6 +192,7 @@ private:
 		crc_error         = 0x02,
 		parity_error      = 0x03,
 		mifare_auth_error = 0x14,
+		invalid_state     = 0x25,
 		context_error     = 0x27,
 	};
 
@@ -260,8 +291,8 @@ private:
 	};
 
 	// Helpers for Mifare Classic 1K / 4K card emulation
-	std::array<u8, mifare_uid_size> get_card_uid(std::span<const u8> card) const;
-	std::vector<u8> get_card_uid_bytes(std::span<const u8> card) const;
+	std::optional<std::array<u8, mifare_uid_size>> get_card_uid(std::span<const u8> card) const;
+	std::span<const u8> get_card_uid_bytes(std::span<const u8> card, std::array<u8, 7>& out_uid) const;
 	std::array<u8, mifare_block_size> get_block_data(std::span<const u8> card, u8 block) const;
 	static access_bits get_access_bits(const std::array<u8, mifare_block_size>& trailer, u8 cond_index);
 	static std::array<u8, mifare_block_size> format_value_block(s32 value, u8 addr);
@@ -280,6 +311,7 @@ private:
 
 	void reset_card_session();
 	void reset_target_state();
+	void build_dep_activation_response(u8 res, bool include_tg, bool is_pcsc, std::span<const u8> card);
 	mifare_check_result check_mifare_block_access(std::span<const u8> card, u8 block, bool allow_trailer, bool allow_block_0 = false) const;
 
 	// ReadGPIO response
@@ -331,10 +363,9 @@ private:
 
 	// Serialize a struct into bytes
 	template <typename T> requires std::is_trivially_copyable_v<T>
-	static inline std::vector<u8> to_bytes(const T& value)
+	static inline std::array<u8, sizeof(T)> to_bytes(const T& value)
 	{
-		const auto bytes = std::bit_cast<std::array<u8, sizeof(T)>>(value);
-		return {bytes.begin(), bytes.end()};
+		return std::bit_cast<std::array<u8, sizeof(T)>>(value);
 	}
 
 	// Skip the preamble (any bytes before the start code) and return the frame starting at the start code
@@ -352,23 +383,63 @@ private:
 		return header.len == 0xFF && header.lcs == 0xFF;
 	}
 
-	// Writes an ACK frame (with preamble and postamble, unless removed with m_remove_pre_and_postamble = true) to the out buffer
-	inline void write_ack(std::vector<u8>& out)
+	inline bool remove_pre_and_postamble() const
 	{
-		if (!m_remove_pre_and_postamble)
-			out.push_back(preamble);
+		return (m_parameters_flags.load(std::memory_order_acquire) & (1 << 6)) != 0;
+	}
 
-		out.insert(out.end(), ack_frame.begin(), ack_frame.end());
+	// Appends an ACK frame (with preamble and postamble, unless removed via SetParameters fRemovePrePostAmble) to m_tx_buffer
+	inline void append_ack_to_tx()
+	{
+		const bool strip_ambles = remove_pre_and_postamble();
 
-		if (!m_remove_pre_and_postamble)
-			out.push_back(postamble);
+		if (!strip_ambles)
+			m_tx_buffer.push_back(preamble);
+
+		m_tx_buffer.insert(m_tx_buffer.end(), ack_frame.begin(), ack_frame.end());
+
+		if (!strip_ambles)
+			m_tx_buffer.push_back(postamble);
 	}
 
 	// Expects a frame starting at the start code (see find_frame), the postamble is optional
 	static bool verify_request(std::span<const u8> in);
 
 	// Builds a valid response frame with the given data from the in buffer; if no data is given, builds an error frame
-	void build_response(const std::vector<u8>& in = {});
+	void build_response(std::span<const u8> in = {});
+	inline void build_response(std::initializer_list<u8> in)
+	{
+		build_response(std::span<const u8>(in.begin(), in.size()));
+	}
+
+	// Asynchronous worker for time-consuming PC/SC operations (avoids blocking caller threads)
+	void ensure_worker_started_locked();
+	void start_worker();
+	void stop_worker();
+	void worker_loop();
+	void dispatch_async_command(u64 task_id, std::span<const u8> frame, std::span<u8> card);
+	void execute_command(std::span<const u8> frame, std::span<u8> card);
+
+	struct worker_task
+	{
+		u64 id = 0;
+		std::vector<u8> frame;
+		std::span<u8> card;
+	};
+
+	mutable std::recursive_mutex m_exec_mutex;
+	mutable std::mutex m_device_mutex;
+	mutable std::mutex m_buffer_mutex;
+	std::mutex m_worker_lifecycle_mutex;
+	std::mutex m_task_mutex;
+	std::condition_variable m_task_cv;
+	std::thread m_worker_thread;
+	std::atomic<bool> m_pcsc_active{false};
+	std::atomic<bool> m_worker_running{false};
+	std::atomic<bool> m_worker_stop{false};
+	std::atomic<u64> m_task_seq{0};
+	std::deque<worker_task> m_task_queue;
+	std::vector<u8> m_exec_response;
 
 	static_assert(sizeof(frame_header) == 5);
 	static_assert(sizeof(extended_frame_header) == 8);
