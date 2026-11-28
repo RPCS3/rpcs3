@@ -22,7 +22,9 @@ if [ "$(arch)" = "arm64" ]; then
 fi
   
 # Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
-sudo port install "clang-$LLVM_COMPILER_VER"
+sudo port selfupdate || true
+sudo port upgrade outdated || true
+sudo port uninstall inactive || true
 
 export CXX=clang++
 export CC=clang
