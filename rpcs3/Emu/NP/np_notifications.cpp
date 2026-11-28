@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Cell/Modules/cellSysutilAvc2.h"
 #include "Emu/IdManager.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_helpers.h"
@@ -133,6 +134,7 @@ namespace np
 
 		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh.disconnect_sig2_users(room_id);
+		cellSysutilAvc2NotifyRoomDestroyed(room_id);
 
 		if (room_event_cb)
 		{
